@@ -11,10 +11,27 @@ if (command === undefined) {
   throw new Error("missing command");
 }
 
-const server = net.createServer((socket) => {
+const stdin = "pipe";
+const stdout = "ignore";
+const stderr = "ignore";
+
+const server = net.createServer({ allowHalfOpen: true }, (socket) => {
   const chunks: Buffer[] = [];
+  socket.on("error", (error) => {
+    console.error("socket error:", error);
+  });
   socket.on("data", (chunk: Buffer) => chunks.push(chunk));
-  socket.on("end", () => execSync(command, { input: Buffer.concat(chunks) }));
+  socket.on("end", () => {
+    try {
+      execSync(command, {
+        input: Buffer.concat(chunks),
+        stdio: [stdin, stdout, stderr],
+      });
+    } catch (error) {
+      console.error("clipboard process error:", error);
+    }
+    socket.end();
+  });
 });
 
 server.listen(0, "0.0.0.0", () => {
@@ -22,4 +39,8 @@ server.listen(0, "0.0.0.0", () => {
   if (address === null) return;
   if (typeof address === "string") return;
   console.log(String(address.port));
+});
+
+server.on("error", (error) => {
+  console.error("server error:", error);
 });

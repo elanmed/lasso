@@ -418,7 +418,7 @@ The `scripts/copy-server.ts` and `scripts/paste-server.ts` helpers bridge the ho
 
 1. `scripts/copy-server.ts` runs on the host, printing its port to stdout
 2. The host captures the port and passes it to the container via a `COPY_PORT` env variable
-3. In the container, yanking to the unnamed register runs `nc --send-only host.docker.internal vim.env.PASTE_PORT`. This makes a request to the copy server informing it of the content to copy
+3. In the container, yanking to the unnamed register runs `nc --send-only host.docker.internal vim.env.COPY_PORT`. This makes a request to the copy server informing it of the content to copy
 4. The copy server on the host executes `copy_cmd` with the content in the request
 
 ```bash
