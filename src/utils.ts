@@ -7,6 +7,7 @@ import { getPromptHistoryDir } from "./paths.ts";
 import assert from "node:assert";
 import { checkBat, baseBatFlags, markdownBatFlags } from "./print.ts";
 import { printGitDiff } from "./tools.ts";
+import type { AssistantContent } from "ai";
 
 export type Result<T> = { ok: true; value: T } | { ok: false; error: unknown };
 
@@ -340,4 +341,29 @@ export function createToolCallDiffer() {
     cleanupTempFileBefore,
     cleanupAllTempFileBefore,
   };
+}
+
+export function getStrFromAssistantContent(content: AssistantContent) {
+  if (typeof content === "string") return content;
+  return content
+    .map((c) => {
+      const { type: ctype } = c;
+      switch (ctype) {
+        case "text": {
+          return c.text;
+        }
+        case "file":
+        case "reasoning":
+        case "tool-call":
+        case "tool-result":
+        case "tool-approval-request": {
+          return "";
+        }
+        default: {
+          ctype satisfies never;
+          return "";
+        }
+      }
+    })
+    .join("\n");
 }

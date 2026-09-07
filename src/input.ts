@@ -16,12 +16,14 @@ import {
   listChatHistoryFiles,
   openWithPager,
   stringify,
+  getStrFromAssistantContent,
 } from "./utils.ts";
 import {
   print,
   printNewline,
   fencePrint,
   printSessionStartDate,
+  formatMarkdown,
 } from "./print.ts";
 import { getPrettyTokenUsage, getPrettyUsage } from "./usage.ts";
 import { basename, dirname, extname, join } from "node:path";
@@ -223,6 +225,10 @@ export function initKeypress() {
           }
           case "commandspage": {
             await pageCustomSlashCommandsStr();
+            return;
+          }
+          case "lastresponse": {
+            await pageLastResponse();
             return;
           }
           case "reload": {
@@ -526,6 +532,7 @@ const builtinSlashCommands = [
   "reload",
   "initlocal",
   "initglobal",
+  "lastresponse",
 ] as const;
 type BuiltinSlashCommand = (typeof builtinSlashCommands)[number];
 
@@ -624,6 +631,10 @@ async function resolveBuiltinSlashCommand(
     }
     case "initglobal": {
       initGlobalConfig();
+      return { handled: true, inputFromCommand: null };
+    }
+    case "lastresponse": {
+      await pageLastResponse();
       return { handled: true, inputFromCommand: null };
     }
     default: {
@@ -1184,6 +1195,34 @@ export function initGlobalConfig() {
     return;
   }
   print.info(`Created the global config at ${path}`);
+}
+
+export async function pageLastResponse() {
+  const { messages } = getState().app.messageParams;
+  const lastMessage = messages.findLast(
+    (message) => message.role === "assistant",
+  );
+
+  if (lastMessage == undefined) {
+    printNewline();
+    print.doing("No messages");
+    return;
+  }
+
+  const contentStr = getStrFromAssistantContent(lastMessage.content);
+  if (contentStr.length === 0) {
+    printNewline();
+    print.doing("No messages");
+    return;
+  }
+
+  const formattedContentStr = await formatMarkdown(contentStr);
+
+  await openWithPager({
+    initialContentStr: formattedContentStr,
+    pagerEnvKey: "LASSO_PAGER_LAST_RESPONSE",
+    contentType: "markdown",
+  });
 }
 
 export function clearRlLine(): readline.Interface | null {

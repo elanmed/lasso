@@ -15,6 +15,7 @@ import {
   createToolCallDiffer,
   truncate,
   listChatHistoryFiles,
+  getStrFromAssistantContent,
 } from "./utils.ts";
 import {
   testFs,
@@ -31,6 +32,29 @@ import { fsDeps, processDeps } from "./deps.ts";
 describe("utils", () => {
   beforeEach(() => {
     setupTestContext();
+  });
+
+  describe("getStrFromAssistantContent", () => {
+    it("returns string content unchanged", () => {
+      assert.equal(getStrFromAssistantContent("response"), "response");
+    });
+
+    it("joins text content and excludes non-text content", () => {
+      assert.equal(
+        getStrFromAssistantContent([
+          { type: "text", text: "first" },
+          { type: "reasoning", text: "hidden reasoning" },
+          {
+            type: "tool-call",
+            toolCallId: "call-1",
+            toolName: "tool",
+            input: {},
+          },
+          { type: "text", text: "second" },
+        ]),
+        "first\n\n\nsecond",
+      );
+    });
   });
 
   describe("getMessageFromError", () => {

@@ -21,6 +21,7 @@ import {
   initSigInt,
   initLocalConfig,
   initGlobalConfig,
+  pageLastResponse,
   resolveInterruptWithEditor,
 } from "./input.ts";
 
@@ -1124,6 +1125,40 @@ No available context files
     });
   });
 
+  describe("pageLastResponse", () => {
+    beforeEach(() => {
+      actions.resetState();
+      actions.resetStdout();
+    });
+
+    it("prints no messages when there is no assistant response", async () => {
+      await pageLastResponse();
+      assert.strictEqual(stripAnsi(getCapturedStdout()), "\nNo messages\n");
+    });
+
+    it("opens the latest assistant response in a pager", async () => {
+      const { spawned } = mockPagerSpawn();
+      testProcessEnv._set("LASSO_PAGER_LAST_RESPONSE", "nano __FILE__");
+      actions.appendToMessageParams({ role: "user", content: "question" });
+      actions.appendToMessageParams({
+        role: "assistant",
+        content: [
+          { type: "text", text: "first" },
+          { type: "text", text: "second" },
+        ],
+      });
+
+      await pageLastResponse();
+
+      assert.strictEqual(spawned[0], "nano /tmp/lasso-test-uuid.txt");
+      assert.strictEqual(
+        testFs._files.get("/tmp/lasso-test-uuid.txt"),
+        "first\nsecond\n",
+      );
+    });
+
+  });
+
   describe("pageEditStr", () => {
     beforeEach(() => {
       actions.resetState();
@@ -1332,6 +1367,7 @@ Available commands:
 - /reload
 - /initlocal
 - /initglobal
+- /lastresponse
 - /test/.lasso/commands/custom.md
 `,
       );
@@ -1846,6 +1882,7 @@ Available commands:
 - /reload
 - /initlocal
 - /initglobal
+- /lastresponse
 `,
       );
     });
@@ -2278,6 +2315,7 @@ Invalid command: /unknown, valid commands:
 - /reload
 - /initlocal
 - /initglobal
+- /lastresponse
 - /test-cwd/.lasso/commands/known.md
 `,
       );
