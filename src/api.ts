@@ -14,6 +14,7 @@ import assert from "node:assert";
 import { aiDeps, MISSING } from "./deps.ts";
 import { appendToChatHistory } from "./log.ts";
 import { getLanguageModel } from "./model.ts";
+import { resolveInterruptWithEditor } from "./input.ts";
 
 function getApiStreamAbortSignal() {
   const controller = getState().abortControllers.apiStream;
@@ -88,7 +89,11 @@ export async function resolveApiCall(userInput: string) {
     toolCallDiffer.cleanupAllTempFileBefore();
 
     if (isAbortError(generateTextResult.error)) {
-      print.error("Interrupted");
+      print.error("Interrupted!");
+
+      if (getState().app.editorInputValue !== null) {
+        await resolveInterruptWithEditor();
+      }
       return null;
     }
 
@@ -153,7 +158,11 @@ ${JSON.stringify(getState().app.messageParams.messages)}
 
   if (!generateTextResult.ok) {
     if (isAbortError(generateTextResult.error)) {
-      print.error("Interrupted compaction");
+      print.error("Interrupted compaction!");
+
+      if (getState().app.editorInputValue !== null) {
+        await resolveInterruptWithEditor();
+      }
       return;
     }
 

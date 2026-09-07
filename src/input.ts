@@ -474,6 +474,33 @@ async function resolveExitConfirmation() {
   return;
 }
 
+export async function resolveInterruptWithEditor() {
+  const rl = getState().app.rl;
+  assert(rl !== null);
+
+  actions.setInterruptWithEditorAbortController(new AbortController());
+  const abortController = getState().abortControllers.question;
+  assert(abortController !== null);
+  const continueResult = await tryCatchAsync(
+    rl.question(
+      `There are pending messages! Update the editor with ${JSON.stringify(getState().config.keymaps["edit"])} and/or press enter when ready to continue.`,
+      {
+        signal: abortController.signal,
+      },
+    ),
+  );
+  actions.setInterruptWithEditorAbortController(null);
+
+  if (!continueResult.ok) {
+    if (isAbortError(continueResult.error)) {
+      return;
+    }
+
+    print.error(getMessageFromError(continueResult.error));
+    return;
+  }
+}
+
 const builtinSlashCommands = [
   "edit",
   "edit-str",
@@ -806,7 +833,7 @@ export async function pageContextStr() {
 
 export async function pageEditStr() {
   const { editorInputValue } = getState().app;
-  if (editorInputValue === null || editorInputValue.length === 0) {
+  if (editorInputValue === null) {
     printNewline();
     print.doing("Editor is empty");
     return;
