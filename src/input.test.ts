@@ -1315,16 +1315,16 @@ Available context files:
         `
 Available commands:
 - /edit
-- /edit-str
+- /editpage
 - /history
 - /clear
 - /paste
 - /model
 - /skills
 - /context
-- /context-str
+- /contextpage
 - /commands
-- /commands-str
+- /commandspage
 - /keymaps
 - /usage
 - /resume
@@ -1417,9 +1417,9 @@ Available commands:
       assert.strictEqual(getCapturedStdout(), "");
     });
 
-    it("opens editor input in a pager when edit-str keymap matches", async () => {
+    it("opens editor input in a pager when editpage keymap matches", async () => {
       mockSpawnSync();
-      actions.setKeymap("edit-str", { name: "e", ctrl: true });
+      actions.setKeymap("editpage", { name: "e", ctrl: true });
       actions.setEditorInputValue("editor input");
       harness.emitKey({ name: "e", ctrl: true });
       await harness.flush();
@@ -1441,9 +1441,9 @@ Available commands:
       assert.strictEqual(getCapturedStdout(), "");
     });
 
-    it("opens context in a pager when context-str keymap matches", async () => {
+    it("opens context in a pager when contextpage keymap matches", async () => {
       mockSpawnSync();
-      actions.setKeymap("context-str", { name: "d", ctrl: true });
+      actions.setKeymap("contextpage", { name: "d", ctrl: true });
       actions.setContextEntries([
         { filePath: "/project/AGENTS.md", content: "context" },
       ]);
@@ -1457,9 +1457,9 @@ Available commands:
       assert.strictEqual(getCapturedStdout(), "");
     });
 
-    it("opens custom commands in a pager when commands-str keymap matches", () => {
+    it("opens custom commands in a pager when commandspage keymap matches", () => {
       mockSpawnSync();
-      actions.setKeymap("commands-str", { name: "m", ctrl: true });
+      actions.setKeymap("commandspage", { name: "m", ctrl: true });
       harness.emitKey({ name: "m", ctrl: true });
       assert.strictEqual(
         testFs._files.get("/tmp/lasso-test-uuid.txt"),
@@ -1711,10 +1711,10 @@ custom command content`,
       assert.strictEqual(result, null);
     });
 
-    it("handles /edit-str command by opening the current editor input in a pager", async () => {
+    it("handles /editpage command by opening the current editor input in a pager", async () => {
       testProcessEnv._set("LASSO_PAGER_EDIT", "nano __FILE__");
       actions.setEditorInputValue("editor input");
-      const result = await resolveSlashCommand("/edit-str");
+      const result = await resolveSlashCommand("/editpage");
       assert.strictEqual(result, null);
       assert.strictEqual(
         testFs._files.get("/tmp/lasso-test-uuid.txt"),
@@ -1829,16 +1829,16 @@ No available context files
         `
 Available commands:
 - /edit
-- /edit-str
+- /editpage
 - /history
 - /clear
 - /paste
 - /model
 - /skills
 - /context
-- /context-str
+- /contextpage
 - /commands
-- /commands-str
+- /commandspage
 - /keymaps
 - /usage
 - /resume
@@ -1850,7 +1850,7 @@ Available commands:
       );
     });
 
-    it("handles /commands-str command by opening custom commands in a pager", async () => {
+    it("handles /commandspage command by opening custom commands in a pager", async () => {
       testProcessEnv._set("LASSO_PAGER_COMMANDS", "nano __FILE__");
       actions.setSlashCommands([
         {
@@ -1859,7 +1859,7 @@ Available commands:
           content: "custom command content",
         },
       ]);
-      const result = await resolveSlashCommand("/commands-str");
+      const result = await resolveSlashCommand("/commandspage");
       assert.strictEqual(result, null);
       assert.strictEqual(
         testFs._files.get("/tmp/lasso-test-uuid.txt"),
@@ -1871,7 +1871,7 @@ custom command content`,
       );
     });
 
-    it("uses LASSO_PAGER_COMMANDS for the commands-str pager", async () => {
+    it("uses LASSO_PAGER_COMMANDS for the commandspage pager", async () => {
       const { spawned } = mockPagerSpawn();
       testProcessEnv._set("LASSO_PAGER_COMMANDS", "nano __FILE__");
       actions.setSlashCommands([
@@ -1881,14 +1881,14 @@ custom command content`,
           content: "custom command content",
         },
       ]);
-      const result = await resolveSlashCommand("/commands-str");
+      const result = await resolveSlashCommand("/commandspage");
       assert.strictEqual(result, null);
       assert.strictEqual(spawned[0], "nano /tmp/lasso-test-uuid.txt");
     });
 
-    it("prints message for commands-str when there are no custom commands", async () => {
+    it("prints message for commandspage when there are no custom commands", async () => {
       actions.resetStdout();
-      const result = await resolveSlashCommand("/commands-str");
+      const result = await resolveSlashCommand("/commandspage");
       assert.strictEqual(result, null);
       assert.strictEqual(
         stripAnsi(getCapturedStdout()),
@@ -1898,9 +1898,9 @@ No available custom slash commands
       );
     });
 
-    it("handles /context-str command with no context files", async () => {
+    it("handles /contextpage command with no context files", async () => {
       actions.resetStdout();
-      const result = await resolveSlashCommand("/context-str");
+      const result = await resolveSlashCommand("/contextpage");
       assert.strictEqual(result, null);
       assert.strictEqual(
         stripAnsi(getCapturedStdout()),
@@ -1910,13 +1910,13 @@ No available context files
       );
     });
 
-    it("handles /context-str command by opening context in a pager", async () => {
+    it("handles /contextpage command by opening context in a pager", async () => {
       testProcessEnv._set("LASSO_PAGER_CONTEXT", "nano __FILE__");
       actions.setContextStr("context string content");
       actions.setContextEntries([
         { filePath: "/project/AGENTS.md", content: "context" },
       ]);
-      const result = await resolveSlashCommand("/context-str");
+      const result = await resolveSlashCommand("/contextpage");
       assert.strictEqual(result, null);
       assert.strictEqual(
         testFs._files.get("/tmp/lasso-test-uuid.txt"),
@@ -2261,16 +2261,16 @@ some   task
         `
 Invalid command: /unknown, valid commands:
 - /edit
-- /edit-str
+- /editpage
 - /history
 - /clear
 - /paste
 - /model
 - /skills
 - /context
-- /context-str
+- /contextpage
 - /commands
-- /commands-str
+- /commandspage
 - /keymaps
 - /usage
 - /resume

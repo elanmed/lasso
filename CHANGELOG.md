@@ -3,7 +3,7 @@
 ## v0.3.0 - 2026-09-04
 
 - Add read-write subagents with configurable models, optional model selection, timeout handling, and parallel execution
-- Add the `/edit-str` command
+- Add the `/editpage` command
 - Improve reload diffs by separating filenames and only pushing diffs when stdout is available
 - Add `@ai-sdk/openai` support
 - Add `sdkProvider` and `gateway` configuration, and warn about missing model, `baseURL`, or API key settings

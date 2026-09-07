@@ -187,7 +187,7 @@ export function initKeypress() {
             }
             return;
           }
-          case "edit-str": {
+          case "editpage": {
             await pageEditStr();
             return;
           }
@@ -217,11 +217,11 @@ export function initKeypress() {
 
             return;
           }
-          case "context-str": {
+          case "contextpage": {
             await pageContextStr();
             return;
           }
-          case "commands-str": {
+          case "commandspage": {
             await pageCustomSlashCommandsStr();
             return;
           }
@@ -509,16 +509,16 @@ export async function resolveInterruptWithEditor() {
 
 const builtinSlashCommands = [
   "edit",
-  "edit-str",
+  "editpage",
   "history",
   "clear",
   "paste",
   "model",
   "skills",
   "context",
-  "context-str",
+  "contextpage",
   "commands",
-  "commands-str",
+  "commandspage",
   "keymaps",
   "usage",
   "resume",
@@ -545,7 +545,7 @@ async function resolveBuiltinSlashCommand(
       if (content !== null) appendToChatHistory(content, "user");
       return { handled: true, inputFromCommand: content };
     }
-    case "edit-str": {
+    case "editpage": {
       await pageEditStr();
       return { handled: true, inputFromCommand: null };
     }
@@ -580,7 +580,7 @@ async function resolveBuiltinSlashCommand(
       printAvailableContextFiles();
       return { handled: true, inputFromCommand: null };
     }
-    case "context-str": {
+    case "contextpage": {
       await pageContextStr();
       return { handled: true, inputFromCommand: null };
     }
@@ -588,7 +588,7 @@ async function resolveBuiltinSlashCommand(
       printAvailableCommandsStr();
       return { handled: true, inputFromCommand: null };
     }
-    case "commands-str": {
+    case "commandspage": {
       await pageCustomSlashCommandsStr();
 
       return { handled: true, inputFromCommand: null };

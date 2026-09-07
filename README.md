@@ -174,7 +174,7 @@ keymaps:
 | ------ | ----- | --------------------------- | -------------------------------------------------------------------- |
 | `edit` | `Key` | `{ name: "g", ctrl: true }` | Call `$LASSO_EDIT` or `$EDITOR __FILE__` to input multi-line prompts |
 
-Pressing a bound key runs the command directly for `edit`/`paste` (editor) and pager commands (`edit-str`, `history`, `config`, `context-str`, `commands-str`); all other commands, builtin or custom, are typed into the prompt. Custom command keymaps use the command's name (its filename without extension).
+Pressing a bound key runs the command directly for `edit`/`paste` (editor) and pager commands (`editpage`, `history`, `config`, `contextpage`, `commandspage`); all other commands, builtin or custom, are typed into the prompt. Custom command keymaps use the command's name (its filename without extension).
 
 Keymaps must be unique across the merged default, global, and local configs — two commands bound to the same key cause a startup validation error.
 
@@ -276,16 +276,16 @@ Slash commands are triggered with `/command` at the prompt.
 | Command         | Description                                                                |
 | --------------- | -------------------------------------------------------------------------- |
 | `/edit`         | Call the `edit` keymap                                                     |
-| `/edit-str`     | View the current editor input in a pager                                   |
+| `/editpage`     | View the current editor input in a pager                                   |
 | `/clear`        | Clear conversation context                                                 |
 | `/history`      | View chat history in a pager                                               |
 | `/paste`        | Call the `paste` keymap                                                    |
 | `/model`        | Switch the model at runtime (e.g. `/model kimi-k2.6`)                      |
 | `/skills`       | List available skills                                                      |
 | `/context`      | List available context files                                               |
-| `/context-str`  | View the raw context string in a pager                                     |
+| `/contextpage`  | View the raw context string in a pager                                     |
 | `/commands`     | List available slash commands (builtin and custom)                         |
-| `/commands-str` | View custom slash command contents in a pager                              |
+| `/commandspage` | View custom slash command contents in a pager                              |
 | `/keymaps`      | List configured keybindings                                                |
 | `/usage`        | Show current session usage                                                 |
 | `/config`       | View global, local, and applied config in a pager                          |
