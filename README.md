@@ -9,7 +9,7 @@ _A minimal agent harness to rein in your llm_
 - **Minimal**: ~4,300 lines of source code, ~8,600 lines of tests
   - Responses are piped through `bat` to render markdown
   - Multi-line input is supported by spawning an editor of your choice
-  - A message queue lets you batch multiple prompts in the editor, sent one per turn
+  - Messages can be queued by typing a custom delimiter (default `l---`) in the spawned editor
 - **Tools**: 9 tools to execute bash, fetch from the web, edit files, and launch subagents
   - A `git diff` with `delta` is output whenever a tool changes a file
 - **Multiple providers**: Anthropic, OpenAI, or OpenAI-compatible APIs
