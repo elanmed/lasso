@@ -21,6 +21,33 @@ _A minimal agent harness to rein in your llm_
 - **Session history**: Transcripts are persisted per session and past sessions can be resumed with `/resume`
 - **Keymaps**: Customizable shortcuts for executing built-in slash commands
 
+## Installation
+
+Install the latest release on macOS or Linux:
+
+```sh
+curl --proto '=https' --tlsv1.2 -fsSL https://raw.githubusercontent.com/elanmed/lasso/master/scripts/install.sh | bash
+```
+
+The installer detects your operating system and architecture, downloads the matching GitHub release binary, and symlinks `lasso` into `~/.local/bin`. Add that directory to `PATH` if needed. Set `XDG_BIN_HOME` or `XDG_DATA_HOME` to override the install locations.
+
+To run the script immediately without adding `~/.local/bin` to `PATH`, export your API key and invoke the symlink directly:
+
+```sh
+export LASSO_API_KEY=your-api-key && ~/.local/bin/lasso
+```
+
+### Manual installation
+
+> Note that manual installation requires Node.js 24 and pnpm 11.1.0:
+
+```sh
+git clone https://github.com/elanmed/lasso.git
+cd lasso
+pnpm install
+node src/index.ts
+```
+
 ## Configuration
 
 Settings live in `~/.config/lasso/settings.yaml` (global) and `./.lasso/settings.yaml` (local overrides), parsed as YAML 1.2 (the `yaml` package default).
