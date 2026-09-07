@@ -1853,16 +1853,16 @@ global diff
 Local config from path: /test-cwd/.lasso/settings.yaml
 local diff
 
-Applied config
+Applied config:
 applied diff
 
-Agent context
+Agent context:
 context diff
 
-Agent skills
+Agent skills:
 skills diff
 
-Custom slash commands
+Custom slash commands:
 commands diff
 
 `,
@@ -1994,7 +1994,7 @@ hello
 {"model":"gpt-4","baseURL":"https://api.example.com","customSlashCommandDirs":[],"customSkillDirs":[]}
 \`\`\``,
       );
-      assert.strictEqual(getSnapshot("local"), "```yaml\n\n```");
+      assert.strictEqual(getSnapshot("local"), "```yaml\n{}\n```");
     });
 
     it("handles custom slash command successfully", async () => {

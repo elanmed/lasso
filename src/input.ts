@@ -1005,10 +1005,10 @@ const getReloadTempFileDiffTitle = (): Record<
 > => ({
   global: `Global config from path: ${getGlobalConfigPath()}`,
   local: `Local config from path: ${getLocalConfigPath()}`,
-  applied: "Applied config",
-  commands: "Custom slash commands",
-  context: "Agent context",
-  skills: "Agent skills",
+  applied: "Applied config:",
+  commands: "Custom slash commands:",
+  context: "Agent context:",
+  skills: "Agent skills:",
 });
 
 const getReloadTempFileStr = (): Record<ReloadTempFilePrefixes, string> => ({
