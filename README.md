@@ -29,6 +29,8 @@ Install the latest release on macOS or Linux:
 curl --proto '=https' --tlsv1.2 -fsSL https://raw.githubusercontent.com/elanmed/lasso/master/scripts/install.sh | bash
 ```
 
+> You should always read a script before curling and executing it!
+
 The installer detects your operating system and architecture, downloads the matching GitHub release binary, and symlinks `lasso` into `~/.local/bin`. Add that directory to `PATH` if needed. Set `XDG_BIN_HOME` or `XDG_DATA_HOME` to override the install locations.
 
 To run the script immediately without adding `~/.local/bin` to `PATH`, export your API key and invoke the symlink directly:
