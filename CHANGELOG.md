@@ -1,5 +1,16 @@
 # Changelog
 
+## v0.4.0 - 2026-09-07
+
+- Add the `/lastresponse` command for paging the last response
+- Rename initialization commands to `/initlocal` and `/initglobal`
+- Rename built-in pager commands to `/editpage`, `/contextpage`, and `/commandspage`
+- Add an `install.sh` installation script and hashes to compiled binaries
+- Improve copy and paste server error handling
+- Improve interruption handling and editor input state
+- Require the `edit` keymap configuration and improve configuration validation errors
+- Improve reload diffs by separating sources and adding clearer diff titles
+
 ## v0.3.0 - 2026-09-04
 
 - Add read-write subagents with configurable models, optional model selection, timeout handling, and parallel execution
