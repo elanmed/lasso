@@ -519,7 +519,7 @@ Compacted to 30,000, 5,000 over the target.
       assert.strictEqual(
         stripAnsi(getCaptured()),
         `Compacting…
-Interrupted compaction
+Interrupted compaction!
 `,
       );
     });
