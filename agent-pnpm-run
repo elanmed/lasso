@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+
+if [[ "$#" -eq 0 ]]; then
+  printf 'Usage: ./agent-pnpm-run <script> [args...]\n' >&2
+  exit 2
+fi
+
+set +e
+CI=true pnpm run "$@" 2>&1
+status=$?
+printf '\nEXIT_STATUS=%s\n' "$status"
+exit 0

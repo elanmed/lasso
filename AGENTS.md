@@ -10,20 +10,22 @@ For a high-level overview of the main loop, the `null` vs `""` return convention
 
 ## Development
 
-After every change, run linting, types, tests, and formatting:
+After every change, run linting, types, tests, and formatting with `./agent-pnpm-run`. The agent runner can hide output from commands that exit nonzero; this wrapper captures both output streams, prints the real exit status, and keeps the diagnostics visible:
 
 ```
-pnpm run lint
-pnpm run types
-pnpm run test
-pnpm run format
+./agent-pnpm-run lint
+./agent-pnpm-run types
+./agent-pnpm-run test
+./agent-pnpm-run format
 ```
 
 Or all at once:
 
 ```
-pnpm run ci
+./agent-pnpm-run ci
 ```
+
+Use `./agent-pnpm-run <script> [args...]` instead of calling `pnpm run` directly.
 
 ## Guidelines
 
