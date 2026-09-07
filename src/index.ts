@@ -8,7 +8,7 @@ import {
   printSessionStartDate,
   warnOnMissingBat,
 } from "./print.ts";
-import { initState } from "./config.ts";
+import { initState, blockOnMissingConfig } from "./config.ts";
 import {
   initKeypress,
   initReadline,
@@ -16,7 +16,6 @@ import {
   resolveUserInput,
 } from "./input.ts";
 import { resolveApiCall, maybeCompactMessageParams } from "./api.ts";
-import { blockOnMissingConfig } from "./config.ts";
 import { initLogs } from "./log.ts";
 
 async function main() {

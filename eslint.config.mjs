@@ -1,8 +1,11 @@
+import importPlugin from "eslint-plugin-import";
 import eslint from "@eslint/js";
 import tseslint from "typescript-eslint";
 
 export default [
   eslint.configs.recommended,
+  importPlugin.flatConfigs.recommended,
+  importPlugin.flatConfigs.typescript,
   ...tseslint.configs.strictTypeChecked,
   ...tseslint.configs.stylisticTypeChecked,
   {
@@ -13,6 +16,7 @@ export default [
       },
     },
     rules: {
+      "import/no-cycle": "error",
       "@typescript-eslint/no-confusing-void-expression": "off",
       "@typescript-eslint/strict-boolean-expressions": [
         "error",
