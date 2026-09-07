@@ -279,6 +279,7 @@ Slash commands are triggered with `/command` at the prompt.
 | `/editpage`     | View the current editor input in a pager                                   |
 | `/clear`        | Clear conversation context                                                 |
 | `/history`      | View chat history in a pager                                               |
+| `/lastresponse` | View the latest assistant response in a pager                              |
 | `/paste`        | Call the `paste` keymap                                                    |
 | `/model`        | Switch the model at runtime (e.g. `/model kimi-k2.6`)                      |
 | `/skills`       | List available skills                                                      |
@@ -290,8 +291,8 @@ Slash commands are triggered with `/command` at the prompt.
 | `/usage`        | Show current session usage                                                 |
 | `/config`       | View global, local, and applied config in a pager                          |
 | `/reload`       | Reload config and context, diff the result in a pager                      |
-| `/initlocal`   | Create `./.lasso/settings.yaml` if it doesn't exist                        |
-| `/initglobal`  | Create `~/.config/lasso/settings.yaml` if it doesn't exist                 |
+| `/initlocal`    | Create `./.lasso/settings.yaml` if it doesn't exist                        |
+| `/initglobal`   | Create `~/.config/lasso/settings.yaml` if it doesn't exist                 |
 | `/resume`       | Continue a past session from its start date (e.g. `/resume 1754000000000`) |
 
 ### Custom Slash Commands
