@@ -5,6 +5,7 @@ import {
   tryCatchAsync,
   getMessageFromError,
   getTempFileName,
+  createToolCallDiffer,
 } from "./utils.ts";
 import { print, startLoadingState, stopLoadingState } from "./print.ts";
 import { appendModelUsage } from "./usage.ts";
@@ -29,7 +30,7 @@ function getApiStreamAbortSignal() {
 }
 
 export async function resolveApiCall(userInput: string) {
-  const toolCallIdToTempFile = new Map<string, string>();
+  const toolCallDiffer = createToolCallDiffer();
 
   const inputMessageParam: ModelMessage = {
     role: "user",
@@ -56,17 +57,15 @@ export async function resolveApiCall(userInput: string) {
       experimental_onToolCallStart: ({ toolCall }) => {
         switch (toolCall.toolName as ToolName) {
           case "create_file": {
-            const tempFileBefore = getTempFileName();
-            toolCallIdToTempFile.set(toolCall.toolCallId, tempFileBefore);
+            toolCallDiffer.setTempFileBefore(toolCall.toolCallId);
             break;
           }
           case "insert_lines":
           case "str_replace": {
             const { path } = objectWithPathSchema.parse(toolCall.input);
-            const tempFileBefore = getTempFileName({
+            toolCallDiffer.setTempFileBefore(toolCall.toolCallId, {
               initialContentPath: path,
             });
-            toolCallIdToTempFile.set(toolCall.toolCallId, tempFileBefore);
             break;
           }
         }
@@ -76,29 +75,13 @@ export async function resolveApiCall(userInput: string) {
           case "create_file":
           case "insert_lines":
           case "str_replace": {
-            const tempFileBefore = toolCallIdToTempFile.get(
-              toolCall.toolCallId,
-            );
-            assert(tempFileBefore !== undefined);
-
             if (!success) {
-              fsDeps.unlinkSync(tempFileBefore);
-              toolCallIdToTempFile.delete(toolCall.toolCallId);
+              toolCallDiffer.cleanupTempFileBefore(toolCall.toolCallId);
               return;
             }
 
             const { path } = objectWithPathSchema.parse(toolCall.input);
-            const tempFileAfter = getTempFileName({
-              initialContentPath: path,
-            });
-            await printGitDiff({
-              tempFileBeforePath: tempFileBefore,
-              tempFileAfterPath: tempFileAfter,
-              path,
-            });
-            fsDeps.unlinkSync(tempFileBefore);
-            fsDeps.unlinkSync(tempFileAfter);
-            toolCallIdToTempFile.delete(toolCall.toolCallId);
+            await toolCallDiffer.diffAndCleanup(toolCall.toolCallId, path);
             break;
           }
         }
@@ -110,9 +93,7 @@ export async function resolveApiCall(userInput: string) {
   actions.setApiEndTime();
 
   if (!generateTextResult.ok) {
-    for (const tempFile of toolCallIdToTempFile.values()) {
-      fsDeps.unlinkSync(tempFile);
-    }
+    toolCallDiffer.cleanupAllTempFileBefore();
 
     if (isAbortError(generateTextResult.error)) {
       print.error("Interrupted");

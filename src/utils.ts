@@ -6,6 +6,7 @@ import { fsDeps, processDeps } from "./deps.ts";
 import { getPromptHistoryDir } from "./paths.ts";
 import assert from "node:assert";
 import { checkBat, baseBatFlags, markdownBatFlags } from "./print.ts";
+import { printGitDiff } from "./tools.ts";
 
 export type Result<T> = { ok: true; value: T } | { ok: false; error: unknown };
 
@@ -49,11 +50,13 @@ export function getShortId(): string {
   return crypto.randomBytes(9).toString("base64url");
 }
 
-export function getTempFileName(args?: {
+interface GetTempFileNameArgs {
   pathPrefix?: string | undefined;
   initialContentPath?: string | undefined;
   initialContentStr?: string | undefined;
-}) {
+}
+
+export function getTempFileName(args?: GetTempFileNameArgs) {
   const { pathPrefix, initialContentPath, initialContentStr } = args ?? {};
   assert(initialContentPath === undefined || initialContentStr === undefined);
 
@@ -291,4 +294,53 @@ function sleep(ms: number) {
   });
 }
 
+// TODO: just update imports from deps
 export { MISSING } from "./deps.ts";
+
+export function createToolCallDiffer() {
+  const toolCallIdToTempFileBefore = new Map<string, string>();
+
+  function setTempFileBefore(toolCallId: string, args?: GetTempFileNameArgs) {
+    const tempFileBefore = getTempFileName(args);
+    toolCallIdToTempFileBefore.set(toolCallId, tempFileBefore);
+  }
+
+  function getTempFileBefore(toolCallId: string) {
+    const tempFileBefore = toolCallIdToTempFileBefore.get(toolCallId);
+    assert(tempFileBefore !== undefined);
+    return tempFileBefore;
+  }
+
+  async function diffAndCleanup(toolCallId: string, path: string) {
+    const tempFileAfter = getTempFileName({ initialContentPath: path });
+    const tempFileBefore = getTempFileBefore(toolCallId);
+    await printGitDiff({
+      tempFileBeforePath: tempFileBefore,
+      tempFileAfterPath: tempFileAfter,
+      path,
+    });
+    fsDeps.unlinkSync(tempFileAfter);
+    cleanupTempFileBefore(toolCallId);
+  }
+
+  function cleanupTempFileBefore(toolCallId: string) {
+    const tempFile = getTempFileBefore(toolCallId);
+    fsDeps.unlinkSync(tempFile);
+    toolCallIdToTempFileBefore.delete(toolCallId);
+  }
+
+  function cleanupAllTempFileBefore() {
+    for (const tempFile of toolCallIdToTempFileBefore.values()) {
+      fsDeps.unlinkSync(tempFile);
+    }
+  }
+
+  return {
+    toolCallIdToTempFileBefore,
+    setTempFileBefore,
+    getTempFileBefore,
+    diffAndCleanup,
+    cleanupTempFileBefore,
+    cleanupAllTempFileBefore,
+  };
+}
