@@ -55,7 +55,7 @@ If `model`, `baseURL`, or `LASSO_API_KEY` are missing at startup, lasso warns an
 The local config either overwrites or extends the global config per option:
 
 - **Overwrite**: scalar options (`model`, `sdkProvider`, `gateway`, `baseURL`, `compactTriggerRatio`, `compactTargetRatio`, `loadingStateFrameDuration`, `promptPrefix`, `suppressBatUnavailableWarning`, `messageQueueDelimiter`, `usageLimit`) and arrays (`customSlashCommandDirs`, `customSkillDirs`, `subagentModels`, `loadingStateFrames`) replace the global value wholesale — arrays are not merged.
-- **Extend**: `keymaps`, `pricingPerModel`, and `contextWindowPerModel` merge entry-by-entry with the default and global entries, the local entry winning on conflicts. Setting an entry to `null` removes it entirely, cancelling the global or default entry (see the relevant sections below).
+- **Extend**: `keymaps`, `pricingPerModel`, and `contextWindowPerModel` merge entry-by-entry with the default and global entries, the local entry winning on conflicts. `pricingPerModel` and `contextWindowPerModel` entries set to `null` cancel the global or default entry (see the relevant sections below).
 
 ### Usage Limits
 
@@ -139,12 +139,11 @@ keymaps:
     ctrl: true
 ```
 
-`edit` and `paste` have default keymaps:
+`edit` has a required default keymap:
 
-| Key     | Type  | Default                     | Description                                                                                  |
-| ------- | ----- | --------------------------- | -------------------------------------------------------------------------------------------- |
-| `edit`  | `Key` | `{ name: "g", ctrl: true }` | Call `$LASSO_EDIT` or `$EDITOR __FILE__` to input multi-line prompts                         |
-| `paste` | `Key` | `{ name: "v", ctrl: true }` | Call `$LASSO_EDIT` or `$EDITOR __FILE__` with the current line + clipboard content pasted in |
+| Key    | Type  | Default                     | Description                                                          |
+| ------ | ----- | --------------------------- | -------------------------------------------------------------------- |
+| `edit` | `Key` | `{ name: "g", ctrl: true }` | Call `$LASSO_EDIT` or `$EDITOR __FILE__` to input multi-line prompts |
 
 Pressing a bound key runs the command directly for `edit`/`paste` (editor) and pager commands (`edit-str`, `history`, `config`, `context-str`, `commands-str`); all other commands, builtin or custom, are typed into the prompt. Custom command keymaps use the command's name (its filename without extension).
 
@@ -161,7 +160,7 @@ Each `Key` object has:
 | `meta`  | `boolean` | `false`  |
 | `shift` | `boolean` | `false`  |
 
-You can configure individual keymaps while keeping defaults for others
+You can configure individual keymaps while keeping the required `edit` keymap and any other configured defaults.
 
 Example:
 
@@ -170,12 +169,10 @@ keymaps:
   edit:
     name: x
     ctrl: true
-  paste:
-    name: v
+  history:
+    name: o
     ctrl: true
 ```
-
-Set a keymap to `null` to remove a binding entirely, overriding a global config keymap or a default, e.g. `paste: null` unbinds paste:
 
 ### Example settings.yaml
 
@@ -191,9 +188,6 @@ compactTargetRatio: 0.3
 keymaps:
   edit:
     name: x
-    ctrl: true
-  paste:
-    name: v
     ctrl: true
   history:
     name: o

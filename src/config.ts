@@ -76,8 +76,10 @@ const DefaultedPricingPerModelSchema = z.record(z.string(), ModelPricingSchema);
 const DefaultedContextWindowPerModelSchema = z.record(z.string(), z.number());
 const CompactTriggerRatioSchema = z.number().min(0).max(1);
 const CompactTargetRatioSchema = z.number().min(0).max(1);
-const KeymapsSchema = z.record(z.string(), KeySchema.nullable());
-const DefaultedKeymapsSchema = z.record(z.string(), KeySchema);
+const KeymapsSchema = z.record(z.string(), KeySchema);
+const DefaultedKeymapsSchema = z
+  .object({ edit: KeySchema })
+  .catchall(KeySchema);
 const CustomSlashCommandDirsSchema = z.array(z.string());
 const CustomSkillDirsSchema = z.array(z.string());
 const SubagentModelsSchema = z.array(z.string());
@@ -157,10 +159,6 @@ export const defaultConfig: DefaultedConfig = {
   keymaps: {
     edit: {
       name: "g",
-      ctrl: true,
-    },
-    paste: {
-      name: "v",
       ctrl: true,
     },
   },
@@ -336,11 +334,11 @@ export function initStateFromConfig() {
       globalConfig.subagentModels ??
       defaultConfig.subagentModels,
   );
-  const defaultedKeymaps = filterNulls({
+  const defaultedKeymaps = {
     ...defaultConfig.keymaps,
     ...globalConfig.keymaps,
     ...localConfig.keymaps,
-  });
+  };
   const hashableKeymaps = Object.entries(defaultedKeymaps).map(
     ([command, keymap]) => ({
       command,

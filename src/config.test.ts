@@ -47,6 +47,14 @@ describe("config", () => {
     );
   });
 
+  it("requires edit in the defaulted keymaps", () => {
+    const result = DefaultedConfigSchema.safeParse({
+      ...defaultConfig,
+      keymaps: {},
+    });
+    assert.equal(result.success, false);
+  });
+
   describe("when local config exists", () => {
     it("uses its model over the global config, default config", async () => {
       testFs._files.set(
@@ -351,7 +359,6 @@ describe("config", () => {
           ...testConfig,
           keymaps: {
             edit: { name: "v", ctrl: false, meta: false, shift: false },
-            paste: { name: "p", ctrl: false, meta: false, shift: false },
             history: { name: "o", ctrl: false, meta: false, shift: false },
             clear: { name: "j", ctrl: false, meta: false, shift: false },
           },
@@ -363,7 +370,6 @@ describe("config", () => {
           ...testConfig,
           keymaps: {
             edit: { name: "e", ctrl: true, meta: false, shift: false },
-            paste: { name: "t", ctrl: true, meta: false, shift: false },
             history: { name: "l", ctrl: true, meta: false, shift: false },
             clear: { name: "k", ctrl: true, meta: false, shift: false },
             skills: { name: "s", ctrl: true, meta: false, shift: false },
@@ -373,14 +379,8 @@ describe("config", () => {
 
       await initState();
 
-      assert.deepEqual(getState().config.keymaps["edit"], {
+      assert.deepEqual(getState().config.keymaps.edit, {
         name: "e",
-        ctrl: true,
-        meta: false,
-        shift: false,
-      });
-      assert.deepEqual(getState().config.keymaps["paste"], {
-        name: "t",
         ctrl: true,
         meta: false,
         shift: false,
@@ -403,41 +403,6 @@ describe("config", () => {
         meta: false,
         shift: false,
       });
-    });
-
-    it("removes keymaps set to null in the local config", async () => {
-      testFs._files.set(
-        getGlobalConfigPath(),
-        JSON.stringify({
-          ...testConfig,
-          keymaps: {
-            edit: { name: "e", ctrl: true, meta: false, shift: false },
-            paste: { name: "p", ctrl: true, meta: false, shift: false },
-            history: { name: "o", ctrl: false, meta: false, shift: false },
-          },
-        }),
-      );
-      testFs._files.set(
-        getLocalConfigPath(),
-        JSON.stringify({
-          ...testConfig,
-          keymaps: {
-            paste: null,
-            history: null,
-          },
-        }),
-      );
-
-      await initState();
-
-      assert.deepEqual(getState().config.keymaps["edit"], {
-        name: "e",
-        ctrl: true,
-        meta: false,
-        shift: false,
-      });
-      assert.equal(getState().config.keymaps["paste"], undefined);
-      assert.equal(getState().config.keymaps["history"], undefined);
     });
 
     it("uses its customSlashCommandDirs over the global config, default config", async () => {
@@ -955,16 +920,12 @@ describe("config", () => {
 
       await initState();
 
-      assert.deepEqual(getState().config.keymaps["edit"], {
+      assert.deepEqual(getState().config.keymaps.edit, {
         name: "v",
         ctrl: false,
         meta: false,
         shift: false,
       });
-      assert.deepEqual(
-        getState().config.keymaps["paste"],
-        defaultConfig.keymaps["paste"],
-      );
       assert.strictEqual(getState().config.keymaps["history"], undefined);
       assert.strictEqual(getState().config.keymaps["clear"], undefined);
     });
@@ -1081,7 +1042,6 @@ describe("config", () => {
             ...testConfig,
             keymaps: {
               edit: { name: "v", ctrl: false, meta: false, shift: false },
-              paste: { name: "p", ctrl: false, meta: false, shift: false },
               history: {
                 name: "o",
                 ctrl: false,
@@ -1095,14 +1055,8 @@ describe("config", () => {
 
         await initState();
 
-        assert.deepEqual(getState().config.keymaps["edit"], {
+        assert.deepEqual(getState().config.keymaps.edit, {
           name: "v",
-          ctrl: false,
-          meta: false,
-          shift: false,
-        });
-        assert.deepEqual(getState().config.keymaps["paste"], {
-          name: "p",
           ctrl: false,
           meta: false,
           shift: false,
