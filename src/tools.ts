@@ -10,7 +10,7 @@ import {
   tryCatchAsync,
   execPromise,
   truncate,
-  getTempFileName,
+  createToolCallDiffer,
 } from "./utils.ts";
 import { print, fencePrint, printNewline, checkDelta } from "./print.ts";
 import { getState } from "./state.ts";
@@ -607,7 +607,7 @@ export async function createSubagentTool(
         return { ...readTools, ...writeTools };
       })();
 
-      const toolCallIdToTempFile = new Map<string, string>();
+      const toolCallDiffer = createToolCallDiffer();
 
       const message = `[${model}] ${subagentSchema.prompt}`;
       toolPrint("   create_subagent", message);
@@ -634,19 +634,15 @@ export async function createSubagentTool(
 
             switch (toolCall.toolName as ToolName) {
               case "create_file": {
-                toolCallIdToTempFile.set(
-                  toolCall.toolCallId,
-                  getTempFileName(),
-                );
+                toolCallDiffer.setTempFileBefore(toolCall.toolCallId);
                 break;
               }
               case "insert_lines":
               case "str_replace": {
                 const { path } = objectWithPathSchema.parse(toolCall.input);
-                toolCallIdToTempFile.set(
-                  toolCall.toolCallId,
-                  getTempFileName({ initialContentPath: path }),
-                );
+                toolCallDiffer.setTempFileBefore(toolCall.toolCallId, {
+                  initialContentPath: path,
+                });
                 break;
               }
             }
@@ -664,29 +660,12 @@ export async function createSubagentTool(
               case "create_file":
               case "insert_lines":
               case "str_replace": {
-                const tempFileBefore = toolCallIdToTempFile.get(
-                  toolCall.toolCallId,
-                );
-                if (tempFileBefore === undefined) return;
-
                 if (!success) {
-                  fsDeps.unlinkSync(tempFileBefore);
-                  toolCallIdToTempFile.delete(toolCall.toolCallId);
+                  toolCallDiffer.cleanupTempFileBefore(toolCall.toolCallId);
                   return;
                 }
-
                 const { path } = objectWithPathSchema.parse(toolCall.input);
-                const tempFileAfter = getTempFileName({
-                  initialContentPath: path,
-                });
-                await printGitDiff({
-                  tempFileBeforePath: tempFileBefore,
-                  tempFileAfterPath: tempFileAfter,
-                  path,
-                });
-                fsDeps.unlinkSync(tempFileBefore);
-                fsDeps.unlinkSync(tempFileAfter);
-                toolCallIdToTempFile.delete(toolCall.toolCallId);
+                await toolCallDiffer.diffAndCleanup(toolCall.toolCallId, path);
                 break;
               }
             }
@@ -695,9 +674,7 @@ export async function createSubagentTool(
       );
 
       if (!generateTextResult.ok) {
-        for (const tempFile of toolCallIdToTempFile.values()) {
-          fsDeps.unlinkSync(tempFile);
-        }
+        toolCallDiffer.cleanupAllTempFileBefore();
         cleanup();
         const timeoutResult = resolveTimeoutError({
           error: generateTextResult.error,
@@ -714,9 +691,7 @@ export async function createSubagentTool(
 
       const { totalUsage, text } = generateTextResult.value;
       await appendModelUsage(totalUsage, model);
-      for (const tempFile of toolCallIdToTempFile.values()) {
-        fsDeps.unlinkSync(tempFile);
-      }
+      toolCallDiffer.cleanupAllTempFileBefore();
       cleanup();
 
       return {

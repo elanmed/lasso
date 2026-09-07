@@ -4,20 +4,14 @@ import {
   isAbortError,
   tryCatchAsync,
   getMessageFromError,
-  getTempFileName,
   createToolCallDiffer,
 } from "./utils.ts";
 import { print, startLoadingState, stopLoadingState } from "./print.ts";
 import { appendModelUsage } from "./usage.ts";
 import { BASE_SYSTEM_PROMPT } from "./context.ts";
-import {
-  objectWithPathSchema,
-  printGitDiff,
-  tools,
-  type ToolName,
-} from "./tools.ts";
+import { objectWithPathSchema, tools, type ToolName } from "./tools.ts";
 import assert from "node:assert";
-import { aiDeps, fsDeps, MISSING } from "./deps.ts";
+import { aiDeps, MISSING } from "./deps.ts";
 import { appendToChatHistory } from "./log.ts";
 import { getLanguageModel } from "./model.ts";
 

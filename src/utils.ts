@@ -294,9 +294,6 @@ function sleep(ms: number) {
   });
 }
 
-// TODO: just update imports from deps
-export { MISSING } from "./deps.ts";
-
 export function createToolCallDiffer() {
   const toolCallIdToTempFileBefore = new Map<string, string>();
 

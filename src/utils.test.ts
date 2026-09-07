@@ -12,6 +12,7 @@ import {
   openWithPager,
   createQueue,
   createLockUtils,
+  createToolCallDiffer,
   truncate,
   listChatHistoryFiles,
 } from "./utils.ts";
@@ -22,6 +23,7 @@ import {
   setupTestContext,
   mockPagerSpawn,
   mockBatAvailable,
+  mockExecCalls,
   batPagerCmd,
 } from "./test-helpers.ts";
 import { fsDeps, processDeps } from "./deps.ts";
@@ -230,6 +232,78 @@ describe("utils", () => {
           }),
         /falsy value/,
       );
+
+      describe("createToolCallDiffer", () => {
+        it("creates and cleans up a tool call snapshot", () => {
+          testFs._files.set("/source/file.txt", "original content");
+          const differ = createToolCallDiffer();
+
+          differ.setTempFileBefore("call-1", {
+            initialContentPath: "/source/file.txt",
+          });
+
+          assert.strictEqual(
+            testFs._files.get("/tmp/lasso-test-uuid.txt"),
+            "original content",
+          );
+          assert.strictEqual(
+            differ.getTempFileBefore("call-1"),
+            "/tmp/lasso-test-uuid.txt",
+          );
+
+          differ.cleanupTempFileBefore("call-1");
+
+          assert.strictEqual(
+            testFs._files.has("/tmp/lasso-test-uuid.txt"),
+            false,
+          );
+          assert.strictEqual(
+            differ.toolCallIdToTempFileBefore.has("call-1"),
+            false,
+          );
+        });
+
+        it("diffs and cleans up a successful tool call", async () => {
+          testFs._files.set("/test/file.txt", "original content");
+          const commands: string[] = [];
+          const differ = createToolCallDiffer();
+          mockExecCalls(
+            [{ stdout: "delta 0.18.2" }, { stdout: "diff output" }],
+            commands,
+          );
+
+          differ.setTempFileBefore("call-1", {
+            initialContentPath: "/test/file.txt",
+          });
+          await differ.diffAndCleanup("call-1", "/test/file.txt");
+
+          assert.strictEqual(
+            commands[1],
+            "git diff --no-index --color=always -U3 /tmp/lasso-test-uuid.txt /tmp/lasso-test-uuid.txt | delta --paging=never --line-numbers --hunk-header-style=omit --file-style=omit",
+          );
+          assert.strictEqual(
+            testFs._files.has("/tmp/lasso-test-uuid.txt"),
+            false,
+          );
+          assert.strictEqual(
+            differ.toolCallIdToTempFileBefore.has("call-1"),
+            false,
+          );
+        });
+
+        it("cleans up all outstanding tool call snapshots", () => {
+          const differ = createToolCallDiffer();
+          differ.setTempFileBefore("call-1");
+          differ.setTempFileBefore("call-2");
+
+          differ.cleanupAllTempFileBefore();
+
+          assert.strictEqual(
+            testFs._files.has("/tmp/lasso-test-uuid.txt"),
+            false,
+          );
+        });
+      });
     });
   });
   describe("openWithPager", () => {
