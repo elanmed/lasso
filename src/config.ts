@@ -189,10 +189,17 @@ export function readConfigFile(path: string): Partial<Config> {
 
   const parseResult = tryCatch((): unknown => YAML.parse(configFileStr));
   if (!parseResult.ok) {
-    throw new Error(`Failed to parse config at ${path} as YAML`);
+    throw new Error(`\`${path}\` is invalid YAML!`);
   }
 
-  return ConfigSchema.parse(parseResult.value);
+  const configResult = ConfigSchema.safeParse(parseResult.value);
+  if (configResult.success) return configResult.data;
+  throw new Error(`Config at \`${path}\` has an invalid option!
+
+${configResult.error}
+
+Update your config and try again.
+`);
 }
 
 export function blockOnMissingConfig() {

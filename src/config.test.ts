@@ -1325,7 +1325,7 @@ describe("config", () => {
 
     await assert.rejects(
       initState(),
-      /Failed to parse config at \/fake-home\/\.config\/lasso\/settings\.yaml as YAML/,
+      /`\/fake-home\/\.config\/lasso\/settings\.yaml` is invalid YAML!/,
     );
   });
 
@@ -1334,7 +1334,37 @@ describe("config", () => {
 
     await assert.rejects(
       initState(),
-      /Failed to parse config at \/test-cwd\/\.lasso\/settings\.yaml as YAML/,
+      /`\/test-cwd\/\.lasso\/settings\.yaml` is invalid YAML!/,
+    );
+  });
+
+  it("throws on invalid global config option", async () => {
+    testFs._files.set(
+      getGlobalConfigPath(),
+      JSON.stringify({
+        ...testConfig,
+        invalidOption: true,
+      }),
+    );
+
+    await assert.rejects(
+      initState(),
+      /Config at `\/fake-home\/\.config\/lasso\/settings\.yaml` has an invalid option!/,
+    );
+  });
+
+  it("throws on invalid local config option", async () => {
+    testFs._files.set(
+      getLocalConfigPath(),
+      JSON.stringify({
+        ...testConfig,
+        invalidOption: true,
+      }),
+    );
+
+    await assert.rejects(
+      initState(),
+      /Config at `\/test-cwd\/\.lasso\/settings\.yaml` has an invalid option!/,
     );
   });
 
