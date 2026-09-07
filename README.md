@@ -6,7 +6,7 @@ _A minimal agent harness to rein in your llm_
 
 ## Features
 
-- **Minimal**: ~4,250 lines of source code, ~8,500 lines of tests
+- **Minimal**: ~4,300 lines of source code, ~8,600 lines of tests
   - Responses are piped through `bat` to render markdown
   - Multi-line input is supported by spawning an editor of your choice
   - A message queue lets you batch multiple prompts in the editor, sent one per turn
