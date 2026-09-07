@@ -8,7 +8,7 @@
   "private": true,
   "scripts": {
     "start": "node src/index.ts",
-    "test": "node --test src/**/*.test.ts scripts/**/*.test.ts",
+    "test": "CI=true node --test src/**/*.test.ts scripts/**/*.test.ts",
     "lint": "eslint src scripts",
     "types": "tsc",
     "prettier-format": "./scripts/prettier.sh write",
@@ -16,7 +16,7 @@
     "cloc-source": "node scripts/cloc.ts source",
     "cloc-tests": "node scripts/cloc.ts tests",
     "cloc": "pnpm run cloc-source && pnpm run cloc-tests",
-    "ci": "pnpm run test && pnpm run lint && pnpm run types && pnpm run prettier-format && pnpm run cloc",
+    "ci": "CI=true pnpm run test && pnpm run lint && pnpm run types && pnpm run prettier-format && pnpm run cloc",
     "pre-push": "pnpm run test && pnpm run lint && pnpm run types && pnpm run prettier-check",
     "compile": "./scripts/compile.sh"
   },
