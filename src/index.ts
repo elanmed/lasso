@@ -2,12 +2,11 @@ import { fileURLToPath } from "node:url";
 import { getMessageFromError } from "./utils.ts";
 import {
   print,
-  executeBat,
   fencePrint,
   printNewline,
   printSessionStartDate,
-  warnOnMissingBat,
 } from "./print.ts";
+import { executeBat, warnOnMissingBat } from "./terminal.ts";
 import { initState, blockOnMissingConfig } from "./config.ts";
 import {
   initKeypress,

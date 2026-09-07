@@ -1,15 +1,16 @@
 import type { ModelMessage } from "ai";
 import { actions, getState } from "./state.ts";
-import {
-  isAbortError,
-  tryCatchAsync,
-  getMessageFromError,
-  createToolCallDiffer,
-} from "./utils.ts";
+import { isAbortError, tryCatchAsync, getMessageFromError } from "./utils.ts";
+import { createToolCallDiffer } from "./differ.ts";
 import { print, startLoadingState, stopLoadingState } from "./print.ts";
 import { appendModelUsage } from "./usage.ts";
-import { BASE_SYSTEM_PROMPT } from "./context.ts";
-import { objectWithPathSchema, tools, type ToolName } from "./tools.ts";
+import { BASE_SYSTEM_PROMPT } from "./prompts.ts";
+import {
+  objectWithPathSchema,
+  printGitDiff,
+  tools,
+  type ToolName,
+} from "./tools.ts";
 import assert from "node:assert";
 import { aiDeps, MISSING } from "./deps.ts";
 import { appendToChatHistory } from "./log.ts";
@@ -23,7 +24,7 @@ function getApiStreamAbortSignal() {
 }
 
 export async function resolveApiCall(userInput: string) {
-  const toolCallDiffer = createToolCallDiffer();
+  const toolCallDiffer = createToolCallDiffer(printGitDiff);
 
   const inputMessageParam: ModelMessage = {
     role: "user",

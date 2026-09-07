@@ -12,7 +12,7 @@ import {
   makeGenerateTextResult,
 } from "./test-helpers.ts";
 import { aiDeps } from "./deps.ts";
-import { BASE_SYSTEM_PROMPT } from "./context.ts";
+import { BASE_SYSTEM_PROMPT } from "./prompts.ts";
 import type { ModelMessage } from "ai";
 
 describe("api", () => {

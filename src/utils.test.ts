@@ -1,6 +1,5 @@
 import { describe, it, beforeEach, mock } from "node:test";
 import assert from "node:assert";
-import childProcess from "node:child_process";
 
 import {
   isAbortError,
@@ -9,24 +8,13 @@ import {
   normalizeLine,
   getMessageFromError,
   getTempFileName,
-  openWithPager,
   createQueue,
   createLockUtils,
-  createToolCallDiffer,
   truncate,
   listChatHistoryFiles,
   getStrFromAssistantContent,
 } from "./utils.ts";
-import {
-  testFs,
-  testProcessEnv,
-  mockSetTimeout,
-  setupTestContext,
-  mockPagerSpawn,
-  mockBatAvailable,
-  mockExecCalls,
-  batPagerCmd,
-} from "./test-helpers.ts";
+import { testFs, mockSetTimeout, setupTestContext } from "./test-helpers.ts";
 import { fsDeps, processDeps } from "./deps.ts";
 
 describe("utils", () => {
@@ -256,193 +244,6 @@ describe("utils", () => {
           }),
         /falsy value/,
       );
-
-      describe("createToolCallDiffer", () => {
-        it("creates and cleans up a tool call snapshot", () => {
-          testFs._files.set("/source/file.txt", "original content");
-          const differ = createToolCallDiffer();
-
-          differ.setTempFileBefore("call-1", {
-            initialContentPath: "/source/file.txt",
-          });
-
-          assert.strictEqual(
-            testFs._files.get("/tmp/lasso-test-uuid.txt"),
-            "original content",
-          );
-          assert.strictEqual(
-            differ.getTempFileBefore("call-1"),
-            "/tmp/lasso-test-uuid.txt",
-          );
-
-          differ.cleanupTempFileBefore("call-1");
-
-          assert.strictEqual(
-            testFs._files.has("/tmp/lasso-test-uuid.txt"),
-            false,
-          );
-          assert.strictEqual(
-            differ.toolCallIdToTempFileBefore.has("call-1"),
-            false,
-          );
-        });
-
-        it("diffs and cleans up a successful tool call", async () => {
-          testFs._files.set("/test/file.txt", "original content");
-          const commands: string[] = [];
-          const differ = createToolCallDiffer();
-          mockExecCalls(
-            [{ stdout: "delta 0.18.2" }, { stdout: "diff output" }],
-            commands,
-          );
-
-          differ.setTempFileBefore("call-1", {
-            initialContentPath: "/test/file.txt",
-          });
-          await differ.diffAndCleanup("call-1", "/test/file.txt");
-
-          assert.strictEqual(
-            commands[1],
-            "git diff --no-index --color=always -U3 /tmp/lasso-test-uuid.txt /tmp/lasso-test-uuid.txt | delta --paging=never --line-numbers --hunk-header-style=omit --file-style=omit",
-          );
-          assert.strictEqual(
-            testFs._files.has("/tmp/lasso-test-uuid.txt"),
-            false,
-          );
-          assert.strictEqual(
-            differ.toolCallIdToTempFileBefore.has("call-1"),
-            false,
-          );
-        });
-
-        it("cleans up all outstanding tool call snapshots", () => {
-          const differ = createToolCallDiffer();
-          differ.setTempFileBefore("call-1");
-          differ.setTempFileBefore("call-2");
-
-          differ.cleanupAllTempFileBefore();
-
-          assert.strictEqual(
-            testFs._files.has("/tmp/lasso-test-uuid.txt"),
-            false,
-          );
-        });
-      });
-    });
-  });
-  describe("openWithPager", () => {
-    let spawned: string[];
-
-    beforeEach(() => {
-      spawned = mockPagerSpawn().spawned;
-      mockBatAvailable(true);
-    });
-
-    it("uses pagerEnvKey env var with __FILE__ replacement", async () => {
-      testProcessEnv._set("LASSO_PAGER_HISTORY", "nano __FILE__");
-      await openWithPager({
-        pagerEnvKey: "LASSO_PAGER_HISTORY",
-        contentType: "markdown",
-      });
-      assert.strictEqual(spawned[0], "nano /tmp/lasso-test-uuid.txt");
-    });
-
-    it("falls back to LASSO_PAGER env var", async () => {
-      testProcessEnv._set("LASSO_PAGER", "bat __FILE__");
-      await openWithPager({
-        pagerEnvKey: "LASSO_PAGER_HISTORY",
-        contentType: "markdown",
-      });
-      assert.strictEqual(spawned[0], "bat /tmp/lasso-test-uuid.txt");
-    });
-
-    it("falls back to PAGER env var with quoted temp file", async () => {
-      testProcessEnv._set("PAGER", "more");
-      await openWithPager({
-        pagerEnvKey: "LASSO_PAGER_HISTORY",
-        contentType: "markdown",
-      });
-      assert.strictEqual(spawned[0], `more "/tmp/lasso-test-uuid.txt"`);
-    });
-
-    it("falls back to bat", async () => {
-      await openWithPager({
-        pagerEnvKey: "LASSO_PAGER_HISTORY",
-        contentType: "markdown",
-      });
-      assert.strictEqual(spawned[0], batPagerCmd("/tmp/lasso-test-uuid.txt"));
-    });
-
-    it("uses base bat flags without markdown flags for diff contentType", async () => {
-      await openWithPager({
-        pagerEnvKey: "LASSO_PAGER_HISTORY",
-        contentType: "diff",
-      });
-      assert.strictEqual(
-        spawned[0],
-        batPagerCmd("/tmp/lasso-test-uuid.txt", "diff"),
-      );
-    });
-
-    it("copies initial content into the temp file", async () => {
-      testFs._files.set("/source/file.txt", "initial content");
-      await openWithPager({
-        pagerEnvKey: "LASSO_PAGER_HISTORY",
-        initialContentPath: "/source/file.txt",
-        contentType: "markdown",
-      });
-      assert.strictEqual(
-        testFs._files.get("/tmp/lasso-test-uuid.txt"),
-        "initial content",
-      );
-    });
-
-    it("spawns pager with shell and inherit stdio", async () => {
-      let spawnArgs: unknown[] = [];
-      mock.method(childProcess, "spawnSync", (...args: unknown[]) => {
-        spawnArgs = args;
-      });
-      await openWithPager({
-        pagerEnvKey: "LASSO_PAGER_HISTORY",
-        contentType: "markdown",
-      });
-      assert.deepStrictEqual(spawnArgs, [
-        batPagerCmd("/tmp/lasso-test-uuid.txt"),
-        { shell: true, stdio: "inherit" },
-      ]);
-    });
-
-    it("writes initialContentStr into the temp file", async () => {
-      await openWithPager({
-        pagerEnvKey: "LASSO_PAGER_HISTORY",
-        initialContentStr: "string content",
-        contentType: "markdown",
-      });
-      assert.strictEqual(
-        testFs._files.get("/tmp/lasso-test-uuid.txt"),
-        "string content",
-      );
-    });
-
-    it("throws when both initialContentPath and initialContentStr are provided", async () => {
-      await assert.rejects(
-        openWithPager({
-          pagerEnvKey: "LASSO_PAGER_HISTORY",
-          initialContentPath: "/source/file.txt",
-          initialContentStr: "string content",
-          contentType: "markdown",
-        }),
-        /falsy value/,
-      );
-    });
-
-    it("falls back to less when bat is unavailable", async () => {
-      mockBatAvailable(false);
-      await openWithPager({
-        pagerEnvKey: "LASSO_PAGER_HISTORY",
-        contentType: "markdown",
-      });
-      assert.strictEqual(spawned[0], `less "/tmp/lasso-test-uuid.txt"`);
     });
   });
 

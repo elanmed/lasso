@@ -9,10 +9,10 @@ import {
   type ModelPricing,
   type SdkProvider,
   type UsageLimit,
-} from "./config.ts";
+} from "./config-types.ts";
 import { MISSING } from "./deps.ts";
 import { getShortId, stringify } from "./utils.ts";
-import { debugLog } from "./log.ts";
+import { debugLog } from "./debug-log.ts";
 import type { ModelUsage } from "./usage.ts";
 import type { ContextEntry, Skill } from "./context.ts";
 
@@ -120,7 +120,11 @@ let state: State = createInitialState();
 export const getState = () => state;
 
 const logStateChange = (actionType: string, before: string, after: string) => {
-  debugLog(`dispatch ${actionType}: before=${before}, after=${after}`);
+  debugLog(
+    state.app.debugLog,
+    state.app.debugLogPath,
+    `dispatch ${actionType}: before=${before}, after=${after}`,
+  );
 };
 
 export const actions = {

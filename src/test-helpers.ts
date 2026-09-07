@@ -5,10 +5,10 @@ import { mock } from "node:test";
 import { aiDeps, fsDeps, processDeps } from "./deps.ts";
 import { actions } from "./state.ts";
 import { initKeypress } from "./input.ts";
-import type { Key } from "./config.ts";
+import type { Key } from "./config-types.ts";
 import readline from "node:readline/promises";
 import { stdin } from "node:process";
-import { baseBatFlags, markdownBatFlags } from "./print.ts";
+import { baseBatFlags, markdownBatFlags } from "./terminal.ts";
 
 export interface FakeFsDeps {
   _files: Map<string, string>;

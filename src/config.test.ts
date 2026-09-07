@@ -5,11 +5,9 @@ import {
   initState,
   initStateForDebug,
   initStateRepeatable,
-  defaultConfig,
-  ConfigSchema,
-  DefaultedConfigSchema,
   blockOnMissingConfig,
 } from "./config.ts";
+import { defaultConfig, DefaultedConfigSchema } from "./config-types.ts";
 import { MISSING } from "./deps.ts";
 import {
   getGlobalConfigPath,
@@ -38,13 +36,6 @@ describe("config", () => {
     mock.method(Date, "now", () => 0);
     setupTestContext();
     mock.method(parseCliArgsDeps, "getArgv", () => ["node", "script.js"]);
-  });
-
-  it("ConfigSchema and DefaultedConfigSchema have the same keys", () => {
-    assert.deepStrictEqual(
-      Object.keys(ConfigSchema.shape).sort(),
-      Object.keys(DefaultedConfigSchema.shape).sort(),
-    );
   });
 
   it("requires edit in the defaulted keymaps", () => {

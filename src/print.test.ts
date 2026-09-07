@@ -1,21 +1,16 @@
 import { describe, it, beforeEach, mock } from "node:test";
 import assert from "node:assert";
 import {
-  formatMarkdown,
   getPrettyApiDuration,
-  executeBat,
   startLoadingState,
   stopLoadingState,
   colorPrint,
   fencePrint,
   printSessionStartDate,
-  warnOnMissingBat,
 } from "./print.ts";
 import { actions } from "./state.ts";
 import {
   stripAnsi,
-  mockExec,
-  mockSpawnSync,
   mockStdout,
   mockSetInterval,
   mockClearInterval,
@@ -26,33 +21,6 @@ import {
 describe("print", () => {
   beforeEach(() => {
     setupFakeDeps();
-  });
-
-  describe("formatMarkdown", () => {
-    it("formats markdown tables with aligned columns", async () => {
-      const unaligned = `|a|b|
-|-|-|
-|x|y|`;
-      const result = await formatMarkdown(unaligned);
-      assert.strictEqual(
-        result,
-        `| a   | b   |
-| --- | --- |
-| x   | y   |
-`,
-      );
-    });
-
-    it("returns original content and warns when formatting fails", async () => {
-      const getCaptured = mockStdout();
-      const invalid = null as unknown as string;
-      const result = await formatMarkdown(invalid);
-      assert.equal(result, invalid);
-      assert.strictEqual(
-        stripAnsi(getCaptured()),
-        "Outputting raw content, markdown formatting failed: Cannot read properties of null (reading 'length')\n",
-      );
-    });
   });
 
   describe("startLoadingState", () => {
@@ -223,156 +191,6 @@ describe("print", () => {
       actions.setApiEndTime();
       const result = getPrettyApiDuration();
       assert.strictEqual(result, "0ms");
-    });
-  });
-
-  describe("executeBat", () => {
-    beforeEach(() => {
-      mock.restoreAll();
-      actions.resetState();
-      actions.setModel("test-model");
-    });
-
-    it("formats markdown and outputs the content through bat when available", async () => {
-      mockExec({ stdout: "bat 0.26.1\n" });
-      mockSpawnSync({ echoInput: true });
-
-      const getCaptured = mockStdout();
-
-      await executeBat("# Hello\n");
-
-      assert.strictEqual(stripAnsi(getCaptured()), "# Hello\n\n");
-    });
-
-    it("falls back to plain text when bat is not available", async () => {
-      mockExec({ stdout: "", error: new Error("not found") });
-
-      const getCaptured = mockStdout();
-
-      await executeBat("test content\n");
-
-      assert.strictEqual(stripAnsi(getCaptured()), "test content\n\n");
-    });
-
-    it("falls back to plain text when bat spawn fails", async () => {
-      mockSpawnSync({ error: new Error("spawn failed") });
-
-      const getCaptured = mockStdout();
-
-      await executeBat("test content\n");
-
-      assert.strictEqual(
-        stripAnsi(getCaptured()),
-        `Falling back to plain text rendering, an error occurred when spawning \`bat\`: spawn failed
-test content
-
-`,
-      );
-    });
-
-    it("falls back to plain text when bat exits with non-zero status", async () => {
-      mockExec({ stdout: "bat 0.25.0" });
-      mockSpawnSync({
-        result: { status: 1, stdout: "bat-rendered\n", stderr: "bat error" },
-      });
-
-      const getCaptured = mockStdout();
-
-      await executeBat("test content\n");
-
-      assert.strictEqual(
-        stripAnsi(getCaptured()),
-        `Falling back to plain text rendering, an error occurred when spawning \`bat\`: \`bat\` returned code 1
-test content
-
-`,
-      );
-    });
-
-    it("prints bat stdout when status is null", async () => {
-      mockExec({ stdout: "bat 0.25.0" });
-      mockSpawnSync({
-        result: { status: null, stdout: "bat-rendered\n", stderr: "" },
-      });
-
-      const getCaptured = mockStdout();
-
-      await executeBat("test content\n");
-
-      assert.strictEqual(stripAnsi(getCaptured()), "bat-rendered\n\n");
-    });
-
-    it("prints bat stdout when stderr is empty", async () => {
-      mockExec({ stdout: "bat 0.25.0" });
-      mockSpawnSync({
-        result: { status: 0, stdout: "bat-rendered\n", stderr: "" },
-      });
-
-      const getCaptured = mockStdout();
-
-      await executeBat("test content\n");
-
-      assert.strictEqual(stripAnsi(getCaptured()), "bat-rendered\n\n");
-    });
-
-    it("falls back to plain text when bat writes stderr", async () => {
-      mockExec({ stdout: "bat 0.25.0" });
-      mockSpawnSync({
-        result: { status: 0, stdout: "bat-rendered\n", stderr: "bat warning" },
-      });
-
-      const getCaptured = mockStdout();
-
-      await executeBat("test content\n");
-
-      assert.strictEqual(
-        stripAnsi(getCaptured()),
-        `Falling back to plain text rendering, an error occurred when spawning \`bat\`: bat warning
-test content
-
-`,
-      );
-    });
-  });
-
-  describe("warnOnMissingBat", () => {
-    beforeEach(() => {
-      mock.restoreAll();
-      actions.resetState();
-    });
-
-    it("warns when bat is not available", async () => {
-      mockExec({ stdout: "", error: new Error("not found") });
-
-      const getCaptured = mockStdout();
-
-      await warnOnMissingBat();
-
-      assert.match(
-        stripAnsi(getCaptured()),
-        /`bat` is not available, consider installing it to properly render markdown responses in the terminal\. Suppress this warning with `suppressBatUnavailableWarning: true` in /,
-      );
-    });
-
-    it("does not warn when bat is available", async () => {
-      mockExec({ stdout: "bat 0.25.0" });
-
-      const getCaptured = mockStdout();
-
-      await warnOnMissingBat();
-
-      assert.strictEqual(getCaptured(), "");
-    });
-
-    it("does not warn when suppressBatUnavailableWarning is set", async () => {
-      mockExec({ stdout: "", error: new Error("not found") });
-      actions.setSuppressBatUnavailableWarning(true);
-
-      const getCaptured = mockStdout();
-
-      await warnOnMissingBat();
-
-      assert.strictEqual(getCaptured(), "");
     });
   });
 

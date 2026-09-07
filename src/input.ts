@@ -14,7 +14,6 @@ import {
   isExisty,
   truncate,
   listChatHistoryFiles,
-  openWithPager,
   stringify,
   getStrFromAssistantContent,
 } from "./utils.ts";
@@ -23,24 +22,26 @@ import {
   printNewline,
   fencePrint,
   printSessionStartDate,
-  formatMarkdown,
 } from "./print.ts";
-import { getPrettyTokenUsage, getPrettyUsage } from "./usage.ts";
-import { basename, dirname, extname, join } from "node:path";
-import { actions, getState, type SlashCommand } from "./state.ts";
+import { getPrettyTokenUsage, getPrettyUsage } from "./usage-format.ts";
+import { dirname, join } from "node:path";
+import { actions, getState } from "./state.ts";
 import childProcess from "node:child_process";
 import os from "node:os";
-import { initStateRepeatable, type Key } from "./config.ts";
+import { initStateRepeatable } from "./config.ts";
+import type { Key } from "./config-types.ts";
 import { appendToChatHistory } from "./log.ts";
 import { fsDeps, processDeps } from "./deps.ts";
-import {
-  getGlobalConfigPath,
-  getGlobalSlashCommandDir,
-  getLocalConfigPath,
-  getLocalSlashCommandDir,
-} from "./paths.ts";
+import { getGlobalConfigPath, getLocalConfigPath } from "./paths.ts";
 import { contextFileSkillNamePrefix } from "./context.ts";
-import { execGitDiff } from "./tools.ts";
+import { execGitDiff } from "./differ.ts";
+import { formatMarkdown, openWithPager } from "./terminal.ts";
+import {
+  builtinSlashCommands,
+  getAvailableCommandsStr,
+  getCustomSlashCommandsStr,
+  type BuiltinSlashCommand,
+} from "./slash-commands.ts";
 
 // https://stackoverflow.com/a/33500118
 const mutedStdout = new Writable({
@@ -513,29 +514,6 @@ export async function resolveInterruptWithEditor() {
   print.error(getMessageFromError(continueResult.error));
 }
 
-const builtinSlashCommands = [
-  "edit",
-  "editpage",
-  "history",
-  "clear",
-  "paste",
-  "model",
-  "skills",
-  "context",
-  "contextpage",
-  "commands",
-  "commandspage",
-  "keymaps",
-  "usage",
-  "resume",
-  "config",
-  "reload",
-  "initlocal",
-  "initglobal",
-  "lastresponse",
-] as const;
-type BuiltinSlashCommand = (typeof builtinSlashCommands)[number];
-
 type ParameterizedBuiltinSlashCommand = "resume" | "model";
 
 interface SlashCommandOutcome {
@@ -967,18 +945,6 @@ ${readResult.value}
   return null;
 }
 
-function getAvailableCommandsStr() {
-  const customCommandsFormatted = getState().app.slashCommands.map(
-    (command) => `- ${command.filePath}`,
-  );
-
-  const builtinCommandsFormatted = builtinSlashCommands.map(
-    (command) => `- /${command}`,
-  );
-
-  return builtinCommandsFormatted.concat(customCommandsFormatted).join("\n");
-}
-
 export function isSameKey(a: Key, b: Key) {
   return (
     a.name === b.name &&
@@ -1017,20 +983,6 @@ ${markdownFence("yaml", getState().app.localConfigStr)}
 # Applied config
 
 ${markdownFence("json", stringify(getState().config))}`;
-}
-
-function getCustomSlashCommandsStr() {
-  const contents = getState()
-    .app.slashCommands.map(
-      ({ content, filePath }) => `## ${filePath}
-
-${content}`,
-    )
-    .join("\n\n");
-
-  return `# [lasso] Slash commands:
-
-${contents}`;
 }
 
 const reloadTempFilePrefixes = [
@@ -1231,36 +1183,4 @@ export function clearRlLine(): readline.Interface | null {
   rl.write(null, { ctrl: true, name: "e" });
   rl.write(null, { ctrl: true, name: "u" });
   return rl;
-}
-
-export function getAvailableSlashCommands() {
-  const seenSlashCommands = new Set<string>();
-
-  const entries: SlashCommand[] = [];
-  const slashCommandFilePaths: string[] = [];
-
-  const slashCommandDirs = [
-    ...getState().config.customSlashCommandDirs,
-    getLocalSlashCommandDir(),
-    getGlobalSlashCommandDir(),
-  ];
-
-  for (const dir of slashCommandDirs) {
-    const glob = join(dir, "**/*.md");
-    const globResult = tryCatch(() => fsDeps.globbySync(glob));
-    if (!globResult.ok) continue;
-    slashCommandFilePaths.push(...globResult.value);
-  }
-
-  for (const filePath of slashCommandFilePaths) {
-    const readResult = tryCatch(() => fsDeps.readFileSync(filePath).toString());
-    if (!readResult.ok) continue;
-    const name = basename(filePath, extname(filePath));
-    if (seenSlashCommands.has(name)) continue;
-    seenSlashCommands.add(name);
-
-    entries.push({ filePath, name, content: readResult.value });
-  }
-
-  return entries;
 }

@@ -1,6 +1,5 @@
 import { tool, type ModelMessage } from "ai";
 import { z } from "zod";
-import os from "node:os";
 import {
   getMessageFromError,
   isAbortError,
@@ -10,16 +9,15 @@ import {
   tryCatchAsync,
   execPromise,
   truncate,
-  createToolCallDiffer,
 } from "./utils.ts";
-import { print, fencePrint, printNewline, checkDelta } from "./print.ts";
+import { createToolCallDiffer, execGitDiff } from "./differ.ts";
+import { print, fencePrint, printNewline } from "./print.ts";
 import { getState } from "./state.ts";
-import { BASE_SYSTEM_PROMPT } from "./context.ts";
+import { BASE_SYSTEM_PROMPT } from "./prompts.ts";
 import { getLanguageModel } from "./model.ts";
 import { Window } from "happy-dom";
 import { Readability } from "@mozilla/readability";
 import { aiDeps, fsDeps } from "./deps.ts";
-import childProcess from "node:child_process";
 import { appendModelUsage } from "./usage.ts";
 
 const userAgent =
@@ -607,7 +605,7 @@ export async function createSubagentTool(
         return { ...readTools, ...writeTools };
       })();
 
-      const toolCallDiffer = createToolCallDiffer();
+      const toolCallDiffer = createToolCallDiffer(printGitDiff);
 
       const message = `[${model}] ${subagentSchema.prompt}`;
       toolPrint("   create_subagent", message);
@@ -833,41 +831,4 @@ export async function printGitDiff({
     print(normalizeLine(diffResult.value.stdout));
     printNewline();
   }
-}
-
-export async function execGitDiff(opts: {
-  tempFileBeforePath: string;
-  tempFileAfterPath: string;
-  includeFilename?: boolean;
-}): Promise<{ stdout: string; stderr: string }> {
-  const isDeltaAvailable = await checkDelta();
-  const linesGitDiffCmd = `git diff --no-index --color=always -U3 ${opts.tempFileBeforePath} ${opts.tempFileAfterPath}`;
-
-  const cmd = (() => {
-    if (isDeltaAvailable) {
-      const fileStyle = (() => {
-        if (opts.includeFilename === true) return "normal";
-        return "omit";
-      })();
-      return `${linesGitDiffCmd} | delta --paging=never --line-numbers --hunk-header-style=omit --file-style=${fileStyle}`;
-    }
-    return linesGitDiffCmd;
-  })();
-
-  const isErrorCode = (() => {
-    if (isDeltaAvailable) {
-      return (status: number) => status > 1;
-    }
-    return (status: number) => status >= 128;
-  })();
-
-  return new Promise((resolve, reject) => {
-    childProcess.exec(cmd, { cwd: os.tmpdir() }, (error, stdout, stderr) => {
-      if (error?.code !== undefined && isErrorCode(error.code)) {
-        reject(error);
-      } else {
-        resolve({ stdout, stderr });
-      }
-    });
-  });
 }

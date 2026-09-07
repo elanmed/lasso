@@ -1,7 +1,7 @@
 import { describe, it, beforeEach, mock } from "node:test";
 import assert from "node:assert";
 import { actions, getState } from "./state.ts";
-import { defaultConfig } from "./config.ts";
+import { defaultConfig } from "./config-types.ts";
 import { MISSING } from "./deps.ts";
 import { makeFakeRl, setupTestContext } from "./test-helpers.ts";
 

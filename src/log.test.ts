@@ -2,7 +2,6 @@ import { describe, it, beforeEach, mock } from "node:test";
 import assert from "node:assert/strict";
 
 import {
-  debugLog,
   appendToChatHistory,
   initPromptHistory,
   deleteExpiredPromptHistory,
@@ -14,57 +13,6 @@ import { fsDeps } from "./deps.ts";
 describe("log", () => {
   beforeEach(() => {
     setupTestContext();
-  });
-
-  describe("debugLog", () => {
-    beforeEach(() => {
-      mock.restoreAll();
-      setupTestContext({ now: 1_700_000_000_000 });
-      actions.setDebugLogPath("/fake-home/.config/lasso/debug-test-uuid.log");
-    });
-
-    it("does nothing when debugLog is disabled", () => {
-      actions.setDebugLog(false);
-      debugLog("test message");
-      assert.equal(
-        testFs._files.has("/fake-home/.config/lasso/debug-test-uuid.log"),
-        false,
-      );
-    });
-
-    it("does nothing when no debug log path is set", () => {
-      actions.setDebugLog(true);
-      actions.setDebugLogPath("");
-      debugLog("test message");
-      assert.equal(testFs._files.has(""), false);
-    });
-
-    it("creates directory when log file does not exist", () => {
-      actions.setDebugLog(true);
-      debugLog("test message");
-      assert.equal(testFs._dirs.has("/fake-home/.config/lasso"), true);
-    });
-
-    it("appends content to log file with timestamp", () => {
-      actions.setDebugLog(true);
-      debugLog("test message");
-      assert.equal(
-        testFs._files.get("/fake-home/.config/lasso/debug-test-uuid.log"),
-        "2023-11-14T22:13:20.000Z :: test message\n",
-      );
-    });
-
-    it("appends multiple messages", () => {
-      actions.setDebugLog(true);
-      debugLog("message 1");
-      debugLog("message 2");
-      assert.equal(
-        testFs._files.get("/fake-home/.config/lasso/debug-test-uuid.log"),
-        `2023-11-14T22:13:20.000Z :: message 1
-2023-11-14T22:13:20.000Z :: message 2
-`,
-      );
-    });
   });
 
   describe("appendToChatHistory", () => {

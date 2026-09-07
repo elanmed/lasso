@@ -5,8 +5,6 @@ import childProcess from "node:child_process";
 import { fsDeps, processDeps } from "./deps.ts";
 import { getPromptHistoryDir } from "./paths.ts";
 import assert from "node:assert";
-import { checkBat, baseBatFlags, markdownBatFlags } from "./print.ts";
-import { printGitDiff } from "./tools.ts";
 import type { AssistantContent } from "ai";
 
 export type Result<T> = { ok: true; value: T } | { ok: false; error: unknown };
@@ -51,7 +49,7 @@ export function getShortId(): string {
   return crypto.randomBytes(9).toString("base64url");
 }
 
-interface GetTempFileNameArgs {
+export interface GetTempFileNameArgs {
   pathPrefix?: string | undefined;
   initialContentPath?: string | undefined;
   initialContentStr?: string | undefined;
@@ -80,56 +78,6 @@ export function getTempFileName(args?: GetTempFileNameArgs) {
   }
 
   return tempFile;
-}
-
-export async function openWithPager({
-  pagerEnvKey,
-  initialContentPath,
-  initialContentStr,
-  contentType,
-}: {
-  initialContentPath?: string;
-  initialContentStr?: string;
-  pagerEnvKey: string;
-  contentType: "diff" | "markdown";
-}) {
-  assert(initialContentPath === undefined || initialContentStr === undefined);
-
-  const tempFile = getTempFileName({ initialContentPath, initialContentStr });
-
-  const pagerCommand = await (async () => {
-    const pagerEnvValue = processDeps.env.get(pagerEnvKey);
-    if (isExisty(pagerEnvValue)) {
-      return pagerEnvValue.replace("__FILE__", tempFile);
-    }
-
-    const lassoDefaultPagerEnvValue = processDeps.env.get("LASSO_PAGER");
-    if (isExisty(lassoDefaultPagerEnvValue)) {
-      return lassoDefaultPagerEnvValue.replace("__FILE__", tempFile);
-    }
-
-    const defaultPagerEnvValue = processDeps.env.get("PAGER");
-    if (isExisty(defaultPagerEnvValue)) {
-      return `${defaultPagerEnvValue} "${tempFile}"`;
-    }
-
-    const isBatAvailable = await checkBat();
-    if (isBatAvailable) {
-      const batFlags =
-        contentType === "diff"
-          ? baseBatFlags
-          : baseBatFlags.concat(markdownBatFlags);
-
-      return `bat ${batFlags.join(" ")} --paging=always "${tempFile}"`;
-    }
-
-    return `less "${tempFile}"`;
-  })();
-
-  childProcess.spawnSync(pagerCommand, {
-    shell: true,
-    stdio: "inherit",
-  });
 }
 
 export function execPromise(
@@ -293,54 +241,6 @@ function sleep(ms: number) {
       resolve();
     }, ms);
   });
-}
-
-export function createToolCallDiffer() {
-  const toolCallIdToTempFileBefore = new Map<string, string>();
-
-  function setTempFileBefore(toolCallId: string, args?: GetTempFileNameArgs) {
-    const tempFileBefore = getTempFileName(args);
-    toolCallIdToTempFileBefore.set(toolCallId, tempFileBefore);
-  }
-
-  function getTempFileBefore(toolCallId: string) {
-    const tempFileBefore = toolCallIdToTempFileBefore.get(toolCallId);
-    assert(tempFileBefore !== undefined);
-    return tempFileBefore;
-  }
-
-  async function diffAndCleanup(toolCallId: string, path: string) {
-    const tempFileAfter = getTempFileName({ initialContentPath: path });
-    const tempFileBefore = getTempFileBefore(toolCallId);
-    await printGitDiff({
-      tempFileBeforePath: tempFileBefore,
-      tempFileAfterPath: tempFileAfter,
-      path,
-    });
-    fsDeps.unlinkSync(tempFileAfter);
-    cleanupTempFileBefore(toolCallId);
-  }
-
-  function cleanupTempFileBefore(toolCallId: string) {
-    const tempFile = getTempFileBefore(toolCallId);
-    fsDeps.unlinkSync(tempFile);
-    toolCallIdToTempFileBefore.delete(toolCallId);
-  }
-
-  function cleanupAllTempFileBefore() {
-    for (const tempFile of toolCallIdToTempFileBefore.values()) {
-      fsDeps.unlinkSync(tempFile);
-    }
-  }
-
-  return {
-    toolCallIdToTempFileBefore,
-    setTempFileBefore,
-    getTempFileBefore,
-    diffAndCleanup,
-    cleanupTempFileBefore,
-    cleanupAllTempFileBefore,
-  };
 }
 
 export function getStrFromAssistantContent(content: AssistantContent) {

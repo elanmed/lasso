@@ -3,24 +3,10 @@ import { actions, getState } from "./state.ts";
 import { listChatHistoryFiles, normalizeLine, tryCatch } from "./utils.ts";
 import { fsDeps } from "./deps.ts";
 import { getPromptHistoryDir } from "./paths.ts";
+import { debugLog as writeDebugLog } from "./debug-log.ts";
 
 export function debugLog(content: string) {
-  if (!getState().app.debugLog) return;
-
-  const path = getState().app.debugLogPath;
-  if (path.length === 0) return;
-  if (!fsDeps.existsSync(path)) {
-    const mkdirResult = tryCatch(() =>
-      fsDeps.mkdirSync(dirname(path), { recursive: true }),
-    );
-    if (!mkdirResult.ok) return;
-  }
-  tryCatch(() =>
-    fsDeps.appendFileSync(
-      path,
-      `${new Date(Date.now()).toISOString()} :: ${content}\n`,
-    ),
-  );
+  writeDebugLog(getState().app.debugLog, getState().app.debugLogPath, content);
 }
 
 export function appendToChatHistory(
