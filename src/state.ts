@@ -55,6 +55,7 @@ interface State {
   abortControllers: {
     question: AbortController | null;
     apiStream: AbortController | null;
+    interruptWithEditorContent: AbortController | null;
   };
 }
 
@@ -109,6 +110,7 @@ const createInitialState = (): State => ({
   abortControllers: {
     question: null,
     apiStream: null,
+    interruptWithEditorContent: null,
   },
 });
 
@@ -259,6 +261,16 @@ export const actions = {
     state.abortControllers.apiStream = controller;
     logStateChange(
       "set-api-stream-abort-controller",
+      String(before),
+      String(controller),
+    );
+  },
+
+  setInterruptWithEditorAbortController(controller: AbortController | null) {
+    const before = state.abortControllers.interruptWithEditorContent;
+    state.abortControllers.interruptWithEditorContent = controller;
+    logStateChange(
+      "set-interrupt-with-editor-abort-controller",
       String(before),
       String(controller),
     );

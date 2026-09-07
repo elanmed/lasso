@@ -146,8 +146,8 @@ async function getEditorInitialContent(opts: {
 
 function abortRlQuestionForEditor(editorContent: string) {
   actions.setEditorInputValue(editorContent);
-  const questionAbortController = getState().abortControllers.question;
-  if (questionAbortController !== null) {
+  const abortController = getState().abortControllers.question;
+  if (abortController !== null) {
     const rl = clearRlLine();
     assert(rl !== null);
 
@@ -155,7 +155,7 @@ function abortRlQuestionForEditor(editorContent: string) {
     rl.write(truncatedFirstLine);
     actions.appendToStdout(truncatedFirstLine);
 
-    questionAbortController.abort();
+    abortController.abort();
   }
 }
 
@@ -286,6 +286,12 @@ export function initSigInt() {
       }
       question.abort();
     }
+
+    const interruptWithEditorContent =
+      getState().abortControllers.interruptWithEditorContent;
+    if (interruptWithEditorContent !== null) {
+      interruptWithEditorContent.abort();
+    }
   });
 }
 
@@ -371,11 +377,11 @@ export async function resolveUserInput({
   actions.resetStdout();
 
   actions.setQuestionAbortController(new AbortController());
-  const questionAbortController = getState().abortControllers.question;
-  assert(questionAbortController !== null);
+  const abortController = getState().abortControllers.question;
+  assert(abortController !== null);
   const inputResult = await tryCatchAsync(
     rl.question(getState().config.promptPrefix, {
-      signal: questionAbortController.signal,
+      signal: abortController.signal,
     }),
   );
   actions.setQuestionAbortController(null);
@@ -441,11 +447,11 @@ async function resolveExitConfirmation() {
   assert(rl !== null);
 
   actions.setQuestionAbortController(new AbortController());
-  const questionAbortController = getState().abortControllers.question;
-  assert(questionAbortController !== null);
+  const abortController = getState().abortControllers.question;
+  assert(abortController !== null);
   const exitResult = await tryCatchAsync(
     rl.question("y(es) or <C-c> to exit: ", {
-      signal: questionAbortController.signal,
+      signal: abortController.signal,
     }),
   );
   actions.setQuestionAbortController(null);
@@ -479,11 +485,12 @@ export async function resolveInterruptWithEditor() {
   assert(rl !== null);
 
   actions.setInterruptWithEditorAbortController(new AbortController());
-  const abortController = getState().abortControllers.question;
+  const abortController =
+    getState().abortControllers.interruptWithEditorContent;
   assert(abortController !== null);
   const continueResult = await tryCatchAsync(
     rl.question(
-      `There are pending messages! Update the editor with ${JSON.stringify(getState().config.keymaps["edit"])} and/or press enter when ready to continue.`,
+      `There are pending messages! Update the editor with the keymap ${JSON.stringify(getState().config.keymaps["edit"])} and/or press enter when ready to continue.`,
       {
         signal: abortController.signal,
       },
@@ -491,14 +498,10 @@ export async function resolveInterruptWithEditor() {
   );
   actions.setInterruptWithEditorAbortController(null);
 
-  if (!continueResult.ok) {
-    if (isAbortError(continueResult.error)) {
-      return;
-    }
+  if (continueResult.ok) return;
+  if (isAbortError(continueResult.error)) return;
 
-    print.error(getMessageFromError(continueResult.error));
-    return;
-  }
+  print.error(getMessageFromError(continueResult.error));
 }
 
 const builtinSlashCommands = [

@@ -15,6 +15,7 @@ describe("state", () => {
     actions.appendToMessageParams({ role: "user", content: "hi" });
     actions.setQuestionAbortController(new AbortController());
     actions.setApiStreamAbortController(new AbortController());
+    actions.setInterruptWithEditorAbortController(new AbortController());
     const timeout = setTimeout(() => undefined, 1_000);
     actions.setLoadingStateTimeout(timeout);
     actions.setChatHistoryPath("/tmp/test.log");
@@ -31,6 +32,7 @@ describe("state", () => {
     assert.deepStrictEqual(getState().app.modelUsageForSession, {});
     assert.equal(getState().abortControllers.question, null);
     assert.equal(getState().abortControllers.apiStream, null);
+    assert.equal(getState().abortControllers.interruptWithEditorContent, null);
     assert.equal(getState().app.loadingStateTimeout, null);
     assert.equal(getState().app.loadingStateFrameIdx, 0);
     assert.equal(getState().app.apiStartTime, null);
@@ -50,6 +52,7 @@ describe("state", () => {
     assert.deepStrictEqual(getState().app.modelUsageForSession, {});
     assert.equal(getState().abortControllers.question, null);
     assert.equal(getState().abortControllers.apiStream, null);
+    assert.equal(getState().abortControllers.interruptWithEditorContent, null);
     assert.equal(getState().app.apiStartTime, null);
     assert.equal(getState().app.apiEndTime, null);
     assert.equal(getState().app.sessionStartDate, 0);
@@ -245,6 +248,13 @@ describe("state", () => {
     const controller = new AbortController();
     actions.setApiStreamAbortController(controller);
     assert.equal(getState().abortControllers.apiStream, controller);
+  });
+
+  it("set-interrupt-with-editor-abort-controller", () => {
+    assert.equal(getState().abortControllers.interruptWithEditorContent, null);
+    const controller = new AbortController();
+    actions.setInterruptWithEditorAbortController(controller);
+    assert.equal(getState().abortControllers.interruptWithEditorContent, controller);
   });
 
   it("set-editor-input-value", () => {
