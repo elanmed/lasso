@@ -15,8 +15,6 @@ import { aiDeps, MISSING } from "./deps.ts";
 import { appendToChatHistory } from "./log.ts";
 import { getLanguageModel } from "./model.ts";
 
-export { getHeaders, getLanguageModel } from "./model.ts";
-
 function getApiStreamAbortSignal() {
   const controller = getState().abortControllers.apiStream;
   assert(controller !== null);
