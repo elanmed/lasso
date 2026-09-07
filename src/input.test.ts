@@ -1156,7 +1156,6 @@ No available context files
         "first\nsecond\n",
       );
     });
-
   });
 
   describe("pageEditStr", () => {
