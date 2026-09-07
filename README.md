@@ -404,7 +404,22 @@ Minimal runtime dependencies (10 total):
 
 ## Running in a container
 
-The `scripts/copy-server.ts` and `scripts/paste-server.ts` helpers bridge the host clipboard to a container. In the example below, each listens on a random port and prints that port to stdout, so the port can be captured via a FIFO. Set `paste_cmd`/`copy_cmd` to the host clipboard commands (e.g. `pbpaste`/`pbcopy` on macOS).
+The `scripts/copy-server.ts` and `scripts/paste-server.ts` helpers bridge the host clipboard to a container using the following flow:
+
+## Paste server
+
+1. `scripts/paste-server.ts` runs on the host, printing its port to stdout
+2. The host captures the port and passes it to the container via a `PASTE_PORT` env variable
+3. In the container, putting (pasting) from the unnamed register runs `nc --recv-only host.docker.internal vim.env.PASTE_PORT`. This makes a request to the paste server asking for the content to paste
+4. The paste server on the host executes `paste_cmd`, captures its output, and responds back to the container with the output
+5. The container pastes the response
+
+## Copy server
+
+1. `scripts/copy-server.ts` runs on the host, printing its port to stdout
+2. The host captures the port and passes it to the container via a `COPY_PORT` env variable
+3. In the container, yanking to the unnamed register runs `nc --send-only host.docker.internal vim.env.PASTE_PORT`. This makes a request to the copy server informing it of the content to copy
+4. The copy server on the host executes `copy_cmd` with the content in the request
 
 ```bash
 agent() {
