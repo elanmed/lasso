@@ -254,13 +254,19 @@ describe("state", () => {
     assert.equal(getState().abortControllers.interruptWithEditorContent, null);
     const controller = new AbortController();
     actions.setInterruptWithEditorAbortController(controller);
-    assert.equal(getState().abortControllers.interruptWithEditorContent, controller);
+    assert.equal(
+      getState().abortControllers.interruptWithEditorContent,
+      controller,
+    );
   });
 
   it("set-editor-input-value", () => {
     assert.equal(getState().app.editorInputValue, null);
     actions.setEditorInputValue("test content");
     assert.equal(getState().app.editorInputValue, "test content");
+    actions.setEditorInputValue(null);
+    assert.equal(getState().app.editorInputValue, null);
+    assert.throws(() => actions.setEditorInputValue(""));
   });
 
   it("set-debug-log", () => {

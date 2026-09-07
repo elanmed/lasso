@@ -273,12 +273,17 @@ export function initSigInt() {
   assert(rl !== null);
   rl.on("SIGINT", () => {
     const apiStream = getState().abortControllers.apiStream;
+    const interruptWithEditorContent =
+      getState().abortControllers.interruptWithEditorContent;
+    const question = getState().abortControllers.question;
+    const controllers = [apiStream, interruptWithEditorContent, question];
+    assert(controllers.filter((c) => c !== null).length <= 1);
+
     if (apiStream !== null) {
       apiStream.abort();
       return;
     }
 
-    const question = getState().abortControllers.question;
     if (question !== null) {
       if (rl.line.length > 0) {
         clearRlLine();
@@ -287,8 +292,6 @@ export function initSigInt() {
       question.abort();
     }
 
-    const interruptWithEditorContent =
-      getState().abortControllers.interruptWithEditorContent;
     if (interruptWithEditorContent !== null) {
       interruptWithEditorContent.abort();
     }

@@ -18,8 +18,10 @@ import {
   pageEditStr,
   spawnAndReadEditorContent,
   resume,
+  initSigInt,
   initLocalConfig,
   initGlobalConfig,
+  resolveInterruptWithEditor,
 } from "./input.ts";
 
 function getTestRl() {
@@ -53,6 +55,197 @@ describe("input", () => {
   beforeEach(() => {
     setupTestContext();
     getCapturedStdout = mockStdout();
+  });
+
+  describe("resolveInterruptWithEditor", () => {
+    it("waits for enter and clears the interrupt controller", async () => {
+      let questionOptions: { signal: AbortSignal } | undefined;
+      actions.setRl(
+        makeFakeRl({
+          question: (_prompt: string, options: { signal: AbortSignal }) => {
+            questionOptions = options;
+            return Promise.resolve("");
+          },
+        }),
+      );
+
+      await resolveInterruptWithEditor();
+
+      assert(questionOptions !== undefined);
+      assert.equal(questionOptions.signal.aborted, false);
+      assert.equal(
+        getState().abortControllers.interruptWithEditorContent,
+        null,
+      );
+    });
+
+    it("returns normally when interrupted", async () => {
+      actions.setRl(
+        makeFakeRl({
+          question: () => {
+            const error = new Error("interrupted");
+            error.name = "AbortError";
+            return Promise.reject(error);
+          },
+        }),
+      );
+
+      await resolveInterruptWithEditor();
+
+      assert.equal(
+        getState().abortControllers.interruptWithEditorContent,
+        null,
+      );
+    });
+  });
+
+  describe("initSigInt", () => {
+    it("aborts interruption with editor content", () => {
+      let sigint: (() => void) | undefined;
+      const rl = makeFakeRl({
+        on: (_event: string, listener: () => void) => {
+          sigint = listener;
+        },
+      });
+      actions.setRl(rl);
+      const controller = new AbortController();
+      actions.setInterruptWithEditorAbortController(controller);
+
+      initSigInt();
+      assert(sigint !== undefined);
+      sigint();
+
+      assert.equal(controller.signal.aborted, true);
+    });
+
+    it("aborts API stream", () => {
+      let sigint: (() => void) | undefined;
+      actions.setRl(
+        makeFakeRl({
+          on: (_event: string, listener: () => void) => {
+            sigint = listener;
+          },
+        }),
+      );
+      const controller = new AbortController();
+      actions.setApiStreamAbortController(controller);
+
+      initSigInt();
+      assert(sigint !== undefined);
+      sigint();
+
+      assert.equal(controller.signal.aborted, true);
+    });
+
+    it("clears readline input for an active question", () => {
+      let sigint: (() => void) | undefined;
+      let writeCount = 0;
+      actions.setRl(
+        makeFakeRl({
+          line: "input",
+          on: (_event: string, listener: () => void) => {
+            sigint = listener;
+          },
+          write: () => {
+            writeCount += 1;
+          },
+        }),
+      );
+      const controller = new AbortController();
+      actions.setQuestionAbortController(controller);
+
+      initSigInt();
+      assert(sigint !== undefined);
+      sigint();
+
+      assert.equal(writeCount, 2);
+      assert.equal(controller.signal.aborted, false);
+    });
+
+    it("aborts an active question when readline input is empty", () => {
+      let sigint: (() => void) | undefined;
+      actions.setRl(
+        makeFakeRl({
+          on: (_event: string, listener: () => void) => {
+            sigint = listener;
+          },
+        }),
+      );
+      const controller = new AbortController();
+      actions.setQuestionAbortController(controller);
+
+      initSigInt();
+      assert(sigint !== undefined);
+      sigint();
+
+      assert.equal(controller.signal.aborted, true);
+    });
+
+    it("does nothing when no controller is active", () => {
+      let sigint: (() => void) | undefined;
+      actions.setRl(
+        makeFakeRl({
+          on: (_event: string, listener: () => void) => {
+            sigint = listener;
+          },
+        }),
+      );
+
+      initSigInt();
+      assert(sigint !== undefined);
+      assert.doesNotThrow(sigint);
+    });
+
+    it("rejects simultaneous API and editor interruption controllers", () => {
+      let sigint: (() => void) | undefined;
+      actions.setRl(
+        makeFakeRl({
+          on: (_event: string, listener: () => void) => {
+            sigint = listener;
+          },
+        }),
+      );
+      actions.setApiStreamAbortController(new AbortController());
+      actions.setInterruptWithEditorAbortController(new AbortController());
+
+      initSigInt();
+      assert(sigint !== undefined);
+      assert.throws(sigint);
+    });
+
+    it("rejects simultaneous API and question controllers", () => {
+      let sigint: (() => void) | undefined;
+      actions.setRl(
+        makeFakeRl({
+          on: (_event: string, listener: () => void) => {
+            sigint = listener;
+          },
+        }),
+      );
+      actions.setApiStreamAbortController(new AbortController());
+      actions.setQuestionAbortController(new AbortController());
+
+      initSigInt();
+      assert(sigint !== undefined);
+      assert.throws(sigint);
+    });
+
+    it("rejects simultaneous question and editor interruption controllers", () => {
+      let sigint: (() => void) | undefined;
+      actions.setRl(
+        makeFakeRl({
+          on: (_event: string, listener: () => void) => {
+            sigint = listener;
+          },
+        }),
+      );
+      actions.setQuestionAbortController(new AbortController());
+      actions.setInterruptWithEditorAbortController(new AbortController());
+
+      initSigInt();
+      assert(sigint !== undefined);
+      assert.throws(sigint);
+    });
   });
 
   describe("spawnAndReadEditorContent", () => {
@@ -938,17 +1131,6 @@ No available context files
     });
 
     it("prints that the editor is empty when editor input is null", async () => {
-      await pageEditStr();
-      assert.strictEqual(
-        stripAnsi(getCapturedStdout()),
-        `
-Editor is empty
-`,
-      );
-    });
-
-    it("prints that the editor is empty when editor input is an empty string", async () => {
-      actions.setEditorInputValue("");
       await pageEditStr();
       assert.strictEqual(
         stripAnsi(getCapturedStdout()),

@@ -1,4 +1,5 @@
 /* eslint-disable @typescript-eslint/no-base-to-string */
+import assert from "node:assert";
 import type readline from "node:readline/promises";
 import type { ModelMessage } from "ai";
 import {
@@ -224,7 +225,7 @@ export const actions = {
     );
   },
 
-  setKeymaps(keymaps: Record<string, Key>) {
+  setKeymaps(keymaps: DefaultedConfig["keymaps"]) {
     const before = structuredClone(state.config.keymaps);
     state.config.keymaps = keymaps;
     logStateChange("set-keymaps", stringify(before), stringify(keymaps));
@@ -277,6 +278,7 @@ export const actions = {
   },
 
   setEditorInputValue(value: string | null) {
+    assert(value !== "");
     const before = state.app.editorInputValue;
     state.app.editorInputValue = value;
     logStateChange("set-editor-input-value", String(before), String(value));
