@@ -1385,6 +1385,7 @@ Available commands:
     });
 
     it("runs paste command with clipboard when its keymap matches", async () => {
+      actions.setKeymap("paste", { name: "v", ctrl: true });
       mockClipboardPaste("world");
       mock.method(childProcess, "spawnSync", () => {
         testFs.writeFileSync(
@@ -1945,7 +1946,6 @@ No available context files
         `
 Keymaps:
 - edit: {"name":"g","ctrl":true}
-- paste: {"name":"v","ctrl":true}
 `,
       );
     });
