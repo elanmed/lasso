@@ -493,7 +493,7 @@ export async function resolveInterruptWithEditor() {
   assert(abortController !== null);
   const continueResult = await tryCatchAsync(
     rl.question(
-      `There are pending messages! Update the editor with the keymap ${JSON.stringify(getState().config.keymaps["edit"])} and/or press enter when ready to continue.`,
+      `There are pending messages! Update the editor with the keymap ${JSON.stringify(getState().config.keymaps.edit)} and/or press enter when ready to continue.`,
       {
         signal: abortController.signal,
       },
