@@ -7,7 +7,7 @@
 - Improve reload diffs by separating filenames and only pushing diffs when stdout is available
 - Add `@ai-sdk/openai` support
 - Add `sdkProvider` and `gateway` configuration, and warn about missing model, `baseURL`, or API key settings
-- Add `init-local` and `init-global` commands for initializing configuration
+- Add `initlocal` and `initglobal` commands for initializing configuration
 - Improve paged output with command overviews and rendered context and skills sections
 
 ## v0.2.0 - 2026-09-01

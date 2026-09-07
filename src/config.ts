@@ -231,7 +231,7 @@ export function blockOnMissingConfig() {
 
     if (includeConfigCommand) {
       formattedMessages = formattedMessages.concat(
-        "\n\nRun /init-local or /init-global to generate a sample config in `./.lasso` or `~/.local/config/lasso` respectively.",
+        "\n\nRun /initlocal or /initglobal to generate a sample config in `./.lasso` or `~/.local/config/lasso` respectively.",
       );
     }
 
