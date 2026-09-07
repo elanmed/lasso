@@ -1836,19 +1836,34 @@ transcript content
         { stdout: "local diff\n" },
         { stdout: "delta 0.18.2" },
         { stdout: "applied diff\n" },
+        { stdout: "delta 0.18.2" },
+        { stdout: "context diff\n" },
+        { stdout: "delta 0.18.2" },
+        { stdout: "skills diff\n" },
+        { stdout: "delta 0.18.2" },
+        { stdout: "commands diff\n" },
       ]);
       const result = await resolveSlashCommand("/reload");
       assert.strictEqual(result, null);
       assert.strictEqual(
         testFs._files.get("/tmp/lasso-test-uuid.txt"),
-        `Global config:
+        `Global config from path: /fake-home/.config/lasso/settings.yaml
 global diff
 
-Local config:
+Local config from path: /test-cwd/.lasso/settings.yaml
 local diff
 
-Applied config:
+Applied config
 applied diff
+
+Agent context
+context diff
+
+Agent skills
+skills diff
+
+Custom slash commands
+commands diff
 
 `,
       );
@@ -1864,12 +1879,18 @@ applied diff
         { stdout: "local diff\n" },
         { stdout: "delta 0.18.2" },
         { stdout: "" },
+        { stdout: "delta 0.18.2" },
+        { stdout: "" },
+        { stdout: "delta 0.18.2" },
+        { stdout: "" },
+        { stdout: "delta 0.18.2" },
+        { stdout: "" },
       ]);
       const result = await resolveSlashCommand("/reload");
       assert.strictEqual(result, null);
       assert.strictEqual(
         testFs._files.get("/tmp/lasso-test-uuid.txt"),
-        `Local config:
+        `Local config from path: /test-cwd/.lasso/settings.yaml
 local diff
 
 `,
@@ -1882,6 +1903,8 @@ local diff
         JSON.stringify({
           model: "gpt-4",
           baseURL: "https://api.example.com",
+          customSlashCommandDirs: [],
+          customSkillDirs: [],
         }),
       );
       testFs._dirs.add(getGlobalContextDir());
@@ -1897,6 +1920,13 @@ description: A test skill
 ---
 # Body`,
       );
+      testFs._globResults.set("/test-cwd/.lasso/commands/**/*.md", [
+        "/test-cwd/.lasso/commands/custom.md",
+      ]);
+      testFs._files.set(
+        "/test-cwd/.lasso/commands/custom.md",
+        "custom command content",
+      );
 
       const snapshots = new Map<string, string>();
       mockExecCalls(
@@ -1910,7 +1940,14 @@ description: A test skill
         ],
         undefined,
         (cmd) => {
-          for (const prefix of ["global", "local", "applied"]) {
+          for (const prefix of [
+            "global",
+            "local",
+            "applied",
+            "context",
+            "skills",
+            "commands",
+          ]) {
             if (cmd.includes(`lasso-${prefix}-after`)) {
               snapshots.set(
                 prefix,
@@ -1934,20 +1971,30 @@ description: A test skill
       assert.strictEqual(result, null);
       assert.deepStrictEqual(
         [...snapshots.keys()],
-        ["global", "local", "applied"],
+        ["global", "local", "applied", "context"],
       );
-      assert.match(getSnapshot("applied"), /# Applied config/);
-      assert.match(
+      assert.strictEqual(
         getSnapshot("applied"),
-        /# \[lasso\] AGENTS\.md context files/,
+        `\`\`\`json
+${JSON.stringify(getState().config, null, 2)}
+\`\`\``,
       );
-      assert.match(getSnapshot("applied"), /# \[lasso\] Skills/);
-      assert.match(
-        getSnapshot("applied"),
-        /## Path: \/fake-home\/.config\/lasso\/context\/AGENTS.md/,
+      assert.strictEqual(
+        getSnapshot("context"),
+        `# [lasso] AGENTS.md context files
+
+## Path: /fake-home/.config/lasso/context/AGENTS.md
+
+hello
+`,
       );
-      assert.match(getSnapshot("global"), /# Global config from path: /);
-      assert.match(getSnapshot("local"), /# Local config from path: /);
+      assert.strictEqual(
+        getSnapshot("global"),
+        `\`\`\`yaml
+{"model":"gpt-4","baseURL":"https://api.example.com","customSlashCommandDirs":[],"customSkillDirs":[]}
+\`\`\``,
+      );
+      assert.strictEqual(getSnapshot("local"), "```yaml\n\n```");
     });
 
     it("handles custom slash command successfully", async () => {

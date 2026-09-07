@@ -989,46 +989,55 @@ ${content}`,
 ${contents}`;
 }
 
-function getPrettyReloadStrs() {
-  return {
-    global: `# Global config from path: ${getGlobalConfigPath()}
+const reloadTempFilePrefixes = [
+  "global",
+  "local",
+  "applied",
+  "context",
+  "skills",
+  "commands",
+] as const;
 
-${markdownFence("yaml", getState().app.globalConfigStr)}`,
-    local: `# Local config from path: ${getLocalConfigPath()}
+type ReloadTempFilePrefixes = (typeof reloadTempFilePrefixes)[number];
+const getReloadTempFileDiffTitle = (): Record<
+  ReloadTempFilePrefixes,
+  string
+> => ({
+  global: `Global config from path: ${getGlobalConfigPath()}`,
+  local: `Local config from path: ${getLocalConfigPath()}`,
+  applied: "Applied config",
+  commands: "Custom slash commands",
+  context: "Agent context",
+  skills: "Agent skills",
+});
 
-${markdownFence("yaml", getState().app.localConfigStr)}`,
-    applied: `# Applied config
-
-${markdownFence("json", stringify(getState().config))}
-
-${getState().app.contextStr}
-
-${getState().app.skillsStr}
-
-${getCustomSlashCommandsStr()}
-`,
-  };
-}
+const getReloadTempFileStr = (): Record<ReloadTempFilePrefixes, string> => ({
+  global: markdownFence("yaml", getState().app.globalConfigStr),
+  local: markdownFence("yaml", getState().app.localConfigStr),
+  applied: markdownFence("json", stringify(getState().config)),
+  context: getState().app.contextStr,
+  commands: getCustomSlashCommandsStr(),
+  skills: getState().app.skillsStr,
+});
 
 async function reload() {
-  const prefixes = ["global", "local", "applied"] as const;
-  const beforeFiles = prefixes.map((prefix) =>
+  const beforeFiles = reloadTempFilePrefixes.map((prefix) =>
     getTempFileName({
       pathPrefix: `lasso-${prefix}-before`,
-      initialContentStr: getPrettyReloadStrs()[prefix],
+      initialContentStr: getReloadTempFileStr()[prefix],
     }),
   );
 
   await initStateRepeatable();
 
-  const afterFiles = prefixes.map((prefix) =>
+  const afterFiles = reloadTempFilePrefixes.map((prefix) =>
     getTempFileName({
       pathPrefix: `lasso-${prefix}-after`,
-      initialContentStr: getPrettyReloadStrs()[prefix],
+      initialContentStr: getReloadTempFileStr()[prefix],
     }),
   );
   const diffResults = [];
-  for (let i = 0; i < prefixes.length; i++) {
+  for (let i = 0; i < reloadTempFilePrefixes.length; i++) {
     const beforeFile = beforeFiles[i];
     assert(beforeFile !== undefined);
 
@@ -1053,13 +1062,10 @@ async function reload() {
     }
 
     if (diffResult.value.stdout.length > 0) {
-      const prefix = prefixes[i];
+      const prefix = reloadTempFilePrefixes[i];
       assert(prefix !== undefined);
-      const firstChar = prefix.at(0);
-      assert(firstChar !== undefined);
-
       diffResults.push(
-        `${firstChar.toUpperCase()}${prefix.slice(1)} config:
+        `${getReloadTempFileDiffTitle()[prefix]}
 ${diffResult.value.stdout}
 `,
       );
