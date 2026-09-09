@@ -137,14 +137,10 @@ describe("utils", () => {
   });
 
   describe("execPromise", () => {
-    it(
-      "closes stdin so commands reading stdin resolve",
-      { timeout: 5000 },
-      async () => {
-        const result = await execPromise("cat");
-        assert.deepStrictEqual(result, { stdout: "", stderr: "" });
-      },
-    );
+    it("closes stdin so commands reading stdin resolve", async () => {
+      const result = await execPromise("cat");
+      assert.deepStrictEqual(result, { stdout: "", stderr: "" });
+    });
   });
 
   describe("truncate", () => {
