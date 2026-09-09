@@ -85,7 +85,7 @@ export function execPromise(
   options?: { signal?: AbortSignal },
 ): Promise<{ stdout: string; stderr: string }> {
   return new Promise((resolve, reject) => {
-    childProcess.exec(
+    const child = childProcess.exec(
       command,
       { encoding: "utf8", ...options },
       (error, stdout, stderr) => {
@@ -96,6 +96,7 @@ export function execPromise(
         }
       },
     );
+    child.stdin?.end();
   });
 }
 

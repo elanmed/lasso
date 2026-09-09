@@ -6,6 +6,7 @@ import {
   tryCatch,
   tryCatchAsync,
   normalizeLine,
+  execPromise,
   getMessageFromError,
   getTempFileName,
   createQueue,
@@ -133,6 +134,17 @@ describe("utils", () => {
     it("handles already normalized string", () => {
       assert.equal(normalizeLine("already\n"), "already\n");
     });
+  });
+
+  describe("execPromise", () => {
+    it(
+      "closes stdin so commands reading stdin resolve",
+      { timeout: 5000 },
+      async () => {
+        const result = await execPromise("cat");
+        assert.deepStrictEqual(result, { stdout: "", stderr: "" });
+      },
+    );
   });
 
   describe("truncate", () => {
