@@ -37,4 +37,16 @@ describe("mcp", () => {
     assert.deepStrictEqual(getState().mcp.clients, {});
     assert.deepStrictEqual(getState().mcp.tools, {});
   });
+
+  it("ignores MCP clients that fail during initialization", async () => {
+    actions.setMcps({
+      first: { type: "http", url: "not-a-url" },
+      second: { type: "sse", url: "also-not-a-url" },
+    });
+
+    await initMcpState();
+
+    assert.deepStrictEqual(getState().mcp.clients, {});
+    assert.deepStrictEqual(getState().mcp.tools, {});
+  });
 });
