@@ -7,6 +7,7 @@ import {
   type DefaultedConfig,
   type Key,
   type ModelPricing,
+  type Mcp,
   type SdkProvider,
   type UsageLimit,
 } from "./config-types.ts";
@@ -106,6 +107,7 @@ const createInitialState = (): State => ({
     promptPrefix: defaultConfig.promptPrefix,
     suppressBatUnavailableWarning: defaultConfig.suppressBatUnavailableWarning,
     messageQueueDelimiter: defaultConfig.messageQueueDelimiter,
+    mcps: structuredClone(defaultConfig.mcps),
     usageLimit: undefined,
   },
   abortControllers: {
@@ -543,6 +545,12 @@ export const actions = {
       before,
       messageQueueDelimiter,
     );
+  },
+
+  setMcps(mcps: Record<string, Mcp>) {
+    const before = state.config.mcps;
+    state.config.mcps = mcps;
+    logStateChange("set-mcps", stringify(before), stringify(mcps));
   },
 
   setUsageLimit(usageLimit: UsageLimit | undefined) {

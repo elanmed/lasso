@@ -132,6 +132,75 @@ describe("config", () => {
       assert.equal(getState().config.gateway, undefined);
     });
 
+    it("merges its mcps with the global and default config", async () => {
+      testFs._files.set(
+        getGlobalConfigPath(),
+        JSON.stringify({
+          ...testConfig,
+          mcps: {
+            global: { type: "stdio", command: "global-mcp" },
+            http: { type: "http", url: "https://global.example.com" },
+          },
+        }),
+      );
+      testFs._files.set(
+        getLocalConfigPath(),
+        JSON.stringify({
+          ...testConfig,
+          mcps: {
+            http: {
+              type: "http",
+              url: "https://mcp.example.com",
+              protocolVersion: "2025-03-26",
+              headers: { Authorization: "Bearer token" },
+            },
+            sse: {
+              type: "sse",
+              url: "https://sse.example.com",
+              protocolVersion: "2024-11-05",
+            },
+            stdio: {
+              type: "stdio",
+              command: "local-mcp",
+              protocolVersion: "2025-06-18",
+              args: ["--debug"],
+            },
+          },
+        }),
+      );
+
+      await initState();
+
+      assert.deepStrictEqual(getState().config.mcps, {
+        global: { type: "stdio", command: "global-mcp" },
+        http: {
+          type: "http",
+          url: "https://mcp.example.com",
+          protocolVersion: "2025-03-26",
+          headers: { Authorization: "Bearer token" },
+        },
+        sse: {
+          type: "sse",
+          url: "https://sse.example.com",
+          protocolVersion: "2024-11-05",
+        },
+        stdio: {
+          type: "stdio",
+          command: "local-mcp",
+          protocolVersion: "2025-06-18",
+          args: ["--debug"],
+        },
+      });
+    });
+
+    it("defaults mcps to an empty object", async () => {
+      testFs._files.set(getLocalConfigPath(), JSON.stringify(testConfig));
+
+      await initState();
+
+      assert.deepStrictEqual(getState().config.mcps, {});
+    });
+
     it("uses minimal local config without model over the global config", async () => {
       testFs._files.set(
         getGlobalConfigPath(),

@@ -80,6 +80,30 @@ const LoadingStateFramesSchema = z
 const PromptPrefixSchema = z.string();
 const SuppressBatUnavailableWarningSchema = z.boolean();
 const MessageQueueDelimiterSchema = z.string().endsWith("\n");
+const McpHeadersSchema = z.record(z.string(), z.string());
+const McpSchema = z.discriminatedUnion("type", [
+  z.strictObject({
+    type: z.literal("http"),
+    url: z.string(),
+    protocolVersion: z.string().optional(),
+    headers: McpHeadersSchema.optional(),
+  }),
+  z.strictObject({
+    type: z.literal("sse"),
+    url: z.string(),
+    protocolVersion: z.string().optional(),
+    headers: McpHeadersSchema.optional(),
+  }),
+  z.strictObject({
+    type: z.literal("stdio"),
+    command: z.string(),
+    protocolVersion: z.string().optional(),
+    args: z.array(z.string()).optional(),
+  }),
+]);
+const McpsSchema = z.record(z.string(), McpSchema);
+
+export type Mcp = z.infer<typeof McpSchema>;
 
 export const ConfigSchema = z.strictObject({
   model: ModelSchema.optional(),
@@ -99,6 +123,7 @@ export const ConfigSchema = z.strictObject({
   promptPrefix: PromptPrefixSchema.optional(),
   suppressBatUnavailableWarning: SuppressBatUnavailableWarningSchema.optional(),
   messageQueueDelimiter: MessageQueueDelimiterSchema.optional(),
+  mcps: McpsSchema.optional(),
   usageLimit: UsageLimitSchema.optional(),
 });
 
@@ -122,6 +147,7 @@ export const DefaultedConfigSchema = z.strictObject({
   promptPrefix: PromptPrefixSchema,
   suppressBatUnavailableWarning: SuppressBatUnavailableWarningSchema,
   messageQueueDelimiter: MessageQueueDelimiterSchema,
+  mcps: McpsSchema,
   usageLimit: UsageLimitSchema.optional(),
 });
 
@@ -151,5 +177,6 @@ export const defaultConfig: DefaultedConfig = {
   promptPrefix: "> ",
   suppressBatUnavailableWarning: false,
   messageQueueDelimiter: "l---\n",
+  mcps: {},
   usageLimit: undefined,
 };

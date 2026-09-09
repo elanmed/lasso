@@ -158,6 +158,16 @@ describe("state", () => {
     assert.equal(getState().config.baseURL, "https://api.example.com/v1");
   });
 
+  it("set-mcps", () => {
+    assert.deepStrictEqual(getState().config.mcps, {});
+    actions.setMcps({
+      local: { type: "stdio", command: "local-mcp", args: ["--debug"] },
+    });
+    assert.deepStrictEqual(getState().config.mcps, {
+      local: { type: "stdio", command: "local-mcp", args: ["--debug"] },
+    });
+  });
+
   it("set-pricing-per-model", () => {
     const newPricing = structuredClone(defaultConfig.pricingPerModel);
     newPricing["test-model"] = {

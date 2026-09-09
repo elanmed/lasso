@@ -229,6 +229,12 @@ export function initStateFromConfig() {
       globalConfig.messageQueueDelimiter ??
       defaultConfig.messageQueueDelimiter,
   );
+  const defaultedMcps = {
+    ...defaultConfig.mcps,
+    ...globalConfig.mcps,
+    ...localConfig.mcps,
+  };
+  actions.setMcps(defaultedMcps);
 
   const defaultedUsageLimit = localConfig.usageLimit ?? globalConfig.usageLimit;
 

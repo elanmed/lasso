@@ -77,6 +77,7 @@ If `model`, `baseURL`, or `LASSO_API_KEY` are missing at startup, lasso warns an
 | `promptPrefix`                  | `string`                                             | `"> "`                   | Prompt prefix string                                            |
 | `suppressBatUnavailableWarning` | `boolean`                                            | `false`                  | Suppress the startup warning when `bat` is missing              |
 | `messageQueueDelimiter`         | `string`                                             | `l---\n`                 | Delimiter line separating multiple messages in the editor input |
+| `mcps`                          | `object`                                             | `{}`                     | Named MCP servers                                               |
 | `usageLimit`                    | `object`                                             | `undefined`              | Dollar limit and tracking window                                |
 
 ### Local Overwrite vs Extend
@@ -84,7 +85,41 @@ If `model`, `baseURL`, or `LASSO_API_KEY` are missing at startup, lasso warns an
 The local config either overwrites or extends the global config per option:
 
 - **Overwrite**: scalar options (`model`, `sdkProvider`, `gateway`, `baseURL`, `compactTriggerRatio`, `compactTargetRatio`, `loadingStateFrameDuration`, `promptPrefix`, `suppressBatUnavailableWarning`, `messageQueueDelimiter`, `usageLimit`) and arrays (`customSlashCommandDirs`, `customSkillDirs`, `subagentModels`, `loadingStateFrames`) replace the global value wholesale — arrays are not merged.
-- **Extend**: `keymaps`, `pricingPerModel`, and `contextWindowPerModel` merge entry-by-entry with the default and global entries, the local entry winning on conflicts. `pricingPerModel` and `contextWindowPerModel` entries set to `null` cancel the global or default entry (see the relevant sections below).
+- **Extend**: `keymaps`, `mcps`, `pricingPerModel`, and `contextWindowPerModel` merge entry-by-entry with the default and global entries, the local entry winning on conflicts. `pricingPerModel` and `contextWindowPerModel` entries set to `null` cancel the global or default entry (see the relevant sections below).
+
+### MCP Servers
+
+The `mcps` option maps server names to MCP server configurations. The `type` field selects one of the supported transports; `protocolVersion` is optional for all transports.
+
+| Transport | Required fields | Optional fields              |
+| --------- | --------------- | ---------------------------- |
+| `http`    | `url`           | `protocolVersion`, `headers` |
+| `sse`     | `url`           | `protocolVersion`, `headers` |
+| `stdio`   | `command`       | `protocolVersion`, `args`    |
+
+`headers` is an object mapping strings to strings. `args` is an array of strings passed to the stdio command. MCP server entries merge by name across the default, global, and local configurations, with local entries winning on conflicts.
+
+Example:
+
+```yaml
+mcps:
+  remote-http:
+    type: http
+    url: https://mcp.example.com/mcp
+    protocolVersion: "2025-03-26"
+    headers:
+      Authorization: Bearer token
+  remote-sse:
+    type: sse
+    url: https://sse.example.com
+    protocolVersion: "2024-11-05"
+  local-tools:
+    type: stdio
+    command: /usr/local/bin/mcp-server
+    protocolVersion: "2025-06-18"
+    args:
+      - --verbose
+```
 
 ### Usage Limits
 
@@ -243,6 +278,12 @@ loadingStateFrames: ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "�
 loadingStateFrameDuration: 100
 promptPrefix: "🤖 "
 messageQueueDelimiter: "l---\n"
+mcps:
+  local-tools:
+    type: stdio
+    command: /usr/local/bin/mcp-server
+    protocolVersion: "2025-06-18"
+    args: [--verbose]
 usageLimit:
   duration: "5h"
   dollarAmount: 10
