@@ -413,7 +413,7 @@ Available skills are listed in the system prompt, the LLM can use the `load_skil
 
 ## Dependencies
 
-Minimal runtime dependencies (10 total):
+Minimal runtime dependencies (9 total):
 
 | Package                     | Purpose                                 |
 | --------------------------- | --------------------------------------- |
@@ -426,7 +426,6 @@ Minimal runtime dependencies (10 total):
 | `@mozilla/readability`      | Content extraction for `web_fetch_html` |
 | `prettier`                  | Markdown formatting                     |
 | `yaml`                      | Parsing Skill metadata                  |
-| `globby`                    | Glob with .gitignore support            |
 
 - This project uses **pnpm v11** for package management, which helps [mitigate the risk of supply chain attacks](https://pnpm.io/supply-chain-security)
 - All tests are written with the Node.js native test runner and mocks i.e. no Jest
