@@ -97,7 +97,6 @@ const McpSchema = z.discriminatedUnion("type", [
   z.strictObject({
     type: z.literal("stdio"),
     command: z.string(),
-    protocolVersion: z.string().optional(),
     args: z.array(z.string()).optional(),
   }),
 ]);

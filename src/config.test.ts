@@ -162,7 +162,6 @@ describe("config", () => {
             stdio: {
               type: "stdio",
               command: "local-mcp",
-              protocolVersion: "2025-06-18",
               args: ["--debug"],
             },
           },
@@ -187,7 +186,6 @@ describe("config", () => {
         stdio: {
           type: "stdio",
           command: "local-mcp",
-          protocolVersion: "2025-06-18",
           args: ["--debug"],
         },
       });

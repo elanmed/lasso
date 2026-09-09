@@ -89,13 +89,13 @@ The local config either overwrites or extends the global config per option:
 
 ### MCP Servers
 
-The `mcps` option maps server names to MCP server configurations. The `type` field selects one of the supported transports; `protocolVersion` is optional for all transports.
+The `mcps` option maps server names to MCP server configurations. The `type` field selects one of the supported transports; `protocolVersion` is optional for HTTP and SSE transports.
 
 | Transport | Required fields | Optional fields              |
 | --------- | --------------- | ---------------------------- |
 | `http`    | `url`           | `protocolVersion`, `headers` |
 | `sse`     | `url`           | `protocolVersion`, `headers` |
-| `stdio`   | `command`       | `protocolVersion`, `args`    |
+| `stdio`   | `command`       | `args`                       |
 
 `headers` is an object mapping strings to strings. `args` is an array of strings passed to the stdio command. MCP server entries merge by name across the default, global, and local configurations, with local entries winning on conflicts.
 
@@ -116,7 +116,6 @@ mcps:
   local-tools:
     type: stdio
     command: /usr/local/bin/mcp-server
-    protocolVersion: "2025-06-18"
     args:
       - --verbose
 ```
@@ -282,7 +281,6 @@ mcps:
   local-tools:
     type: stdio
     command: /usr/local/bin/mcp-server
-    protocolVersion: "2025-06-18"
     args: [--verbose]
 usageLimit:
   duration: "5h"
