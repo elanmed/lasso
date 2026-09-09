@@ -14,6 +14,7 @@ export interface FakeFsDeps {
   _files: Map<string, string>;
   _dirs: Set<string>;
   _globResults: Map<string, string[]>;
+  _gitLsFilesResults: Map<string, string[]>;
   _restore: () => void;
   readFileSync: (path: string) => Buffer;
   writeFileSync: (
@@ -34,10 +35,17 @@ export interface FakeFsDeps {
     isFile: () => boolean;
     isDirectory: () => boolean;
   };
-  globbySync: (pattern: string) => string[];
+  globSync: (pattern: string) => string[];
+  gitLsFiles: (pattern: string) => string[];
 }
 
-const EXCLUDED_KEYS = ["_files", "_dirs", "_globResults", "_restore"];
+const EXCLUDED_KEYS = [
+  "_files",
+  "_dirs",
+  "_globResults",
+  "_gitLsFilesResults",
+  "_restore",
+];
 
 export function makeFakeFsDeps(
   overrides: Partial<FakeFsDeps> = {},
@@ -45,6 +53,7 @@ export function makeFakeFsDeps(
   const _files = new Map<string, string>();
   const _dirs = new Set<string>();
   const _globResults = new Map<string, string[]>();
+  const _gitLsFilesResults = new Map<string, string[]>();
   const _mtimes = new Map<string, number>();
 
   let _mtimeCounter = 0;
@@ -53,6 +62,7 @@ export function makeFakeFsDeps(
     _files,
     _dirs,
     _globResults,
+    _gitLsFilesResults,
     readFileSync: (path: string) => {
       const content = _files.get(path);
       if (content === undefined) throw new Error(`ENOENT: ${path}`);
@@ -94,11 +104,13 @@ export function makeFakeFsDeps(
       isDirectory: () => _dirs.has(path),
       mtimeMs: _mtimes.get(path) ?? 0,
     }),
-    globbySync: (pattern: string) => _globResults.get(pattern) ?? [],
+    globSync: (pattern: string) => _globResults.get(pattern) ?? [],
+    gitLsFiles: (pattern: string) => _gitLsFilesResults.get(pattern) ?? [],
     _restore: () => {
       _files.clear();
       _dirs.clear();
       _globResults.clear();
+      _gitLsFilesResults.clear();
       _mtimes.clear();
       _mtimeCounter = 0;
     },

@@ -17,7 +17,7 @@ describe("getAvailableSlashCommands", () => {
   });
 
   it("returns empty array when glob throws", () => {
-    mock.method(fsDeps, "globbySync", () => {
+    mock.method(fsDeps, "globSync", () => {
       throw new Error("permission denied");
     });
     const result = getAvailableSlashCommands();

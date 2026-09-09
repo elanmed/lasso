@@ -90,7 +90,7 @@ export function getSkills() {
 
   for (const skillGrandparentDir of skillGrandparentDirs) {
     const glob = join(skillGrandparentDir, "**/SKILL.md");
-    const globResult = tryCatch(() => fsDeps.globbySync(glob));
+    const globResult = tryCatch(() => fsDeps.globSync(glob));
     if (!globResult.ok) continue;
     skillPaths.push(...globResult.value);
   }
@@ -104,8 +104,7 @@ export function getSkills() {
     skills.push(skill);
   }
 
-  const agentFileGlob = join(processDeps.cwd(), "*/**/AGENTS.md");
-  const agentFileGlobResult = tryCatch(() => fsDeps.globbySync(agentFileGlob));
+  const agentFileGlobResult = tryCatch(() => fsDeps.gitLsFiles("**/AGENTS.md"));
   if (!agentFileGlobResult.ok) return skills;
 
   for (const agentFilePath of agentFileGlobResult.value) {

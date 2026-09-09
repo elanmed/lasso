@@ -7,9 +7,11 @@ import {
   unlinkSync,
   appendFileSync,
   statSync,
+  globSync,
 } from "node:fs";
 import { generateText, isLoopFinished } from "ai";
-import { globbySync } from "globby";
+import childProcess from "node:child_process";
+
 export const fsDeps = {
   readFileSync,
   writeFileSync,
@@ -19,8 +21,28 @@ export const fsDeps = {
   unlinkSync,
   appendFileSync,
   statSync,
-  globbySync: (pattern: string) => globbySync(pattern, { gitignore: true }),
+  globSync,
+  gitLsFiles,
 };
+
+function gitLsFiles(regex: string) {
+  return childProcess
+    .execFileSync(
+      "git",
+      [
+        "ls-files",
+        "--cached",
+        "--others",
+        "--exclude-standard",
+        "-z",
+        "--",
+        regex,
+      ],
+      { encoding: "utf8" },
+    )
+    .split("\0")
+    .filter(Boolean);
+}
 
 export type FsDeps = typeof fsDeps;
 

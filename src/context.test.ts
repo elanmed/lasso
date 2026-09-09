@@ -397,7 +397,7 @@ would benefit from specialized instructions.
     });
 
     it("includes nested AGENTS.md files as context skills", () => {
-      testFs._globResults.set("/test-cwd/*/**/AGENTS.md", [
+      testFs._gitLsFilesResults.set("**/AGENTS.md", [
         "/test-cwd/src/AGENTS.md",
       ]);
       testFs._files.set("/test-cwd/src/AGENTS.md", "nested content");
@@ -428,7 +428,7 @@ description: A test skill
 ---
 # Body`,
       );
-      testFs._globResults.set("/test-cwd/*/**/AGENTS.md", [
+      testFs._gitLsFilesResults.set("**/AGENTS.md", [
         "/test-cwd/src/AGENTS.md",
       ]);
       testFs._files.set("/test-cwd/src/AGENTS.md", "nested content");
@@ -448,11 +448,11 @@ would benefit from specialized instructions.
       );
     });
 
-    it("skips entries where globbySync throws", () => {
-      mock.method(fsDeps, "globbySync", (pattern: string) => {
+    it("skips entries where globSync throws", () => {
+      mock.method(fsDeps, "globSync", (pattern: string) => {
         if (pattern === "/test-cwd/.lasso/skills/**/SKILL.md")
           throw new Error("glob failed");
-        return testFs.globbySync(pattern);
+        return testFs.globSync(pattern);
       });
       testFs._globResults.set("/fake-home/.config/lasso/skills/**/SKILL.md", [
         "/fake-home/.config/lasso/skills/ok/SKILL.md",

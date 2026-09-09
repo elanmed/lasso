@@ -1332,7 +1332,7 @@ describe("config", () => {
 
   it("sets contextStr from dep", async () => {
     testFs._dirs.add(getGlobalContextDir());
-    testFs._globResults.set("/fake-home/.config/lasso/context/**/AGENTS.md", [
+    testFs._gitLsFilesResults.set("**/AGENTS.md", [
       "/fake-home/.config/lasso/context/AGENTS.md",
     ]);
     testFs._files.set("/fake-home/.config/lasso/context/AGENTS.md", "hello");
