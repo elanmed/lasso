@@ -2,8 +2,10 @@ import { describe, it, beforeEach, mock } from "node:test";
 import assert from "node:assert";
 import { actions, getState } from "./state.ts";
 import { defaultConfig } from "./config-types.ts";
+import type { MCPClient } from "@ai-sdk/mcp";
 import { MISSING } from "./deps.ts";
 import { makeFakeRl, setupTestContext } from "./test-helpers.ts";
+import { initMcpState } from "./mcp.ts";
 
 describe("state", () => {
   beforeEach(() => {
@@ -166,6 +168,21 @@ describe("state", () => {
     assert.deepStrictEqual(getState().config.mcps, {
       local: { type: "stdio", command: "local-mcp", args: ["--debug"] },
     });
+  });
+
+  it("mcp state closes all clients when initialized", async () => {
+    const closeFirst = mock.fn(() => undefined);
+    const closeSecond = mock.fn(() => undefined);
+    const firstClient = { close: closeFirst } as unknown as MCPClient;
+    const secondClient = { close: closeSecond } as unknown as MCPClient;
+    actions.setMcp({ first: firstClient, second: secondClient }, {});
+
+    await initMcpState();
+
+    assert.equal(closeFirst.mock.callCount(), 1);
+    assert.equal(closeSecond.mock.callCount(), 1);
+    assert.deepStrictEqual(getState().mcp.clients, {});
+    assert.deepStrictEqual(getState().mcp.tools, {});
   });
 
   it("set-pricing-per-model", () => {

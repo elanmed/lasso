@@ -3,6 +3,7 @@ import assert from "node:assert";
 import { actions, getState } from "./state.ts";
 import {
   initState,
+  initStateFromConfig,
   initStateForDebug,
   initStateRepeatable,
   blockOnMissingConfig,
@@ -168,7 +169,7 @@ describe("config", () => {
         }),
       );
 
-      await initState();
+      initStateFromConfig();
 
       assert.deepStrictEqual(getState().config.mcps, {
         global: { type: "stdio", command: "global-mcp" },

@@ -2,6 +2,7 @@
 import assert from "node:assert";
 import type readline from "node:readline/promises";
 import type { ModelMessage } from "ai";
+import type { MCPClient } from "@ai-sdk/mcp";
 import {
   defaultConfig,
   type DefaultedConfig,
@@ -21,6 +22,14 @@ export interface SlashCommand {
   name: string;
   filePath: string;
   content: string;
+}
+
+export type MCPToolSet = Awaited<ReturnType<MCPClient["tools"]>>;
+
+export interface McpState {
+  clients: Record<string, MCPClient>;
+  tools: MCPToolSet;
+  close: () => Promise<void>;
 }
 
 interface State {
@@ -54,6 +63,7 @@ interface State {
     sessionId: string;
   };
   config: DefaultedConfig;
+  mcp: McpState;
   abortControllers: {
     question: AbortController | null;
     apiStream: AbortController | null;
@@ -109,6 +119,11 @@ const createInitialState = (): State => ({
     messageQueueDelimiter: defaultConfig.messageQueueDelimiter,
     mcps: structuredClone(defaultConfig.mcps),
     usageLimit: undefined,
+  },
+  mcp: {
+    clients: {},
+    tools: {},
+    close: () => Promise.resolve(),
   },
   abortControllers: {
     question: null,
@@ -551,6 +566,20 @@ export const actions = {
     const before = state.config.mcps;
     state.config.mcps = mcps;
     logStateChange("set-mcps", stringify(before), stringify(mcps));
+  },
+
+  setMcp(clients: Record<string, MCPClient>, tools: MCPToolSet) {
+    const before = state.mcp;
+    state.mcp.clients = clients;
+    state.mcp.tools = tools;
+    state.mcp.close = async () => {
+      await Promise.all(Object.values(clients).map((client) => client.close()));
+    };
+    logStateChange(
+      "set-mcp",
+      `${String(Object.keys(before.clients).length)}:${String(Object.keys(before.tools).length)}`,
+      `${String(Object.keys(clients).length)}:${String(Object.keys(tools).length)}`,
+    );
   },
 
   setUsageLimit(usageLimit: UsageLimit | undefined) {
