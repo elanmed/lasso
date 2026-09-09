@@ -26,6 +26,9 @@ export const fsDeps = {
 };
 
 function gitLsFiles(regex: string) {
+  const stdin = "ignore";
+  const stdout = "pipe";
+  const stderr = "pipe";
   return childProcess
     .execFileSync(
       "git",
@@ -38,7 +41,7 @@ function gitLsFiles(regex: string) {
         "--",
         regex,
       ],
-      { encoding: "utf8" },
+      { encoding: "utf8", stdio: [stdin, stdout, stderr] },
     )
     .split("\0")
     .filter(Boolean);
