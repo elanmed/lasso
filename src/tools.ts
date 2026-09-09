@@ -23,8 +23,23 @@ import { appendModelUsage } from "./usage.ts";
 const userAgent =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
 
-function toolPrint(label: string, detail: string) {
-  print.doing(truncate(`${label}: ${detail}`));
+export function toolPrint(label: string, detail: string) {
+  const detailArr = detail.split("\n");
+  const [detailOne, detailTwo, detailThree] = detailArr;
+
+  const lines = [];
+  lines.push(truncate(`${label}: ${detailOne ?? ""}`));
+
+  for (const detail of [detailTwo, detailThree]) {
+    if (detail === undefined) continue;
+    if (detail === "") continue;
+
+    const indent = " ".repeat(detail.length);
+    lines.push(truncate(`${indent}${detail}`));
+  }
+  const linesStr = lines.join("\n");
+
+  print.doing(linesStr);
 }
 
 export type ToolPrint = typeof toolPrint;

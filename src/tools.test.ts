@@ -14,6 +14,7 @@ import {
   createSubagentTaskSchema,
   printGitDiff,
   harnessTools,
+  toolPrint,
 } from "./tools.ts";
 import {
   testFs,
@@ -32,6 +33,35 @@ import { actions } from "./state.ts";
 describe("tools", () => {
   beforeEach(() => {
     setupTestContext();
+  });
+
+  describe("toolPrint", () => {
+    it("prints the label and first detail line", () => {
+      const getCaptured = mockStdout();
+      toolPrint("bash", "echo hello");
+      assert.strictEqual(stripAnsi(getCaptured()), `bash: echo hello\n`);
+    });
+
+    it("indents each detail line to its own length", () => {
+      const getCaptured = mockStdout();
+      toolPrint("label", "one\ntwo\nthree");
+      assert.strictEqual(
+        stripAnsi(getCaptured()),
+        `label: one\n   two\n     three\n`,
+      );
+    });
+
+    it("skips lines beyond the third and prints an empty first line", () => {
+      const getCaptured = mockStdout();
+      toolPrint("label", "");
+      assert.strictEqual(stripAnsi(getCaptured()), `label: \n`);
+    });
+
+    it("skips empty extra lines", () => {
+      const getCaptured = mockStdout();
+      toolPrint("label", "one\n\nthree");
+      assert.strictEqual(stripAnsi(getCaptured()), `label: one\n     three\n`);
+    });
   });
 
   describe("executeBashTool", () => {
