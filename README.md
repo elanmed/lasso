@@ -6,13 +6,14 @@ _A minimal agent harness to rein in your llm_
 
 ## Features
 
-- **Minimal**: ~4,400 lines of source code, ~8,700 lines of tests
+- **Minimal**: ~4,600 lines of source code, ~8,800 lines of tests
   - Responses are piped through `bat` to render markdown
   - Multi-line input is supported by spawning an editor of your choice
   - Messages can be queued by typing a custom delimiter (default `l---`) in the spawned editor
 - **Tools**: 9 tools to execute bash, fetch from the web, edit files, and launch subagents
   - A `git diff` with `delta` is output whenever a tool changes a file
 - **Multiple providers**: Anthropic, OpenAI, or OpenAI-compatible APIs
+- **MCP support**: Connect HTTP, SSE, and stdio servers
 - **AGENTS.md support**: The root file is included in context, nested files are internally represented as skills
 - **Slash commands**: Change agent settings or execute reusable prompts
 - **Token usage tracking**: Track spending per model within a configurable time window
@@ -538,11 +539,9 @@ vim.g.clipboard = {
 
 ## TODO (soon)
 
-- [ ] Support local MCP servers
+- [ ] Update `ai` sdk related deps
 
 ## TODO (later)
 
-- [ ] Support remove MCP servers
-- [ ] Look into tanstack ai when it supports openai compatible
-  - [ ] Support code-mode
+- [ ] Support code-mode
 - [ ] Support Windows-style newlines

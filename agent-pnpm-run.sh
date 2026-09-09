@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-if [[ "$#" -eq 0 ]]; then
+if [[ $# -eq 0 ]]; then
   printf 'Usage: ./agent-pnpm-run <script> [args...]\n' >&2
   exit 2
 fi

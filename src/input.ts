@@ -470,6 +470,7 @@ async function resolveExitConfirmation() {
     if (isAbortError(exitResult.error)) {
       rl.close();
       printSessionStartDate();
+      await getState().mcp.close();
       process.exit(0);
     }
 
@@ -484,6 +485,7 @@ async function resolveExitConfirmation() {
 
     rl.close();
     printSessionStartDate();
+    await getState().mcp.close();
     process.exit(0);
   }
 

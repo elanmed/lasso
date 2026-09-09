@@ -16,6 +16,7 @@ import {
 } from "./input.ts";
 import { resolveApiCall, maybeCompactMessageParams } from "./api.ts";
 import { initLogs } from "./log.ts";
+import { getState } from "./state.ts";
 
 async function main() {
   await initState();
@@ -56,9 +57,10 @@ async function main() {
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  main().catch((error: unknown) => {
+  main().catch(async (error: unknown) => {
     print.error(getMessageFromError(error));
     printSessionStartDate();
+    await getState().mcp.close();
     process.exit(1);
   });
 }

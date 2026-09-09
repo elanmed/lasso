@@ -133,7 +133,7 @@ describe("config", () => {
       assert.equal(getState().config.gateway, undefined);
     });
 
-    it("merges its mcps with the global and default config", async () => {
+    it("merges its mcps with the global and default config", () => {
       testFs._files.set(
         getGlobalConfigPath(),
         JSON.stringify({

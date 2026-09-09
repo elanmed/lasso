@@ -13,7 +13,7 @@ import {
   createSubagentTool,
   createSubagentTaskSchema,
   printGitDiff,
-  tools,
+  harnessTools,
 } from "./tools.ts";
 import {
   testFs,
@@ -26,7 +26,7 @@ import {
   makeGenerateTextResult,
 } from "./test-helpers.ts";
 import { fsDeps } from "./deps.ts";
-import { actions } from "./state.ts";
+import { actions, type MCPToolSet } from "./state.ts";
 
 describe("tools", () => {
   beforeEach(() => {
@@ -588,7 +588,7 @@ bottom`,
 
   describe("TOOLS", () => {
     it("registers tools under the names referenced by the system prompt", () => {
-      assert.deepStrictEqual(Object.keys(tools), [
+      assert.deepStrictEqual(Object.keys(harnessTools), [
         "web_fetch_html",
         "web_fetch_json",
         "view_file",
@@ -791,6 +791,7 @@ bottom`,
 
     it("gives read-write subagents write tools and prints file diffs", async () => {
       setupApiCallState();
+      actions.setMcp({}, { mcp_tool: {} } as unknown as MCPToolSet);
       const getCaptured = mockStdout();
       testFs._files.set("/test/file.txt", "original content");
       mockGenerateText(async (options: Record<string, unknown>) => {
@@ -805,6 +806,7 @@ bottom`,
           "str_replace",
           "insert_lines",
           "bash",
+          "mcp_tool",
         ]);
         const onStart = options["experimental_onToolCallStart"] as (
           arg: Record<string, unknown>,

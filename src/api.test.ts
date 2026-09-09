@@ -1,6 +1,6 @@
 import { describe, it, beforeEach, mock } from "node:test";
 import assert from "node:assert";
-import { actions, getState } from "./state.ts";
+import { actions, getState, type MCPToolSet } from "./state.ts";
 import { maybeCompactMessageParams, resolveApiCall } from "./api.ts";
 import {
   setupTestContext,
@@ -10,10 +10,12 @@ import {
   mockStdout,
   stripAnsi,
   makeGenerateTextResult,
+  mockGenerateText,
 } from "./test-helpers.ts";
 import { aiDeps } from "./deps.ts";
 import { BASE_SYSTEM_PROMPT } from "./prompts.ts";
-import type { ModelMessage } from "ai";
+import type { ModelMessage, ToolSet } from "ai";
+import { z } from "zod/v4";
 
 describe("api", () => {
   beforeEach(() => {
@@ -50,6 +52,30 @@ response text
       );
       const result = await resolveApiCall("hello");
       assert.strictEqual(result, null);
+    });
+
+    it("passes harness and MCP tools to generateText", async () => {
+      let capturedTools: ToolSet | undefined;
+      const mcpTool = {
+        inputSchema: z.object({}),
+        execute: () => ({ content: [] }),
+      };
+      const mcpTools: MCPToolSet = { mcp_tool: mcpTool };
+      actions.setMcp({}, mcpTools);
+      mockGenerateText((options: Record<string, unknown>) => {
+        capturedTools = options["tools"] as ToolSet;
+        return Promise.resolve(makeGenerateTextResult());
+      });
+
+      await resolveApiCall("hello");
+
+      if (capturedTools === undefined) {
+        throw new Error("Expected generateText tools");
+      }
+      assert.strictEqual(capturedTools["mcp_tool"], mcpTool);
+      if (capturedTools["bash"] === undefined) {
+        throw new Error("Expected bash tool");
+      }
     });
 
     it("returns null on abort error", async () => {

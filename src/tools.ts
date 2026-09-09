@@ -602,7 +602,7 @@ export async function createSubagentTool(
 
       const subagentTools = (() => {
         if (subagentSchema.access === "read-only") return readTools;
-        return { ...readTools, ...writeTools };
+        return { ...readTools, ...writeTools, ...getState().mcp.tools };
       })();
 
       const toolCallDiffer = createToolCallDiffer(printGitDiff);
@@ -630,7 +630,7 @@ export async function createSubagentTool(
           }) => {
             if (subagentSchema.access !== "read-write") return;
 
-            switch (toolCall.toolName as ToolName) {
+            switch (toolCall.toolName as HarnessToolName) {
               case "create_file": {
                 toolCallDiffer.setTempFileBefore(toolCall.toolCallId);
                 break;
@@ -654,7 +654,7 @@ export async function createSubagentTool(
           }) => {
             if (subagentSchema.access !== "read-write") return;
 
-            switch (toolCall.toolName as ToolName) {
+            switch (toolCall.toolName as HarnessToolName) {
               case "create_file":
               case "insert_lines":
               case "str_replace": {
@@ -794,13 +794,13 @@ const baseAgentTools = {
   }),
 };
 
-export const tools = {
+export const harnessTools = {
   ...readTools,
   ...writeTools,
   ...baseAgentTools,
 };
 
-export type ToolName = keyof typeof tools;
+export type HarnessToolName = keyof typeof harnessTools;
 
 export async function printGitDiff({
   path,

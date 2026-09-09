@@ -8,8 +8,8 @@ import { BASE_SYSTEM_PROMPT } from "./prompts.ts";
 import {
   objectWithPathSchema,
   printGitDiff,
-  tools,
-  type ToolName,
+  harnessTools,
+  type HarnessToolName,
 } from "./tools.ts";
 import assert from "node:assert";
 import { aiDeps, MISSING } from "./deps.ts";
@@ -45,11 +45,11 @@ export async function resolveApiCall(userInput: string) {
       model: getLanguageModel(getState().config.model),
       system: systemContent,
       messages: [...getState().app.messageParams.messages, inputMessageParam],
-      tools,
+      tools: { ...harnessTools, ...getState().mcp.tools },
       stopWhen: aiDeps.isLoopFinished(),
       abortSignal: getApiStreamAbortSignal(),
       experimental_onToolCallStart: ({ toolCall }) => {
-        switch (toolCall.toolName as ToolName) {
+        switch (toolCall.toolName as HarnessToolName) {
           case "create_file": {
             toolCallDiffer.setTempFileBefore(toolCall.toolCallId);
             break;
@@ -65,7 +65,7 @@ export async function resolveApiCall(userInput: string) {
         }
       },
       experimental_onToolCallFinish: async ({ toolCall, success }) => {
-        switch (toolCall.toolName as ToolName) {
+        switch (toolCall.toolName as HarnessToolName) {
           case "create_file":
           case "insert_lines":
           case "str_replace": {
