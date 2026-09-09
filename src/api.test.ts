@@ -11,11 +11,11 @@ import {
   stripAnsi,
   makeGenerateTextResult,
   mockGenerateText,
+  makeMcpTool,
 } from "./test-helpers.ts";
 import { aiDeps } from "./deps.ts";
 import { BASE_SYSTEM_PROMPT } from "./prompts.ts";
 import type { ModelMessage, ToolSet } from "ai";
-import { z } from "zod/v4";
 
 describe("api", () => {
   beforeEach(() => {
@@ -56,10 +56,7 @@ response text
 
     it("passes harness and MCP tools to generateText", async () => {
       let capturedTools: ToolSet | undefined;
-      const mcpTool = {
-        inputSchema: z.object({}),
-        execute: () => ({ content: [] }),
-      };
+      const mcpTool = makeMcpTool();
       const mcpTools: MCPToolSet = { mcp_tool: mcpTool };
       actions.setMcp({}, mcpTools);
       mockGenerateText((options: Record<string, unknown>) => {

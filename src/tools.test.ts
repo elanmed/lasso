@@ -24,9 +24,10 @@ import {
   stripAnsi,
   mockStdout,
   makeGenerateTextResult,
+  makeMcpTool,
 } from "./test-helpers.ts";
 import { fsDeps } from "./deps.ts";
-import { actions, type MCPToolSet } from "./state.ts";
+import { actions } from "./state.ts";
 
 describe("tools", () => {
   beforeEach(() => {
@@ -791,7 +792,8 @@ bottom`,
 
     it("gives read-write subagents write tools and prints file diffs", async () => {
       setupApiCallState();
-      actions.setMcp({}, { mcp_tool: {} } as unknown as MCPToolSet);
+      const mcpTool = makeMcpTool();
+      actions.setMcp({}, { mcp_tool: mcpTool });
       const getCaptured = mockStdout();
       testFs._files.set("/test/file.txt", "original content");
       mockGenerateText(async (options: Record<string, unknown>) => {

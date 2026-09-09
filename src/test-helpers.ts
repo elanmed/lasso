@@ -9,6 +9,14 @@ import type { Key } from "./config-types.ts";
 import readline from "node:readline/promises";
 import { stdin } from "node:process";
 import { baseBatFlags, markdownBatFlags } from "./terminal.ts";
+import { z } from "zod/v4";
+
+export function makeMcpTool() {
+  return {
+    inputSchema: z.object({}),
+    execute: () => ({ content: [] }),
+  };
+}
 
 export interface FakeFsDeps {
   _files: Map<string, string>;
