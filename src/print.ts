@@ -15,6 +15,10 @@ const COLORS = {
 
 export type Color = keyof typeof COLORS;
 
+export function bold(text: Uint8Array | string) {
+  return `\x1b[1m${text.toString()}\x1b[0m`;
+}
+
 export const print = Object.assign(
   (text: Uint8Array | string) => colorPrint(text),
   {
