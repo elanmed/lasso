@@ -124,7 +124,6 @@ describe("tools", () => {
       assert.strictEqual(
         stripAnsi(getCaptured()),
         `bash: abc-
-
       def-
       gh
       ij
