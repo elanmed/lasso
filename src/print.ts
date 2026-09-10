@@ -62,9 +62,9 @@ export function fencePrint(text: string, opts: FencePrintOpts = {}) {
   const showSessionInfo = opts.showSessionInfo ?? false;
 
   const line = (() => {
-    if (!showSessionInfo) return `━━ ${text} ━━`;
+    if (!showSessionInfo) return `━━ ${bold(text)} ━━`;
 
-    return `━━ ${text} (${getPrettyApiDuration()}) (${getPrettyUsage()}) ━━`;
+    return `━━ ${bold(text)} (${getPrettyApiDuration()}) (${getPrettyUsage()}) ━━`;
   })();
 
   colorPrint(line, opts.color ?? "grey");

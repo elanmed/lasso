@@ -12,7 +12,7 @@ import {
   getMaxColLength,
 } from "./utils.ts";
 import { createToolCallDiffer, execGitDiff } from "./differ.ts";
-import { print, fencePrint, printNewline } from "./print.ts";
+import { print, bold, fencePrint, printNewline } from "./print.ts";
 import { getState } from "./state.ts";
 import { BASE_SYSTEM_PROMPT } from "./prompts.ts";
 import { getLanguageModel } from "./model.ts";
@@ -54,7 +54,7 @@ export function toolPrint(label: string, detail: string) {
       assert(splitStr !== undefined);
 
       const prefix = (() => {
-        if (splitIdx === 0 && detailIdx === 0) return `${label}: `;
+        if (splitIdx === 0 && detailIdx === 0) return `${bold(label)}: `;
         return indent;
       })();
 
