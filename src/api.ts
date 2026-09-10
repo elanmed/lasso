@@ -1,6 +1,11 @@
 import type { ModelMessage } from "ai";
 import { actions, getState } from "./state.ts";
-import { isAbortError, tryCatchAsync, getMessageFromError } from "./utils.ts";
+import {
+  isAbortError,
+  tryCatchAsync,
+  getMessageFromError,
+  safeStringify,
+} from "./utils.ts";
 import { createToolCallDiffer } from "./differ.ts";
 import { print, startLoadingState, stopLoadingState } from "./print.ts";
 import { appendModelUsage } from "./usage.ts";
@@ -10,6 +15,7 @@ import {
   printGitDiff,
   harnessTools,
   type HarnessToolName,
+  toolPrint,
 } from "./tools.ts";
 import assert from "node:assert";
 import { aiDeps, MISSING } from "./deps.ts";
@@ -49,6 +55,13 @@ export async function resolveApiCall(userInput: string) {
       stopWhen: aiDeps.isLoopFinished(),
       abortSignal: getApiStreamAbortSignal(),
       experimental_onToolCallStart: ({ toolCall }) => {
+        if (!Object.keys(harnessTools).includes(toolCall.toolName)) {
+          toolPrint(
+            `[mcp] ${toolCall.toolName}`,
+            safeStringify(toolCall.input),
+          );
+        }
+
         switch (toolCall.toolName as HarnessToolName) {
           case "create_file": {
             toolCallDiffer.setTempFileBefore(toolCall.toolCallId);

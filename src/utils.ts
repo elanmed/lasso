@@ -108,6 +108,13 @@ export function isExisty(val: unknown) {
   return val !== undefined && val !== null;
 }
 
+export function safeStringify(val: unknown) {
+  if (val === undefined) return "";
+  const stringifyResult = tryCatch(() => JSON.stringify(val));
+  if (stringifyResult.ok) return stringifyResult.value;
+  return getMessageFromError(stringifyResult.error);
+}
+
 export function createQueue() {
   let queue: Promise<void> = Promise.resolve();
 
