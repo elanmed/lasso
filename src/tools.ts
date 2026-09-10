@@ -24,7 +24,8 @@ import { appendModelUsage } from "./usage.ts";
 const userAgent =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
 
-function splitByLenPretty(str: string, len: number) {
+function splitByLen(str: string, len: number) {
+  assert(!str.includes("\n"));
   const chunkLen = Math.max(1, len);
   const chunks: string[] = [];
   for (let i = 0; i < str.length; i += chunkLen) {
@@ -41,8 +42,8 @@ function splitByLenPretty(str: string, len: number) {
 
 export function toolPrint(label: string, detail: string) {
   const detailArr = detail.split("\n").filter((str) => str.length > 0);
-  const indent = " ".repeat(label.length);
   const padding = 2;
+  const indent = " ".repeat(label.length + padding);
   const maxLen = getMaxColLength() - label.length - padding;
 
   const lines = [];
@@ -52,7 +53,7 @@ export function toolPrint(label: string, detail: string) {
     const detail = detailArr[detailIdx];
     assert(detail !== undefined);
 
-    const split = splitByLenPretty(detail, maxLen);
+    const split = splitByLen(detail, maxLen);
     let splitIdx = 0;
     while (lines.length <= 3 && splitIdx < split.length) {
       const splitStr = split[splitIdx];
