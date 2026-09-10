@@ -203,7 +203,7 @@ describe("print", () => {
 
       assert.strictEqual(
         stripAnsi(getCaptured()),
-        `\u2501\u2501 ${longHeader.substring(0, 63)}\u2026 \u2501\u2501\n`,
+        `\u2501\u2501 ${longHeader.substring(0, 66)}\u2026 \u2501\u2501\n`,
       );
     });
   });

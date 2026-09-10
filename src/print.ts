@@ -70,7 +70,7 @@ function getFenceSessionLine(text: string) {
   let accumulatedCol = fenceCharsLen;
   let sessionInfo = "";
 
-  const fittedHeader = truncate(text, fenceCharsLen + 3);
+  const fittedHeader = truncate(text, fenceCharsLen);
 
   sessionInfo += bold(fittedHeader);
   accumulatedCol += fittedHeader.length;
