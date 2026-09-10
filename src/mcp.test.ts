@@ -1,4 +1,4 @@
-import { beforeEach, describe, it, mock } from "node:test";
+import { afterEach, beforeEach, describe, it, mock } from "node:test";
 import assert from "node:assert";
 import type { MCPClient } from "@ai-sdk/mcp";
 import { actions, getState, type MCPToolSet } from "./state.ts";
@@ -6,6 +6,10 @@ import { initMcpState } from "./mcp.ts";
 import { setupTestContext } from "./test-helpers.ts";
 
 describe("mcp", () => {
+  afterEach(() => {
+    mock.restoreAll();
+  });
+
   beforeEach(() => {
     setupTestContext();
     actions.resetState();

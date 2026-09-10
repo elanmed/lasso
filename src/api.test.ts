@@ -1,4 +1,4 @@
-import { describe, it, beforeEach, mock } from "node:test";
+import { describe, it, beforeEach, afterEach, mock } from "node:test";
 import assert from "node:assert";
 import { actions, getState, type MCPToolSet } from "./state.ts";
 import { maybeCompactMessageParams, resolveApiCall } from "./api.ts";
@@ -18,6 +18,10 @@ import { BASE_SYSTEM_PROMPT } from "./prompts.ts";
 import type { ModelMessage, ToolSet } from "ai";
 
 describe("api", () => {
+  afterEach(() => {
+    mock.restoreAll();
+  });
+
   beforeEach(() => {
     setupTestContext();
     setupApiCallState();

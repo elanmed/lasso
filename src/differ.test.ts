@@ -1,10 +1,14 @@
-import { describe, it, beforeEach } from "node:test";
+import { describe, it, beforeEach, afterEach, mock } from "node:test";
 import assert from "node:assert";
 
 import { createToolCallDiffer, execGitDiff } from "./differ.ts";
 import { mockExecCalls, setupTestContext, testFs } from "./test-helpers.ts";
 
 describe("createToolCallDiffer", () => {
+  afterEach(() => {
+    mock.restoreAll();
+  });
+
   beforeEach(() => {
     setupTestContext();
   });
@@ -66,6 +70,10 @@ describe("createToolCallDiffer", () => {
 });
 
 describe("execGitDiff", () => {
+  afterEach(() => {
+    mock.restoreAll();
+  });
+
   it("uses delta and three context lines by default", async () => {
     const commands: string[] = [];
     mockExecCalls(

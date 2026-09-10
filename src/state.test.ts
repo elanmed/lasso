@@ -1,4 +1,4 @@
-import { describe, it, beforeEach, mock } from "node:test";
+import { describe, it, beforeEach, afterEach, mock } from "node:test";
 import assert from "node:assert";
 import { actions, getState } from "./state.ts";
 import { defaultConfig } from "./config-types.ts";
@@ -8,6 +8,10 @@ import { makeFakeRl, setupTestContext } from "./test-helpers.ts";
 import { initMcpState } from "./mcp.ts";
 
 describe("state", () => {
+  afterEach(() => {
+    mock.restoreAll();
+  });
+
   beforeEach(() => {
     mock.method(Date, "now", () => 0);
     setupTestContext();

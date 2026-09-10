@@ -1,4 +1,4 @@
-import { describe, it, beforeEach, mock } from "node:test";
+import { describe, it, beforeEach, afterEach, mock } from "node:test";
 import assert from "node:assert";
 import { actions, getState } from "./state.ts";
 import {
@@ -33,6 +33,10 @@ const testConfig = {
 };
 
 describe("config", () => {
+  afterEach(() => {
+    mock.restoreAll();
+  });
+
   beforeEach(() => {
     mock.method(Date, "now", () => 0);
     setupTestContext();

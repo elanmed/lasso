@@ -50,6 +50,10 @@ import childProcess from "node:child_process";
 import { getGlobalConfigPath, getGlobalContextDir } from "./paths.ts";
 
 describe("input", () => {
+  afterEach(() => {
+    mock.restoreAll();
+  });
+
   let getCapturedStdout: () => string;
 
   beforeEach(() => {

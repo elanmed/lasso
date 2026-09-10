@@ -1,8 +1,12 @@
-import { describe, it, mock } from "node:test";
+import { describe, it, afterEach, mock } from "node:test";
 import assert from "node:assert";
 import { parseCliArgs, parseCliArgsDeps } from "./args.ts";
 
 describe("args", () => {
+  afterEach(() => {
+    mock.restoreAll();
+  });
+
   it("returns default args when no arguments are provided", () => {
     mock.method(parseCliArgsDeps, "getArgv", () => ["node", "script.js"]);
     const result = parseCliArgs();

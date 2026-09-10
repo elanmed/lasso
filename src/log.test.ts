@@ -1,4 +1,4 @@
-import { describe, it, beforeEach, mock } from "node:test";
+import { describe, it, beforeEach, afterEach, mock } from "node:test";
 import assert from "node:assert/strict";
 
 import {
@@ -11,6 +11,10 @@ import { testFs, setupTestContext } from "./test-helpers.ts";
 import { fsDeps } from "./deps.ts";
 
 describe("log", () => {
+  afterEach(() => {
+    mock.restoreAll();
+  });
+
   beforeEach(() => {
     setupTestContext();
   });

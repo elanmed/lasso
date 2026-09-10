@@ -1,4 +1,4 @@
-import { describe, it, beforeEach, mock } from "node:test";
+import { describe, it, beforeEach, afterEach, mock } from "node:test";
 import assert from "node:assert";
 import childProcess from "node:child_process";
 
@@ -28,6 +28,10 @@ beforeEach(() => {
 });
 
 describe("openWithPager", () => {
+  afterEach(() => {
+    mock.restoreAll();
+  });
+
   beforeEach(() => {
     setupTestContext();
   });
@@ -148,6 +152,10 @@ describe("openWithPager", () => {
 });
 
 describe("formatMarkdown", () => {
+  afterEach(() => {
+    mock.restoreAll();
+  });
+
   it("formats markdown tables with aligned columns", async () => {
     const unaligned = `|a|b|
 |-|-|
@@ -175,6 +183,10 @@ describe("formatMarkdown", () => {
 });
 
 describe("executeBat", () => {
+  afterEach(() => {
+    mock.restoreAll();
+  });
+
   beforeEach(() => {
     mock.restoreAll();
     actions.resetState();
@@ -284,6 +296,10 @@ test content
 });
 
 describe("warnOnMissingBat", () => {
+  afterEach(() => {
+    mock.restoreAll();
+  });
+
   beforeEach(() => {
     mock.restoreAll();
     actions.resetState();

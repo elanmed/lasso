@@ -1,4 +1,4 @@
-import { describe, it, beforeEach, mock } from "node:test";
+import { describe, it, beforeEach, afterEach, mock } from "node:test";
 import assert from "node:assert";
 
 import { getAvailableSlashCommands } from "./slash-commands.ts";
@@ -7,6 +7,10 @@ import { fsDeps } from "./deps.ts";
 import { setupTestContext, testFs } from "./test-helpers.ts";
 
 describe("getAvailableSlashCommands", () => {
+  afterEach(() => {
+    mock.restoreAll();
+  });
+
   beforeEach(() => {
     setupTestContext();
   });

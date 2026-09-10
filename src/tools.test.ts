@@ -1,4 +1,4 @@
-import { describe, it, beforeEach, mock } from "node:test";
+import { describe, it, beforeEach, afterEach, mock } from "node:test";
 import assert from "node:assert";
 import { getEventListeners } from "node:events";
 import {
@@ -27,7 +27,7 @@ import {
   makeGenerateTextResult,
   makeMcpTool,
 } from "./test-helpers.ts";
-import { fsDeps } from "./deps.ts";
+import { fsDeps, processDeps } from "./deps.ts";
 import { actions } from "./state.ts";
 
 describe("tools", () => {
@@ -35,32 +35,121 @@ describe("tools", () => {
     setupTestContext();
   });
 
-  describe("toolPrint", () => {
-    it("prints the label and first detail line", () => {
-      const getCaptured = mockStdout();
-      toolPrint("bash", "echo hello");
-      assert.strictEqual(stripAnsi(getCaptured()), `bash: echo hello\n`);
-    });
+  afterEach(() => {
+    mock.restoreAll();
+  });
 
-    it("indents each detail line to its own length", () => {
+  describe("toolPrint", () => {
+    it("prints the detail with a labeled prefix on the first line", () => {
+      mock.method(processDeps.stdout, "getColumns", () => 10);
       const getCaptured = mockStdout();
-      toolPrint("label", "one\ntwo\nthree");
+      toolPrint("bash", "hello");
       assert.strictEqual(
         stripAnsi(getCaptured()),
-        `label: one\n   two\n     three\n`,
+        `bash: hel-
+    lo
+`,
       );
     });
 
-    it("skips lines beyond the third and prints an empty first line", () => {
+    it("wraps long details into chunks of maxLen minus label length and padding, hyphenating breaks", () => {
+      mock.method(processDeps.stdout, "getColumns", () => 10);
       const getCaptured = mockStdout();
-      toolPrint("label", "");
-      assert.strictEqual(stripAnsi(getCaptured()), `label: \n`);
+      toolPrint("bash", "abcdefghij");
+      assert.strictEqual(
+        stripAnsi(getCaptured()),
+        `bash: abc-
+    def-
+    ghi-
+    j
+`,
+      );
     });
 
-    it("skips empty extra lines", () => {
+    it("ignores empty detail lines", () => {
+      mock.method(processDeps.stdout, "getColumns", () => 10);
       const getCaptured = mockStdout();
-      toolPrint("label", "one\n\nthree");
-      assert.strictEqual(stripAnsi(getCaptured()), `label: one\n     three\n`);
+      toolPrint("bash", "one\n\ntwo");
+      assert.strictEqual(
+        stripAnsi(getCaptured()),
+        `bash: one
+    two
+`,
+      );
+    });
+
+    it("caps the total output at four lines", () => {
+      mock.method(processDeps.stdout, "getColumns", () => 10);
+      const getCaptured = mockStdout();
+      toolPrint("bash", "a\nb\nc\nd\ne");
+      assert.strictEqual(
+        stripAnsi(getCaptured()),
+        `bash: a
+    b
+    c
+    d
+`,
+      );
+    });
+
+    it("does not add a hyphen when a chunk exactly fits maxLen with no remainder", () => {
+      mock.method(processDeps.stdout, "getColumns", () => 10);
+      const getCaptured = mockStdout();
+      toolPrint("bash", "abcd");
+      assert.strictEqual(
+        stripAnsi(getCaptured()),
+        `bash: abc-
+    d
+`,
+      );
+    });
+
+    it("does not hyphenate a chunk that already ends in whitespace", () => {
+      mock.method(processDeps.stdout, "getColumns", () => 10);
+      const getCaptured = mockStdout();
+      toolPrint("bash", "abc defgh");
+      assert.strictEqual(
+        stripAnsi(getCaptured()),
+        `bash: abc-
+     de-
+    fgh
+`,
+      );
+    });
+
+    it("wraps multiple original lines and combines them under the same cap", () => {
+      mock.method(processDeps.stdout, "getColumns", () => 10);
+      const getCaptured = mockStdout();
+      toolPrint("bash", "abcdefgh\nij");
+      assert.strictEqual(
+        stripAnsi(getCaptured()),
+        `bash: abc-
+    def-
+    gh
+    ij
+`,
+      );
+    });
+
+    it("stops mid-wrap once the four line cap is reached", () => {
+      mock.method(processDeps.stdout, "getColumns", () => 10);
+      const getCaptured = mockStdout();
+      toolPrint("bash", "abcdefgh\nijklmnop");
+      assert.strictEqual(
+        stripAnsi(getCaptured()),
+        `bash: abc-
+    def-
+    gh
+    ijk-
+`,
+      );
+    });
+
+    it("prints nothing but the label prefix when detail is only whitespace lines", () => {
+      mock.method(processDeps.stdout, "getColumns", () => 10);
+      const getCaptured = mockStdout();
+      toolPrint("bash", "\n\n\n");
+      assert.strictEqual(stripAnsi(getCaptured()), `\n`);
     });
   });
 
@@ -875,12 +964,7 @@ bottom`,
       ]);
       assert.strictEqual(
         stripAnsi(getCaptured()),
-        `   create_subagent: [main-model] edit
-
-━━ File change: /test/file.txt ━━
-+modified content
-
-`,
+        `[main-model] edit\n\n━━ File change: /test/file.txt ━━\n+modified content\n\n`,
       );
     });
 

@@ -1,10 +1,14 @@
-import { describe, it, beforeEach, mock } from "node:test";
+import { describe, it, beforeEach, afterEach, mock } from "node:test";
 import assert from "node:assert/strict";
 
 import { debugLog } from "./debug-log.ts";
 import { setupFakeDeps, testFs } from "./test-helpers.ts";
 
 describe("debugLog", () => {
+  afterEach(() => {
+    mock.restoreAll();
+  });
+
   const path = "/fake-home/.config/lasso/debug-test-uuid.log";
 
   beforeEach(() => {

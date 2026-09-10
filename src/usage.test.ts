@@ -1,4 +1,4 @@
-import { describe, it, beforeEach, mock } from "node:test";
+import { describe, it, beforeEach, afterEach, mock } from "node:test";
 import assert from "node:assert";
 import {
   appendModelUsage,
@@ -16,6 +16,10 @@ import { setupFakeDeps, testFs } from "./test-helpers.ts";
 import { getUsageLogLockPath, getUsageLogPath } from "./paths.ts";
 
 describe("usage", () => {
+  afterEach(() => {
+    mock.restoreAll();
+  });
+
   describe("appendModelUsage", () => {
     beforeEach(() => {
       setupFakeDeps();
