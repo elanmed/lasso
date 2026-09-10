@@ -1,3 +1,4 @@
+import assert from "node:assert";
 import { tool, type ModelMessage } from "ai";
 import { z } from "zod";
 import {
@@ -8,7 +9,6 @@ import {
   tryCatch,
   tryCatchAsync,
   execPromise,
-  truncate,
   getMaxColLength,
 } from "./utils.ts";
 import { createToolCallDiffer, execGitDiff } from "./differ.ts";
@@ -24,43 +24,49 @@ import { appendModelUsage } from "./usage.ts";
 const userAgent =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
 
-function splitByLen(str: string, len: number) {
-  const chunks = [];
-  for (let i = 0; i < str.length; i += len) chunks.push(str.slice(i, i + len));
-  return chunks;
+function splitByLenPretty(str: string, len: number) {
+  const chunkLen = Math.max(1, len);
+  const chunks: string[] = [];
+  for (let i = 0; i < str.length; i += chunkLen) {
+    chunks.push(str.slice(i, i + chunkLen));
+  }
+
+  return chunks.map((chunk, idx) => {
+    if (/\s$/.test(chunk)) return chunk;
+    const nextChunk = chunks[idx + 1];
+    if (nextChunk === undefined) return chunk;
+    return chunk.concat("-");
+  });
 }
 
 export function toolPrint(label: string, detail: string) {
   const detailArr = detail.split("\n").filter((str) => str.length > 0);
   const indent = " ".repeat(label.length);
-  const maxLen = getMaxColLength() - label.length;
+  const padding = 2;
+  const maxLen = getMaxColLength() - label.length - padding;
 
   const lines = [];
+
   let detailIdx = 0;
   while (lines.length <= 3 && detailIdx < detailArr.length) {
     const detail = detailArr[detailIdx];
-    if (detail === undefined) {
-      detailIdx++;
-      continue;
-    }
+    assert(detail !== undefined);
 
-    const split = splitByLen(detail, maxLen);
+    const split = splitByLenPretty(detail, maxLen);
     let splitIdx = 0;
     while (lines.length <= 3 && splitIdx < split.length) {
       const splitStr = split[splitIdx];
-      if (splitStr === undefined) {
-        splitIdx++;
-        continue;
-      }
+      assert(splitStr !== undefined);
 
       const prefix = (() => {
-        if (splitIdx === 0 && detailIdx === 0) return indent;
-        return "";
+        if (splitIdx === 0 && detailIdx === 0) return `${label}: `;
+        return indent;
       })();
 
       lines.push(`${prefix}${splitStr}`);
       splitIdx++;
     }
+    detailIdx++;
   }
 
   const linesStr = lines.join("\n");
@@ -649,7 +655,7 @@ export async function createSubagentTool(
       const toolCallDiffer = createToolCallDiffer(printGitDiff);
 
       const message = `[${model}] ${subagentSchema.prompt}`;
-      toolPrint("   create_subagent", message);
+      print.doing(message);
 
       const inputMessageParam: ModelMessage = {
         role: "user",
