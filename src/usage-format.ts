@@ -1,5 +1,6 @@
 import assert from "node:assert";
 import { getState } from "./state.ts";
+import { processDeps } from "./deps.ts";
 import {
   isUsageLimitDisabled,
   type ModelUsage,
@@ -100,6 +101,9 @@ export function getPrettyTokenUsage() {
 }
 
 export function getPrettyContextWindowUsage() {
+  const columns = processDeps.stdout.getColumns();
+  if (columns !== undefined && columns < 80) return "";
+
   const { model } = getState().config;
   const contextWindow = getState().config.contextWindowPerModel[model];
   if (contextWindow === undefined) return "";
