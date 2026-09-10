@@ -124,6 +124,7 @@ describe("tools", () => {
       assert.strictEqual(
         stripAnsi(getCaptured()),
         `bash: abc-
+
       def-
       gh
       ij
@@ -964,7 +965,12 @@ bottom`,
       ]);
       assert.strictEqual(
         stripAnsi(getCaptured()),
-        `[main-model] edit\n\n━━ File change: /test/file.txt ━━\n+modified content\n\n`,
+        `   create_subagent: [main-model] edit
+
+━━ File change: /test/file.txt ━━
++modified content
+
+`,
       );
     });
 

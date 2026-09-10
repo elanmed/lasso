@@ -656,7 +656,8 @@ export async function createSubagentTool(
       const toolCallDiffer = createToolCallDiffer(printGitDiff);
 
       const message = `[${model}] ${subagentSchema.prompt}`;
-      print.doing(message);
+      const subagentIndent = "   ";
+      toolPrint(`${subagentIndent}create_subagent`, message);
 
       const inputMessageParam: ModelMessage = {
         role: "user",
