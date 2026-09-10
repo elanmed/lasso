@@ -3,6 +3,7 @@ import { createMCPClient, type MCPClient } from "@ai-sdk/mcp";
 import { Experimental_StdioMCPTransport as StdioClientTransport } from "@ai-sdk/mcp/mcp-stdio";
 import { actions, getState, type MCPToolSet } from "./state.ts";
 import type { Mcp } from "./config-types.ts";
+import { print } from "./print.ts";
 
 async function createMcpClient(config: Mcp) {
   switch (config.type) {
@@ -33,6 +34,7 @@ async function createMcpClient(config: Mcp) {
         transport: new StdioClientTransport({
           command: config.command,
           ...args,
+          stderr: "pipe",
         }),
       });
     }
@@ -48,6 +50,7 @@ async function getMcpClients() {
 
   await Promise.all(
     Object.entries(getState().config.mcps).map(async ([name, config]) => {
+      print.doing(`Starting mcp server: ${name}`);
       try {
         mcpClients[name] = await createMcpClient(config);
       } catch {
