@@ -123,9 +123,13 @@ export function createQueue() {
   return { enqueue, flush };
 }
 
-export function truncate(str: string) {
+export function getMaxColLength() {
   const columns = processDeps.stdout.getColumns() ?? 80;
-  const maxLen = 0.9 * columns;
+  return 0.9 * columns;
+}
+
+export function truncate(str: string) {
+  const maxLen = getMaxColLength();
   const newlineIdx = str.indexOf("\n");
 
   const firstLine = (() => {

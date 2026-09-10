@@ -9,6 +9,7 @@ import {
   tryCatchAsync,
   execPromise,
   truncate,
+  getMaxColLength,
 } from "./utils.ts";
 import { createToolCallDiffer, execGitDiff } from "./differ.ts";
 import { print, fencePrint, printNewline } from "./print.ts";
@@ -23,20 +24,45 @@ import { appendModelUsage } from "./usage.ts";
 const userAgent =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
 
+function splitByLen(str: string, len: number) {
+  const chunks = [];
+  for (let i = 0; i < str.length; i += len) chunks.push(str.slice(i, i + len));
+  return chunks;
+}
+
 export function toolPrint(label: string, detail: string) {
-  const detailArr = detail.split("\n");
-  const [detailOne, detailTwo, detailThree] = detailArr;
+  const detailArr = detail.split("\n").filter((str) => str.length > 0);
+  const indent = " ".repeat(label.length);
+  const maxLen = getMaxColLength() - label.length;
 
   const lines = [];
-  lines.push(truncate(`${label}: ${detailOne ?? ""}`));
+  let detailIdx = 0;
+  while (lines.length <= 3 && detailIdx < detailArr.length) {
+    const detail = detailArr[detailIdx];
+    if (detail === undefined) {
+      detailIdx++;
+      continue;
+    }
 
-  for (const detail of [detailTwo, detailThree]) {
-    if (detail === undefined) continue;
-    if (detail === "") continue;
+    const split = splitByLen(detail, maxLen);
+    let splitIdx = 0;
+    while (lines.length <= 3 && splitIdx < split.length) {
+      const splitStr = split[splitIdx];
+      if (splitStr === undefined) {
+        splitIdx++;
+        continue;
+      }
 
-    const indent = " ".repeat(detail.length);
-    lines.push(truncate(`${indent}${detail}`));
+      const prefix = (() => {
+        if (splitIdx === 0 && detailIdx === 0) return indent;
+        return "";
+      })();
+
+      lines.push(`${prefix}${splitStr}`);
+      splitIdx++;
+    }
   }
+
   const linesStr = lines.join("\n");
 
   print.doing(linesStr);
