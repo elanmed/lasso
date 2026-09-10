@@ -135,8 +135,8 @@ export function getMaxColLength() {
   return 0.9 * columns;
 }
 
-export function truncate(str: string) {
-  const maxLen = getMaxColLength();
+export function truncate(str: string, padding = 0) {
+  const maxLen = Math.max(1, getMaxColLength() - padding);
   const newlineIdx = str.indexOf("\n");
 
   const firstLine = (() => {

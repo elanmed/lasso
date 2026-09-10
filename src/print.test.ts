@@ -9,6 +9,7 @@ import {
   printSessionStartDate,
 } from "./print.ts";
 import { actions } from "./state.ts";
+import { processDeps } from "./deps.ts";
 import {
   stripAnsi,
   mockStdout,
@@ -143,6 +144,66 @@ describe("print", () => {
       assert.strictEqual(
         stripAnsi(getCaptured()),
         "\u2501\u2501 Output (500ms) (0 tokens in session, 50% of context window) \u2501\u2501\n",
+      );
+    });
+
+    it("drops usage when there is not enough room", () => {
+      mock.method(processDeps.stdout, "getColumns", () => 44);
+      const getCaptured = mockStdout();
+      mock.method(performance, "now", () => 1_000);
+      actions.setApiStartTime();
+      mock.method(performance, "now", () => 1_500);
+      actions.setApiEndTime();
+      actions.setContextWindowPerModel({ "unknown-model": 10_000 });
+
+      fencePrint("Output", { showSessionInfo: true });
+
+      assert.strictEqual(
+        stripAnsi(getCaptured()),
+        "\u2501\u2501 Output (500ms) \u2501\u2501\n",
+      );
+    });
+
+    it("drops duration and usage when there is not enough room", () => {
+      mock.method(processDeps.stdout, "getColumns", () => 20);
+      const getCaptured = mockStdout();
+      mock.method(performance, "now", () => 1_000);
+      actions.setApiStartTime();
+      mock.method(performance, "now", () => 1_500);
+      actions.setApiEndTime();
+
+      fencePrint("Output", { showSessionInfo: true });
+
+      assert.strictEqual(
+        stripAnsi(getCaptured()),
+        "\u2501\u2501 Output \u2501\u2501\n",
+      );
+    });
+
+    it("drops the header when it does not fit", () => {
+      const longHeader = "a".repeat(72);
+      const getCaptured = mockStdout();
+      fencePrint(longHeader);
+
+      assert.strictEqual(
+        stripAnsi(getCaptured()),
+        `\u2501\u2501 ${longHeader.substring(0, 66)}\u2026 \u2501\u2501\n`,
+      );
+    });
+
+    it("truncates the header instead of dropping when showSessionInfo is set", () => {
+      const longHeader = "b".repeat(72);
+      const getCaptured = mockStdout();
+      mock.method(performance, "now", () => 1_000);
+      actions.setApiStartTime();
+      mock.method(performance, "now", () => 1_500);
+      actions.setApiEndTime();
+
+      fencePrint(longHeader, { showSessionInfo: true });
+
+      assert.strictEqual(
+        stripAnsi(getCaptured()),
+        `\u2501\u2501 ${longHeader.substring(0, 63)}\u2026 \u2501\u2501\n`,
       );
     });
   });

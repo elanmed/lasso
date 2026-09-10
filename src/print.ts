@@ -2,6 +2,7 @@ import assert from "node:assert";
 import { actions, getState } from "./state.ts";
 import { processDeps } from "./deps.ts";
 import { getPrettyUsage } from "./usage-format.ts";
+import { getMaxColLength, truncate } from "./utils.ts";
 
 const COLORS = {
   red: "\x1b[31m",
@@ -61,10 +62,39 @@ interface FencePrintOpts {
 export function fencePrint(text: string, opts: FencePrintOpts = {}) {
   const showSessionInfo = opts.showSessionInfo ?? false;
 
-  const line = (() => {
-    if (!showSessionInfo) return `━━ ${bold(text)} ━━`;
+  const fenceCharsLen = 6;
+  const parensPlusSpace = 3;
+  const availCol = getMaxColLength();
 
-    return `━━ ${bold(text)} (${getPrettyApiDuration()}) (${getPrettyUsage()}) ━━`;
+  const line = (() => {
+    if (!showSessionInfo) return `━━ ${bold(truncate(text, fenceCharsLen))} ━━`;
+
+    let accumulatedCol = fenceCharsLen;
+    let sessionInfo = "";
+
+    const fittedHeader = truncate(text, fenceCharsLen + parensPlusSpace);
+
+    sessionInfo += bold(fittedHeader);
+    accumulatedCol += fittedHeader.length;
+
+    const prettyApiDuration = getPrettyApiDuration();
+    if (
+      accumulatedCol + prettyApiDuration.length + parensPlusSpace >
+      availCol
+    ) {
+      return `━━ ${sessionInfo} ━━`;
+    }
+    sessionInfo += ` (${prettyApiDuration})`;
+    accumulatedCol += prettyApiDuration.length + parensPlusSpace;
+
+    const prettyUsage = getPrettyUsage();
+    if (accumulatedCol + prettyUsage.length + parensPlusSpace > availCol) {
+      return `━━ ${sessionInfo} ━━`;
+    }
+    sessionInfo += ` (${prettyUsage})`;
+    accumulatedCol += prettyUsage.length;
+
+    return `━━ ${sessionInfo} ━━`;
   })();
 
   colorPrint(line, opts.color ?? "grey");
