@@ -31,13 +31,7 @@ function splitByLen(str: string, len: number) {
   for (let i = 0; i < str.length; i += chunkLen) {
     chunks.push(str.slice(i, i + chunkLen));
   }
-
-  return chunks.map((chunk, idx) => {
-    if (/\s$/.test(chunk)) return chunk;
-    const nextChunk = chunks[idx + 1];
-    if (nextChunk === undefined) return chunk;
-    return chunk.concat("-");
-  });
+  return chunks;
 }
 
 export function toolPrint(label: string, detail: string) {

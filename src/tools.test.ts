@@ -46,7 +46,7 @@ describe("tools", () => {
       toolPrint("bash", "hello");
       assert.strictEqual(
         stripAnsi(getCaptured()),
-        `bash: hel-
+        `bash: hel
       lo
 `,
       );
@@ -58,9 +58,9 @@ describe("tools", () => {
       toolPrint("bash", "abcdefghij");
       assert.strictEqual(
         stripAnsi(getCaptured()),
-        `bash: abc-
-      def-
-      ghi-
+        `bash: abc
+      def
+      ghi
       j
 `,
       );
@@ -98,7 +98,7 @@ describe("tools", () => {
       toolPrint("bash", "abcd");
       assert.strictEqual(
         stripAnsi(getCaptured()),
-        `bash: abc-
+        `bash: abc
       d
 `,
       );
@@ -110,8 +110,8 @@ describe("tools", () => {
       toolPrint("bash", "abc defgh");
       assert.strictEqual(
         stripAnsi(getCaptured()),
-        `bash: abc-
-       de-
+        `bash: abc
+       de
       fgh
 `,
       );
@@ -123,8 +123,8 @@ describe("tools", () => {
       toolPrint("bash", "abcdefgh\nij");
       assert.strictEqual(
         stripAnsi(getCaptured()),
-        `bash: abc-
-      def-
+        `bash: abc
+      def
       gh
       ij
 `,
@@ -137,10 +137,10 @@ describe("tools", () => {
       toolPrint("bash", "abcdefgh\nijklmnop");
       assert.strictEqual(
         stripAnsi(getCaptured()),
-        `bash: abc-
-      def-
+        `bash: abc
+      def
       gh
-      ijk-
+      ijk
 `,
       );
     });
