@@ -1,10 +1,13 @@
-import { describe, it, beforeEach } from "node:test";
+import { describe, it, beforeEach, afterEach, mock } from "node:test";
 import assert from "node:assert";
 import { actions } from "./state.ts";
 import { getHeaders, getLanguageModel } from "./model.ts";
 import { setupApiCallState, setupTestContext } from "./test-helpers.ts";
 
 describe("model", () => {
+  afterEach(() => {
+    mock.restoreAll();
+  });
   beforeEach(() => {
     setupTestContext();
     setupApiCallState();

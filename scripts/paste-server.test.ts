@@ -2,7 +2,7 @@ import assert from "node:assert";
 import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import net from "node:net";
-import { describe, it } from "node:test";
+import { describe, it, afterEach, mock } from "node:test";
 import { readPort, stop } from "./test-helpers.ts";
 
 const serverPath = fileURLToPath(new URL("./paste-server.ts", import.meta.url));
@@ -19,6 +19,9 @@ async function request(port: number): Promise<Buffer> {
 }
 
 describe("paste-server", () => {
+  afterEach(() => {
+    mock.restoreAll();
+  });
   it("sends the clipboard command output to the client for repeated requests", async () => {
     const server = spawn(
       process.execPath,

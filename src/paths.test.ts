@@ -1,4 +1,4 @@
-import { describe, it, beforeEach } from "node:test";
+import { describe, it, beforeEach, afterEach, mock } from "node:test";
 import assert from "node:assert";
 import { join } from "node:path";
 import {
@@ -9,6 +9,9 @@ import {
 import { testProcessEnv, setupTestContext } from "./test-helpers.ts";
 
 describe("paths", () => {
+  afterEach(() => {
+    mock.restoreAll();
+  });
   beforeEach(() => {
     setupTestContext();
   });

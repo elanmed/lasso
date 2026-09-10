@@ -4,7 +4,7 @@ import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
 import net from "node:net";
-import { describe, it } from "node:test";
+import { describe, it, afterEach, mock } from "node:test";
 import { readPort, stop } from "./test-helpers.ts";
 
 const serverPath = fileURLToPath(new URL("./copy-server.ts", import.meta.url));
@@ -22,6 +22,9 @@ async function send(port: number, chunks: Buffer[]): Promise<void> {
 }
 
 describe("copy-server", () => {
+  afterEach(() => {
+    mock.restoreAll();
+  });
   it("writes client data, including multiple TCP chunks, to command stdin", async () => {
     const directory = mkdtempSync(`${tmpdir()}/copy-server-test-`);
     const outputPath = `${directory}/clipboard`;
