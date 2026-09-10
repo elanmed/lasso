@@ -59,42 +59,45 @@ interface FencePrintOpts {
   color?: Color;
 }
 
+function wrapInFence(text: string) {
+  return `━━ ${text} ━━`;
+}
+
+function getFenceSessionLine(text: string) {
+  const fenceCharsLen = 6;
+  const availCol = getMaxColLength();
+
+  let accumulatedCol = fenceCharsLen;
+  let sessionInfo = "";
+
+  const fittedHeader = truncate(text, fenceCharsLen + 3);
+
+  sessionInfo += bold(fittedHeader);
+  accumulatedCol += fittedHeader.length;
+
+  const prettyApiDurationInfo = ` (${getPrettyApiDuration()})`;
+  if (accumulatedCol + prettyApiDurationInfo.length > availCol) {
+    return sessionInfo;
+  }
+  sessionInfo += prettyApiDurationInfo;
+  accumulatedCol += prettyApiDurationInfo.length;
+
+  const prettyUsageInfo = ` (${getPrettyUsage()})`;
+  if (accumulatedCol + prettyUsageInfo.length > availCol) {
+    return sessionInfo;
+  }
+  sessionInfo += prettyUsageInfo;
+  accumulatedCol += prettyUsageInfo.length;
+
+  return sessionInfo;
+}
+
 export function fencePrint(text: string, opts: FencePrintOpts = {}) {
   const showSessionInfo = opts.showSessionInfo ?? false;
 
-  const fenceCharsLen = 6;
-  const parensPlusSpace = 3;
-  const availCol = getMaxColLength();
-
   const line = (() => {
-    if (!showSessionInfo) return `━━ ${bold(truncate(text, fenceCharsLen))} ━━`;
-
-    let accumulatedCol = fenceCharsLen;
-    let sessionInfo = "";
-
-    const fittedHeader = truncate(text, fenceCharsLen + parensPlusSpace);
-
-    sessionInfo += bold(fittedHeader);
-    accumulatedCol += fittedHeader.length;
-
-    const prettyApiDuration = getPrettyApiDuration();
-    if (
-      accumulatedCol + prettyApiDuration.length + parensPlusSpace >
-      availCol
-    ) {
-      return `━━ ${sessionInfo} ━━`;
-    }
-    sessionInfo += ` (${prettyApiDuration})`;
-    accumulatedCol += prettyApiDuration.length + parensPlusSpace;
-
-    const prettyUsage = getPrettyUsage();
-    if (accumulatedCol + prettyUsage.length + parensPlusSpace > availCol) {
-      return `━━ ${sessionInfo} ━━`;
-    }
-    sessionInfo += ` (${prettyUsage})`;
-    accumulatedCol += prettyUsage.length;
-
-    return `━━ ${sessionInfo} ━━`;
+    if (!showSessionInfo) return wrapInFence(bold(truncate(text, 6)));
+    return wrapInFence(getFenceSessionLine(text));
   })();
 
   colorPrint(line, opts.color ?? "grey");
