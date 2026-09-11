@@ -150,6 +150,19 @@ function getApproxTokens(str: string) {
   return Math.floor(str.length / 3);
 }
 
+function getApproxTokensFromMessages(messages: ModelMessage[]) {
+  const textOnly = messages.map((message) => {
+    if (typeof message.content === "string") return message;
+    return {
+      ...message,
+      content: message.content.filter(
+        (part) => part.type !== "image" && part.type !== "file",
+      ),
+    };
+  });
+  return getApproxTokens(JSON.stringify(textOnly));
+}
+
 export async function maybeCompactMessageParams(userInput: string) {
   const { model } = getState().config;
   if (model === MISSING) return;
@@ -157,11 +170,14 @@ export async function maybeCompactMessageParams(userInput: string) {
   const contextWindow = getState().config.contextWindowPerModel[model];
   if (contextWindow === undefined) return;
 
+  // maybeCompactMessageParams runs before each api call turn, so we don't know the token
+  // count of userInput until after the API call. This can be problematic when the userInput
+  // would large enough to trigger compaction, so we approximate for the userInput
   const userInputTokensApprox = getApproxTokens(userInput);
   const nextApiTokens = (() => {
     if (getState().app.messageParams.tokensStale) {
       return (
-        getApproxTokens(JSON.stringify(getState().app.messageParams.messages)) +
+        getApproxTokensFromMessages(getState().app.messageParams.messages) +
         userInputTokensApprox
       );
     } else {

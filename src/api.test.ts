@@ -461,7 +461,7 @@ SKILLS: available skills`,
       actions.appendToMessageParams({
         role: "user",
         content: [
-          { type: "image", image: "a".repeat(20_000), mediaType: "image/png" },
+          { type: "image", image: "a".repeat(300_000), mediaType: "image/png" },
           { type: "text", text: "after image" },
         ],
       });
