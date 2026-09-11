@@ -57,8 +57,8 @@ describe("tools", () => {
       toolPrint("bash", "abcdefghijklmnopqrstuvwxyz");
       assert.strictEqual(
         stripAnsi(getCaptured()),
-        `bash: abcdefghijklmnopqrstuv
-       ┊wxyz
+        `bash: abcdefghijklmnopqrstuvwx
+       ┊yz
 `,
       );
     });
@@ -143,7 +143,7 @@ describe("tools", () => {
       toolPrint("bash", "a".repeat(91));
       assert.strictEqual(
         stripAnsi(getCaptured()),
-        `bash: ${"a".repeat(22)}
+        `bash: ${"a".repeat(24)}
        ┊${"a".repeat(22)}
        ┊${"a".repeat(22)}
        ┊${"a".repeat(21)}…

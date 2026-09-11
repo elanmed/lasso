@@ -29,8 +29,6 @@ export function toolPrint(label: string, detail: string) {
   const colonSpaceLen = 2;
   const labelLen = label.length + colonSpaceLen;
   const indent = " ".repeat(7).concat("┊");
-  const maxLen = getMaxColLength() - Math.max(indent.length, labelLen);
-
   const lines = [];
 
   let detailIdx = 0;
@@ -38,6 +36,11 @@ export function toolPrint(label: string, detail: string) {
   while (lines.length <= 3 && detailIdx < detailArr.length) {
     const detailLine = detailArr[detailIdx];
     assert(detailLine !== undefined);
+
+    const maxLen = (() => {
+      if (lines.length === 0) return getMaxColLength() - labelLen;
+      return getMaxColLength() - indent.length;
+    })();
 
     const splitStr = detailLine.slice(strIdx, strIdx + maxLen);
     strIdx += splitStr.length;
@@ -61,7 +64,7 @@ export function toolPrint(label: string, detail: string) {
     assert(lastLine !== undefined);
 
     const newLastLine = (() => {
-      if (lastLine.length === indent.length + maxLen) {
+      if (lastLine.length === getMaxColLength()) {
         return lastLine.slice(0, -1).concat("…");
       } else {
         return lastLine.concat("…");
