@@ -26,7 +26,7 @@ import {
 } from "./print.ts";
 import { getPrettyTokenUsage, getPrettyUsage } from "./usage-format.ts";
 import { dirname, join } from "node:path";
-import { actions, getState , promptDeps } from "./state.ts";
+import { actions, getState, promptDeps } from "./state.ts";
 import childProcess from "node:child_process";
 import os from "node:os";
 import { initStateRepeatable } from "./config.ts";

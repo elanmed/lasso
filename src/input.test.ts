@@ -1,6 +1,6 @@
 import { describe, it, beforeEach, afterEach, mock } from "node:test";
 import assert from "node:assert";
-import { actions, getState , promptDeps } from "./state.ts";
+import { actions, getState, promptDeps } from "./state.ts";
 import { getApproxTokens } from "./utils.ts";
 
 import {
