@@ -57,8 +57,8 @@ describe("tools", () => {
       toolPrint("bash", "abcdefghijklmnopqrstuvwxyz");
       assert.strictEqual(
         stripAnsi(getCaptured()),
-        `bash: abcdefghijklmnopqr
-        ┊stuvwxyz
+        `bash: abcdefghijklmnopqrstuv
+       ┊wxyz
 `,
       );
     });
@@ -70,7 +70,7 @@ describe("tools", () => {
       assert.strictEqual(
         stripAnsi(getCaptured()),
         `bash: one
-        ┊two
+       ┊two
 `,
       );
     });
@@ -82,9 +82,9 @@ describe("tools", () => {
       assert.strictEqual(
         stripAnsi(getCaptured()),
         `bash: a
-        ┊b
-        ┊c
-        ┊d
+       ┊b
+       ┊c
+       ┊d
 `,
       );
     });
@@ -118,7 +118,7 @@ describe("tools", () => {
       assert.strictEqual(
         stripAnsi(getCaptured()),
         `bash: abcdefghij
-        ┊kl
+       ┊kl
 `,
       );
     });
@@ -130,9 +130,23 @@ describe("tools", () => {
       assert.strictEqual(
         stripAnsi(getCaptured()),
         `bash: abcdefghij
-        ┊kl
-        ┊m
-        ┊n
+       ┊kl
+       ┊m
+       ┊n
+`,
+      );
+    });
+
+    it("caps a long single detail at four full lines", () => {
+      mock.method(processDeps.stdout, "getColumns", () => 30);
+      const getCaptured = mockStdout();
+      toolPrint("bash", "a".repeat(91));
+      assert.strictEqual(
+        stripAnsi(getCaptured()),
+        `bash: ${"a".repeat(22)}
+       ┊${"a".repeat(22)}
+       ┊${"a".repeat(22)}
+       ┊${"a".repeat(22)}
 `,
       );
     });
@@ -143,8 +157,8 @@ describe("tools", () => {
       toolPrint("abcdefghijklmnopqrst", "abcdefghijklmnopqrstuvwx");
       assert.strictEqual(
         stripAnsi(getCaptured()),
-        `abcdefghijklmnopqrst: abcdefghijklmn
-        ┊opqrstuvwx
+        `abcdefghijklmnopqrst: abcdefghijklmnopqr
+       ┊stuvwx
 `,
       );
     });

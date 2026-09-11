@@ -36,23 +36,23 @@ function splitByLen(str: string, len: number) {
 
 export function toolPrint(label: string, detail: string) {
   const detailArr = detail.split("\n").filter((str) => str.length > 0);
-  const colonSpacePadding = 2;
-  const indent = " ".repeat(8).concat("┊");
-  const maxLen =
-    getMaxColLength() -
-    Math.max(indent.length, label.length + colonSpacePadding);
+  const colonSpaceLen = 2;
+  const labelLen = label.length + colonSpaceLen;
+  const indent = " ".repeat(7).concat("┊");
+  const maxLen = getMaxColLength() - Math.max(indent.length, labelLen);
 
   const lines = [];
 
+  let detailSplit: string[] = [];
   let detailIdx = 0;
   while (lines.length <= 3 && detailIdx < detailArr.length) {
     const detail = detailArr[detailIdx];
     assert(detail !== undefined);
 
-    const split = splitByLen(detail, maxLen);
+    detailSplit = splitByLen(detail, maxLen);
     let splitIdx = 0;
-    while (lines.length <= 3 && splitIdx < split.length) {
-      const splitStr = split[splitIdx];
+    while (lines.length <= 3 && splitIdx < detailSplit.length) {
+      const splitStr = detailSplit[splitIdx];
       assert(splitStr !== undefined);
 
       const prefix = (() => {
@@ -64,6 +64,23 @@ export function toolPrint(label: string, detail: string) {
       splitIdx++;
     }
     detailIdx++;
+  }
+
+  const lastSplitDetailOverflow = lines.length === 3 && detailSplit.length > 3;
+  const lastDetailOverflow = lines.length === 3 && detailArr.length > 3;
+
+  if (lastSplitDetailOverflow || lastDetailOverflow) {
+    const lastLine = lines.at(-1);
+    assert(lastLine !== undefined);
+
+    const newLastLine = (() => {
+      if (lastLine.length === maxLen) {
+        return lastLine.slice(0, maxLen - 1).concat("…");
+      } else {
+        return lastLine.concat("…");
+      }
+    })();
+    lines.push(newLastLine);
   }
 
   const linesStr = lines.join("\n");
