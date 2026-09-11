@@ -24,16 +24,6 @@ import { appendModelUsage } from "./usage.ts";
 const userAgent =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
 
-function splitByLen(str: string, len: number) {
-  len = Math.max(1, len);
-  assert(!str.includes("\n"));
-  const chunks: string[] = [];
-  for (let i = 0; i < str.length; i += len) {
-    chunks.push(str.slice(i, i + len));
-  }
-  return chunks;
-}
-
 export function toolPrint(label: string, detail: string) {
   const detailArr = detail.split("\n").filter((str) => str.length > 0);
   const colonSpaceLen = 2;
@@ -43,33 +33,30 @@ export function toolPrint(label: string, detail: string) {
 
   const lines = [];
 
-  let detailSplit: string[] = [];
   let detailIdx = 0;
+  let strIdx = 0;
   while (lines.length <= 3 && detailIdx < detailArr.length) {
-    const detail = detailArr[detailIdx];
-    assert(detail !== undefined);
+    const detailLine = detailArr[detailIdx];
+    assert(detailLine !== undefined);
 
-    detailSplit = splitByLen(detail, maxLen);
-    let splitIdx = 0;
-    while (lines.length <= 3 && splitIdx < detailSplit.length) {
-      const splitStr = detailSplit[splitIdx];
-      assert(splitStr !== undefined);
-
-      const prefix = (() => {
-        if (splitIdx === 0 && detailIdx === 0) return `${bold(label)}: `;
-        return indent;
-      })();
-
-      lines.push(prefix.concat(splitStr));
-      splitIdx++;
+    const splitStr = detailLine.slice(strIdx, strIdx + maxLen);
+    strIdx += splitStr.length;
+    if (strIdx >= detailLine.length) {
+      detailIdx++;
+      strIdx = 0;
     }
-    detailIdx++;
+
+    const prefix = (() => {
+      if (lines.length === 0) return `${bold(label)}: `;
+      return indent;
+    })();
+
+    lines.push(prefix.concat(splitStr));
   }
 
-  const lastSplitDetailOverflow = lines.length === 4 && detailSplit.length > 4;
-  const lastDetailOverflow = lines.length === 4 && detailArr.length > 4;
+  const overflow = lines.length === 4 && detailIdx < detailArr.length;
 
-  if (lastSplitDetailOverflow || lastDetailOverflow) {
+  if (overflow) {
     const lastLine = lines.pop();
     assert(lastLine !== undefined);
 
