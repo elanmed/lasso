@@ -204,11 +204,7 @@ export function initKeypress() {
             return;
           }
           case "history": {
-            await openWithPager({
-              initialContentPath: getState().app.chatHistoryPath,
-              pagerEnvKey: "LASSO_PAGER_HISTORY",
-              contentType: "markdown",
-            });
+            await pageHistory();
             return;
           }
           case "config": {
@@ -548,11 +544,7 @@ async function resolveBuiltinSlashCommand(
       return { handled: true, inputFromCommand: null };
     }
     case "history": {
-      await openWithPager({
-        initialContentPath: getState().app.chatHistoryPath,
-        pagerEnvKey: "LASSO_PAGER_HISTORY",
-        contentType: "markdown",
-      });
+      await pageHistory();
       return { handled: true, inputFromCommand: null };
     }
     case "model": {
@@ -1151,6 +1143,26 @@ export function initGlobalConfig() {
   print.info(`Created the global config at ${path}`);
 }
 
+export async function pageHistory() {
+  const path = getState().app.chatHistoryPath;
+  const readResult = tryCatch(() => fsDeps.readFileSync(path).toString());
+  const historyStr = readResult.ok ? readResult.value : "";
+
+  if (historyStr.length === 0) {
+    printNewline();
+    print.doing("No chat history");
+    return;
+  }
+
+  await openWithPager({
+    initialContentStr: `# [lasso] Chat history
+
+${historyStr}`,
+    pagerEnvKey: "LASSO_PAGER_HISTORY",
+    contentType: "markdown",
+  });
+}
+
 export async function pageLastResponse() {
   const { messages } = getState().app.messageParams;
   const lastMessage = messages.findLast(
@@ -1173,7 +1185,9 @@ export async function pageLastResponse() {
   const formattedContentStr = await formatMarkdown(contentStr);
 
   await openWithPager({
-    initialContentStr: formattedContentStr,
+    initialContentStr: `# [lasso] Last response
+
+${formattedContentStr}`,
     pagerEnvKey: "LASSO_PAGER_LAST_RESPONSE",
     contentType: "markdown",
   });

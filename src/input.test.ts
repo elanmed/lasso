@@ -20,6 +20,7 @@ import {
   initSigInt,
   initLocalConfig,
   initGlobalConfig,
+  pageHistory,
   pageLastResponse,
   resolveInterruptWithEditor,
 } from "./input.ts";
@@ -1128,6 +1129,39 @@ No available context files
     });
   });
 
+  describe("pageHistory", () => {
+    beforeEach(() => {
+      actions.resetState();
+      actions.resetStdout();
+      actions.setChatHistoryPath("/tmp/test-history.log");
+    });
+
+    it("prints that history is empty when the chat history file does not exist", async () => {
+      await pageHistory();
+      assert.strictEqual(stripAnsi(getCapturedStdout()), `\nNo chat history\n`);
+    });
+
+    it("prints that history is empty when the chat history file is empty", async () => {
+      testFs._files.set("/tmp/test-history.log", "");
+      await pageHistory();
+      assert.strictEqual(stripAnsi(getCapturedStdout()), `\nNo chat history\n`);
+    });
+
+    it("opens the chat history in a pager with a heading prepended", async () => {
+      const { spawned } = mockPagerSpawn();
+      testProcessEnv._set("LASSO_PAGER_HISTORY", "nano __FILE__");
+      testFs._files.set("/tmp/test-history.log", "log content");
+      await pageHistory();
+      assert.strictEqual(spawned[0], "nano /tmp/lasso-test-uuid.txt");
+      assert.strictEqual(
+        testFs._files.get("/tmp/lasso-test-uuid.txt"),
+        `# [lasso] Chat history
+        
+log content`,
+      );
+    });
+  });
+
   describe("pageLastResponse", () => {
     beforeEach(() => {
       actions.resetState();
@@ -1156,7 +1190,11 @@ No available context files
       assert.strictEqual(spawned[0], "nano /tmp/lasso-test-uuid.txt");
       assert.strictEqual(
         testFs._files.get("/tmp/lasso-test-uuid.txt"),
-        "first\nsecond\n",
+        `# [lasso] Last response
+
+first
+second
+`,
       );
     });
   });
@@ -1450,7 +1488,9 @@ Available commands:
       assert.strictEqual(spawned[0], batPagerCmd("/tmp/lasso-test-uuid.txt"));
       assert.strictEqual(
         testFs._files.get("/tmp/lasso-test-uuid.txt"),
-        "log content",
+        `# [lasso] Chat history
+
+log content`,
       );
       assert.strictEqual(getCapturedStdout(), "");
     });
@@ -1705,7 +1745,9 @@ pasted content
       assert.strictEqual(result, null);
       assert.strictEqual(
         testFs._files.get("/tmp/lasso-test-uuid.txt"),
-        "log content",
+        `# [lasso] Chat history
+
+log content`,
       );
     });
 
