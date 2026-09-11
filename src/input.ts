@@ -174,6 +174,8 @@ export function initKeypress() {
     actions.appendToStdout(output);
   }
 
+  // Reprints the readline prompt line and any half-typed input after pager
+  // commands so the pending question and its input stay visible and editable
   function redrawPendingQuestion() {
     if (getState().abortControllers.question === null) return;
     assert(rl !== null);

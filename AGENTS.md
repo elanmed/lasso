@@ -27,6 +27,10 @@ Or all at once:
 
 Use `./agent-pnpm-run <script> [args...]` instead of calling `pnpm run` directly.
 
+## Line counts
+
+The README states approximate source and test line counts. Run `./agent-pnpm-run cloc` after code changes; if either number has moved past the nearest-100 boundary (round the new count to the nearest hundred and compare with the README), update the README figures.
+
 ## Guidelines
 
 - Never add comments
