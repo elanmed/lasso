@@ -1,4 +1,6 @@
 import { describe, it, beforeEach, afterEach, mock } from "node:test";
+
+import { getApproxTokens } from "./utils.ts";
 import assert from "node:assert";
 import { actions, getState, type MCPToolSet } from "./state.ts";
 import { maybeCompactMessageParams, resolveApiCall } from "./api.ts";
@@ -14,7 +16,7 @@ import {
   makeMcpTool,
 } from "./test-helpers.ts";
 import { aiDeps } from "./deps.ts";
-import { BASE_SYSTEM_PROMPT } from "./prompts.ts";
+import { promptDeps } from "./state.ts";
 import type { ModelMessage, ToolSet } from "ai";
 
 describe("api", () => {
@@ -337,21 +339,16 @@ response text
       assert.strictEqual(testFs._files.has("/tmp/lasso-test-uuid.txt"), false);
     });
 
-    it("passes system content from context and skills", async () => {
-      actions.setContextStr("CTX: project context");
-      actions.setSkillsStr("SKILLS: available skills");
+    it("passes system content to the api call", async () => {
+      const systemContent = "system-content";
+      mock.method(promptDeps, "getSystemContent", () => systemContent);
       let capturedSystem: string | undefined;
       mock.method(aiDeps, "generateText", (opts: Record<string, unknown>) => {
         capturedSystem = opts["system"] as string;
         return makeGenerateTextResult();
       });
       await resolveApiCall("hello");
-      assert.strictEqual(
-        capturedSystem,
-        `${BASE_SYSTEM_PROMPT}
-CTX: project context
-SKILLS: available skills`,
-      );
+      assert.strictEqual(capturedSystem, systemContent);
     });
 
     it("includes previous messages in request", async () => {
@@ -455,6 +452,31 @@ SKILLS: available skills`,
         tokensStale: true,
         messages: [{ role: "user", content: longUserContent }],
       });
+    });
+
+    it("includes the system prompt in the stale approximation when deciding compaction", async () => {
+      const systemContent = "s".repeat(60_000);
+      mock.method(promptDeps, "getSystemContent", () => systemContent);
+      const longUserContent = "a".repeat(150_000);
+      actions.appendToMessageParams({
+        role: "user",
+        content: longUserContent,
+      });
+      actions.setMessageParamTokens(0);
+      actions.setMessageParamTokensStale(true);
+      let called = false;
+      mock.method(aiDeps, "generateText", () => {
+        called = true;
+        return Promise.resolve(makeGenerateTextResult());
+      });
+      await maybeCompactMessageParams("hi");
+      const systemContentTokensApprox = getApproxTokens(systemContent);
+      assert.strictEqual(getApproxTokens(longUserContent) < 70_000, true);
+      assert.strictEqual(
+        getApproxTokens(longUserContent) + systemContentTokensApprox >= 70_000,
+        true,
+      );
+      assert.strictEqual(called, true);
     });
 
     it("excludes image and file parts from the stale approximation", async () => {

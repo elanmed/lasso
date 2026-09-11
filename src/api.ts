@@ -1,7 +1,8 @@
 import type { ModelMessage } from "ai";
-import { actions, getState } from "./state.ts";
+import { actions, getState, promptDeps } from "./state.ts";
 import {
   isAbortError,
+  getApproxTokens,
   tryCatchAsync,
   getMessageFromError,
   safeStringify,
@@ -9,7 +10,6 @@ import {
 import { createToolCallDiffer } from "./differ.ts";
 import { print, startLoadingState, stopLoadingState } from "./print.ts";
 import { appendModelUsage } from "./usage.ts";
-import { BASE_SYSTEM_PROMPT } from "./prompts.ts";
 import {
   objectWithPathSchema,
   printGitDiff,
@@ -18,7 +18,8 @@ import {
   toolPrint,
 } from "./tools.ts";
 import assert from "node:assert";
-import { aiDeps, MISSING } from "./deps.ts";
+import { MISSING } from "./missing.ts";
+import { aiDeps } from "./deps.ts";
 import { prependToChatHistory } from "./log.ts";
 import { getLanguageModel } from "./model.ts";
 import { resolveInterruptWithEditor } from "./input.ts";
@@ -37,11 +38,7 @@ export async function resolveApiCall(userInput: string) {
     content: userInput,
   };
 
-  const systemContent = [
-    BASE_SYSTEM_PROMPT,
-    getState().app.contextStr,
-    getState().app.skillsStr,
-  ].join("\n");
+  const systemContent = promptDeps.getSystemContent();
 
   actions.appendToMessageParams(inputMessageParam);
 
@@ -135,6 +132,7 @@ export async function resolveApiCall(userInput: string) {
   const inputTokens = totalUsage.inputTokens ?? 0;
   const outputTokens = totalUsage.outputTokens ?? 0;
 
+  // no need to approximate the system prompt tokens here — inputTokens already includes them
   actions.setMessageParamTokens(inputTokens + outputTokens);
   actions.setMessageParamTokensStale(false);
 
@@ -144,10 +142,6 @@ export async function resolveApiCall(userInput: string) {
   prependToChatHistory(text, "assistant");
 
   return text;
-}
-
-function getApproxTokens(str: string) {
-  return Math.floor(str.length / 3);
 }
 
 function getApproxTokensFromMessages(messages: ModelMessage[]) {
@@ -174,11 +168,17 @@ export async function maybeCompactMessageParams(userInput: string) {
   // count of userInput until after the API call. This can be problematic when the userInput
   // would large enough to trigger compaction, so we approximate for the userInput
   const userInputTokensApprox = getApproxTokens(userInput);
+  // the same applies to the system content, which is sent with every api call
+  const systemContentTokensApprox = getApproxTokens(
+    promptDeps.getSystemContent(),
+  );
+
   const nextApiTokens = (() => {
     if (getState().app.messageParams.tokensStale) {
       return (
         getApproxTokensFromMessages(getState().app.messageParams.messages) +
-        userInputTokensApprox
+        userInputTokensApprox +
+        systemContentTokensApprox
       );
     } else {
       return getState().app.messageParams.tokens + userInputTokensApprox;
@@ -228,7 +228,9 @@ ${JSON.stringify(getState().app.messageParams.messages)}
 
   actions.resetMessageParams();
   actions.appendToMessageParams({ content: text, role: "assistant" });
-  actions.setMessageParamTokens(afterCompactionTokens);
+  actions.setMessageParamTokens(
+    afterCompactionTokens + systemContentTokensApprox,
+  );
   if (afterCompactionTokens >= targetTokens) {
     print.warning(
       `Compacted to ${afterCompactionTokens.toLocaleString()}, ${(afterCompactionTokens - targetTokens).toLocaleString()} over the target.`,

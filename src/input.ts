@@ -8,6 +8,7 @@ import {
   tryCatch,
   tryCatchAsync,
   getMessageFromError,
+  getApproxTokens,
   normalizeLine,
   getTempFileName,
   execPromise,
@@ -25,7 +26,7 @@ import {
 } from "./print.ts";
 import { getPrettyTokenUsage, getPrettyUsage } from "./usage-format.ts";
 import { dirname, join } from "node:path";
-import { actions, getState } from "./state.ts";
+import { actions, getState , promptDeps } from "./state.ts";
 import childProcess from "node:child_process";
 import os from "node:os";
 import { initStateRepeatable } from "./config.ts";
@@ -714,6 +715,9 @@ export async function resolveSlashCommand(rawInput: string) {
 export function clearCommand() {
   print.infoSubtle(`Context cleared (${getPrettyTokenUsage()})`);
   actions.resetMessageParams();
+  // the next api call only reports its token usage after it completes, so seeding with the
+  // system prompt approx keeps the context window percent from displaying 0% in the meantime
+  actions.setMessageParamTokens(getApproxTokens(promptDeps.getSystemContent()));
   actions.setModelUsageForSession({});
 }
 
