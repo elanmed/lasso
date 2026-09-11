@@ -174,6 +174,12 @@ export function initKeypress() {
     actions.appendToStdout(output);
   }
 
+  function redrawPendingQuestion() {
+    if (getState().abortControllers.question === null) return;
+    assert(rl !== null);
+    rl.prompt(true);
+  }
+
   stdin.on("keypress", (_char, key: Key) => {
     void (async () => {
       const keymaps = getState().config.keymaps;
@@ -186,26 +192,33 @@ export function initKeypress() {
         switch (command) {
           case "edit": {
             const editorContent = await spawnAndReadEditorContent();
-            if (editorContent !== null) {
+            if (editorContent === null) {
+              redrawPendingQuestion();
+            } else {
               abortRlQuestionForEditor(editorContent);
             }
+
             return;
           }
           case "editpage": {
             await pageEditStr();
+            redrawPendingQuestion();
             return;
           }
           case "paste": {
             const editorContent = await spawnAndReadEditorContent({
               includeClipboardSuffix: true,
             });
-            if (editorContent !== null) {
+            if (editorContent === null) {
+              redrawPendingQuestion();
+            } else {
               abortRlQuestionForEditor(editorContent);
             }
             return;
           }
           case "history": {
             await pageHistory();
+            redrawPendingQuestion();
             return;
           }
           case "config": {
@@ -214,23 +227,28 @@ export function initKeypress() {
               initialContentStr: getAllPrettyConfig(),
               contentType: "markdown",
             });
+            redrawPendingQuestion();
 
             return;
           }
           case "contextpage": {
             await pageContextStr();
+            redrawPendingQuestion();
             return;
           }
           case "commandspage": {
             await pageCustomSlashCommandsStr();
+            redrawPendingQuestion();
             return;
           }
           case "lastresponse": {
             await pageLastResponse();
+            redrawPendingQuestion();
             return;
           }
           case "reload": {
             await reload();
+            redrawPendingQuestion();
             return;
           }
           case "initlocal":
