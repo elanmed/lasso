@@ -2,7 +2,7 @@ import { describe, it, beforeEach, afterEach, mock } from "node:test";
 import assert from "node:assert/strict";
 
 import {
-  appendToChatHistory,
+  prependToChatHistory,
   initPromptHistory,
   deleteExpiredPromptHistory,
 } from "./log.ts";
@@ -19,7 +19,7 @@ describe("log", () => {
     setupTestContext();
   });
 
-  describe("appendToChatHistory", () => {
+  describe("prependToChatHistory", () => {
     beforeEach(() => {
       mock.restoreAll();
       setupTestContext({ now: 1_700_000_000_000 });
@@ -27,40 +27,42 @@ describe("log", () => {
 
     it("creates directory when log file does not exist", () => {
       actions.setChatHistoryPath("/test/editor.log");
-      appendToChatHistory("test message", "user");
+      prependToChatHistory("test message", "user");
       assert.equal(testFs._dirs.has("/test"), true);
     });
 
     it("appends content with timestamp and role", () => {
       actions.setChatHistoryPath("/test/editor.log");
-      appendToChatHistory("test content", "user");
+      testFs._files.set("/test/editor.log", "");
+      prependToChatHistory("test content", "user");
       assert.equal(
         testFs._files.get("/test/editor.log"),
-        `2023-11-14T22:13:20.000Z  *user*
-
----
+        `
+2023-11-14T22:13:20.000Z  *user*
 test content
 
+---
 `,
       );
     });
 
     it("appends multiple messages with different roles", () => {
       actions.setChatHistoryPath("/test/editor.log");
-      appendToChatHistory("hello", "user");
-      appendToChatHistory("response", "assistant");
+      testFs._files.set("/test/editor.log", "");
+      prependToChatHistory("hello", "user");
+      prependToChatHistory("response", "assistant");
       assert.equal(
         testFs._files.get("/test/editor.log"),
-        `2023-11-14T22:13:20.000Z  *user*
-
----
-hello
-
+        `
 2023-11-14T22:13:20.000Z  *assistant*
-
----
 response
 
+---
+
+2023-11-14T22:13:20.000Z  *user*
+hello
+
+---
 `,
       );
     });

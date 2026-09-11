@@ -376,11 +376,11 @@ describe("input", () => {
       assert.strictEqual(getState().app.editorInputValue, null);
       assert.strictEqual(
         testFs._files.get("/tmp/test-history.log"),
-        `1970-01-01T00:00:00.000Z  *user*
-
----
+        `
+1970-01-01T00:00:00.000Z  *user*
 editor content
 
+---
 `,
       );
     });
@@ -395,11 +395,11 @@ editor content
       assert.strictEqual(getState().app.editorInputValue, null);
       assert.strictEqual(
         testFs._files.get("/tmp/test-history.log"),
-        `1970-01-01T00:00:00.000Z  *user*
-
----
+        `
+1970-01-01T00:00:00.000Z  *user*
 /model new-model
 
+---
 `,
       );
     });
@@ -412,11 +412,11 @@ editor content
       assert.strictEqual(stripAnsi(getCapturedStdout()), "\n━━ Input ━━\n");
       assert.strictEqual(
         testFs._files.get("/tmp/test-history.log"),
-        `1970-01-01T00:00:00.000Z  *user*
-
----
+        `
+1970-01-01T00:00:00.000Z  *user*
 hello
 
+---
 `,
       );
     });
@@ -433,11 +433,11 @@ hello
       assert.strictEqual(getState().config.model, "new-model");
       assert.strictEqual(
         testFs._files.get("/tmp/test-history.log"),
-        `1970-01-01T00:00:00.000Z  *user*
-
----
+        `
+1970-01-01T00:00:00.000Z  *user*
 /model new-model
 
+---
 `,
       );
     });
@@ -470,11 +470,11 @@ read failed
       assert.strictEqual(getState().app.editorInputValue, null);
       assert.strictEqual(
         testFs._files.get("/tmp/test-history.log"),
-        `1970-01-01T00:00:00.000Z  *user*
-
----
+        `
+1970-01-01T00:00:00.000Z  *user*
 from editor
 
+---
 `,
       );
     });
@@ -560,11 +560,11 @@ Resume this session with /resume 42000
       assert.strictEqual(getState().app.editorInputValue, "second\n");
       assert.strictEqual(
         testFs._files.get("/tmp/test-history.log"),
-        `1970-01-01T00:00:00.000Z  *user*
-
----
+        `
+1970-01-01T00:00:00.000Z  *user*
 first
 
+---
 `,
       );
     });
@@ -599,11 +599,11 @@ second
       assert.strictEqual(getState().app.editorInputValue, null);
       assert.strictEqual(
         testFs._files.get("/tmp/test-history.log"),
-        `1970-01-01T00:00:00.000Z  *user*
-
----
+        `
+1970-01-01T00:00:00.000Z  *user*
 editor content
 
+---
 `,
       );
     });
@@ -626,11 +626,11 @@ third
       );
       assert.strictEqual(
         testFs._files.get("/tmp/test-history.log"),
-        `1970-01-01T00:00:00.000Z  *user*
-
----
+        `
+1970-01-01T00:00:00.000Z  *user*
 first
 
+---
 `,
       );
     });
@@ -681,11 +681,11 @@ l---
       assert.strictEqual(getState().app.editorInputValue, "/cwd\n");
       assert.strictEqual(
         testFs._files.get("/tmp/test-history.log"),
-        `1970-01-01T00:00:00.000Z  *user*
-
----
+        `
+1970-01-01T00:00:00.000Z  *user*
 message 2
 
+---
 `,
       );
     });
@@ -1664,11 +1664,11 @@ custom command content`,
       assert.strictEqual(result, "from editor\n");
       assert.strictEqual(
         testFs._files.get("/tmp/test-history.log"),
-        `1970-01-01T00:00:00.000Z  *user*
-
----
+        `
+1970-01-01T00:00:00.000Z  *user*
 from editor
 
+---
 `,
       );
     });
@@ -1683,11 +1683,11 @@ from editor
       assert.strictEqual(result, "pasted content\n");
       assert.strictEqual(
         testFs._files.get("/tmp/test-history.log"),
-        `1970-01-01T00:00:00.000Z  *user*
-
----
+        `
+1970-01-01T00:00:00.000Z  *user*
 pasted content
 
+---
 `,
       );
     });

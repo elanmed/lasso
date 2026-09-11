@@ -30,7 +30,7 @@ import childProcess from "node:child_process";
 import os from "node:os";
 import { initStateRepeatable } from "./config.ts";
 import type { Key } from "./config-types.ts";
-import { appendToChatHistory } from "./log.ts";
+import { prependToChatHistory } from "./log.ts";
 import { fsDeps, processDeps } from "./deps.ts";
 import { getGlobalConfigPath, getLocalConfigPath } from "./paths.ts";
 import { contextFileSkillNamePrefix } from "./context.ts";
@@ -357,7 +357,7 @@ export function parseInputFromEditor() {
     );
   }
 
-  appendToChatHistory(firstMessage, "user");
+  prependToChatHistory(firstMessage, "user");
   return firstMessage;
 }
 
@@ -421,7 +421,7 @@ export async function resolveUserInput({
   actions.appendToStdout(
     `${getState().config.promptPrefix}${inputResult.value}\n`,
   );
-  appendToChatHistory(inputResult.value, "user");
+  prependToChatHistory(inputResult.value, "user");
 
   const rawInput = inputResult.value;
   if (shouldResolveSlashCommand(rawInput, { forceKnownCommand: false })) {
@@ -529,7 +529,7 @@ async function resolveBuiltinSlashCommand(
   switch (command) {
     case "edit": {
       const content = await spawnAndReadEditorContent();
-      if (content !== null) appendToChatHistory(content, "user");
+      if (content !== null) prependToChatHistory(content, "user");
       return { handled: true, inputFromCommand: content };
     }
     case "editpage": {
@@ -540,7 +540,7 @@ async function resolveBuiltinSlashCommand(
       const content = await spawnAndReadEditorContent({
         includeClipboardSuffix: true,
       });
-      if (content !== null) appendToChatHistory(content, "user");
+      if (content !== null) prependToChatHistory(content, "user");
       return { handled: true, inputFromCommand: content };
     }
     case "clear": {
@@ -638,7 +638,7 @@ function resolveParameterizedBuiltinSlashCommand(
     }
     case "resume": {
       const content = resume(commandWithArgs);
-      if (content !== null) appendToChatHistory(content, "user");
+      if (content !== null) prependToChatHistory(content, "user");
       return { handled: true, inputFromCommand: content };
     }
     default: {

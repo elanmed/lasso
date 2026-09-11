@@ -19,7 +19,7 @@ import {
 } from "./tools.ts";
 import assert from "node:assert";
 import { aiDeps, MISSING } from "./deps.ts";
-import { appendToChatHistory } from "./log.ts";
+import { prependToChatHistory } from "./log.ts";
 import { getLanguageModel } from "./model.ts";
 import { resolveInterruptWithEditor } from "./input.ts";
 
@@ -129,7 +129,7 @@ export async function resolveApiCall(userInput: string) {
   for (const message of response.messages) {
     actions.appendToMessageParams(message);
   }
-  appendToChatHistory(text, "assistant");
+  prependToChatHistory(text, "assistant");
 
   return text;
 }

@@ -9,7 +9,7 @@ export function debugLog(content: string) {
   writeDebugLog(getState().app.debugLog, getState().app.debugLogPath, content);
 }
 
-export function appendToChatHistory(
+export function prependToChatHistory(
   content: string,
   role: "user" | "assistant",
 ) {
@@ -20,16 +20,17 @@ export function appendToChatHistory(
     );
     if (!mkdirResult.ok) return;
   }
-  tryCatch(() =>
-    fsDeps.appendFileSync(
-      path,
-      `${new Date(Date.now()).toISOString()}  *${role}*
 
----
+  const readResult = tryCatch(() => fsDeps.readFileSync(path).toString());
+  const existingContent = readResult.ok ? readResult.value : "";
+
+  const newChatHistory = `
+${new Date(Date.now()).toISOString()}  *${role}*
 ${normalizeLine(content)}
-`,
-    ),
-  );
+---
+${existingContent}`;
+
+  tryCatch(() => fsDeps.writeFileSync(path, newChatHistory));
 }
 
 export function initPromptHistory() {
