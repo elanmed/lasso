@@ -1446,11 +1446,16 @@ Available commands:
     });
 
     it("runs edit command when its keymap matches", async () => {
+      const prompts: boolean[] = [];
+      mock.method(harness.rl, "prompt", (arg: boolean) => {
+        prompts.push(arg);
+      });
       mock.method(childProcess, "spawnSync", () => {
         testFs.writeFileSync("/tmp/lasso-test-uuid.txt", "  edited  ");
       });
       harness.emitKey({ name: "g", ctrl: true });
       await harness.flush();
+      assert.deepStrictEqual(prompts, []);
       assert.strictEqual(getState().app.editorInputValue, "edited\n");
     });
 
@@ -1471,7 +1476,25 @@ Available commands:
       );
     });
 
+    it("redraws the pending question prompt after a cancelled edit", async () => {
+      const prompts: boolean[] = [];
+      mock.method(harness.rl, "prompt", (arg: boolean) => {
+        prompts.push(arg);
+      });
+      mock.method(childProcess, "spawnSync", () => {
+        testFs.writeFileSync("/tmp/lasso-test-uuid.txt", "");
+      });
+      harness.emitKey({ name: "g", ctrl: true });
+      await harness.flush();
+      assert.deepStrictEqual(prompts, [true]);
+      assert.strictEqual(getState().app.editorInputValue, null);
+    });
+
     it("opens chat history in a pager when history keymap matches", async () => {
+      const prompts: boolean[] = [];
+      mock.method(harness.rl, "prompt", (arg: boolean) => {
+        prompts.push(arg);
+      });
       const { spawned } = mockPagerSpawn();
       mockBatAvailable(true);
       actions.setKeymap("history", { name: "h", ctrl: true });
@@ -1487,10 +1510,87 @@ Available commands:
 log content`,
       );
       assert.strictEqual(getCapturedStdout(), "");
+      assert.deepStrictEqual(prompts, [true]);
+    });
+
+    it("does not redraw the prompt after paging chat history without a pending question", async () => {
+      const prompts: boolean[] = [];
+      mock.method(harness.rl, "prompt", (arg: boolean) => {
+        prompts.push(arg);
+      });
+      const { spawned } = mockPagerSpawn();
+      mockBatAvailable(true);
+      actions.setQuestionAbortController(null);
+      actions.setKeymap("history", { name: "h", ctrl: true });
+      actions.setChatHistoryPath("/tmp/editor.log");
+      testFs._files.set("/tmp/editor.log", "log content");
+      harness.emitKey({ name: "h", ctrl: true });
+      await harness.flush();
+      assert.strictEqual(spawned[0], batPagerCmd("/tmp/lasso-test-uuid.txt"));
+      assert.deepStrictEqual(prompts, []);
+    });
+
+    it("opens the last response in a pager when lastresponse keymap matches and redraws the pending question prompt", async () => {
+      const prompts: boolean[] = [];
+      mock.method(harness.rl, "prompt", (arg: boolean) => {
+        prompts.push(arg);
+      });
+      const { spawned } = mockPagerSpawn();
+      testProcessEnv._set("LASSO_PAGER_LAST_RESPONSE", "nano __FILE__");
+      actions.setKeymap("lastresponse", { name: "u", ctrl: true });
+      actions.appendToMessageParams({ role: "user", content: "question" });
+      actions.appendToMessageParams({
+        role: "assistant",
+        content: [{ type: "text", text: "first" }],
+      });
+      harness.emitKey({ name: "u", ctrl: true });
+      await harness.flush();
+      assert.deepStrictEqual(spawned, ["nano /tmp/lasso-test-uuid.txt"]);
+      assert.deepStrictEqual(prompts, [true]);
+    });
+
+    it("opens config diffs in a pager when reload keymap matches and redraws the pending question prompt", async () => {
+      const prompts: boolean[] = [];
+      mock.method(harness.rl, "prompt", (arg: boolean) => {
+        prompts.push(arg);
+      });
+      testFs._files.set(
+        getGlobalConfigPath(),
+        JSON.stringify({
+          model: "gpt-4",
+          baseURL: "https://api.example.com",
+        }),
+      );
+      testProcessEnv._set("LASSO_PAGER_RELOAD", "cat __FILE__");
+      const { spawned } = mockPagerSpawn();
+      mockExecCalls([
+        { stdout: "delta 0.18.2" },
+        { stdout: "global diff\n" },
+        { stdout: "delta 0.18.2" },
+        { stdout: "local diff\n" },
+        { stdout: "delta 0.18.2" },
+        { stdout: "applied diff\n" },
+        { stdout: "delta 0.18.2" },
+        { stdout: "context diff\n" },
+        { stdout: "delta 0.18.2" },
+        { stdout: "skills diff\n" },
+        { stdout: "delta 0.18.2" },
+        { stdout: "commands diff\n" },
+      ]);
+      actions.setKeymap("reload", { name: "w", ctrl: true });
+      harness.emitKey({ name: "w", ctrl: true });
+      await harness.flush();
+      assert.deepStrictEqual(prompts, [true]);
+      assert.notStrictEqual(spawned.length, 0);
     });
 
     it("opens editor input in a pager when editpage keymap matches", async () => {
-      mockSpawnSync();
+      const prompts: boolean[] = [];
+      mock.method(harness.rl, "prompt", (arg: boolean) => {
+        prompts.push(arg);
+      });
+      const { spawned } = mockPagerSpawn();
+      testProcessEnv._set("LASSO_PAGER", "cat __FILE__");
       actions.setKeymap("editpage", { name: "e", ctrl: true });
       actions.setEditorInputValue("editor input");
       harness.emitKey({ name: "e", ctrl: true });
@@ -1500,21 +1600,36 @@ log content`,
         "editor input",
       );
       assert.strictEqual(getCapturedStdout(), "");
+      assert.deepStrictEqual(prompts, [true]);
+      assert.deepStrictEqual(spawned, ["cat /tmp/lasso-test-uuid.txt"]);
     });
 
-    it("opens config in a pager when config keymap matches", () => {
-      mockSpawnSync();
+    it("opens config in a pager when config keymap matches", async () => {
+      const prompts: boolean[] = [];
+      mock.method(harness.rl, "prompt", (arg: boolean) => {
+        prompts.push(arg);
+      });
+      const { spawned } = mockPagerSpawn();
+      testProcessEnv._set("LASSO_PAGER", "cat __FILE__");
       actions.setKeymap("config", { name: "q", ctrl: true });
       harness.emitKey({ name: "q", ctrl: true });
+      await harness.flush();
       assert.match(
         testFs._files.get("/tmp/lasso-test-uuid.txt") ?? "",
         /# Applied config/,
       );
       assert.strictEqual(getCapturedStdout(), "");
+      assert.deepStrictEqual(prompts, [true]);
+      assert.deepStrictEqual(spawned, ["cat /tmp/lasso-test-uuid.txt"]);
     });
 
     it("opens context in a pager when contextpage keymap matches", async () => {
-      mockSpawnSync();
+      const prompts: boolean[] = [];
+      mock.method(harness.rl, "prompt", (arg: boolean) => {
+        prompts.push(arg);
+      });
+      const { spawned } = mockPagerSpawn();
+      testProcessEnv._set("LASSO_PAGER", "cat __FILE__");
       actions.setKeymap("contextpage", { name: "d", ctrl: true });
       actions.setContextEntries([
         { filePath: "/project/AGENTS.md", content: "context" },
@@ -1527,12 +1642,20 @@ log content`,
         `context string content`,
       );
       assert.strictEqual(getCapturedStdout(), "");
+      assert.deepStrictEqual(prompts, [true]);
+      assert.deepStrictEqual(spawned, ["cat /tmp/lasso-test-uuid.txt"]);
     });
 
-    it("opens custom commands in a pager when commandspage keymap matches", () => {
-      mockSpawnSync();
+    it("opens custom commands in a pager when commandspage keymap matches", async () => {
+      const prompts: boolean[] = [];
+      mock.method(harness.rl, "prompt", (arg: boolean) => {
+        prompts.push(arg);
+      });
+      const { spawned } = mockPagerSpawn();
+      testProcessEnv._set("LASSO_PAGER", "cat __FILE__");
       actions.setKeymap("commandspage", { name: "m", ctrl: true });
       harness.emitKey({ name: "m", ctrl: true });
+      await harness.flush();
       assert.strictEqual(
         testFs._files.get("/tmp/lasso-test-uuid.txt"),
         `# [lasso] Slash commands:
@@ -1542,6 +1665,8 @@ log content`,
 custom command content`,
       );
       assert.strictEqual(getCapturedStdout(), "");
+      assert.deepStrictEqual(prompts, [true]);
+      assert.deepStrictEqual(spawned, ["cat /tmp/lasso-test-uuid.txt"]);
     });
 
     for (const [command, keyName] of [
