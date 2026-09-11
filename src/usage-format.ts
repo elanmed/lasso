@@ -109,6 +109,6 @@ export function getPrettyContextWindowUsage() {
   if (contextWindow === undefined) return "";
 
   const currRatio = getState().app.messageParams.tokens / contextWindow;
-  const currPercent = String(Math.floor(currRatio * 100));
+  const currPercent = String(Number((currRatio * 100).toFixed(3)));
   return `${currPercent}% of context window`;
 }

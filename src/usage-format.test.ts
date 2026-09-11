@@ -328,13 +328,13 @@ describe("usage-format", () => {
       assert.strictEqual(result, "50% of context window");
     });
 
-    it("floors partial percents", () => {
+    it("rounds partial percents to 3 decimal places", () => {
       actions.setModel("test-model");
       actions.setContextWindowPerModel({ "test-model": 10_000 });
       actions.appendToMessageParams({ role: "user", content: "hi" });
       actions.setMessageParamTokens(1_666);
       const result = getPrettyContextWindowUsage();
-      assert.strictEqual(result, "16% of context window");
+      assert.strictEqual(result, "16.66% of context window");
     });
 
     it("returns percents above 100", () => {
