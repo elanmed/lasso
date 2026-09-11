@@ -540,6 +540,7 @@ vim.g.clipboard = {
 ## TODO (soon)
 
 - [ ] Update `ai` sdk related deps
+- [ ] `asciiOnly` config option
 
 ## TODO (later)
 
