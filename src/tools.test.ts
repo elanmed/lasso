@@ -41,115 +41,124 @@ describe("tools", () => {
 
   describe("toolPrint", () => {
     it("prints the detail with a labeled prefix on the first line", () => {
-      mock.method(processDeps.stdout, "getColumns", () => 10);
+      mock.method(processDeps.stdout, "getColumns", () => 30);
       const getCaptured = mockStdout();
       toolPrint("bash", "hello");
       assert.strictEqual(
         stripAnsi(getCaptured()),
-        `bash: hel
-      lo
+        `bash: hello
 `,
       );
     });
 
-    it("wraps long details into chunks of maxLen minus label length and padding, hyphenating breaks", () => {
-      mock.method(processDeps.stdout, "getColumns", () => 10);
+    it("wraps long details into chunks of maxLen minus the indent length", () => {
+      mock.method(processDeps.stdout, "getColumns", () => 30);
       const getCaptured = mockStdout();
-      toolPrint("bash", "abcdefghij");
+      toolPrint("bash", "abcdefghijklmnopqrstuv");
       assert.strictEqual(
         stripAnsi(getCaptured()),
-        `bash: abc
-      def
-      ghi
-      j
+        `bash: abcdefghijklmnop
+│          qrstuv
 `,
       );
     });
 
     it("ignores empty detail lines", () => {
-      mock.method(processDeps.stdout, "getColumns", () => 10);
+      mock.method(processDeps.stdout, "getColumns", () => 30);
       const getCaptured = mockStdout();
       toolPrint("bash", "one\n\ntwo");
       assert.strictEqual(
         stripAnsi(getCaptured()),
         `bash: one
-      two
+│          two
 `,
       );
     });
 
     it("caps the total output at four lines", () => {
-      mock.method(processDeps.stdout, "getColumns", () => 10);
+      mock.method(processDeps.stdout, "getColumns", () => 30);
       const getCaptured = mockStdout();
       toolPrint("bash", "a\nb\nc\nd\ne");
       assert.strictEqual(
         stripAnsi(getCaptured()),
         `bash: a
-      b
-      c
-      d
+│          b
+│          c
+│          d
 `,
       );
     });
 
-    it("does not add a hyphen when a chunk exactly fits maxLen with no remainder", () => {
-      mock.method(processDeps.stdout, "getColumns", () => 10);
+    it("does not wrap a detail that fits within the cap", () => {
+      mock.method(processDeps.stdout, "getColumns", () => 30);
       const getCaptured = mockStdout();
       toolPrint("bash", "abcd");
       assert.strictEqual(
         stripAnsi(getCaptured()),
-        `bash: abc
-      d
+        `bash: abcd
 `,
       );
     });
 
-    it("does not hyphenate a chunk that already ends in whitespace", () => {
-      mock.method(processDeps.stdout, "getColumns", () => 10);
+    it("wraps without regard to whitespace inside the detail", () => {
+      mock.method(processDeps.stdout, "getColumns", () => 30);
       const getCaptured = mockStdout();
-      toolPrint("bash", "abc defgh");
+      toolPrint("bash", "abc defghijklmnop");
       assert.strictEqual(
         stripAnsi(getCaptured()),
-        `bash: abc
-       de
-      fgh
+        `bash: abc defghijklmno
+│          p
 `,
       );
     });
 
     it("wraps multiple original lines and combines them under the same cap", () => {
-      mock.method(processDeps.stdout, "getColumns", () => 10);
+      mock.method(processDeps.stdout, "getColumns", () => 30);
       const getCaptured = mockStdout();
-      toolPrint("bash", "abcdefgh\nij");
+      toolPrint("bash", "abcdefghij\nkl");
       assert.strictEqual(
         stripAnsi(getCaptured()),
-        `bash: abc
-      def
-      gh
-      ij
+        `bash: abcdefghij
+│          kl
 `,
       );
     });
 
     it("stops mid-wrap once the four line cap is reached", () => {
-      mock.method(processDeps.stdout, "getColumns", () => 10);
+      mock.method(processDeps.stdout, "getColumns", () => 30);
       const getCaptured = mockStdout();
-      toolPrint("bash", "abcdefgh\nijklmnop");
+      toolPrint("bash", "abcdefghij\nkl\nm\nn\no");
       assert.strictEqual(
         stripAnsi(getCaptured()),
-        `bash: abc
-      def
-      gh
-      ijk
+        `bash: abcdefghij
+│          kl
+│          m
+│          n
+`,
+      );
+    });
+
+    it("uses label length plus padding for the maxLen when it exceeds the indent", () => {
+      mock.method(processDeps.stdout, "getColumns", () => 40);
+      const getCaptured = mockStdout();
+      toolPrint("abcdefghijklmnopqrst", "abcdefghijklmnopqrstuvwx");
+      assert.strictEqual(
+        stripAnsi(getCaptured()),
+        `abcdefghijklmnopqrst: abcdefghijklmn
+│          opqrstuvwx
 `,
       );
     });
 
     it("prints nothing but the label prefix when detail is only whitespace lines", () => {
-      mock.method(processDeps.stdout, "getColumns", () => 10);
+      mock.method(processDeps.stdout, "getColumns", () => 30);
       const getCaptured = mockStdout();
       toolPrint("bash", "\n\n\n");
-      assert.strictEqual(stripAnsi(getCaptured()), `\n`);
+      assert.strictEqual(
+        stripAnsi(getCaptured()),
+        `
+`,
+      );
     });
   });
 
