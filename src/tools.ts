@@ -25,20 +25,22 @@ const userAgent =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
 
 function splitByLen(str: string, len: number) {
+  len = Math.max(1, len);
   assert(!str.includes("\n"));
-  const chunkLen = Math.max(1, len);
   const chunks: string[] = [];
-  for (let i = 0; i < str.length; i += chunkLen) {
-    chunks.push(str.slice(i, i + chunkLen));
+  for (let i = 0; i < str.length; i += len) {
+    chunks.push(str.slice(i, i + len));
   }
   return chunks;
 }
 
 export function toolPrint(label: string, detail: string) {
   const detailArr = detail.split("\n").filter((str) => str.length > 0);
-  const padding = 2;
-  const indent = " ".repeat(label.length + padding);
-  const maxLen = getMaxColLength() - label.length - padding;
+  const colonSpacePadding = 2;
+  const indent = " ".repeat(10).concat("│");
+  const maxLen =
+    getMaxColLength() -
+    Math.max(indent.length, label.length + colonSpacePadding);
 
   const lines = [];
 
@@ -58,7 +60,7 @@ export function toolPrint(label: string, detail: string) {
         return indent;
       })();
 
-      lines.push(`${prefix}${splitStr}`);
+      lines.push(prefix.concat(splitStr));
       splitIdx++;
     }
     detailIdx++;

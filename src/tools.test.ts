@@ -58,7 +58,7 @@ describe("tools", () => {
       assert.strictEqual(
         stripAnsi(getCaptured()),
         `bash: abcdefghijklmnop
-│          qrstuv
+          │qrstuv
 `,
       );
     });
@@ -70,7 +70,7 @@ describe("tools", () => {
       assert.strictEqual(
         stripAnsi(getCaptured()),
         `bash: one
-│          two
+          │two
 `,
       );
     });
@@ -82,9 +82,9 @@ describe("tools", () => {
       assert.strictEqual(
         stripAnsi(getCaptured()),
         `bash: a
-│          b
-│          c
-│          d
+          │b
+          │c
+          │d
 `,
       );
     });
@@ -107,7 +107,7 @@ describe("tools", () => {
       assert.strictEqual(
         stripAnsi(getCaptured()),
         `bash: abc defghijklmno
-│          p
+          │p
 `,
       );
     });
@@ -119,7 +119,7 @@ describe("tools", () => {
       assert.strictEqual(
         stripAnsi(getCaptured()),
         `bash: abcdefghij
-│          kl
+          │kl
 `,
       );
     });
@@ -131,9 +131,9 @@ describe("tools", () => {
       assert.strictEqual(
         stripAnsi(getCaptured()),
         `bash: abcdefghij
-│          kl
-│          m
-│          n
+          │kl
+          │m
+          │n
 `,
       );
     });
@@ -145,7 +145,7 @@ describe("tools", () => {
       assert.strictEqual(
         stripAnsi(getCaptured()),
         `abcdefghijklmnopqrst: abcdefghijklmn
-│          opqrstuvwx
+          │opqrstuvwx
 `,
       );
     });
