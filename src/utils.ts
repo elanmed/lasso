@@ -134,14 +134,16 @@ export function createQueue() {
   return { enqueue, flush };
 }
 
+export const MIN_WIDTH_HARD = 10;
+
 export function getMaxColLength() {
-  const columns = processDeps.stdout.getColumns() ?? 80;
-  return 0.9 * columns;
+  return Math.max(processDeps.stdout.getColumns() ?? 80, 1);
 }
 
 export function truncate(str: string, padding = 0) {
   const maxLen = Math.max(1, getMaxColLength() - padding);
   const newlineIdx = str.indexOf("\n");
+  const ellipsisLen = 1;
 
   const firstLine = (() => {
     if (newlineIdx === -1) return str;
@@ -149,14 +151,14 @@ export function truncate(str: string, padding = 0) {
   })();
 
   if (newlineIdx !== -1) {
-    return firstLine.substring(0, maxLen).concat("…");
+    return firstLine.substring(0, maxLen - ellipsisLen).concat("…");
   }
 
   if (str.length <= maxLen) {
     return firstLine;
   }
 
-  return firstLine.substring(0, maxLen).concat("…");
+  return firstLine.substring(0, maxLen - ellipsisLen).concat("…");
 }
 
 interface ChatHistoryEntry {

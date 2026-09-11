@@ -148,13 +148,11 @@ describe("utils", () => {
   });
 
   describe("truncate", () => {
-    const COLUMNS = 100;
-    const MAX_LEN = 0.9 * COLUMNS;
+    const MAX_LEN = 100;
 
     beforeEach(() => {
-      mock.method(processDeps.stdout, "getColumns", () => COLUMNS);
+      mock.method(processDeps.stdout, "getColumns", () => MAX_LEN);
     });
-
     it("returns empty string unchanged", () => {
       assert.equal(truncate(""), "");
     });
@@ -166,7 +164,7 @@ describe("utils", () => {
     it("truncates longer strings to the max length with an ellipsis", () => {
       assert.equal(
         truncate("a".repeat(MAX_LEN + 10)),
-        `${"a".repeat(MAX_LEN)}…`,
+        `${"a".repeat(MAX_LEN - 1)}…`,
       );
     });
 
@@ -177,13 +175,13 @@ describe("utils", () => {
     it("truncates a long first line to the max length with an ellipsis", () => {
       assert.equal(
         truncate(`${"a".repeat(MAX_LEN + 10)}\nrest`),
-        `${"a".repeat(MAX_LEN)}…`,
+        `${"a".repeat(MAX_LEN - 1)}…`,
       );
     });
 
     it("falls back to 80 columns when stdout columns are undefined", () => {
       mock.method(processDeps.stdout, "getColumns", () => undefined);
-      assert.equal(truncate("a".repeat(100)), `${"a".repeat(72)}…`);
+      assert.equal(truncate("a".repeat(100)), `${"a".repeat(79)}…`);
     });
   });
 
