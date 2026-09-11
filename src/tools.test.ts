@@ -84,7 +84,7 @@ describe("tools", () => {
         `bash: a
        ┊b
        ┊c
-       ┊d
+       ┊d…
 `,
       );
     });
@@ -123,7 +123,7 @@ describe("tools", () => {
       );
     });
 
-    it("stops mid-wrap once the four line cap is reached", () => {
+    it("stops mid-wrap once the four line cap is reached, ending with an ellipsis", () => {
       mock.method(processDeps.stdout, "getColumns", () => 30);
       const getCaptured = mockStdout();
       toolPrint("bash", "abcdefghij\nkl\nm\nn\no");
@@ -132,12 +132,12 @@ describe("tools", () => {
         `bash: abcdefghij
        ┊kl
        ┊m
-       ┊n
+       ┊n…
 `,
       );
     });
 
-    it("caps a long single detail at four full lines", () => {
+    it("replaces the last char of a full fourth line with an ellipsis", () => {
       mock.method(processDeps.stdout, "getColumns", () => 30);
       const getCaptured = mockStdout();
       toolPrint("bash", "a".repeat(91));
@@ -146,7 +146,7 @@ describe("tools", () => {
         `bash: ${"a".repeat(22)}
        ┊${"a".repeat(22)}
        ┊${"a".repeat(22)}
-       ┊${"a".repeat(22)}
+       ┊${"a".repeat(21)}…
 `,
       );
     });

@@ -66,16 +66,16 @@ export function toolPrint(label: string, detail: string) {
     detailIdx++;
   }
 
-  const lastSplitDetailOverflow = lines.length === 3 && detailSplit.length > 3;
-  const lastDetailOverflow = lines.length === 3 && detailArr.length > 3;
+  const lastSplitDetailOverflow = lines.length === 4 && detailSplit.length > 4;
+  const lastDetailOverflow = lines.length === 4 && detailArr.length > 4;
 
   if (lastSplitDetailOverflow || lastDetailOverflow) {
-    const lastLine = lines.at(-1);
+    const lastLine = lines.pop();
     assert(lastLine !== undefined);
 
     const newLastLine = (() => {
-      if (lastLine.length === maxLen) {
-        return lastLine.slice(0, maxLen - 1).concat("…");
+      if (lastLine.length === indent.length + maxLen) {
+        return lastLine.slice(0, -1).concat("…");
       } else {
         return lastLine.concat("…");
       }
