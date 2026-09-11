@@ -1098,9 +1098,7 @@ transcript content
       await pageContextStr();
       assert.strictEqual(
         stripAnsi(getCapturedStdout()),
-        `
-No available context files
-`,
+        "No available context files\n",
       );
     });
 
@@ -1138,13 +1136,13 @@ No available context files
 
     it("prints that history is empty when the chat history file does not exist", async () => {
       await pageHistory();
-      assert.strictEqual(stripAnsi(getCapturedStdout()), `\nNo chat history\n`);
+      assert.strictEqual(stripAnsi(getCapturedStdout()), "No chat history\n");
     });
 
     it("prints that history is empty when the chat history file is empty", async () => {
       testFs._files.set("/tmp/test-history.log", "");
       await pageHistory();
-      assert.strictEqual(stripAnsi(getCapturedStdout()), `\nNo chat history\n`);
+      assert.strictEqual(stripAnsi(getCapturedStdout()), "No chat history\n");
     });
 
     it("opens the chat history in a pager with a heading prepended", async () => {
@@ -1156,7 +1154,7 @@ No available context files
       assert.strictEqual(
         testFs._files.get("/tmp/lasso-test-uuid.txt"),
         `# [lasso] Chat history
-        
+
 log content`,
       );
     });
@@ -1170,7 +1168,7 @@ log content`,
 
     it("prints no messages when there is no assistant response", async () => {
       await pageLastResponse();
-      assert.strictEqual(stripAnsi(getCapturedStdout()), "\nNo messages\n");
+      assert.strictEqual(stripAnsi(getCapturedStdout()), "No messages\n");
     });
 
     it("opens the latest assistant response in a pager", async () => {
@@ -1207,12 +1205,7 @@ second
 
     it("prints that the editor is empty when editor input is null", async () => {
       await pageEditStr();
-      assert.strictEqual(
-        stripAnsi(getCapturedStdout()),
-        `
-Editor is empty
-`,
-      );
+      assert.strictEqual(stripAnsi(getCapturedStdout()), "Editor is empty\n");
     });
   });
 
@@ -1226,9 +1219,7 @@ Editor is empty
       await pageCustomSlashCommandsStr();
       assert.strictEqual(
         stripAnsi(getCapturedStdout()),
-        `
-No available custom slash commands
-`,
+        "No available custom slash commands\n",
       );
     });
 
@@ -1868,9 +1859,7 @@ custom command content`,
       assert.strictEqual(result, null);
       assert.strictEqual(
         stripAnsi(getCapturedStdout()),
-        `
-No available custom slash commands
-`,
+        "No available custom slash commands\n",
       );
     });
 
@@ -1880,9 +1869,7 @@ No available custom slash commands
       assert.strictEqual(result, null);
       assert.strictEqual(
         stripAnsi(getCapturedStdout()),
-        `
-No available context files
-`,
+        "No available context files\n",
       );
     });
 

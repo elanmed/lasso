@@ -808,7 +808,6 @@ export function setModelCommand(rawInput: string) {
 
 export async function pageContextStr() {
   if (getState().app.contextEntries.length === 0) {
-    printNewline();
     print.doing("No available context files");
     return;
   }
@@ -823,7 +822,6 @@ export async function pageContextStr() {
 export async function pageEditStr() {
   const { editorInputValue } = getState().app;
   if (editorInputValue === null) {
-    printNewline();
     print.doing("Editor is empty");
     return;
   }
@@ -843,7 +841,6 @@ export function printAvailableCommandsStr() {
 
 export async function pageCustomSlashCommandsStr() {
   if (getState().app.slashCommands.length === 0) {
-    printNewline();
     print.doing("No available custom slash commands");
     return;
   }
@@ -1149,7 +1146,6 @@ export async function pageHistory() {
   const historyStr = readResult.ok ? readResult.value : "";
 
   if (historyStr.length === 0) {
-    printNewline();
     print.doing("No chat history");
     return;
   }
@@ -1170,14 +1166,12 @@ export async function pageLastResponse() {
   );
 
   if (lastMessage == undefined) {
-    printNewline();
     print.doing("No messages");
     return;
   }
 
   const contentStr = getStrFromAssistantContent(lastMessage.content);
   if (contentStr.length === 0) {
-    printNewline();
     print.doing("No messages");
     return;
   }
