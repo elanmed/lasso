@@ -96,7 +96,10 @@ export function fencePrint(text: string, opts: FencePrintOpts = {}) {
   const showSessionInfo = opts.showSessionInfo ?? false;
 
   const line = (() => {
-    if (!showSessionInfo) return wrapInFence(bold(truncate(text, 6)));
+    const fenceCharsLen = 6;
+    if (!showSessionInfo) {
+      return wrapInFence(bold(truncate(text, fenceCharsLen)));
+    }
     return wrapInFence(getFenceSessionLine(text));
   })();
 

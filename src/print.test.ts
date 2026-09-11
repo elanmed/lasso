@@ -148,7 +148,7 @@ describe("print", () => {
     });
 
     it("drops usage when there is not enough room", () => {
-      mock.method(processDeps.stdout, "getColumns", () => 44);
+      mock.method(processDeps.stdout, "getColumns", () => 20);
       const getCaptured = mockStdout();
       mock.method(performance, "now", () => 1_000);
       actions.setApiStartTime();
@@ -165,7 +165,7 @@ describe("print", () => {
     });
 
     it("drops duration and usage when there is not enough room", () => {
-      mock.method(processDeps.stdout, "getColumns", () => 20);
+      mock.method(processDeps.stdout, "getColumns", () => 19);
       const getCaptured = mockStdout();
       mock.method(performance, "now", () => 1_000);
       actions.setApiStartTime();
@@ -181,18 +181,18 @@ describe("print", () => {
     });
 
     it("drops the header when it does not fit", () => {
-      const longHeader = "a".repeat(72);
+      const longHeader = "a".repeat(100);
       const getCaptured = mockStdout();
       fencePrint(longHeader);
 
       assert.strictEqual(
         stripAnsi(getCaptured()),
-        `\u2501\u2501 ${longHeader.substring(0, 66)}\u2026 \u2501\u2501\n`,
+        `\u2501\u2501 ${longHeader.substring(0, 73)}\u2026 \u2501\u2501\n`,
       );
     });
 
     it("truncates the header instead of dropping when showSessionInfo is set", () => {
-      const longHeader = "b".repeat(72);
+      const longHeader = "b".repeat(100);
       const getCaptured = mockStdout();
       mock.method(performance, "now", () => 1_000);
       actions.setApiStartTime();
@@ -203,7 +203,7 @@ describe("print", () => {
 
       assert.strictEqual(
         stripAnsi(getCaptured()),
-        `\u2501\u2501 ${longHeader.substring(0, 66)}\u2026 \u2501\u2501\n`,
+        `\u2501\u2501 ${longHeader.substring(0, 73)}\u2026 \u2501\u2501\n`,
       );
     });
   });
