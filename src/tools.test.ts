@@ -51,14 +51,14 @@ describe("tools", () => {
       );
     });
 
-    it("wraps long details into chunks of maxLen minus the indent length", () => {
+    it("wraps a detail that does not fit within maxLen", () => {
       mock.method(processDeps.stdout, "getColumns", () => 30);
       const getCaptured = mockStdout();
-      toolPrint("bash", "abcdefghijklmnopqrstuv");
+      toolPrint("bash", "abcdefghijklmnopqrstuvwxyz");
       assert.strictEqual(
         stripAnsi(getCaptured()),
         `bash: abcdefghijklmnopqr
-        │stuv
+        ┊stuvwxyz
 `,
       );
     });
@@ -70,7 +70,7 @@ describe("tools", () => {
       assert.strictEqual(
         stripAnsi(getCaptured()),
         `bash: one
-        │two
+        ┊two
 `,
       );
     });
@@ -82,9 +82,9 @@ describe("tools", () => {
       assert.strictEqual(
         stripAnsi(getCaptured()),
         `bash: a
-        │b
-        │c
-        │d
+        ┊b
+        ┊c
+        ┊d
 `,
       );
     });
@@ -118,7 +118,7 @@ describe("tools", () => {
       assert.strictEqual(
         stripAnsi(getCaptured()),
         `bash: abcdefghij
-        │kl
+        ┊kl
 `,
       );
     });
@@ -130,9 +130,9 @@ describe("tools", () => {
       assert.strictEqual(
         stripAnsi(getCaptured()),
         `bash: abcdefghij
-        │kl
-        │m
-        │n
+        ┊kl
+        ┊m
+        ┊n
 `,
       );
     });
@@ -144,7 +144,7 @@ describe("tools", () => {
       assert.strictEqual(
         stripAnsi(getCaptured()),
         `abcdefghijklmnopqrst: abcdefghijklmn
-        │opqrstuvwx
+        ┊opqrstuvwx
 `,
       );
     });

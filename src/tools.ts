@@ -37,7 +37,7 @@ function splitByLen(str: string, len: number) {
 export function toolPrint(label: string, detail: string) {
   const detailArr = detail.split("\n").filter((str) => str.length > 0);
   const colonSpacePadding = 2;
-  const indent = " ".repeat(8).concat("│");
+  const indent = " ".repeat(8).concat("┊");
   const maxLen =
     getMaxColLength() -
     Math.max(indent.length, label.length + colonSpacePadding);
