@@ -3,7 +3,7 @@ import crypto from "node:crypto";
 import childProcess from "node:child_process";
 import { mock } from "node:test";
 import { aiDeps, fsDeps, processDeps } from "./deps.ts";
-import { actions } from "./state.ts";
+import { promptDeps, actions } from "./state.ts";
 import { initKeypress } from "./input.ts";
 import type { Key } from "./config-types.ts";
 import readline from "node:readline/promises";
@@ -192,6 +192,7 @@ export function setupFakeDeps() {
   testProcessEnv._clear();
   mock.method(processDeps.env, "get", (key: string) => testProcessEnv.get(key));
   mock.method(processDeps, "cwd", () => testCwd.get());
+  mock.method(promptDeps, "getSystemContent", () => "");
 }
 
 export function makeFakeRl(overrides: object = {}) {

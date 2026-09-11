@@ -8,7 +8,8 @@ import {
 } from "./context.ts";
 import { actions, getState } from "./state.ts";
 import { parseCliArgs } from "./args.ts";
-import { fsDeps, processDeps, MISSING } from "./deps.ts";
+import { MISSING } from "./missing.ts";
+import { fsDeps, processDeps } from "./deps.ts";
 import {
   getDebugLogDir,
   getGlobalConfigPath,

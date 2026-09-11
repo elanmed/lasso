@@ -9,7 +9,7 @@ import {
   blockOnMissingConfig,
 } from "./config.ts";
 import { defaultConfig, DefaultedConfigSchema } from "./config-types.ts";
-import { MISSING } from "./deps.ts";
+import { MISSING } from "./missing.ts";
 import {
   getGlobalConfigPath,
   getLocalConfigPath,

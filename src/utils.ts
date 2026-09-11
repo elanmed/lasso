@@ -9,6 +9,10 @@ import type { AssistantContent } from "ai";
 
 export type Result<T> = { ok: true; value: T } | { ok: false; error: unknown };
 
+export function getApproxTokens(str: string) {
+  return Math.floor(str.length / 3);
+}
+
 export function isAbortError(error: unknown): boolean {
   return error instanceof Error && error.name === "AbortError";
 }

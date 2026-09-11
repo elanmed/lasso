@@ -12,7 +12,8 @@ import {
   type SdkProvider,
   type UsageLimit,
 } from "./config-types.ts";
-import { MISSING } from "./deps.ts";
+import { MISSING } from "./missing.ts";
+import { BASE_SYSTEM_PROMPT } from "./prompts.ts";
 import { getShortId, stringify } from "./utils.ts";
 import { debugLog } from "./debug-log.ts";
 import type { ModelUsage } from "./usage.ts";
@@ -135,6 +136,15 @@ const createInitialState = (): State => ({
 let state: State = createInitialState();
 
 export const getState = () => state;
+
+export const promptDeps = {
+  getSystemContent: () =>
+    [
+      BASE_SYSTEM_PROMPT,
+      getState().app.contextStr,
+      getState().app.skillsStr,
+    ].join("\n"),
+};
 
 const logStateChange = (actionType: string, before: string, after: string) => {
   debugLog(

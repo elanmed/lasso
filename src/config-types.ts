@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { MISSING } from "./deps.ts";
+import { MISSING } from "./missing.ts";
 
 const KeySchema = z.object({
   name: z.string().length(1),
