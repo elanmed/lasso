@@ -85,6 +85,17 @@ response text
       mock.method(aiDeps, "generateText", () => Promise.reject(err));
       const result = await resolveApiCall("hello");
       assert.strictEqual(result, null);
+      assert.deepStrictEqual(getState().app.messageParams, {
+        tokens: 16,
+        tokensStale: true,
+        messages: [
+          { role: "user", content: "hello" },
+          {
+            role: "assistant",
+            content: "[Interrupted before a response was generated]",
+          },
+        ],
+      });
     });
 
     it("appends usage and messages on success", async () => {
@@ -392,9 +403,45 @@ SKILLS: available skills`,
       });
     });
 
-    it("returns early when tokens are stale", async () => {
-      actions.appendToMessageParams({ role: "user", content: "hi" });
-      actions.setMessageParamTokens(80_000);
+    it("uses approximated tokens when stale to decide compaction", async () => {
+      actions.setCompactTargetRatio(0.25);
+      const longUserContent = "a".repeat(240_000);
+      actions.appendToMessageParams({
+        role: "user",
+        content: longUserContent,
+      });
+      actions.setMessageParamTokens(0);
+      actions.setMessageParamTokensStale(true);
+      let capturedMessages: ModelMessage[] = [];
+      mock.method(aiDeps, "generateText", (opts: Record<string, unknown>) => {
+        capturedMessages = opts["messages"] as ModelMessage[];
+        return Promise.resolve(
+          makeGenerateTextResult({
+            text: "compacted summary",
+            totalUsage: {
+              inputTokens: 0,
+              outputTokens: 25_000,
+              inputTokenDetails: { cacheReadTokens: 0, cacheWriteTokens: 0 },
+            },
+          }),
+        );
+      });
+      await maybeCompactMessageParams("hi");
+      assert.strictEqual(capturedMessages.length, 1);
+      assert.deepStrictEqual(getState().app.messageParams, {
+        tokens: 25_000,
+        tokensStale: false,
+        messages: [{ role: "assistant", content: "compacted summary" }],
+      });
+    });
+
+    it("returns early when approximated tokens are below the compact threshold only even when stale", async () => {
+      const longUserContent = "a".repeat(20_000);
+      actions.appendToMessageParams({
+        role: "user",
+        content: longUserContent,
+      });
+      actions.setMessageParamTokens(2_000);
       actions.setMessageParamTokensStale(true);
       let called = false;
       mock.method(aiDeps, "generateText", () => {
@@ -404,10 +451,29 @@ SKILLS: available skills`,
       await maybeCompactMessageParams("hi");
       assert.strictEqual(called, false);
       assert.deepStrictEqual(getState().app.messageParams, {
-        tokens: 80_000,
+        tokens: 2_000,
         tokensStale: true,
-        messages: [{ role: "user", content: "hi" }],
+        messages: [{ role: "user", content: longUserContent }],
       });
+    });
+
+    it("excludes image and file parts from the stale approximation", async () => {
+      actions.appendToMessageParams({
+        role: "user",
+        content: [
+          { type: "image", image: "a".repeat(20_000), mediaType: "image/png" },
+          { type: "text", text: "after image" },
+        ],
+      });
+      actions.setMessageParamTokens(0);
+      actions.setMessageParamTokensStale(true);
+      let called = false;
+      mock.method(aiDeps, "generateText", () => {
+        called = true;
+        return Promise.resolve(makeGenerateTextResult());
+      });
+      await maybeCompactMessageParams("hi");
+      assert.strictEqual(called, false);
     });
 
     it("compacts the conversation when above the threshold", async () => {

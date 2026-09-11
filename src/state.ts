@@ -161,6 +161,17 @@ export const actions = {
     logStateChange("set-message-param-tokens", String(before), String(tokens));
   },
 
+  appendToMessageParamTokens(tokens: number) {
+    const before = state.app.messageParams.tokens;
+    const after = state.app.messageParams.tokens + tokens;
+    state.app.messageParams.tokens = after;
+    logStateChange(
+      "append-to-message-param-tokens",
+      String(before),
+      String(after),
+    );
+  },
+
   setMessageParamTokensStale(tokensStale: boolean) {
     const before = state.app.messageParams.tokensStale;
     state.app.messageParams.tokensStale = tokensStale;

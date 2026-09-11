@@ -43,6 +43,8 @@ export async function resolveApiCall(userInput: string) {
     getState().app.skillsStr,
   ].join("\n");
 
+  actions.appendToMessageParams(inputMessageParam);
+
   actions.setApiStartTime();
   actions.setApiStreamAbortController(new AbortController());
   startLoadingState();
@@ -50,7 +52,7 @@ export async function resolveApiCall(userInput: string) {
     aiDeps.generateText({
       model: getLanguageModel(getState().config.model),
       system: systemContent,
-      messages: [...getState().app.messageParams.messages, inputMessageParam],
+      messages: [...getState().app.messageParams.messages],
       tools: { ...harnessTools, ...getState().mcp.tools },
       stopWhen: aiDeps.isLoopFinished(),
       abortSignal: getApiStreamAbortSignal(),
@@ -104,6 +106,17 @@ export async function resolveApiCall(userInput: string) {
 
     if (isAbortError(generateTextResult.error)) {
       print.error("Interrupted!");
+      const interruptContent = "[Interrupted before a response was generated]";
+      const interruptMessageParam: ModelMessage = {
+        role: "assistant",
+        content: interruptContent,
+      };
+
+      actions.appendToMessageParams(interruptMessageParam);
+      actions.appendToMessageParamTokens(
+        getApproxTokens(userInput) + getApproxTokens(interruptContent),
+      );
+      actions.setMessageParamTokensStale(true);
 
       if (getState().app.editorInputValue !== null) {
         await resolveInterruptWithEditor();
@@ -125,13 +138,16 @@ export async function resolveApiCall(userInput: string) {
   actions.setMessageParamTokens(inputTokens + outputTokens);
   actions.setMessageParamTokensStale(false);
 
-  actions.appendToMessageParams(inputMessageParam);
   for (const message of response.messages) {
     actions.appendToMessageParams(message);
   }
   prependToChatHistory(text, "assistant");
 
   return text;
+}
+
+function getApproxTokens(str: string) {
+  return Math.floor(str.length / 3);
 }
 
 export async function maybeCompactMessageParams(userInput: string) {
@@ -141,11 +157,17 @@ export async function maybeCompactMessageParams(userInput: string) {
   const contextWindow = getState().config.contextWindowPerModel[model];
   if (contextWindow === undefined) return;
 
-  if (getState().app.messageParams.tokensStale) return;
-
-  const userInputTokensApprox = Math.floor(userInput.length / 3);
-  const nextApiTokens =
-    getState().app.messageParams.tokens + userInputTokensApprox;
+  const userInputTokensApprox = getApproxTokens(userInput);
+  const nextApiTokens = (() => {
+    if (getState().app.messageParams.tokensStale) {
+      return (
+        getApproxTokens(JSON.stringify(getState().app.messageParams.messages)) +
+        userInputTokensApprox
+      );
+    } else {
+      return getState().app.messageParams.tokens + userInputTokensApprox;
+    }
+  })();
 
   const currRatio = nextApiTokens / contextWindow;
   if (currRatio <= getState().config.compactTriggerRatio) return;

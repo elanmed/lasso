@@ -111,6 +111,13 @@ describe("state", () => {
     assert.equal(getState().app.messageParams.tokens, 42);
   });
 
+  it("append-to-message-param-tokens", () => {
+    actions.setMessageParamTokens(40);
+    actions.appendToMessageParamTokens(2);
+    assert.equal(getState().app.messageParams.tokens, 42);
+    assert.equal(getState().app.messageParams.tokensStale, false);
+  });
+
   it("set-message-param-tokens-stale", () => {
     assert.equal(getState().app.messageParams.tokensStale, false);
     actions.setMessageParamTokensStale(true);
