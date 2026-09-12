@@ -8,6 +8,7 @@ import {
   safeStringify,
 } from "./utils.ts";
 import { createToolCallDiffer } from "./differ.ts";
+import { getUnicodeChar } from "./text.ts";
 import { print, startLoadingState, stopLoadingState } from "./print.ts";
 import { appendModelUsage } from "./usage.ts";
 import {
@@ -188,7 +189,7 @@ export async function maybeCompactMessageParams(userInput: string) {
 
   const currRatio = nextApiTokens / contextWindow;
   if (currRatio <= getState().config.compactTriggerRatio) return;
-  print.doing("Compacting…");
+  print.doing("Compacting" + getUnicodeChar("…"));
 
   const targetTokens = getState().config.compactTargetRatio * contextWindow;
 

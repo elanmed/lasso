@@ -11,7 +11,6 @@ import {
   getTempFileName,
   createQueue,
   createLockUtils,
-  truncate,
   listChatHistoryFiles,
   getStrFromAssistantContent,
 } from "./utils.ts";
@@ -144,44 +143,6 @@ describe("utils", () => {
     it("closes stdin so commands reading stdin resolve", async () => {
       const result = await execPromise("cat");
       assert.deepStrictEqual(result, { stdout: "", stderr: "" });
-    });
-  });
-
-  describe("truncate", () => {
-    const MAX_LEN = 100;
-
-    beforeEach(() => {
-      mock.method(processDeps.stdout, "getColumns", () => MAX_LEN);
-    });
-    it("returns empty string unchanged", () => {
-      assert.equal(truncate(""), "");
-    });
-
-    it("returns strings within the max length unchanged", () => {
-      assert.equal(truncate("a".repeat(MAX_LEN)), "a".repeat(MAX_LEN));
-    });
-
-    it("truncates longer strings to the max length with an ellipsis", () => {
-      assert.equal(
-        truncate("a".repeat(MAX_LEN + 10)),
-        `${"a".repeat(MAX_LEN - 1)}…`,
-      );
-    });
-
-    it("returns the first line with an ellipsis for multiline input", () => {
-      assert.equal(truncate("short\nsecond line"), "short…");
-    });
-
-    it("truncates a long first line to the max length with an ellipsis", () => {
-      assert.equal(
-        truncate(`${"a".repeat(MAX_LEN + 10)}\nrest`),
-        `${"a".repeat(MAX_LEN - 1)}…`,
-      );
-    });
-
-    it("falls back to 80 columns when stdout columns are undefined", () => {
-      mock.method(processDeps.stdout, "getColumns", () => undefined);
-      assert.equal(truncate("a".repeat(100)), `${"a".repeat(79)}…`);
     });
   });
 

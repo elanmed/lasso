@@ -13,11 +13,11 @@ import {
   getTempFileName,
   execPromise,
   isExisty,
-  truncate,
   listChatHistoryFiles,
   stringify,
   getStrFromAssistantContent,
 } from "./utils.ts";
+import { truncate } from "./text.ts";
 import {
   print,
   printNewline,

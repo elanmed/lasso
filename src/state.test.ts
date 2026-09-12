@@ -536,6 +536,12 @@ hello`,
     assert.strictEqual(getState().config.messageQueueDelimiter, "---");
   });
 
+  it("set-ascii-only", () => {
+    assert.strictEqual(getState().config.asciiOnly, false);
+    actions.setAsciiOnly(true);
+    assert.strictEqual(getState().config.asciiOnly, true);
+  });
+
   it("set-reasoning", () => {
     assert.strictEqual(getState().config.reasoning, "provider-default");
     actions.setReasoning("high");

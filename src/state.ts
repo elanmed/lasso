@@ -118,6 +118,7 @@ const createInitialState = (): State => ({
     loadingStateFrames: structuredClone(defaultConfig.loadingStateFrames),
     promptPrefix: defaultConfig.promptPrefix,
     suppressBatUnavailableWarning: defaultConfig.suppressBatUnavailableWarning,
+    asciiOnly: defaultConfig.asciiOnly,
     messageQueueDelimiter: defaultConfig.messageQueueDelimiter,
     reasoning: defaultConfig.reasoning,
     mcps: structuredClone(defaultConfig.mcps),
@@ -583,6 +584,12 @@ export const actions = {
       before,
       messageQueueDelimiter,
     );
+  },
+
+  setAsciiOnly(asciiOnly: boolean) {
+    const before = state.config.asciiOnly;
+    state.config.asciiOnly = asciiOnly;
+    logStateChange("set-ascii-only", String(before), String(asciiOnly));
   },
 
   setReasoning(reasoning: Reasoning) {

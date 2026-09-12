@@ -226,6 +226,9 @@ export function initStateFromConfig() {
       globalConfig.suppressBatUnavailableWarning ??
       defaultConfig.suppressBatUnavailableWarning,
   );
+  actions.setAsciiOnly(
+    localConfig.asciiOnly ?? globalConfig.asciiOnly ?? defaultConfig.asciiOnly,
+  );
   actions.setMessageQueueDelimiter(
     localConfig.messageQueueDelimiter ??
       globalConfig.messageQueueDelimiter ??

@@ -77,6 +77,7 @@ If `model`, `baseURL`, or `LASSO_API_KEY` are missing at startup, lasso warns an
 | `loadingStateFrameDuration`     | `number`                                                                                 | `80`                     | Spinner frame interval in ms                                               |
 | `promptPrefix`                  | `string`                                                                                 | `"> "`                   | Prompt prefix string                                                       |
 | `suppressBatUnavailableWarning` | `boolean`                                                                                | `false`                  | Suppress the startup warning when `bat` is missing                         |
+| `asciiOnly`                     | `boolean`                                                                                | `false`                  | Replace unicode characters with ASCII equivalents                          |
 | `messageQueueDelimiter`         | `string`                                                                                 | `l---\\n`                | Delimiter line separating multiple messages in the editor input            |
 | `reasoning`                     | `"provider-default" \| "none" \| "minimal" \| "low" \|<br>"medium" \| "high" \| "xhigh"` | `provider-default`       | Reasoning effort (`provider-default` uses the provider's default behavior) |
 | `mcps`                          | `object`                                                                                 | `{}`                     | Named MCP servers                                                          |
@@ -86,7 +87,7 @@ If `model`, `baseURL`, or `LASSO_API_KEY` are missing at startup, lasso warns an
 
 The local config either overwrites or extends the global config per option:
 
-- **Overwrite**: scalar options (`model`, `sdkProvider`, `gateway`, `baseURL`, `compactTriggerRatio`, `compactTargetRatio`, `loadingStateFrameDuration`, `promptPrefix`, `suppressBatUnavailableWarning`, `messageQueueDelimiter`, `reasoning`, `usageLimit`) and arrays (`customSlashCommandDirs`, `customSkillDirs`, `subagentModels`, `loadingStateFrames`) replace the global value wholesale — arrays are not merged.
+- **Overwrite**: scalar options (`model`, `sdkProvider`, `gateway`, `baseURL`, `compactTriggerRatio`, `compactTargetRatio`, `loadingStateFrameDuration`, `promptPrefix`, `suppressBatUnavailableWarning`, `asciiOnly`, `messageQueueDelimiter`, `reasoning`, `usageLimit`) and arrays (`customSlashCommandDirs`, `customSkillDirs`, `subagentModels`, `loadingStateFrames`) replace the global value wholesale — arrays are not merged.
 - **Extend**: `keymaps`, `mcps`, `pricingPerModel`, and `contextWindowPerModel` merge entry-by-entry with the default and global entries, the local entry winning on conflicts. `pricingPerModel` and `contextWindowPerModel` entries set to `null` cancel the global or default entry (see the relevant sections below).
 
 ### MCP Servers
@@ -542,7 +543,6 @@ vim.g.clipboard = {
 ## TODO (soon)
 
 - [ ] Use native v7 timeouts
-- [ ] `asciiOnly` config option
 
 ## TODO (later)
 

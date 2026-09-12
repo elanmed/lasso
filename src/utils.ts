@@ -140,27 +140,6 @@ export function getMaxColLength() {
   return Math.max(processDeps.stdout.getColumns() ?? 80, 1);
 }
 
-export function truncate(str: string, padding = 0) {
-  const maxLen = Math.max(1, getMaxColLength() - padding);
-  const newlineIdx = str.indexOf("\n");
-  const ellipsisLen = 1;
-
-  const firstLine = (() => {
-    if (newlineIdx === -1) return str;
-    return str.substring(0, newlineIdx);
-  })();
-
-  if (newlineIdx !== -1) {
-    return firstLine.substring(0, maxLen - ellipsisLen).concat("…");
-  }
-
-  if (str.length <= maxLen) {
-    return firstLine;
-  }
-
-  return firstLine.substring(0, maxLen - ellipsisLen).concat("…");
-}
-
 interface ChatHistoryEntry {
   absolutePath: string;
   timestampMs: number;

@@ -2,7 +2,8 @@ import assert from "node:assert";
 import { actions, getState } from "./state.ts";
 import { processDeps } from "./deps.ts";
 import { getPrettyUsage } from "./usage-format.ts";
-import { getMaxColLength, truncate } from "./utils.ts";
+import { getMaxColLength } from "./utils.ts";
+import { getUnicodeChar, truncate } from "./text.ts";
 
 const COLORS = {
   red: "\x1b[31m",
@@ -60,7 +61,8 @@ interface FencePrintOpts {
 }
 
 function wrapInFence(text: string) {
-  return `━━ ${text} ━━`;
+  const fence = getUnicodeChar("━").repeat(2);
+  return `${fence} ${text} ${fence}`;
 }
 
 function getFenceSessionLine(text: string) {

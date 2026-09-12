@@ -625,6 +625,27 @@ describe("config", () => {
       assert.strictEqual(getState().config.messageQueueDelimiter, "L---\n");
     });
 
+    it("uses its asciiOnly over the global config, default config", async () => {
+      testFs._files.set(
+        getGlobalConfigPath(),
+        JSON.stringify({
+          ...testConfig,
+          asciiOnly: true,
+        }),
+      );
+      testFs._files.set(
+        getLocalConfigPath(),
+        JSON.stringify({
+          ...testConfig,
+          asciiOnly: false,
+        }),
+      );
+
+      await initState();
+
+      assert.strictEqual(getState().config.asciiOnly, false);
+    });
+
     it("uses its reasoning over the global config, default config", async () => {
       testFs._files.set(
         getGlobalConfigPath(),
@@ -883,6 +904,18 @@ describe("config", () => {
       );
 
       await assert.rejects(initState(), /Invalid input: expected number/);
+    });
+
+    it("rejects non-boolean asciiOnly", async () => {
+      testFs._files.set(
+        getGlobalConfigPath(),
+        JSON.stringify({
+          ...testConfig,
+          asciiOnly: "yes",
+        }),
+      );
+
+      await assert.rejects(initState(), /Invalid input: expected boolean/);
     });
 
     it("rejects non-boolean suppressBatUnavailableWarning", async () => {
@@ -1231,6 +1264,20 @@ describe("config", () => {
           getState().config.suppressBatUnavailableWarning,
           true,
         );
+      });
+
+      it("uses its asciiOnly over the default config", async () => {
+        testFs._files.set(
+          getGlobalConfigPath(),
+          JSON.stringify({
+            ...testConfig,
+            asciiOnly: true,
+          }),
+        );
+
+        await initState();
+
+        assert.strictEqual(getState().config.asciiOnly, true);
       });
 
       it("uses its reasoning over the default config", async () => {

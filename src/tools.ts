@@ -11,6 +11,7 @@ import {
   execPromise,
   getMaxColLength,
 } from "./utils.ts";
+import { getUnicodeChar } from "./text.ts";
 import { createToolCallDiffer, execGitDiff } from "./differ.ts";
 import { print, bold, fencePrint, printNewline } from "./print.ts";
 import { getState } from "./state.ts";
@@ -28,7 +29,7 @@ export function toolPrint(label: string, detail: string) {
   const detailArr = detail.split("\n").filter((str) => str.length > 0);
   const colonSpaceLen = 2;
   const labelLen = label.length + colonSpaceLen;
-  const indent = " ".repeat(7).concat("┊");
+  const indent = " ".repeat(7).concat(getUnicodeChar("┊"));
   const lines = [];
 
   let detailIdx = 0;
@@ -63,11 +64,14 @@ export function toolPrint(label: string, detail: string) {
     const lastLine = lines.pop();
     assert(lastLine !== undefined);
 
+    const ellipsis = getUnicodeChar("…");
+    const ellipsisLen = ellipsis.length;
+
     const newLastLine = (() => {
       if (lastLine.length === getMaxColLength()) {
-        return lastLine.slice(0, -1).concat("…");
+        return lastLine.slice(0, -ellipsisLen).concat(ellipsis);
       } else {
-        return lastLine.concat("…");
+        return lastLine.concat(ellipsis);
       }
     })();
     lines.push(newLastLine);
