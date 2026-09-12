@@ -2,6 +2,7 @@ import os from "node:os";
 import crypto from "node:crypto";
 import childProcess from "node:child_process";
 import { mock } from "node:test";
+import assert from "node:assert";
 import { aiDeps, fsDeps, processDeps } from "./deps.ts";
 import { promptDeps, actions } from "./state.ts";
 import { initKeypress } from "./input.ts";
@@ -323,14 +324,11 @@ export function getCapturedTool(
   options: Record<string, unknown> | undefined,
   name: string,
 ): ToolSet[string] {
-  if (options === undefined) {
-    throw new Error(`Expected generateText call for tool ${name}`);
-  }
+  assert.ok(options !== undefined, `Expected generateText call for ${name}`);
   const tools = options["tools"] as ToolSet | undefined;
-  const tool = tools?.[name];
-  if (tool === undefined) {
-    throw new Error(`Expected tool ${name} in generateText options`);
-  }
+  assert.ok(tools !== undefined, `Expected tools in generateText options`);
+  const tool = tools[name];
+  assert.ok(tool !== undefined, `Expected tool ${name} in generateText options`);
   return tool;
 }
 
