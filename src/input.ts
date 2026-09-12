@@ -3,6 +3,9 @@ import { emitKeypressEvents } from "node:readline";
 import { stdin, stdout } from "node:process";
 import assert from "node:assert";
 import { Writable } from "node:stream";
+import { dirname, join } from "node:path";
+import childProcess from "node:child_process";
+import os from "node:os";
 import {
   isAbortError,
   tryCatch,
@@ -25,10 +28,7 @@ import {
   printSessionStartDate,
 } from "./print.ts";
 import { getPrettyTokenUsage, getPrettyUsage } from "./usage-format.ts";
-import { dirname, join } from "node:path";
 import { actions, getState, promptDeps } from "./state.ts";
-import childProcess from "node:child_process";
-import os from "node:os";
 import { initStateRepeatable } from "./config.ts";
 import type { Key } from "./config-types.ts";
 import { prependToChatHistory } from "./log.ts";

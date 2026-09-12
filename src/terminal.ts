@@ -1,5 +1,6 @@
 import assert from "node:assert";
 import childProcess from "node:child_process";
+import { format } from "prettier";
 import { processDeps } from "./deps.ts";
 import { getState } from "./state.ts";
 import {
@@ -12,7 +13,6 @@ import {
   tryCatchAsync,
   shouldDisableColor,
 } from "./utils.ts";
-import { format } from "prettier";
 import { print } from "./print.ts";
 
 import { getGlobalConfigPath, getLocalConfigPath } from "./paths.ts";

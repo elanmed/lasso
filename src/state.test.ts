@@ -1,8 +1,8 @@
 import { describe, it, beforeEach, afterEach, mock } from "node:test";
 import assert from "node:assert";
+import type { MCPClient } from "@ai-sdk/mcp";
 import { actions, getState } from "./state.ts";
 import { defaultConfig } from "./config-types.ts";
-import type { MCPClient } from "@ai-sdk/mcp";
 import { MISSING } from "./missing.ts";
 import { makeFakeRl, setupTestContext } from "./test-helpers.ts";
 import { initMcpState } from "./mcp.ts";

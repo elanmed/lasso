@@ -1,3 +1,5 @@
+import { join } from "node:path";
+import * as YAML from "yaml";
 import { getShortId, stringify, tryCatch } from "./utils.ts";
 import { getAvailableSlashCommands } from "./slash-commands.ts";
 import {
@@ -18,8 +20,6 @@ import {
 import { syncInitialModelUsageForLimitWindow } from "./usage.ts";
 import { print } from "./print.ts";
 import { initMcpState } from "./mcp.ts";
-import { join } from "node:path";
-import * as YAML from "yaml";
 import { ConfigSchema, defaultConfig, type Config } from "./config-types.ts";
 
 export function readConfigFileStr(path: string) {

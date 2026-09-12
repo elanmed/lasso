@@ -1,5 +1,6 @@
 import { describe, it, beforeEach, afterEach, mock } from "node:test";
 import assert from "node:assert";
+import childProcess from "node:child_process";
 import { actions, getState, promptDeps } from "./state.ts";
 import { getApproxTokens } from "./utils.ts";
 import {
@@ -41,7 +42,6 @@ import {
   mockStdout,
 } from "./test-helpers.ts";
 import { fsDeps } from "./deps.ts";
-import childProcess from "node:child_process";
 import { getGlobalConfigPath, getGlobalContextDir } from "./paths.ts";
 
 function getTestRl() {

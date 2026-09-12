@@ -17,6 +17,7 @@ export default [
     },
     rules: {
       "import/no-cycle": "error",
+      "import/order": "error",
       "@typescript-eslint/no-confusing-void-expression": "off",
       "@typescript-eslint/strict-boolean-expressions": [
         "error",

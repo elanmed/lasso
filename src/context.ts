@@ -1,4 +1,6 @@
 import { dirname, join } from "node:path";
+import * as YAML from "yaml";
+import { z } from "zod";
 import { fsDeps, processDeps } from "./deps.ts";
 import { tryCatch } from "./utils.ts";
 import { print } from "./print.ts";
@@ -8,8 +10,6 @@ import {
   getGlobalSkillDir,
   getLocalSkillDir,
 } from "./paths.ts";
-import * as YAML from "yaml";
-import { z } from "zod";
 
 export interface ContextEntry {
   filePath: string;

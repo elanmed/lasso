@@ -1,7 +1,7 @@
+import assert from "node:assert";
 import { createAnthropic } from "@ai-sdk/anthropic";
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 import { createOpenAI } from "@ai-sdk/openai";
-import assert from "node:assert";
 import { getState } from "./state.ts";
 import { MISSING } from "./missing.ts";
 import { processDeps } from "./deps.ts";

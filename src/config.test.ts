@@ -1,5 +1,6 @@
 import { describe, it, beforeEach, afterEach, mock } from "node:test";
 import assert from "node:assert";
+import { dirname } from "node:path";
 import { actions, getState } from "./state.ts";
 import {
   initState,
@@ -24,7 +25,6 @@ import {
   stripAnsi,
 } from "./test-helpers.ts";
 import { parseCliArgsDeps } from "./args.ts";
-import { dirname } from "node:path";
 
 const testConfig = {
   model: "claude-sonnet-4-6",

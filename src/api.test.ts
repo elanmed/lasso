@@ -1,7 +1,8 @@
 import { describe, it, beforeEach, afterEach, mock } from "node:test";
 
-import { getApproxTokens } from "./utils.ts";
 import assert from "node:assert";
+import type { ModelMessage } from "ai";
+import { getApproxTokens } from "./utils.ts";
 import { actions, getState, type MCPToolSet } from "./state.ts";
 import { maybeCompactMessageParams, resolveApiCall } from "./api.ts";
 import {
@@ -17,7 +18,6 @@ import {
 } from "./test-helpers.ts";
 import { aiDeps } from "./deps.ts";
 import { promptDeps } from "./state.ts";
-import type { ModelMessage } from "ai";
 
 describe("api", () => {
   afterEach(() => {

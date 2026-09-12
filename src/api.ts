@@ -1,3 +1,4 @@
+import assert from "node:assert";
 import type { ModelMessage } from "ai";
 import { actions, getState, promptDeps } from "./state.ts";
 import {
@@ -17,7 +18,6 @@ import {
   type HarnessToolName,
   toolPrint,
 } from "./tools.ts";
-import assert from "node:assert";
 import { MISSING } from "./missing.ts";
 import { aiDeps } from "./deps.ts";
 import { prependToChatHistory } from "./log.ts";

@@ -1,6 +1,8 @@
 import assert from "node:assert";
 import { tool, type ModelMessage } from "ai";
 import { z } from "zod";
+import { Window } from "happy-dom";
+import { Readability } from "@mozilla/readability";
 import {
   getMessageFromError,
   isAbortError,
@@ -16,8 +18,6 @@ import { print, bold } from "./print.ts";
 import { getState } from "./state.ts";
 import { BASE_SYSTEM_PROMPT } from "./prompts.ts";
 import { getLanguageModel } from "./model.ts";
-import { Window } from "happy-dom";
-import { Readability } from "@mozilla/readability";
 import { aiDeps, fsDeps } from "./deps.ts";
 import { appendModelUsage } from "./usage.ts";
 

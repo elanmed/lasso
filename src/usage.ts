@@ -1,11 +1,11 @@
+import assert from "node:assert";
+import { dirname } from "node:path";
 import { z } from "zod";
+import type { LanguageModelUsage } from "ai";
 import { actions, getState } from "./state.ts";
 import { createLockUtils, tryCatch } from "./utils.ts";
 import { fsDeps, processDeps } from "./deps.ts";
-import assert from "node:assert";
-import type { LanguageModelUsage } from "ai";
 import { getUsageLogLockPath, getUsageLogPath } from "./paths.ts";
-import { dirname } from "node:path";
 
 function printWarning(message: string) {
   const output = `${message}\n`;

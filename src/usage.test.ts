@@ -1,5 +1,7 @@
 import { describe, it, beforeEach, afterEach, mock } from "node:test";
 import assert from "node:assert";
+import { dirname } from "node:path";
+import type { LanguageModelUsage } from "ai";
 import {
   appendModelUsage,
   filterExpiredModelUsage,
@@ -10,8 +12,6 @@ import {
 } from "./usage.ts";
 import { actions, getState } from "./state.ts";
 import { fsDeps } from "./deps.ts";
-import { dirname } from "node:path";
-import type { LanguageModelUsage } from "ai";
 import { setupTestContext, testFs } from "./test-helpers.ts";
 import { getUsageLogLockPath, getUsageLogPath } from "./paths.ts";
 

@@ -3,15 +3,15 @@ import crypto from "node:crypto";
 import childProcess from "node:child_process";
 import { mock } from "node:test";
 import assert from "node:assert";
+import readline from "node:readline/promises";
+import { stdin } from "node:process";
+import { z } from "zod/v4";
+import type { ToolSet } from "ai";
 import { aiDeps, fsDeps, processDeps } from "./deps.ts";
 import { promptDeps, actions } from "./state.ts";
 import { initKeypress } from "./input.ts";
 import type { Key, SdkProvider } from "./config-types.ts";
-import readline from "node:readline/promises";
-import { stdin } from "node:process";
 import { baseBatFlags, markdownBatFlags } from "./terminal.ts";
-import { z } from "zod/v4";
-import type { ToolSet } from "ai";
 
 export function makeMcpTool() {
   return {

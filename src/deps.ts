@@ -9,8 +9,8 @@ import {
   statSync,
   globSync,
 } from "node:fs";
-import { generateText, isLoopFinished } from "ai";
 import childProcess from "node:child_process";
+import { generateText, isLoopFinished } from "ai";
 
 export const fsDeps = {
   readFileSync,

@@ -2,10 +2,10 @@ import { basename, extname, join } from "node:path";
 import os from "node:os";
 import crypto from "node:crypto";
 import childProcess from "node:child_process";
-import { fsDeps, processDeps } from "./deps.ts";
-import { getPromptHistoryDir } from "./paths.ts";
 import assert from "node:assert";
 import type { AssistantContent } from "ai";
+import { fsDeps, processDeps } from "./deps.ts";
+import { getPromptHistoryDir } from "./paths.ts";
 
 export type Result<T> = { ok: true; value: T } | { ok: false; error: unknown };
 
