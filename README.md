@@ -59,33 +59,34 @@ If `model`, `baseURL`, or `LASSO_API_KEY` are missing at startup, lasso warns an
 
 ### Config Options
 
-| Option                          | Type                                                 | Default                  | Description                                                     |
-| ------------------------------- | ---------------------------------------------------- | ------------------------ | --------------------------------------------------------------- |
-| `model`                         | `string`                                             | —                        | Model name (required in the merged config)                      |
-| `sdkProvider`                   | `"anthropic"` \| `"openai"` \| `"openai-compatible"` | `openai-compatible`      | AI SDK provider                                                 |
-| `gateway`                       | `"opencode"`                                         | —                        | Used to append gateway-specific headers                         |
-| `baseURL`                       | `string`                                             | `null`                   | API base URL (required for `openai-compatible`)                 |
-| `pricingPerModel`               | `object`                                             | `{}`                     | Token pricing per model per million                             |
-| `contextWindowPerModel`         | `object`                                             | `{}`                     | Context window size in tokens per model                         |
-| `compactTriggerRatio`           | `number`                                             | `0.7`                    | Compact when context usage exceeds this ratio                   |
-| `compactTargetRatio`            | `number`                                             | `0.3`                    | Compact down to this context ratio                              |
-| `keymaps`                       | `object`                                             | see below                | Custom keybindings                                              |
-| `customSlashCommandDirs`        | `string[]`                                           | `[]`                     | Additional directories for custom slash commands                |
-| `customSkillDirs`               | `string[]`                                           | `[]`                     | Additional directories for skills                               |
-| `subagentModels`                | `string[]`                                           | `[]`                     | Models available to subagents                                   |
-| `loadingStateFrames`            | `string[]`                                           | `["\|", "/", "-", "\\"]` | Custom spinner frames                                           |
-| `loadingStateFrameDuration`     | `number`                                             | `80`                     | Spinner frame interval in ms                                    |
-| `promptPrefix`                  | `string`                                             | `"> "`                   | Prompt prefix string                                            |
-| `suppressBatUnavailableWarning` | `boolean`                                            | `false`                  | Suppress the startup warning when `bat` is missing              |
-| `messageQueueDelimiter`         | `string`                                             | `l---\n`                 | Delimiter line separating multiple messages in the editor input |
-| `mcps`                          | `object`                                             | `{}`                     | Named MCP servers                                               |
-| `usageLimit`                    | `object`                                             | `undefined`              | Dollar limit and tracking window                                |
+| Option                          | Type                                                                                     | Default                  | Description                                                                |
+| ------------------------------- | ---------------------------------------------------------------------------------------- | ------------------------ | -------------------------------------------------------------------------- |
+| `model`                         | `string`                                                                                 | —                        | Model name (required in the merged config)                                 |
+| `sdkProvider`                   | `"anthropic"` \| `"openai"` \| `"openai-compatible"`                                     | `openai-compatible`      | AI SDK provider                                                            |
+| `gateway`                       | `"opencode"`                                                                             | —                        | Used to append gateway-specific headers                                    |
+| `baseURL`                       | `string`                                                                                 | `null`                   | API base URL (required for `openai-compatible`)                            |
+| `pricingPerModel`               | `object`                                                                                 | `{}`                     | Token pricing per model per million                                        |
+| `contextWindowPerModel`         | `object`                                                                                 | `{}`                     | Context window size in tokens per model                                    |
+| `compactTriggerRatio`           | `number`                                                                                 | `0.7`                    | Compact when context usage exceeds this ratio                              |
+| `compactTargetRatio`            | `number`                                                                                 | `0.3`                    | Compact down to this context ratio                                         |
+| `keymaps`                       | `object`                                                                                 | see below                | Custom keybindings                                                         |
+| `customSlashCommandDirs`        | `string[]`                                                                               | `[]`                     | Additional directories for custom slash commands                           |
+| `customSkillDirs`               | `string[]`                                                                               | `[]`                     | Additional directories for skills                                          |
+| `subagentModels`                | `string[]`                                                                               | `[]`                     | Models available to subagents                                              |
+| `loadingStateFrames`            | `string[]`                                                                               | `["\|", "/", "-", "\\"]` | Custom spinner frames                                                      |
+| `loadingStateFrameDuration`     | `number`                                                                                 | `80`                     | Spinner frame interval in ms                                               |
+| `promptPrefix`                  | `string`                                                                                 | `"> "`                   | Prompt prefix string                                                       |
+| `suppressBatUnavailableWarning` | `boolean`                                                                                | `false`                  | Suppress the startup warning when `bat` is missing                         |
+| `messageQueueDelimiter`         | `string`                                                                                 | `l---\\n`                | Delimiter line separating multiple messages in the editor input            |
+| `reasoning`                     | `"provider-default" \| "none" \| "minimal" \| "low" \|<br>"medium" \| "high" \| "xhigh"` | `provider-default`       | Reasoning effort (`provider-default` uses the provider's default behavior) |
+| `mcps`                          | `object`                                                                                 | `{}`                     | Named MCP servers                                                          |
+| `usageLimit`                    | `object`                                                                                 | `undefined`              | Dollar limit and tracking window                                           |
 
 ### Local Overwrite vs Extend
 
 The local config either overwrites or extends the global config per option:
 
-- **Overwrite**: scalar options (`model`, `sdkProvider`, `gateway`, `baseURL`, `compactTriggerRatio`, `compactTargetRatio`, `loadingStateFrameDuration`, `promptPrefix`, `suppressBatUnavailableWarning`, `messageQueueDelimiter`, `usageLimit`) and arrays (`customSlashCommandDirs`, `customSkillDirs`, `subagentModels`, `loadingStateFrames`) replace the global value wholesale — arrays are not merged.
+- **Overwrite**: scalar options (`model`, `sdkProvider`, `gateway`, `baseURL`, `compactTriggerRatio`, `compactTargetRatio`, `loadingStateFrameDuration`, `promptPrefix`, `suppressBatUnavailableWarning`, `messageQueueDelimiter`, `reasoning`, `usageLimit`) and arrays (`customSlashCommandDirs`, `customSkillDirs`, `subagentModels`, `loadingStateFrames`) replace the global value wholesale — arrays are not merged.
 - **Extend**: `keymaps`, `mcps`, `pricingPerModel`, and `contextWindowPerModel` merge entry-by-entry with the default and global entries, the local entry winning on conflicts. `pricingPerModel` and `contextWindowPerModel` entries set to `null` cancel the global or default entry (see the relevant sections below).
 
 ### MCP Servers
@@ -278,6 +279,7 @@ loadingStateFrames: ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "�
 loadingStateFrameDuration: 100
 promptPrefix: "🤖 "
 messageQueueDelimiter: "l---\n"
+reasoning: "high"
 mcps:
   local-tools:
     type: stdio
@@ -539,7 +541,7 @@ vim.g.clipboard = {
 
 ## TODO (soon)
 
-- [ ] Update `ai` sdk related deps
+- [ ] Use native v7 timeouts
 - [ ] `asciiOnly` config option
 
 ## TODO (later)

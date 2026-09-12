@@ -625,6 +625,39 @@ describe("config", () => {
       assert.strictEqual(getState().config.messageQueueDelimiter, "L---\n");
     });
 
+    it("uses its reasoning over the global config, default config", async () => {
+      testFs._files.set(
+        getGlobalConfigPath(),
+        JSON.stringify({
+          ...testConfig,
+          reasoning: "low",
+        }),
+      );
+      testFs._files.set(
+        getLocalConfigPath(),
+        JSON.stringify({
+          ...testConfig,
+          reasoning: "high",
+        }),
+      );
+
+      await initState();
+
+      assert.strictEqual(getState().config.reasoning, "high");
+    });
+
+    it("rejects an invalid reasoning", async () => {
+      testFs._files.set(
+        getGlobalConfigPath(),
+        JSON.stringify({
+          ...testConfig,
+          reasoning: "maximum",
+        }),
+      );
+
+      await assert.rejects(initState(), /Invalid option/);
+    });
+
     it("rejects an empty messageQueueDelimiter", async () => {
       testFs._files.set(
         getGlobalConfigPath(),
@@ -1198,6 +1231,20 @@ describe("config", () => {
           getState().config.suppressBatUnavailableWarning,
           true,
         );
+      });
+
+      it("uses its reasoning over the default config", async () => {
+        testFs._files.set(
+          getGlobalConfigPath(),
+          JSON.stringify({
+            ...testConfig,
+            reasoning: "medium",
+          }),
+        );
+
+        await initState();
+
+        assert.strictEqual(getState().config.reasoning, "medium");
       });
 
       it("uses its usageLimit over the default config", async () => {

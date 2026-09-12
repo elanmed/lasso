@@ -74,6 +74,21 @@ response text
       getCapturedTool(capturedOptions, "bash");
     });
 
+    it("passes the configured reasoning to generateText", async () => {
+      const captured: Record<string, unknown>[] = [];
+      mockGenerateText((options: Record<string, unknown>) => {
+        captured.push(options);
+        return Promise.resolve(makeGenerateTextResult());
+      });
+
+      await resolveApiCall("hello");
+      assert.strictEqual(captured[0]?.["reasoning"], "provider-default");
+
+      actions.setReasoning("high");
+      await resolveApiCall("hello");
+      assert.strictEqual(captured[1]?.["reasoning"], "high");
+    });
+
     it("returns null on abort error", async () => {
       const err = new Error("aborted");
       err.name = "AbortError";

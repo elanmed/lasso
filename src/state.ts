@@ -11,6 +11,7 @@ import {
   type Mcp,
   type SdkProvider,
   type UsageLimit,
+  type Reasoning,
 } from "./config-types.ts";
 import { MISSING } from "./missing.ts";
 import { BASE_SYSTEM_PROMPT } from "./prompts.ts";
@@ -118,6 +119,7 @@ const createInitialState = (): State => ({
     promptPrefix: defaultConfig.promptPrefix,
     suppressBatUnavailableWarning: defaultConfig.suppressBatUnavailableWarning,
     messageQueueDelimiter: defaultConfig.messageQueueDelimiter,
+    reasoning: defaultConfig.reasoning,
     mcps: structuredClone(defaultConfig.mcps),
     usageLimit: undefined,
   },
@@ -581,6 +583,12 @@ export const actions = {
       before,
       messageQueueDelimiter,
     );
+  },
+
+  setReasoning(reasoning: Reasoning) {
+    const before = state.config.reasoning;
+    state.config.reasoning = reasoning;
+    logStateChange("set-reasoning", before, reasoning);
   },
 
   setMcps(mcps: Record<string, Mcp>) {

@@ -80,6 +80,16 @@ const LoadingStateFramesSchema = z
 const PromptPrefixSchema = z.string();
 const SuppressBatUnavailableWarningSchema = z.boolean();
 const MessageQueueDelimiterSchema = z.string().endsWith("\n");
+const ReasoningSchema = z.enum([
+  "provider-default",
+  "none",
+  "minimal",
+  "low",
+  "medium",
+  "high",
+  "xhigh",
+]);
+export type Reasoning = z.infer<typeof ReasoningSchema>;
 const McpHeadersSchema = z.record(z.string(), z.string());
 const McpSchema = z.discriminatedUnion("type", [
   z.strictObject({
@@ -122,6 +132,7 @@ export const ConfigSchema = z.strictObject({
   promptPrefix: PromptPrefixSchema.optional(),
   suppressBatUnavailableWarning: SuppressBatUnavailableWarningSchema.optional(),
   messageQueueDelimiter: MessageQueueDelimiterSchema.optional(),
+  reasoning: ReasoningSchema.optional(),
   mcps: McpsSchema.optional(),
   usageLimit: UsageLimitSchema.optional(),
 });
@@ -146,6 +157,7 @@ export const DefaultedConfigSchema = z.strictObject({
   promptPrefix: PromptPrefixSchema,
   suppressBatUnavailableWarning: SuppressBatUnavailableWarningSchema,
   messageQueueDelimiter: MessageQueueDelimiterSchema,
+  reasoning: ReasoningSchema,
   mcps: McpsSchema,
   usageLimit: UsageLimitSchema.optional(),
 });
@@ -176,6 +188,7 @@ export const defaultConfig: DefaultedConfig = {
   promptPrefix: "> ",
   suppressBatUnavailableWarning: false,
   messageQueueDelimiter: "l---\n",
+  reasoning: "provider-default",
   mcps: {},
   usageLimit: undefined,
 };

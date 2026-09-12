@@ -670,6 +670,7 @@ export async function createSubagentTool(
       const generateTextResult = await tryCatchAsync(
         aiDeps.generateText({
           model: getLanguageModel(model),
+          // Subagents should always use the provider's default reasoning
           instructions: systemContent,
           messages: [inputMessageParam],
           tools: subagentTools,

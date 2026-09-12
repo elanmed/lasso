@@ -536,6 +536,12 @@ hello`,
     assert.strictEqual(getState().config.messageQueueDelimiter, "---");
   });
 
+  it("set-reasoning", () => {
+    assert.strictEqual(getState().config.reasoning, "provider-default");
+    actions.setReasoning("high");
+    assert.strictEqual(getState().config.reasoning, "high");
+  });
+
   it("set-usage-limit", () => {
     assert.strictEqual(getState().config.usageLimit, undefined);
     actions.setUsageLimit({ duration: "60m", dollarAmount: 5 });

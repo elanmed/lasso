@@ -231,6 +231,9 @@ export function initStateFromConfig() {
       globalConfig.messageQueueDelimiter ??
       defaultConfig.messageQueueDelimiter,
   );
+  actions.setReasoning(
+    localConfig.reasoning ?? globalConfig.reasoning ?? defaultConfig.reasoning,
+  );
   const defaultedMcps = {
     ...defaultConfig.mcps,
     ...globalConfig.mcps,

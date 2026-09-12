@@ -48,6 +48,7 @@ export async function resolveApiCall(userInput: string) {
   const generateTextResult = await tryCatchAsync(
     aiDeps.generateText({
       model: getLanguageModel(getState().config.model),
+      reasoning: getState().config.reasoning,
       instructions: systemContent,
       messages: [...getState().app.messageParams.messages],
       tools: { ...harnessTools, ...getState().mcp.tools },
@@ -77,12 +78,11 @@ export async function resolveApiCall(userInput: string) {
         }
       },
       onToolExecutionEnd: async ({ toolCall, toolOutput }) => {
-        const success = toolOutput.type === "tool-result";
         switch (toolCall.toolName as HarnessToolName) {
           case "create_file":
           case "insert_lines":
           case "str_replace": {
-            if (!success) {
+            if (toolOutput.type === "tool-error") {
               toolCallDiffer.cleanupTempFileBefore(toolCall.toolCallId);
               return;
             }
