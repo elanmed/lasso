@@ -13,7 +13,6 @@ import { print, startLoadingState, stopLoadingState } from "./print.ts";
 import { appendModelUsage } from "./usage.ts";
 import {
   objectWithPathSchema,
-  printGitDiff,
   harnessTools,
   type HarnessToolName,
   toolPrint,
@@ -32,7 +31,7 @@ function getApiStreamAbortSignal() {
 }
 
 export async function resolveApiCall(userInput: string) {
-  const toolCallDiffer = createToolCallDiffer(printGitDiff);
+  const toolCallDiffer = createToolCallDiffer();
 
   const inputMessageParam: ModelMessage = {
     role: "user",

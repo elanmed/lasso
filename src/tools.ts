@@ -4,7 +4,6 @@ import { z } from "zod";
 import {
   getMessageFromError,
   isAbortError,
-  normalizeLine,
   stringify,
   tryCatch,
   tryCatchAsync,
@@ -12,8 +11,8 @@ import {
   getMaxColLength,
 } from "./utils.ts";
 import { getUnicodeChar } from "./text.ts";
-import { createToolCallDiffer, execGitDiff } from "./differ.ts";
-import { print, bold, fencePrint, printNewline } from "./print.ts";
+import { createToolCallDiffer } from "./differ.ts";
+import { print, bold } from "./print.ts";
 import { getState } from "./state.ts";
 import { BASE_SYSTEM_PROMPT } from "./prompts.ts";
 import { getLanguageModel } from "./model.ts";
@@ -659,7 +658,7 @@ export async function createSubagentTool(
         return { ...readTools, ...writeTools, ...getState().mcp.tools };
       })();
 
-      const toolCallDiffer = createToolCallDiffer(printGitDiff);
+      const toolCallDiffer = createToolCallDiffer();
 
       const message = `[${model}] ${subagentSchema.prompt}`;
       const subagentIndent = "   ";
@@ -858,34 +857,3 @@ export const harnessTools = {
 };
 
 export type HarnessToolName = keyof typeof harnessTools;
-
-export async function printGitDiff({
-  path,
-  tempFileAfterPath,
-  tempFileBeforePath,
-}: {
-  tempFileBeforePath: string;
-  tempFileAfterPath: string;
-  path: string;
-}) {
-  const diffResult = await tryCatchAsync(
-    execGitDiff({
-      tempFileBeforePath,
-      tempFileAfterPath,
-    }),
-  );
-
-  if (!diffResult.ok) {
-    print.error(
-      `An error occurred when getting the diff for ${path}: ${getMessageFromError(diffResult.error)}`,
-    );
-    return;
-  }
-
-  if (diffResult.value.stdout.length > 0) {
-    printNewline();
-    fencePrint(`File change: ${path}`);
-    print(normalizeLine(diffResult.value.stdout));
-    printNewline();
-  }
-}

@@ -2,11 +2,15 @@ import assert from "node:assert";
 import os from "node:os";
 import childProcess from "node:child_process";
 import { fsDeps } from "./deps.ts";
+import { fencePrint, print, printNewline } from "./print.ts";
 import {
   execPromise,
+  getMessageFromError,
   getTempFileName,
   type GetTempFileNameArgs,
+  normalizeLine,
   shouldDisableColor,
+  tryCatchAsync,
 } from "./utils.ts";
 
 export async function execGitDiff(opts: {
@@ -46,24 +50,38 @@ export async function execGitDiff(opts: {
   });
 }
 
-async function defaultPrintGitDiff({
-  tempFileBeforePath,
+export async function printGitDiff({
+  path,
   tempFileAfterPath,
+  tempFileBeforePath,
 }: {
   tempFileBeforePath: string;
   tempFileAfterPath: string;
   path: string;
 }) {
-  await execGitDiff({ tempFileBeforePath, tempFileAfterPath });
+  const diffResult = await tryCatchAsync(
+    execGitDiff({
+      tempFileBeforePath,
+      tempFileAfterPath,
+    }),
+  );
+
+  if (!diffResult.ok) {
+    print.error(
+      `An error occurred when getting the diff for ${path}: ${getMessageFromError(diffResult.error)}`,
+    );
+    return;
+  }
+
+  if (diffResult.value.stdout.length > 0) {
+    printNewline();
+    fencePrint(`File change: ${path}`);
+    print(normalizeLine(diffResult.value.stdout));
+    printNewline();
+  }
 }
 
-export function createToolCallDiffer(
-  printGitDiff: (opts: {
-    tempFileBeforePath: string;
-    tempFileAfterPath: string;
-    path: string;
-  }) => Promise<void> = defaultPrintGitDiff,
-) {
+export function createToolCallDiffer() {
   const toolCallIdToTempFileBefore = new Map<string, string>();
 
   function setTempFileBefore(toolCallId: string, args?: GetTempFileNameArgs) {

@@ -12,7 +12,6 @@ import {
   loadSkillTool,
   createSubagentTool,
   createSubagentTaskSchema,
-  printGitDiff,
   harnessTools,
   toolPrint,
 } from "./tools.ts";
@@ -1146,53 +1145,6 @@ bottom`,
 
       await assert.rejects(resultPromise, { name: "AbortError" });
       assert.deepStrictEqual(getEventListeners(controller.signal, "abort"), []);
-    });
-  });
-
-  describe("printGitDiff", () => {
-    it("prints diff with lines style", async () => {
-      const getCaptured = mockStdout();
-      mockExec({ stdout: "+added line" });
-      await printGitDiff({
-        tempFileBeforePath: "/tmp/before",
-        tempFileAfterPath: "/tmp/after",
-        path: "/test/file.txt",
-      });
-      assert.strictEqual(
-        stripAnsi(getCaptured()),
-        `
-━━ File change: /test/file.txt ━━
-+added line
-
-`,
-      );
-    });
-
-    it("prints an error when execGitDiff fails", async () => {
-      const getCaptured = mockStdout();
-      const err = new Error("fatal") as Error & { code: number };
-      err.code = 128;
-      mockExec({ stdout: "", error: err });
-      await printGitDiff({
-        tempFileBeforePath: "/tmp/before",
-        tempFileAfterPath: "/tmp/after",
-        path: "/test/file.txt",
-      });
-      assert.strictEqual(
-        stripAnsi(getCaptured()),
-        "An error occurred when getting the diff for /test/file.txt: fatal\n",
-      );
-    });
-
-    it("does not print when execGitDiff returns empty stdout", async () => {
-      const getCaptured = mockStdout();
-      mockExec({ stdout: "" });
-      await printGitDiff({
-        tempFileBeforePath: "/tmp/before",
-        tempFileAfterPath: "/tmp/after",
-        path: "/test/file.txt",
-      });
-      assert.strictEqual(stripAnsi(getCaptured()), "");
     });
   });
 });
