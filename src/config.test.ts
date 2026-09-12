@@ -38,7 +38,6 @@ describe("config", () => {
   });
 
   beforeEach(() => {
-    mock.method(Date, "now", () => 0);
     setupTestContext();
     mock.method(parseCliArgsDeps, "getArgv", () => ["node", "script.js"]);
   });

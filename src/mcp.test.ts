@@ -12,7 +12,6 @@ describe("mcp", () => {
 
   beforeEach(() => {
     setupTestContext();
-    actions.resetState();
   });
 
   it("sets clients and tools", () => {

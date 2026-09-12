@@ -2,7 +2,7 @@ import { describe, it, beforeEach, afterEach, mock } from "node:test";
 import assert from "node:assert/strict";
 
 import { debugLog } from "./debug-log.ts";
-import { setupFakeDeps, testFs } from "./test-helpers.ts";
+import { setupTestContext, testFs } from "./test-helpers.ts";
 
 describe("debugLog", () => {
   afterEach(() => {
@@ -12,8 +12,7 @@ describe("debugLog", () => {
   const path = "/fake-home/.config/lasso/debug-test-uuid.log";
 
   beforeEach(() => {
-    setupFakeDeps();
-    mock.method(Date, "now", () => 1_700_000_000_000);
+    setupTestContext({ now: 1_700_000_000_000 });
   });
 
   it("does nothing when debugLog is disabled", () => {

@@ -11,7 +11,7 @@ import {
 } from "./usage-format.ts";
 import { actions } from "./state.ts";
 import { appendModelUsage } from "./usage.ts";
-import { setupFakeDeps } from "./test-helpers.ts";
+import { setupTestContext } from "./test-helpers.ts";
 import { processDeps } from "./deps.ts";
 
 describe("usage-format", () => {
@@ -21,8 +21,7 @@ describe("usage-format", () => {
 
   describe("getPrettyUsage", () => {
     beforeEach(() => {
-      setupFakeDeps();
-      actions.resetState();
+      setupTestContext();
     });
 
     it("returns just token usage when the model has no context window configured", () => {
@@ -43,8 +42,7 @@ describe("usage-format", () => {
 
   describe("getPrettyTokenUsage", () => {
     beforeEach(() => {
-      setupFakeDeps();
-      actions.resetState();
+      setupTestContext();
       actions.setPricingPerModel({
         "claude-haiku-4-5": {
           inputPerMillion: 1,
@@ -302,8 +300,7 @@ describe("usage-format", () => {
 
   describe("getPrettyContextWindowUsage", () => {
     beforeEach(() => {
-      setupFakeDeps();
-      actions.resetState();
+      setupTestContext();
     });
 
     it("returns empty string when the model has no context window configured", () => {
@@ -365,8 +362,7 @@ describe("usage-format", () => {
 
   describe("getUsageMoneyForModel", () => {
     beforeEach(() => {
-      setupFakeDeps();
-      actions.resetState();
+      setupTestContext();
       actions.setModel("gpt-4");
       actions.setPricingPerModel({
         "gpt-4": {
@@ -467,8 +463,7 @@ describe("usage-format", () => {
 
   describe("getPrettyTokenUsage no pricing configured", () => {
     beforeEach(() => {
-      setupFakeDeps();
-      actions.resetState();
+      setupTestContext();
     });
 
     it("returns token counts for no modelUsage", () => {

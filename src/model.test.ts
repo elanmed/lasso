@@ -8,6 +8,7 @@ describe("model", () => {
   afterEach(() => {
     mock.restoreAll();
   });
+
   beforeEach(() => {
     setupTestContext();
     setupApiCallState();

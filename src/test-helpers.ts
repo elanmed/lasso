@@ -177,24 +177,6 @@ export function stripAnsi(str: string): string {
   return str.replace(ANSI_ESCAPE_PATTERN, "");
 }
 
-export function setupFakeDeps() {
-  testFs._restore();
-  for (const key of Object.keys(testFs)) {
-    if (!EXCLUDED_KEYS.includes(key)) {
-      mock.method(
-        fsDeps,
-        key as keyof typeof fsDeps,
-        testFs[key as keyof typeof testFs] as never,
-      );
-    }
-  }
-
-  testProcessEnv._clear();
-  mock.method(processDeps.env, "get", (key: string) => testProcessEnv.get(key));
-  mock.method(processDeps, "cwd", () => testCwd.get());
-  mock.method(promptDeps, "getSystemContent", () => "");
-}
-
 export function makeFakeRl(overrides: object = {}) {
   return {
     write: () => null,
@@ -218,7 +200,22 @@ export function makeFakeRlWithWrites(overrides: object = {}) {
 }
 
 export function setupTestContext({ now = 0 }: { now?: number } = {}) {
-  setupFakeDeps();
+  testFs._restore();
+  for (const key of Object.keys(testFs)) {
+    if (!EXCLUDED_KEYS.includes(key)) {
+      mock.method(
+        fsDeps,
+        key as keyof typeof fsDeps,
+        testFs[key as keyof typeof testFs] as never,
+      );
+    }
+  }
+
+  testProcessEnv._clear();
+  mock.method(processDeps.env, "get", (key: string) => testProcessEnv.get(key));
+  mock.method(processDeps, "cwd", () => testCwd.get());
+  mock.method(promptDeps, "getSystemContent", () => "");
+  mock.method(processDeps.stdout, "write", () => true);
   mock.method(os, "homedir", () => "/fake-home");
   mock.method(os, "tmpdir", () => "/tmp");
   mock.method(

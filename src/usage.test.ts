@@ -12,7 +12,7 @@ import { actions, getState } from "./state.ts";
 import { fsDeps } from "./deps.ts";
 import { dirname } from "node:path";
 import type { LanguageModelUsage } from "ai";
-import { setupFakeDeps, testFs } from "./test-helpers.ts";
+import { setupTestContext, testFs } from "./test-helpers.ts";
 import { getUsageLogLockPath, getUsageLogPath } from "./paths.ts";
 
 describe("usage", () => {
@@ -22,8 +22,7 @@ describe("usage", () => {
 
   describe("appendModelUsage", () => {
     beforeEach(() => {
-      setupFakeDeps();
-      actions.resetState();
+      setupTestContext();
       actions.setModel("gpt-4");
       actions.setPricingPerModel({
         "gpt-4": {
@@ -245,8 +244,7 @@ describe("usage", () => {
 
   describe("syncNewModelUsageForLimitWindow", () => {
     beforeEach(() => {
-      setupFakeDeps();
-      actions.resetState();
+      setupTestContext();
       actions.setModel("gpt-4");
       actions.setPricingPerModel({
         "gpt-4": {
@@ -564,8 +562,7 @@ describe("usage", () => {
 
   describe("syncInitialModelUsageForLimitWindow", () => {
     beforeEach(() => {
-      setupFakeDeps();
-      actions.resetState();
+      setupTestContext();
       actions.setModel("gpt-4");
       actions.setPricingPerModel({
         "gpt-4": {
@@ -710,8 +707,7 @@ describe("usage", () => {
 
   describe("isUsageLimitDisabled", () => {
     beforeEach(() => {
-      setupFakeDeps();
-      actions.resetState();
+      setupTestContext();
     });
 
     it("returns true when the model has no pricing configured", () => {
@@ -804,8 +800,7 @@ describe("usage", () => {
 
   describe("getExpiredTime", () => {
     beforeEach(() => {
-      setupFakeDeps();
-      actions.resetState();
+      setupTestContext();
       mock.method(Date, "now", () => 1_000_000);
     });
 

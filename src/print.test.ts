@@ -15,7 +15,6 @@ import {
   mockStdout,
   mockSetInterval,
   mockClearInterval,
-  setupFakeDeps,
   setupTestContext,
 } from "./test-helpers.ts";
 
@@ -25,7 +24,7 @@ describe("print", () => {
   });
 
   beforeEach(() => {
-    setupFakeDeps();
+    setupTestContext();
   });
 
   describe("startLoadingState", () => {
@@ -99,8 +98,7 @@ describe("print", () => {
 
   describe("fencePrint", () => {
     beforeEach(() => {
-      setupFakeDeps();
-      actions.resetState();
+      setupTestContext();
       actions.resetStdout();
     });
 
@@ -261,8 +259,7 @@ describe("print", () => {
 
   describe("printSessionStartDate", () => {
     beforeEach(() => {
-      setupFakeDeps();
-      actions.resetState();
+      setupTestContext();
       actions.resetStdout();
     });
 

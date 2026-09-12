@@ -13,7 +13,6 @@ describe("state", () => {
   });
 
   beforeEach(() => {
-    mock.method(Date, "now", () => 0);
     setupTestContext();
   });
 

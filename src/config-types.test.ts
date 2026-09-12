@@ -7,6 +7,7 @@ describe("config-types", () => {
   afterEach(() => {
     mock.restoreAll();
   });
+
   it("ConfigSchema and DefaultedConfigSchema have the same keys", () => {
     assert.deepStrictEqual(
       Object.keys(ConfigSchema.shape).sort(),

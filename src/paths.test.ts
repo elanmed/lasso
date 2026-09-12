@@ -12,6 +12,7 @@ describe("paths", () => {
   afterEach(() => {
     mock.restoreAll();
   });
+
   beforeEach(() => {
     setupTestContext();
   });

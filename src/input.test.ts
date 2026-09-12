@@ -2,7 +2,6 @@ import { describe, it, beforeEach, afterEach, mock } from "node:test";
 import assert from "node:assert";
 import { actions, getState, promptDeps } from "./state.ts";
 import { getApproxTokens } from "./utils.ts";
-
 import {
   parseInputFromEditor,
   resolveSlashCommand,
@@ -26,13 +25,6 @@ import {
   pageLastResponse,
   resolveInterruptWithEditor,
 } from "./input.ts";
-
-function getTestRl() {
-  const rl = getState().app.rl;
-  assert(rl !== null);
-  return rl;
-}
-
 import {
   testFs,
   testProcessEnv,
@@ -51,6 +43,12 @@ import {
 import { fsDeps } from "./deps.ts";
 import childProcess from "node:child_process";
 import { getGlobalConfigPath, getGlobalContextDir } from "./paths.ts";
+
+function getTestRl() {
+  const rl = getState().app.rl;
+  assert(rl !== null);
+  return rl;
+}
 
 describe("input", () => {
   afterEach(() => {

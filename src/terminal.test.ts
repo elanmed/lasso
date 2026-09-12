@@ -16,7 +16,6 @@ import {
   mockSpawnSync,
   mockStdout,
   mockPagerSpawn,
-  setupFakeDeps,
   setupTestContext,
   stripAnsi,
   testFs,
@@ -29,7 +28,7 @@ describe("terminal", () => {
   });
 
   beforeEach(() => {
-    setupFakeDeps();
+    setupTestContext();
   });
 
   describe("openWithPager", () => {
