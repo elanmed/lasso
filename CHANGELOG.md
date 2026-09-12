@@ -1,5 +1,20 @@
 # Changelog
 
+## v0.5.0 - 2026-09-11
+
+- Add MCP support with `mcps` configuration: HTTP, SSE, and stdio servers with parallel initialization, graceful failure handling, and tool call logging
+- Add the `pageHistory` command with empty history handling
+- Prepend latest messages to chat history
+- Migrate the AI SDK from v6 to v7
+- Bold tool call labels and fence headers
+- Fit fence and tool print sections to terminal width with header truncation and overflow handling
+- Hide context window usage under 80 terminal columns
+- Replace globby with native file discovery for glob and git file lists
+- Change the default `compactTriggerRatio` from `0.8` -> `0.7`
+- Compaction improvements: approximate stale token counts, include system prompt tokens, record interrupted responses in history
+- Redraw the pending question prompt after paging, editing, and reload commands
+- Fix truncation and wrapping across tool and fence printing
+
 ## v0.4.0 - 2026-09-07
 
 - Add the `/lastresponse` command for paging the last response
