@@ -244,17 +244,11 @@ export function makeGenerateTextResult(
 ) {
   return {
     text: "response text",
-    totalUsage: {
-      inputTokens: 10,
-      outputTokens: 5,
-      inputTokenDetails: { cacheReadTokens: 0, cacheWriteTokens: 0 },
-    },
     usage: {
       inputTokens: 10,
       outputTokens: 5,
       inputTokenDetails: { cacheReadTokens: 0, cacheWriteTokens: 0 },
     },
-    response: { messages: [] },
     responseMessages: [],
     ...overrides,
   };
