@@ -6,7 +6,7 @@ _A minimal agent harness to rein in your llm_
 
 ## Features
 
-- **Minimal**: ~4,800 lines of source code, ~9,400 lines of tests
+- **Minimal**: ~4,900 lines of source code, ~9,500 lines of tests
   - Responses are piped through `bat` to render markdown
   - Multi-line input is supported by spawning an editor of your choice
   - Messages can be queued by typing a custom delimiter (default `l---`) in the spawned editor
@@ -543,7 +543,8 @@ vim.g.clipboard = {
 
 ## TODO (soon)
 
-- [ ] Use native v7 timeouts
+- [ ] Use native ai sdk v7 timeouts
+- [ ] Update tools to support reading, writing base64 for images
 
 ## TODO (later)
 
