@@ -9,7 +9,6 @@ import {
   getSkills,
 } from "./context.ts";
 import { actions, getState } from "./state.ts";
-import { parseCliArgs } from "./args.ts";
 import { MISSING } from "./missing.ts";
 import { fsDeps, processDeps } from "./deps.ts";
 import {
@@ -274,8 +273,7 @@ export async function initStateFromFs() {
 }
 
 export function initStateForDebug() {
-  const args = parseCliArgs();
-  actions.setDebugLog(args.debug);
+  actions.setDebugLog(processDeps.env.get("DEBUG") === "1");
 }
 
 export async function initStateRepeatable() {

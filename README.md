@@ -306,12 +306,7 @@ usageLimit:
 | `LASSO_PAGER`           | Default pager command with `__FILE__` placeholder (fallback: `$PAGER`, then `bat`, then `less`)                        |
 | `LASSO_CLIPBOARD_PASTE` | Command used by `/paste` to read the clipboard (default: `pbpaste` on macOS, `xclip -selection clipboard -o` on Linux) |
 | `NO_COLOR`              | Disables all ansi color output (color is also disabled automatically when stdout is not a tty)                         |
-
-## CLI Arguments
-
-| Flag      | Description          |
-| --------- | -------------------- |
-| `--debug` | Enable debug logging |
+| `DEBUG`                 | Set to `1` to enable debug logging                                                                                     |
 
 ## Builtin Slash Commands
 

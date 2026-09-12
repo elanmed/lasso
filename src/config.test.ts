@@ -24,7 +24,6 @@ import {
   mockStdout,
   stripAnsi,
 } from "./test-helpers.ts";
-import { parseCliArgsDeps } from "./args.ts";
 
 const testConfig = {
   model: "claude-sonnet-4-6",
@@ -38,7 +37,6 @@ describe("config", () => {
 
   beforeEach(() => {
     setupTestContext();
-    mock.method(parseCliArgsDeps, "getArgv", () => ["node", "script.js"]);
   });
 
   it("requires edit in the defaulted keymaps", () => {
@@ -1477,12 +1475,9 @@ describe("config", () => {
     );
   });
 
-  it("sets debug from args", async () => {
-    mock.method(parseCliArgsDeps, "getArgv", () => [
-      "node",
-      "script.js",
-      "--debug",
-    ]);
+  it("sets debug from DEBUG env var", async () => {
+    testProcessEnv._clear();
+    testProcessEnv._set("DEBUG", "1");
     testFs._files.set(
       getGlobalConfigPath(),
       JSON.stringify({
@@ -1650,18 +1645,15 @@ hello
   });
 
   describe("initStateForDebug", () => {
-    it("sets debug flag when --debug is passed", () => {
-      mock.method(parseCliArgsDeps, "getArgv", () => [
-        "node",
-        "script.js",
-        "--debug",
-      ]);
+    it("sets debug flag when DEBUG=1", () => {
+      testProcessEnv._clear();
+      testProcessEnv._set("DEBUG", "1");
 
       initStateForDebug();
 
       assert.strictEqual(getState().app.debugLog, true);
     });
-    it("keeps debug flag off when --debug is not passed", () => {
+    it("keeps debug flag off when DEBUG is not set", () => {
       initStateForDebug();
 
       assert.strictEqual(getState().app.debugLog, false);
