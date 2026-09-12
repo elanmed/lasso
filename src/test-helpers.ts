@@ -328,7 +328,10 @@ export function getCapturedTool(
   const tools = options["tools"] as ToolSet | undefined;
   assert.ok(tools !== undefined, `Expected tools in generateText options`);
   const tool = tools[name];
-  assert.ok(tool !== undefined, `Expected tool ${name} in generateText options`);
+  assert.ok(
+    tool !== undefined,
+    `Expected tool ${name} in generateText options`,
+  );
   return tool;
 }
 
