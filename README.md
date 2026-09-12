@@ -540,6 +540,8 @@ vim.g.clipboard = {
 
 - [ ] Use native ai sdk v7 timeouts
 - [ ] Update tools to support reading, writing base64 for images
+- [ ] Move all config validation into blockOnMissingConfig, don't throw at start
+  - [ ] Separate error message for no config (`initlocal` and `initglobal`)
 
 ## TODO (later)
 
