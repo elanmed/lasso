@@ -6,7 +6,7 @@ if [[ $# -eq 0 ]]; then
 fi
 
 set +e
-CI=true pnpm run "$@" 2>&1
+CI=true timeout 30 pnpm run "$@" 2>&1
 status=$?
 printf '\nEXIT_STATUS=%s\n' "$status"
 exit 0
