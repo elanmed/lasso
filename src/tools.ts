@@ -670,12 +670,12 @@ export async function createSubagentTool(
       const generateTextResult = await tryCatchAsync(
         aiDeps.generateText({
           model: getLanguageModel(model),
-          system: systemContent,
+          instructions: systemContent,
           messages: [inputMessageParam],
           tools: subagentTools,
           stopWhen: aiDeps.isLoopFinished(),
           abortSignal: controller.signal,
-          experimental_onToolCallStart: ({
+          onToolExecutionStart: ({
             toolCall,
           }: {
             toolCall: { toolName: string; toolCallId: string; input: unknown };
@@ -697,14 +697,15 @@ export async function createSubagentTool(
               }
             }
           },
-          experimental_onToolCallFinish: async ({
+          onToolExecutionEnd: async ({
             toolCall,
-            success,
+            toolOutput,
           }: {
             toolCall: { toolName: string; toolCallId: string; input: unknown };
-            success: boolean;
+            toolOutput: { type: "tool-result" | "tool-error" };
           }) => {
             if (subagentSchema.access !== "read-write") return;
+            const success = toolOutput.type === "tool-result";
 
             switch (toolCall.toolName as HarnessToolName) {
               case "create_file":
@@ -739,8 +740,8 @@ export async function createSubagentTool(
         };
       }
 
-      const { totalUsage, text } = generateTextResult.value;
-      await appendModelUsage(totalUsage, model);
+      const { usage, text } = generateTextResult.value;
+      await appendModelUsage(usage, model);
       toolCallDiffer.cleanupAllTempFileBefore();
       cleanup();
 

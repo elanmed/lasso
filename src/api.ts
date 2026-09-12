@@ -48,12 +48,12 @@ export async function resolveApiCall(userInput: string) {
   const generateTextResult = await tryCatchAsync(
     aiDeps.generateText({
       model: getLanguageModel(getState().config.model),
-      system: systemContent,
+      instructions: systemContent,
       messages: [...getState().app.messageParams.messages],
       tools: { ...harnessTools, ...getState().mcp.tools },
       stopWhen: aiDeps.isLoopFinished(),
       abortSignal: getApiStreamAbortSignal(),
-      experimental_onToolCallStart: ({ toolCall }) => {
+      onToolExecutionStart: ({ toolCall }) => {
         if (!Object.keys(harnessTools).includes(toolCall.toolName)) {
           toolPrint(
             `[mcp] ${toolCall.toolName}`,
@@ -76,7 +76,8 @@ export async function resolveApiCall(userInput: string) {
           }
         }
       },
-      experimental_onToolCallFinish: async ({ toolCall, success }) => {
+      onToolExecutionEnd: async ({ toolCall, toolOutput }) => {
+        const success = toolOutput.type === "tool-result";
         switch (toolCall.toolName as HarnessToolName) {
           case "create_file":
           case "insert_lines":
@@ -125,18 +126,18 @@ export async function resolveApiCall(userInput: string) {
     return null;
   }
 
-  const { totalUsage, text, response } = generateTextResult.value;
+  const { usage, text, responseMessages } = generateTextResult.value;
 
-  await appendModelUsage(totalUsage);
+  await appendModelUsage(usage);
 
-  const inputTokens = totalUsage.inputTokens ?? 0;
-  const outputTokens = totalUsage.outputTokens ?? 0;
+  const inputTokens = usage.inputTokens ?? 0;
+  const outputTokens = usage.outputTokens ?? 0;
 
   // no need to approximate the system prompt tokens here — inputTokens already includes them
   actions.setMessageParamTokens(inputTokens + outputTokens);
   actions.setMessageParamTokensStale(false);
 
-  for (const message of response.messages) {
+  for (const message of responseMessages) {
     actions.appendToMessageParams(message);
   }
   prependToChatHistory(text, "assistant");
@@ -222,9 +223,9 @@ ${JSON.stringify(getState().app.messageParams.messages)}
     return;
   }
 
-  const { totalUsage, text } = generateTextResult.value;
-  await appendModelUsage(totalUsage);
-  const afterCompactionTokens = totalUsage.outputTokens ?? 0;
+  const { usage, text } = generateTextResult.value;
+  await appendModelUsage(usage);
+  const afterCompactionTokens = usage.outputTokens ?? 0;
 
   actions.resetMessageParams();
   actions.appendToMessageParams({ content: text, role: "assistant" });

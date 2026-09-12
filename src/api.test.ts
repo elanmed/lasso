@@ -104,7 +104,7 @@ response text
       mock.method(aiDeps, "generateText", () =>
         Promise.resolve(
           makeGenerateTextResult({
-            totalUsage: {
+            usage: {
               inputTokens: 42,
               outputTokens: 7,
               inputTokenDetails: {
@@ -112,12 +112,10 @@ response text
                 cacheWriteTokens: 1,
               },
             },
-            response: {
-              messages: [
-                { role: "assistant", content: "tool call" },
-                { role: "tool", content: "tool result" },
-              ],
-            },
+            responseMessages: [
+              { role: "assistant", content: "tool call" },
+              { role: "tool", content: "tool result" },
+            ],
           }),
         ),
       );
@@ -152,14 +150,12 @@ response text
       mock.method(aiDeps, "generateText", () =>
         Promise.resolve(
           makeGenerateTextResult({
-            totalUsage: {
+            usage: {
               inputTokens: 14,
               outputTokens: 3,
               inputTokenDetails: { cacheReadTokens: 0, cacheWriteTokens: 0 },
             },
-            response: {
-              messages: [{ role: "assistant", content: "answer" }],
-            },
+            responseMessages: [{ role: "assistant", content: "answer" }],
           }),
         ),
       );
@@ -182,14 +178,12 @@ response text
       mock.method(aiDeps, "generateText", () =>
         Promise.resolve(
           makeGenerateTextResult({
-            totalUsage: {
+            usage: {
               inputTokens: 50,
               outputTokens: 5,
               inputTokenDetails: { cacheReadTokens: 0, cacheWriteTokens: 0 },
             },
-            response: {
-              messages: [{ role: "assistant", content: "answer" }],
-            },
+            responseMessages: [{ role: "assistant", content: "answer" }],
           }),
         ),
       );
@@ -208,7 +202,7 @@ response text
     it("creates temp file on tool call start for str_replace", async () => {
       testFs._files.set("/test/file.txt", "original content");
       mock.method(aiDeps, "generateText", (opts: Record<string, unknown>) => {
-        const onStart = opts["experimental_onToolCallStart"] as (
+        const onStart = opts["onToolExecutionStart"] as (
           arg: Record<string, unknown>,
         ) => void;
         onStart({
@@ -231,7 +225,7 @@ response text
     it("creates temp file on tool call start for insert_lines", async () => {
       testFs._files.set("/test/file.txt", "original");
       mock.method(aiDeps, "generateText", (opts: Record<string, unknown>) => {
-        const onStart = opts["experimental_onToolCallStart"] as (
+        const onStart = opts["onToolExecutionStart"] as (
           arg: Record<string, unknown>,
         ) => void;
         onStart({
@@ -249,7 +243,7 @@ response text
 
     it("does not create temp file for non-file tools", async () => {
       mock.method(aiDeps, "generateText", (opts: Record<string, unknown>) => {
-        const onStart = opts["experimental_onToolCallStart"] as (
+        const onStart = opts["onToolExecutionStart"] as (
           arg: Record<string, unknown>,
         ) => void;
         onStart({
@@ -272,10 +266,10 @@ response text
         aiDeps,
         "generateText",
         async (opts: Record<string, unknown>) => {
-          const onStart = opts["experimental_onToolCallStart"] as (
+          const onStart = opts["onToolExecutionStart"] as (
             arg: Record<string, unknown>,
           ) => void;
-          const onFinish = opts["experimental_onToolCallFinish"] as (
+          const onFinish = opts["onToolExecutionEnd"] as (
             arg: Record<string, unknown>,
           ) => Promise<void>;
           onStart({
@@ -291,7 +285,7 @@ response text
               toolCallId: "call-1",
               input: { path: "/test/file.txt" },
             },
-            success: true,
+            toolOutput: { type: "tool-result" },
           });
           return makeGenerateTextResult();
         },
@@ -311,10 +305,10 @@ response text
         aiDeps,
         "generateText",
         async (opts: Record<string, unknown>) => {
-          const onStart = opts["experimental_onToolCallStart"] as (
+          const onStart = opts["onToolExecutionStart"] as (
             arg: Record<string, unknown>,
           ) => void;
-          const onFinish = opts["experimental_onToolCallFinish"] as (
+          const onFinish = opts["onToolExecutionEnd"] as (
             arg: Record<string, unknown>,
           ) => Promise<void>;
           onStart({
@@ -330,7 +324,7 @@ response text
               toolCallId: "call-1",
               input: { path: "/test/file.txt" },
             },
-            success: false,
+            toolOutput: { type: "tool-error" },
           });
           return makeGenerateTextResult();
         },
@@ -342,13 +336,13 @@ response text
     it("passes system content to the api call", async () => {
       const systemContent = "system-content";
       mock.method(promptDeps, "getSystemContent", () => systemContent);
-      let capturedSystem: string | undefined;
+      let capturedInstructions: string | undefined;
       mock.method(aiDeps, "generateText", (opts: Record<string, unknown>) => {
-        capturedSystem = opts["system"] as string;
+        capturedInstructions = opts["instructions"] as string;
         return makeGenerateTextResult();
       });
       await resolveApiCall("hello");
-      assert.strictEqual(capturedSystem, systemContent);
+      assert.strictEqual(capturedInstructions, systemContent);
     });
 
     it("includes previous messages in request", async () => {
@@ -415,7 +409,7 @@ response text
         return Promise.resolve(
           makeGenerateTextResult({
             text: "compacted summary",
-            totalUsage: {
+            usage: {
               inputTokens: 0,
               outputTokens: 25_000,
               inputTokenDetails: { cacheReadTokens: 0, cacheWriteTokens: 0 },
@@ -483,7 +477,11 @@ response text
       actions.appendToMessageParams({
         role: "user",
         content: [
-          { type: "image", image: "a".repeat(300_000), mediaType: "image/png" },
+          {
+            type: "file",
+            mediaType: "image/png",
+            data: "a".repeat(300_000),
+          },
           { type: "text", text: "after image" },
         ],
       });
@@ -508,7 +506,7 @@ response text
         return Promise.resolve(
           makeGenerateTextResult({
             text: "compacted summary",
-            totalUsage: {
+            usage: {
               inputTokens: 0,
               outputTokens: 25_000,
               inputTokenDetails: { cacheReadTokens: 0, cacheWriteTokens: 0 },
@@ -552,7 +550,7 @@ response text
         return Promise.resolve(
           makeGenerateTextResult({
             text: "compacted summary",
-            totalUsage: {
+            usage: {
               inputTokens: 0,
               outputTokens: 25_000,
               inputTokenDetails: { cacheReadTokens: 0, cacheWriteTokens: 0 },
@@ -581,7 +579,7 @@ response text
         Promise.resolve(
           makeGenerateTextResult({
             text: "compacted summary",
-            totalUsage: {
+            usage: {
               inputTokens: 0,
               outputTokens: 30_000,
               inputTokenDetails: { cacheReadTokens: 0, cacheWriteTokens: 0 },

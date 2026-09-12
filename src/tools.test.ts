@@ -951,10 +951,10 @@ bottom`,
           "bash",
           "mcp_tool",
         ]);
-        const onStart = options["experimental_onToolCallStart"] as (
+        const onStart = options["onToolExecutionStart"] as (
           arg: Record<string, unknown>,
         ) => void;
-        const onFinish = options["experimental_onToolCallFinish"] as (
+        const onFinish = options["onToolExecutionEnd"] as (
           arg: Record<string, unknown>,
         ) => Promise<void>;
         onStart({
@@ -972,7 +972,7 @@ bottom`,
             toolCallId: "call-1",
             input: { path: "/test/file.txt" },
           },
-          success: true,
+          toolOutput: { type: "tool-result" },
         });
         return makeGenerateTextResult({ text: "done" });
       });

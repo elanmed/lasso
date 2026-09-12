@@ -271,7 +271,9 @@ export function getStrFromAssistantContent(content: AssistantContent) {
           return c.text;
         }
         case "file":
+        case "custom":
         case "reasoning":
+        case "reasoning-file":
         case "tool-call":
         case "tool-result":
         case "tool-approval-request": {
