@@ -13,10 +13,11 @@ import {
   makeGenerateTextResult,
   mockGenerateText,
   makeMcpTool,
+  getCapturedTool,
 } from "./test-helpers.ts";
 import { aiDeps } from "./deps.ts";
 import { promptDeps } from "./state.ts";
-import type { ModelMessage, ToolSet } from "ai";
+import type { ModelMessage } from "ai";
 
 describe("api", () => {
   afterEach(() => {
@@ -58,24 +59,19 @@ response text
     });
 
     it("passes harness and MCP tools to generateText", async () => {
-      let capturedTools: ToolSet | undefined;
+      let capturedOptions: Record<string, unknown> | undefined;
       const mcpTool = makeMcpTool();
       const mcpTools: MCPToolSet = { mcp_tool: mcpTool };
       actions.setMcp({}, mcpTools);
       mockGenerateText((options: Record<string, unknown>) => {
-        capturedTools = options["tools"] as ToolSet;
+        capturedOptions = options;
         return Promise.resolve(makeGenerateTextResult());
       });
 
       await resolveApiCall("hello");
 
-      if (capturedTools === undefined) {
-        throw new Error("Expected generateText tools");
-      }
-      assert.strictEqual(capturedTools["mcp_tool"], mcpTool);
-      if (capturedTools["bash"] === undefined) {
-        throw new Error("Expected bash tool");
-      }
+      assert.strictEqual(getCapturedTool(capturedOptions, "mcp_tool"), mcpTool);
+      getCapturedTool(capturedOptions, "bash");
     });
 
     it("returns null on abort error", async () => {

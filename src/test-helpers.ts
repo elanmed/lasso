@@ -10,6 +10,7 @@ import readline from "node:readline/promises";
 import { stdin } from "node:process";
 import { baseBatFlags, markdownBatFlags } from "./terminal.ts";
 import { z } from "zod/v4";
+import type { ToolSet } from "ai";
 
 export function makeMcpTool() {
   return {
@@ -307,6 +308,21 @@ export function mockExecCalls(
 
 export function mockGenerateText(implementation: unknown) {
   mock.method(aiDeps, "generateText", implementation as never);
+}
+
+export function getCapturedTool(
+  options: Record<string, unknown> | undefined,
+  name: string,
+): ToolSet[string] {
+  if (options === undefined) {
+    throw new Error(`Expected generateText call for tool ${name}`);
+  }
+  const tools = options["tools"] as ToolSet | undefined;
+  const tool = tools?.[name];
+  if (tool === undefined) {
+    throw new Error(`Expected tool ${name} in generateText options`);
+  }
+  return tool;
 }
 
 export function mockClipboardPaste(stdout: string) {
