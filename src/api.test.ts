@@ -6,7 +6,6 @@ import { actions, getState, type MCPToolSet } from "./state.ts";
 import { maybeCompactMessageParams, resolveApiCall } from "./api.ts";
 import {
   setupTestContext,
-  setupApiCallState,
   testFs,
   mockExec,
   mockStdout,
@@ -25,9 +24,7 @@ describe("api", () => {
   });
 
   beforeEach(() => {
-    setupTestContext();
-    setupApiCallState();
-    actions.setModel("claude-sonnet-4-20250514");
+    setupTestContext({ model: "claude-sonnet-4-20250514" });
     actions.setBaseURL("https://api.anthropic.com");
     actions.setContextStr("");
     actions.setSkillsStr("");

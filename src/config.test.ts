@@ -19,7 +19,6 @@ import {
 import {
   testFs,
   testProcessEnv,
-  setupApiCallState,
   setupTestContext,
   mockStdout,
   stripAnsi,
@@ -1619,9 +1618,8 @@ hello
 
   describe("blockOnMissingConfig", () => {
     beforeEach(() => {
-      setupApiCallState();
+      setupTestContext({ model: "claude-sonnet-4-20250514" });
       actions.setBaseURL("https://api.anthropic.com");
-      actions.setModel("claude-sonnet-4-20250514");
     });
 
     it("returns false when api key, baseURL, and model are set", () => {

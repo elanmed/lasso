@@ -13,7 +13,7 @@ describe("state", () => {
   });
 
   beforeEach(() => {
-    setupTestContext();
+    setupTestContext({ model: null, sdkProvider: null });
   });
 
   it("resetState restores initial state after mutations", () => {

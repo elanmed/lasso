@@ -5,7 +5,7 @@ import { mock } from "node:test";
 import { aiDeps, fsDeps, processDeps } from "./deps.ts";
 import { promptDeps, actions } from "./state.ts";
 import { initKeypress } from "./input.ts";
-import type { Key } from "./config-types.ts";
+import type { Key, SdkProvider } from "./config-types.ts";
 import readline from "node:readline/promises";
 import { stdin } from "node:process";
 import { baseBatFlags, markdownBatFlags } from "./terminal.ts";
@@ -199,7 +199,17 @@ export function makeFakeRlWithWrites(overrides: object = {}) {
   return { rl, writes };
 }
 
-export function setupTestContext({ now = 0 }: { now?: number } = {}) {
+export function setupTestContext({
+  now = 0,
+  apiKey = "api-key",
+  sdkProvider = "anthropic" as const,
+  model = "main-model",
+}: {
+  now?: number;
+  apiKey?: string | null;
+  sdkProvider?: SdkProvider | null;
+  model?: string | null;
+} = {}) {
   testFs._restore();
   for (const key of Object.keys(testFs)) {
     if (!EXCLUDED_KEYS.includes(key)) {
@@ -228,12 +238,15 @@ export function setupTestContext({ now = 0 }: { now?: number } = {}) {
   );
   mock.method(Date, "now", () => now);
   actions.resetState();
-}
-
-export function setupApiCallState() {
-  testProcessEnv._set("LASSO_API_KEY", "api-key");
-  actions.setSdkProvider("anthropic");
-  actions.setModel("main-model");
+  if (apiKey !== null) {
+    testProcessEnv._set("LASSO_API_KEY", apiKey);
+  }
+  if (sdkProvider !== null) {
+    actions.setSdkProvider(sdkProvider);
+  }
+  if (model !== null) {
+    actions.setModel(model);
+  }
 }
 
 export function makeGenerateTextResult(

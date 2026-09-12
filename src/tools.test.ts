@@ -19,7 +19,6 @@ import {
 import {
   testFs,
   setupTestContext,
-  setupApiCallState,
   mockExec,
   mockGenerateText,
   stripAnsi,
@@ -884,7 +883,6 @@ bottom`,
 
   describe("createSubagentTool", () => {
     it("runs read-only subagents in parallel and returns structured results", async () => {
-      setupApiCallState();
       const calls: Record<string, unknown>[] = [];
       mockGenerateText((options: Record<string, unknown>) => {
         calls.push(options);
@@ -932,7 +930,6 @@ bottom`,
     });
 
     it("gives read-write subagents write tools and prints file diffs", async () => {
-      setupApiCallState();
       const mcpTool = makeMcpTool();
       actions.setMcp({}, { mcp_tool: mcpTool });
       const getCaptured = mockStdout();
@@ -996,7 +993,6 @@ bottom`,
     });
 
     it("uses the configured model when a task model is omitted", async () => {
-      setupApiCallState();
       mockGenerateText((options: { model: { modelId: string } }) => {
         assert.strictEqual(options.model.modelId, "main-model");
         return Promise.resolve(makeGenerateTextResult({ text: "ok" }));
@@ -1014,7 +1010,6 @@ bottom`,
     });
 
     it("uses the task model", async () => {
-      setupApiCallState();
       mockGenerateText((options: { model: { modelId: string } }) => {
         assert.strictEqual(options.model.modelId, "main-model");
         return Promise.resolve(makeGenerateTextResult({ text: "ok" }));
@@ -1032,7 +1027,6 @@ bottom`,
     });
 
     it("returns errors for failed subagents without hiding successful results", async () => {
-      setupApiCallState();
       mockGenerateText((options: { model: { modelId: string } }) => {
         if (options.model.modelId === "bad-model") {
           return Promise.reject(new Error("subagent failed"));
@@ -1060,7 +1054,6 @@ bottom`,
     });
 
     it("returns a timeout error with subagent metadata", async () => {
-      setupApiCallState();
       mock.timers.enable({ apis: ["setTimeout"] });
       let onGenerateTextCalled: () => void = () => undefined;
       const generateTextCalledPromise = new Promise<void>((resolve) => {
@@ -1106,7 +1099,6 @@ bottom`,
     });
 
     it("rethrows when aborted by the caller and removes the abort listener", async () => {
-      setupApiCallState();
       const controller = new AbortController();
       let onGenerateTextCalled: () => void = () => undefined;
       const generateTextCalledPromise = new Promise<void>((resolve) => {

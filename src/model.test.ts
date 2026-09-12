@@ -2,7 +2,7 @@ import { describe, it, beforeEach, afterEach, mock } from "node:test";
 import assert from "node:assert";
 import { actions } from "./state.ts";
 import { getHeaders, getLanguageModel } from "./model.ts";
-import { setupApiCallState, setupTestContext } from "./test-helpers.ts";
+import { setupTestContext } from "./test-helpers.ts";
 
 describe("model", () => {
   afterEach(() => {
@@ -10,9 +10,7 @@ describe("model", () => {
   });
 
   beforeEach(() => {
-    setupTestContext();
-    setupApiCallState();
-    actions.setModel("claude-sonnet-4-20250514");
+    setupTestContext({ model: "claude-sonnet-4-20250514" });
     actions.setBaseURL("https://api.anthropic.com");
   });
 
