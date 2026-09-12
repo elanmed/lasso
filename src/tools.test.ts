@@ -172,6 +172,20 @@ describe("tools", () => {
 `,
       );
     });
+
+    it("falls back to one char per line when the terminal is narrower than the label", () => {
+      mock.method(processDeps.stdout, "getColumns", () => 5);
+      const getCaptured = mockStdout();
+      toolPrint("bash", "abcdefghijklmnopqrstuvwxyz");
+      assert.strictEqual(
+        stripAnsi(getCaptured()),
+        `bash: a
+       ┊b
+       ┊c
+       ┊…
+`,
+      );
+    });
   });
 
   describe("executeBashTool", () => {

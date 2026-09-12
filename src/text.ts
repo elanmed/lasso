@@ -5,7 +5,7 @@ import { getMaxColLength } from "./utils.ts";
 export function getUnicodeChar(char: string) {
   const map = {
     ["┊"]: "|",
-    ["…"]: "...",
+    ["…"]: " ",
     ["━"]: "=",
     ["—"]: "-",
   };
@@ -19,7 +19,6 @@ export function truncate(str: string, padding = 0) {
   const maxLen = Math.max(1, getMaxColLength() - padding);
   const newlineIdx = str.indexOf("\n");
   const ellipsis = getUnicodeChar("…");
-  const ellipsisLen = ellipsis.length;
 
   const firstLine = (() => {
     if (newlineIdx === -1) return str;
@@ -27,12 +26,12 @@ export function truncate(str: string, padding = 0) {
   })();
 
   if (newlineIdx !== -1) {
-    return firstLine.substring(0, maxLen - ellipsisLen).concat(ellipsis);
+    return firstLine.substring(0, maxLen - 1).concat(ellipsis);
   }
 
   if (str.length <= maxLen) {
     return firstLine;
   }
 
-  return firstLine.substring(0, maxLen - ellipsisLen).concat(ellipsis);
+  return firstLine.substring(0, maxLen - 1).concat(ellipsis);
 }

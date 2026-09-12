@@ -38,10 +38,11 @@ export function toolPrint(label: string, detail: string) {
     const detailLine = detailArr[detailIdx];
     assert(detailLine !== undefined);
 
-    const maxLen = (() => {
+    let maxLen = (() => {
       if (lines.length === 0) return getMaxColLength() - labelLen;
       return getMaxColLength() - indent.length;
     })();
+    maxLen = Math.max(1, maxLen);
 
     const splitStr = detailLine.slice(strIdx, strIdx + maxLen);
     strIdx += splitStr.length;
@@ -65,11 +66,9 @@ export function toolPrint(label: string, detail: string) {
     assert(lastLine !== undefined);
 
     const ellipsis = getUnicodeChar("…");
-    const ellipsisLen = ellipsis.length;
-
     const newLastLine = (() => {
-      if (lastLine.length === getMaxColLength()) {
-        return lastLine.slice(0, -ellipsisLen).concat(ellipsis);
+      if (lastLine.length >= getMaxColLength()) {
+        return lastLine.slice(0, -1).concat(ellipsis);
       } else {
         return lastLine.concat(ellipsis);
       }
