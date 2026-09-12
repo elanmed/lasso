@@ -18,13 +18,8 @@ export async function execGitDiff(opts: {
   tempFileAfterPath: string;
   includeFilename?: boolean;
 }): Promise<{ stdout: string; stderr: string }> {
-  let isDeltaAvailable = false;
-  try {
-    await execPromise("delta --version");
-    isDeltaAvailable = true;
-  } catch {
-    isDeltaAvailable = false;
-  }
+  const deltaResult = await tryCatchAsync(execPromise("delta --version"));
+  const isDeltaAvailable = deltaResult.ok;
 
   const colorFlag = shouldDisableColor() ? "--color=never" : "--color=always";
   const base = `git diff --no-index ${colorFlag} -U3 ${opts.tempFileBeforePath} ${opts.tempFileAfterPath}`;

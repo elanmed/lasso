@@ -4,6 +4,7 @@ import { Experimental_StdioMCPTransport as StdioClientTransport } from "@ai-sdk/
 import { actions, getState, type MCPToolSet } from "./state.ts";
 import type { Mcp } from "./config-types.ts";
 import { print } from "./print.ts";
+import { tryCatchAsync } from "./utils.ts";
 
 async function createMcpClient(config: Mcp) {
   switch (config.type) {
@@ -51,10 +52,9 @@ async function getMcpClients() {
   await Promise.all(
     Object.entries(getState().config.mcps).map(async ([name, config]) => {
       print.doing(`Starting mcp server: ${name}`);
-      try {
-        mcpClients[name] = await createMcpClient(config);
-      } catch {
-        return;
+      const createMcpResult = await tryCatchAsync(createMcpClient(config));
+      if (createMcpResult.ok) {
+        mcpClients[name] = createMcpResult.value;
       }
     }),
   );
@@ -67,13 +67,14 @@ export async function initMcpState() {
 
   await state.mcp.close();
   const clients = await getMcpClients();
-  try {
-    const toolSets = await Promise.all(
-      Object.values(clients).map((client) => client.tools()),
-    );
-    const tools = Object.assign({}, ...toolSets) as MCPToolSet;
+  const toolSetsPromise = Promise.all(
+    Object.values(clients).map((client) => client.tools()),
+  );
+  const toolSetsResult = await tryCatchAsync(toolSetsPromise);
+  if (toolSetsResult.ok) {
+    const tools = Object.assign({}, ...toolSetsResult.value) as MCPToolSet;
     actions.setMcp(clients, tools);
-  } catch {
+  } else {
     actions.setMcp({}, {});
   }
 }
