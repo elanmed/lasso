@@ -59,6 +59,11 @@ export const processDeps = {
       process.stdout.write(out);
     },
   },
+  stderr: {
+    write: (out: string) => {
+      process.stderr.write(out);
+    },
+  },
   cwd: () => process.cwd(),
   kill: (pid: number, signal: number) => process.kill(pid, signal),
 };

@@ -137,6 +137,14 @@ export function mockStdout(opts: { includeSpinnerFrames?: boolean } = {}) {
   return () => captured;
 }
 
+export function mockStderr() {
+  let captured = "";
+  mock.method(processDeps.stderr, "write", (out: string) => {
+    captured += out;
+  });
+  return () => captured;
+}
+
 export function makeFakeProcessEnv() {
   const map = new Map<string, string>();
 
@@ -227,6 +235,7 @@ export function setupTestContext({
   mock.method(processDeps, "cwd", () => testCwd.get());
   mock.method(promptDeps, "getSystemContent", () => "");
   mock.method(processDeps.stdout, "write", () => true);
+  mock.method(processDeps.stderr, "write", () => true);
   mock.method(os, "homedir", () => "/fake-home");
   mock.method(os, "tmpdir", () => "/tmp");
   mock.method(
