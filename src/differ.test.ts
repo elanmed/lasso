@@ -73,6 +73,14 @@ describe("differ", () => {
       differ.cleanupAllTempFileBefore();
 
       assert.strictEqual(testFs._files.has("/tmp/lasso-test-uuid.txt"), false);
+      assert.strictEqual(
+        differ.toolCallIdToTempFileBefore.has("call-1"),
+        false,
+      );
+      assert.strictEqual(
+        differ.toolCallIdToTempFileBefore.has("call-2"),
+        false,
+      );
     });
   });
 

@@ -99,6 +99,7 @@ export function createToolCallDiffer(
     for (const tempFile of toolCallIdToTempFileBefore.values()) {
       fsDeps.unlinkSync(tempFile);
     }
+    toolCallIdToTempFileBefore.clear();
   }
 
   return {
