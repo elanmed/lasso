@@ -1,6 +1,5 @@
 import { describe, it, beforeEach, afterEach, mock } from "node:test";
 import assert from "node:assert";
-
 import {
   isAbortError,
   tryCatch,
@@ -13,8 +12,14 @@ import {
   createLockUtils,
   listChatHistoryFiles,
   getStrFromAssistantContent,
+  shouldDisableColor,
 } from "./utils.ts";
-import { testFs, mockSetTimeout, setupTestContext } from "./test-helpers.ts";
+import {
+  testFs,
+  mockSetTimeout,
+  setupTestContext,
+  testProcessEnv,
+} from "./test-helpers.ts";
 import { fsDeps, processDeps } from "./deps.ts";
 
 describe("utils", () => {
@@ -24,6 +29,22 @@ describe("utils", () => {
 
   beforeEach(() => {
     setupTestContext();
+  });
+
+  describe("shouldDisableColor", () => {
+    it("disables color when NO_COLOR is set", () => {
+      testProcessEnv._set("NO_COLOR", "1");
+      assert.equal(shouldDisableColor(), true);
+    });
+
+    it("disables color when stdout is not a tty", () => {
+      mock.method(processDeps.stdout, "isTTY", () => false);
+      assert.equal(shouldDisableColor(), true);
+    });
+
+    it("keeps color when stdout is a tty and NO_COLOR is unset", () => {
+      assert.equal(shouldDisableColor(), false);
+    });
   });
 
   describe("getStrFromAssistantContent", () => {

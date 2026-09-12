@@ -6,6 +6,7 @@ import {
   execPromise,
   getTempFileName,
   type GetTempFileNameArgs,
+  shouldDisableColor,
 } from "./utils.ts";
 
 export async function execGitDiff(opts: {
@@ -20,7 +21,9 @@ export async function execGitDiff(opts: {
   } catch {
     isDeltaAvailable = false;
   }
-  const base = `git diff --no-index --color=always -U3 ${opts.tempFileBeforePath} ${opts.tempFileAfterPath}`;
+
+  const colorFlag = shouldDisableColor() ? "--color=never" : "--color=always";
+  const base = `git diff --no-index ${colorFlag} -U3 ${opts.tempFileBeforePath} ${opts.tempFileAfterPath}`;
   const fileStyle = opts.includeFilename === true ? "normal" : "omit";
   const command = isDeltaAvailable
     ? `${base} | delta --paging=never --line-numbers --hunk-header-style=omit --file-style=${fileStyle}`

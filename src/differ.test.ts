@@ -77,6 +77,10 @@ describe("differ", () => {
   });
 
   describe("execGitDiff", () => {
+    beforeEach(() => {
+      setupTestContext();
+    });
+
     it("uses delta and three context lines by default", async () => {
       const commands: string[] = [];
       mockExecCalls(

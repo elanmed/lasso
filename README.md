@@ -305,6 +305,7 @@ usageLimit:
 | `LASSO_PAGER_RELOAD`    | Pager command with `__FILE__` placeholder for viewing the reload config diff (fallback: `$LASSO_PAGER`)                |
 | `LASSO_PAGER`           | Default pager command with `__FILE__` placeholder (fallback: `$PAGER`, then `bat`, then `less`)                        |
 | `LASSO_CLIPBOARD_PASTE` | Command used by `/paste` to read the clipboard (default: `pbpaste` on macOS, `xclip -selection clipboard -o` on Linux) |
+| `NO_COLOR`              | Disables all ansi color output (color is also disabled automatically when stdout is not a tty)                         |
 
 ## CLI Arguments
 

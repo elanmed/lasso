@@ -10,6 +10,7 @@ import {
   normalizeLine,
   tryCatch,
   tryCatchAsync,
+  shouldDisableColor,
 } from "./utils.ts";
 import { format } from "prettier";
 import { print } from "./print.ts";
@@ -35,14 +36,18 @@ export async function checkDelta(): Promise<boolean> {
   return (await tryCatchAsync(execPromise("delta --version"))).ok;
 }
 
-export const baseBatFlags = ["--style=plain", "--color=always"];
+export function baseBatFlags() {
+  return shouldDisableColor()
+    ? ["--style=plain", "--color=never"]
+    : ["--style=plain", "--color=always"];
+}
 export const markdownBatFlags = ["--language", "md", "--italic-text=always"];
 
 function spawnBat(input: string) {
   return tryCatch(() =>
     childProcess.spawnSync(
       "bat",
-      [...baseBatFlags, ...markdownBatFlags, "--paging=never", "-"],
+      [...baseBatFlags(), ...markdownBatFlags, "--paging=never", "-"],
       {
         input,
         encoding: "utf8",
@@ -131,8 +136,8 @@ export async function openWithPager({
     if (isBatAvailable) {
       const batFlags =
         contentType === "diff"
-          ? baseBatFlags
-          : baseBatFlags.concat(markdownBatFlags);
+          ? baseBatFlags()
+          : baseBatFlags().concat(markdownBatFlags);
 
       return `bat ${batFlags.join(" ")} --paging=always "${tempFile}"`;
     }

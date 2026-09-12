@@ -236,6 +236,7 @@ export function setupTestContext({
   mock.method(processDeps, "cwd", () => testCwd.get());
   mock.method(promptDeps, "getSystemContent", () => "");
   mock.method(processDeps.stdout, "write", () => true);
+  mock.method(processDeps.stdout, "isTTY", () => true);
   mock.method(processDeps.stderr, "write", () => true);
   mock.method(os, "homedir", () => "/fake-home");
   mock.method(os, "tmpdir", () => "/tmp");
@@ -394,8 +395,8 @@ export function batPagerCmd(
 ) {
   const batFlags =
     contentType === "diff"
-      ? baseBatFlags
-      : baseBatFlags.concat(markdownBatFlags);
+      ? baseBatFlags()
+      : baseBatFlags().concat(markdownBatFlags);
   return `bat ${batFlags.join(" ")} --paging=always "${tempFile}"`;
 }
 

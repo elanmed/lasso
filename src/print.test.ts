@@ -7,11 +7,13 @@ import {
   colorPrint,
   fencePrint,
   printSessionStartDate,
+  bold,
 } from "./print.ts";
 import { actions } from "./state.ts";
 import { processDeps } from "./deps.ts";
 import {
   stripAnsi,
+  testProcessEnv,
   mockStdout,
   mockSetInterval,
   mockClearInterval,
@@ -93,6 +95,24 @@ describe("print", () => {
       await Promise.resolve();
 
       assert.strictEqual(stripAnsi(getCaptured()), "X\nY\nZ\n");
+    });
+  });
+
+  describe("color disabled", () => {
+    it("omits ansi codes when NO_COLOR is set", () => {
+      testProcessEnv._set("NO_COLOR", "1");
+      const getCaptured = mockStdout();
+      colorPrint("hello", "blue");
+      const out = getCaptured();
+      assert.equal(out, "hello\n");
+      assert.equal(bold("hello"), "hello");
+    });
+
+    it("omits ansi codes when stdout is not a tty", () => {
+      mock.method(processDeps.stdout, "isTTY", () => false);
+      const getCaptured = mockStdout();
+      colorPrint("hello", "blue");
+      assert.equal(getCaptured(), "hello\n");
     });
   });
 

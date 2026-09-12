@@ -2,7 +2,7 @@ import assert from "node:assert";
 import { actions, getState } from "./state.ts";
 import { processDeps } from "./deps.ts";
 import { getPrettyUsage } from "./usage-format.ts";
-import { getMaxColLength } from "./utils.ts";
+import { getMaxColLength, shouldDisableColor } from "./utils.ts";
 import { getUnicodeChar, truncate } from "./text.ts";
 
 const COLORS = {
@@ -18,6 +18,7 @@ const COLORS = {
 export type Color = keyof typeof COLORS;
 
 export function bold(text: Uint8Array | string) {
+  if (shouldDisableColor()) return text.toString();
   return `\x1b[1m${text.toString()}\x1b[22m`;
 }
 
@@ -35,12 +36,10 @@ export const print = Object.assign(
 export function colorPrint(text: Uint8Array | string, color?: Color) {
   const reset = "\x1b[0m";
   const out = (() => {
-    if (color !== undefined) {
-      const colorCode = COLORS[color];
-      return `${colorCode}${text.toString()}${reset}\n`;
-    } else {
+    if (color === undefined || shouldDisableColor()) {
       return `${text.toString()}\n`;
     }
+    return `${COLORS[color]}${text.toString()}${reset}\n`;
   })();
 
   const wasSpinnerActive = getState().app.loadingStateTimeout !== null;

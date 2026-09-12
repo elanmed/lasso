@@ -266,3 +266,9 @@ export function getStrFromAssistantContent(content: AssistantContent) {
     })
     .join("\n");
 }
+
+export function shouldDisableColor() {
+  return (
+    processDeps.env.get("NO_COLOR") !== undefined || !processDeps.stdout.isTTY()
+  );
+}

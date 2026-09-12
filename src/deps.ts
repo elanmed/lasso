@@ -58,6 +58,7 @@ export const processDeps = {
     write: (out: string) => {
       process.stdout.write(out);
     },
+    isTTY: () => process.stdout.isTTY,
   },
   stderr: {
     write: (out: string) => {
