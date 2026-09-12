@@ -160,7 +160,7 @@ export const defaultConfig: DefaultedConfig = {
   gateway: undefined,
   pricingPerModel: {},
   contextWindowPerModel: {},
-  compactTriggerRatio: 0.7,
+  compactTriggerRatio: 0.8,
   compactTargetRatio: 0.3,
   keymaps: {
     edit: {

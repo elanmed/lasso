@@ -247,7 +247,7 @@ model: claude-sonnet-4-6
 sdkProvider: openai-compatible
 gateway: opencode
 baseURL: https://api.example.com/v1
-compactTriggerRatio: 0.7
+compactTriggerRatio: 0.8
 compactTargetRatio: 0.3
 keymaps:
   edit:

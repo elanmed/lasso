@@ -216,7 +216,7 @@ describe("state", () => {
   });
 
   it("set-compact-trigger-ratio", () => {
-    assert.strictEqual(getState().config.compactTriggerRatio, 0.7);
+    assert.strictEqual(getState().config.compactTriggerRatio, 0.8);
     actions.setCompactTriggerRatio(0.5);
     assert.strictEqual(getState().config.compactTriggerRatio, 0.5);
   });
