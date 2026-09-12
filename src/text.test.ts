@@ -50,8 +50,8 @@ describe("text", () => {
 
     it("truncates with a three-char ellipsis when asciiOnly is set", () => {
       actions.setAsciiOnly(true);
-      assert.equal(truncate("a".repeat(MAX_LEN + 10)), `${"a".repeat(99)} `);
-      assert.equal(truncate("short\nsecond line"), "short ");
+      assert.equal(truncate("a".repeat(MAX_LEN + 10)), `${"a".repeat(99)}~`);
+      assert.equal(truncate("short\nsecond line"), "short~");
     });
 
     it("falls back to 80 columns when stdout columns are undefined", () => {
@@ -68,7 +68,7 @@ describe("text", () => {
 
     it("returns the ascii replacement when asciiOnly is on", () => {
       actions.setAsciiOnly(true);
-      assert.equal(getUnicodeChar("…"), " ");
+      assert.equal(getUnicodeChar("…"), "~");
       assert.equal(getUnicodeChar("┊"), "|");
       assert.equal(getUnicodeChar("━"), "=");
       assert.equal(getUnicodeChar("—"), "-");

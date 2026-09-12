@@ -5,7 +5,7 @@ import { getMaxColLength } from "./utils.ts";
 export function getUnicodeChar(char: string) {
   const map = {
     ["┊"]: "|",
-    ["…"]: " ",
+    ["…"]: "~",
     ["━"]: "=",
     ["—"]: "-",
   };
