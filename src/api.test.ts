@@ -644,5 +644,65 @@ Interrupted compaction!
 `,
       );
     });
+
+    it("resets messages before the api call so the summary and new user input are both sent", async () => {
+      actions.setCompactTargetRatio(0.25);
+      actions.appendToMessageParams({ role: "user", content: "old" });
+      actions.setMessageParamTokens(80_000);
+      const calls: ModelMessage[][] = [];
+      let callCount = 0;
+      mock.method(aiDeps, "generateText", (opts: Record<string, unknown>) => {
+        calls.push(opts["messages"] as ModelMessage[]);
+        const overrides = (() => {
+          if (callCount === 0) {
+            return {
+              text: "compacted summary",
+              usage: {
+                inputTokens: 0,
+                outputTokens: 25,
+                inputTokenDetails: { cacheReadTokens: 0, cacheWriteTokens: 0 },
+              },
+            };
+          }
+          return {
+            text: "answer text",
+            usage: {
+              inputTokens: 0,
+              outputTokens: 25,
+              inputTokenDetails: { cacheReadTokens: 0, cacheWriteTokens: 0 },
+            },
+            responseMessages: [{ role: "assistant", content: "answer text" }],
+          };
+        })();
+        callCount = callCount + 1;
+        return Promise.resolve(makeGenerateTextResult(overrides));
+      });
+      await maybeCompactMessageParams("new input");
+      await resolveApiCall("new input");
+      assert.deepStrictEqual(getState().app.messageParams, {
+        tokens: 25,
+        tokensStale: false,
+        messages: [
+          { role: "assistant", content: "compacted summary" },
+          { role: "user", content: "new input" },
+          { role: "assistant", content: "answer text" },
+        ],
+      });
+      const compactionCall = calls[0];
+      assert(compactionCall !== undefined);
+      assert.deepStrictEqual(compactionCall, [
+        {
+          role: "user",
+          content: `Compact the following conversation. Your summary must be less than 25000 tokens:\n[{"role":"user","content":"old"}]\n`,
+        },
+      ]);
+      assert.strictEqual(calls.length, 2);
+      const apiCall = calls[1];
+      assert(apiCall !== undefined);
+      assert.deepStrictEqual(apiCall, [
+        { role: "assistant", content: "compacted summary" },
+        { role: "user", content: "new input" },
+      ]);
+    });
   });
 });

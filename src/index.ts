@@ -43,10 +43,11 @@ async function main() {
     const missingConfig = blockOnMissingConfig();
     if (missingConfig) continue;
 
+    await maybeCompactMessageParams(userInput);
+
     const text = await resolveApiCall(userInput);
     if (text === null) continue;
 
-    await maybeCompactMessageParams(userInput);
     printNewline();
     fencePrint("Output", {
       showSessionInfo: true,
