@@ -22,6 +22,7 @@ import {
   initSigInt,
   initLocalConfig,
   initGlobalConfig,
+  pageMessages,
   pageHistory,
   pageLastResponse,
   resolveInterruptWithEditor,
@@ -1206,6 +1207,50 @@ second
     });
   });
 
+  describe("pageMessages", () => {
+    beforeEach(() => {
+      actions.resetState();
+      actions.resetStdout();
+    });
+
+    it("opens the message list newest first in a pager", async () => {
+      const { spawned } = mockPagerSpawn();
+      testProcessEnv._set("LASSO_PAGER_MESSAGES", "nano __FILE__");
+      actions.appendToMessageParams({
+        role: "user",
+        content: "question",
+      });
+      actions.appendToMessageParams({
+        role: "assistant",
+        content: [{ type: "text", text: "answer" }],
+      });
+
+      await pageMessages();
+
+      assert.strictEqual(spawned[0], "nano /tmp/lasso-test-uuid.txt");
+      assert.deepStrictEqual(
+        stripAnsi(testFs._files.get("/tmp/lasso-test-uuid.txt") ?? ""),
+        `# [lasso] Messages
+
+[
+  {
+    "role": "assistant",
+    "content": [
+      {
+        "type": "text",
+        "text": "answer"
+      }
+    ]
+  },
+  {
+    "role": "user",
+    "content": "question"
+  }
+]`,
+      );
+    });
+  });
+
   describe("pageEditStr", () => {
     beforeEach(() => {
       actions.resetState();
@@ -1424,6 +1469,7 @@ Available commands:
 - /initlocal
 - /initglobal
 - /lastresponse
+- /messages
 - /test/.lasso/commands/custom.md
 `,
       );
@@ -1896,6 +1942,15 @@ log content`,
       );
     });
 
+    it("handles /messages command by opening the message list in a pager", async () => {
+      const { spawned } = mockPagerSpawn();
+      testProcessEnv._set("LASSO_PAGER_MESSAGES", "nano __FILE__");
+      actions.appendToMessageParams({ role: "user", content: "question" });
+      const result = await resolveSlashCommand("/messages");
+      assert.strictEqual(result, null);
+      assert.strictEqual(spawned[0], "nano /tmp/lasso-test-uuid.txt");
+    });
+
     it("handles /model command", async () => {
       actions.setModel("old");
       actions.resetStdout();
@@ -1967,6 +2022,7 @@ Available commands:
 - /initlocal
 - /initglobal
 - /lastresponse
+- /messages
 `,
       );
     });
@@ -2396,6 +2452,7 @@ Invalid command: /unknown, valid commands:
 - /initlocal
 - /initglobal
 - /lastresponse
+- /messages
 - /test-cwd/.lasso/commands/known.md
 `,
       );

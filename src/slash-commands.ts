@@ -24,6 +24,7 @@ export const builtinSlashCommands = [
   "initlocal",
   "initglobal",
   "lastresponse",
+  "messages",
 ] as const;
 export type BuiltinSlashCommand = (typeof builtinSlashCommands)[number];
 

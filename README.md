@@ -299,6 +299,7 @@ usageLimit:
 | `LASSO_EDIT`            | Editor command with `__FILE__` placeholder for multi-line input (fallback: `$EDITOR __FILE__`)                         |
 | `LASSO_PAGER_EDIT`      | Pager command with `__FILE__` placeholder for viewing the current editor input (fallback: `$LASSO_PAGER`)              |
 | `LASSO_PAGER_HISTORY`   | Pager command with `__FILE__` placeholder for viewing chat history (fallback: `$LASSO_PAGER`)                          |
+| `LASSO_PAGER_MESSAGES`  | Pager command with `__FILE__` placeholder for viewing the message list (fallback: `$LASSO_PAGER`)                      |
 | `LASSO_PAGER_CONFIG`    | Pager command with `__FILE__` placeholder for viewing config (fallback: `$LASSO_PAGER`)                                |
 | `LASSO_PAGER_CONTEXT`   | Pager command with `__FILE__` placeholder for viewing context (fallback: `$LASSO_PAGER`)                               |
 | `LASSO_PAGER_COMMANDS`  | Pager command with `__FILE__` placeholder for viewing custom commands (fallback: `$LASSO_PAGER`)                       |
@@ -319,6 +320,7 @@ Slash commands are triggered with `/command` at the prompt.
 | `/clear`        | Clear conversation context                                                 |
 | `/history`      | View chat history in a pager                                               |
 | `/lastresponse` | View the latest assistant response in a pager                              |
+| `/messages`     | View the full message list in a pager                                      |
 | `/paste`        | Call the `paste` keymap                                                    |
 | `/model`        | Switch the model at runtime (e.g. `/model kimi-k2.6`)                      |
 | `/skills`       | List available skills                                                      |

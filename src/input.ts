@@ -248,6 +248,11 @@ export function initKeypress() {
             redrawPendingQuestion();
             return;
           }
+          case "messages": {
+            await pageMessages();
+            redrawPendingQuestion();
+            return;
+          }
           case "reload": {
             await reload();
             redrawPendingQuestion();
@@ -628,6 +633,10 @@ async function resolveBuiltinSlashCommand(
     }
     case "lastresponse": {
       await pageLastResponse();
+      return { handled: true, inputFromCommand: null };
+    }
+    case "messages": {
+      await pageMessages();
       return { handled: true, inputFromCommand: null };
     }
     default: {
@@ -1211,6 +1220,16 @@ export async function pageLastResponse() {
 
 ${formattedContentStr}`,
     pagerEnvKey: "LASSO_PAGER_LAST_RESPONSE",
+    contentType: "markdown",
+  });
+}
+
+export async function pageMessages() {
+  await openWithPager({
+    initialContentStr: `# [lasso] Messages
+
+${stringify(getState().app.messageParams.messages.toReversed())}`,
+    pagerEnvKey: "LASSO_PAGER_MESSAGES",
     contentType: "markdown",
   });
 }
