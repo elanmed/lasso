@@ -174,13 +174,17 @@ export async function maybeCompactMessageParams(userInput: string) {
   const systemContentTokensApprox = strToApproxTokens(
     promptDeps.getSystemContent(),
   );
+  const toolsTokensApprox = strToApproxTokens(
+    safeStringify({ ...harnessTools, ...getState().mcp.tools }),
+  );
 
   const nextApiTokens = (() => {
     if (getState().app.messageParams.tokensStale) {
       return (
         getApproxTokensFromMessages(getState().app.messageParams.messages) +
         userInputTokensApprox +
-        systemContentTokensApprox
+        systemContentTokensApprox +
+        toolsTokensApprox
       );
     } else {
       return getState().app.messageParams.tokens + userInputTokensApprox;
@@ -238,7 +242,7 @@ ${JSON.stringify(getState().app.messageParams.messages)}
   actions.resetMessageParams();
   actions.appendToMessageParams({ content: compacted, role: "assistant" });
   actions.setMessageParamTokens(
-    afterCompactionTokens + systemContentTokensApprox,
+    afterCompactionTokens + systemContentTokensApprox + toolsTokensApprox,
   );
   if (afterCompactionTokens >= targetTokens) {
     print.warning(

@@ -2,9 +2,10 @@ import { describe, it, beforeEach, afterEach, mock } from "node:test";
 
 import assert from "node:assert";
 import type { ModelMessage } from "ai";
-import { strToApproxTokens } from "./utils.ts";
+import { strToApproxTokens, safeStringify } from "./utils.ts";
 import { actions, getState, type MCPToolSet } from "./state.ts";
 import { maybeCompactMessageParams, resolveApiCall } from "./api.ts";
+import { harnessTools } from "./tools.ts";
 import {
   setupTestContext,
   testFs,
@@ -385,6 +386,11 @@ response text
       actions.setCompactTargetRatio(0.3);
     });
 
+    const getApproxAdditions = () =>
+      strToApproxTokens(
+        safeStringify({ ...harnessTools, ...getState().mcp.tools }),
+      ) + strToApproxTokens(promptDeps.getSystemContent());
+
     it("returns early when below the compact threshold", async () => {
       actions.appendToMessageParams({ role: "user", content: "hi" });
       actions.setMessageParamTokens(60_000);
@@ -428,7 +434,7 @@ response text
       await maybeCompactMessageParams("hi");
       assert.strictEqual(capturedMessages.length, 1);
       assert.deepStrictEqual(getState().app.messageParams, {
-        tokens: 25_000,
+        tokens: 25_000 + getApproxAdditions(),
         tokensStale: false,
         messages: [{ role: "assistant", content: "compacted summary" }],
       });
@@ -484,6 +490,61 @@ response text
       assert.strictEqual(called, true);
     });
 
+    it("includes the tools in the stale approximation when deciding compaction", async () => {
+      const longUserContent = "a".repeat(205_000);
+      actions.appendToMessageParams({
+        role: "user",
+        content: longUserContent,
+      });
+      actions.setMessageParamTokens(0);
+      actions.setMessageParamTokensStale(true);
+      let called = false;
+      mock.method(aiDeps, "generateText", () => {
+        called = true;
+        return Promise.resolve(
+          makeGenerateTextResult({ output: { compacted: "" } }),
+        );
+      });
+      await maybeCompactMessageParams("hi");
+      const toolsTokensApprox = strToApproxTokens(safeStringify(harnessTools));
+      assert.strictEqual(strToApproxTokens(longUserContent) < 70_000, true);
+      assert.strictEqual(
+        strToApproxTokens(longUserContent) + toolsTokensApprox >= 70_000,
+        true,
+      );
+      assert.strictEqual(called, true);
+    });
+
+    it("includes mcp tools in the tokens after compaction", async () => {
+      actions.setCompactTargetRatio(0.25);
+      actions.setMcp({}, { mcp_tool: makeMcpTool() });
+      actions.appendToMessageParams({ role: "user", content: "hi" });
+      actions.setMessageParamTokens(80_000);
+      mock.method(aiDeps, "generateText", () =>
+        Promise.resolve(
+          makeGenerateTextResult({
+            output: { compacted: "compacted summary" },
+            usage: {
+              inputTokens: 0,
+              outputTokens: 25_000,
+              inputTokenDetails: { cacheReadTokens: 0, cacheWriteTokens: 0 },
+            },
+          }),
+        ),
+      );
+      await maybeCompactMessageParams("hi");
+      const withMcpTools = strToApproxTokens(
+        safeStringify({ ...harnessTools, ...getState().mcp.tools }),
+      );
+      const withoutMcpTools = strToApproxTokens(safeStringify(harnessTools));
+      assert.deepStrictEqual(getState().app.messageParams, {
+        tokens: 25_000 + withMcpTools,
+        tokensStale: false,
+        messages: [{ role: "assistant", content: "compacted summary" }],
+      });
+      assert.strictEqual(withMcpTools > withoutMcpTools, true);
+    });
+
     it("excludes image and file parts from the stale approximation", async () => {
       actions.appendToMessageParams({
         role: "user",
@@ -534,7 +595,7 @@ response text
         `Compact the following conversation:\n[{"role":"user","content":"hi"}]\n`,
       );
       assert.deepStrictEqual(getState().app.messageParams, {
-        tokens: 25_000,
+        tokens: 25_000 + getApproxAdditions(),
         tokensStale: false,
         messages: [{ role: "assistant", content: "compacted summary" }],
       });
@@ -575,7 +636,7 @@ response text
 
       assert.strictEqual(capturedMessages.length, 1);
       assert.deepStrictEqual(getState().app.messageParams, {
-        tokens: 25_000,
+        tokens: 25_000 + getApproxAdditions(),
         tokensStale: false,
         messages: [{ role: "assistant", content: "compacted summary" }],
       });
@@ -600,7 +661,7 @@ response text
       );
       await maybeCompactMessageParams("hi");
       assert.deepStrictEqual(getState().app.messageParams, {
-        tokens: 30_000,
+        tokens: 30_000 + getApproxAdditions(),
         tokensStale: false,
         messages: [{ role: "assistant", content: "compacted summary" }],
       });
