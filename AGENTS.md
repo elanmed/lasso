@@ -1,7 +1,5 @@
 # lasso
 
-You are running in a container. Make all changes to `/lasso` at the root of the filesystem.
-
 This is a Node.js project. Only Node.js APIs should be used. Use `node` for running and testing, and `pnpm` as the package manager.
 
 ## Architecture
