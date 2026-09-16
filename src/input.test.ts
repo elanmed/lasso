@@ -1208,6 +1208,22 @@ second
       await pageEditStr();
       assert.strictEqual(stripAnsi(getCapturedStdout()), "Editor is empty\n");
     });
+
+    it("opens the editor input in a pager with a header", async () => {
+      const { spawned } = mockPagerSpawn();
+      testProcessEnv._set("LASSO_PAGER_EDIT", "nano __FILE__");
+      actions.setEditorInputValue("editor input");
+
+      await pageEditStr();
+
+      assert.strictEqual(spawned[0], "nano /tmp/lasso-test-uuid.txt");
+      assert.strictEqual(
+        testFs._files.get("/tmp/lasso-test-uuid.txt"),
+        `[lasso] Editor content
+
+editor input`,
+      );
+    });
   });
 
   describe("pageCustomSlashCommandsStr", () => {
@@ -1595,7 +1611,9 @@ log content`,
       await harness.flush();
       assert.strictEqual(
         testFs._files.get("/tmp/lasso-test-uuid.txt"),
-        "editor input",
+        `[lasso] Editor content
+
+editor input`,
       );
       assert.strictEqual(getCapturedStdout(), "");
       assert.deepStrictEqual(prompts, [true]);
@@ -1808,7 +1826,9 @@ custom command content`,
       assert.strictEqual(result, null);
       assert.strictEqual(
         testFs._files.get("/tmp/lasso-test-uuid.txt"),
-        "editor input",
+        `[lasso] Editor content
+
+editor input`,
       );
     });
 

@@ -850,8 +850,12 @@ export async function pageEditStr() {
     return;
   }
 
+  const initialContentStr = `[lasso] Editor content
+
+${editorInputValue}`;
+
   await openWithPager({
-    initialContentStr: editorInputValue,
+    initialContentStr,
     pagerEnvKey: "LASSO_PAGER_EDIT",
     contentType: "markdown",
   });
