@@ -1,5 +1,18 @@
 # Changelog
 
+## v0.6.0 - 2026-09-16
+
+- Add the Google SDK provider via `@ai-sdk/google`
+- Add the `reasoning` config option, defaulting to the provider default
+- Add the `asciiOnly` config option for single-char ascii ellipsis and truncation handling
+- Honor the `NO_COLOR` env var and non-tty stdout to disable ansi colors in print, bat flags, and git diff
+- Add the `/messages` command to view the full message list in a pager via `LASSO_PAGER_MESSAGES`
+- Add the `/lastmessage` command to view the last user message in a pager via `LASSO_PAGER_LAST_MESSAGE`, and rename the empty `pageLastResponse` message to "No llm messages"
+- Add a `# [lasso] Editor content` header to pageEditStr pager content
+- Compact messages before the api call so the summary and new input are sent together
+- Fix narrow terminal toolprint truncation, and single-char ascii ellipsis
+- Use the `DEBUG` env var for debug logging instead of a cli flag
+
 ## v0.5.0 - 2026-09-11
 
 - Add MCP support with `mcps` configuration: HTTP, SSE, and stdio servers with parallel initialization, graceful failure handling, and tool call logging
