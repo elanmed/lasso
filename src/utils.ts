@@ -9,8 +9,16 @@ import { getPromptHistoryDir } from "./paths.ts";
 
 export type Result<T> = { ok: true; value: T } | { ok: false; error: unknown };
 
-export function getApproxTokens(str: string) {
-  return Math.floor(str.length / 3);
+export function strToApproxTokens(str: string) {
+  return charLenToApproxTokens(str.length);
+}
+
+function charLenToApproxTokens(charLen: number) {
+  return Math.floor(charLen / 3);
+}
+
+export function approxTokensToCharLen(tokenCount: number) {
+  return 3 * tokenCount;
 }
 
 export function isAbortError(error: unknown): boolean {

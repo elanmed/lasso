@@ -11,7 +11,7 @@ import {
   tryCatch,
   tryCatchAsync,
   getMessageFromError,
-  getApproxTokens,
+  strToApproxTokens,
   normalizeLine,
   getTempFileName,
   execPromise,
@@ -755,7 +755,9 @@ export function clearCommand() {
   actions.resetMessageParams();
   // the next api call only reports its token usage after it completes, so seeding with the
   // system prompt approx keeps the context window percent from displaying 0% in the meantime
-  actions.setMessageParamTokens(getApproxTokens(promptDeps.getSystemContent()));
+  actions.setMessageParamTokens(
+    strToApproxTokens(promptDeps.getSystemContent()),
+  );
   actions.setModelUsageForSession({});
 }
 

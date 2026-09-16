@@ -2,7 +2,7 @@ import { describe, it, beforeEach, afterEach, mock } from "node:test";
 import assert from "node:assert";
 import childProcess from "node:child_process";
 import { actions, getState, promptDeps } from "./state.ts";
-import { getApproxTokens } from "./utils.ts";
+import { strToApproxTokens } from "./utils.ts";
 import {
   parseInputFromEditor,
   resolveSlashCommand,
@@ -996,7 +996,7 @@ l---
       mock.method(promptDeps, "getSystemContent", () => "abc");
       clearCommand();
       assert.deepStrictEqual(getState().app.messageParams, {
-        tokens: getApproxTokens("abc"),
+        tokens: strToApproxTokens("abc"),
         tokensStale: false,
         messages: [],
       });

@@ -2,7 +2,7 @@ import { describe, it, beforeEach, afterEach, mock } from "node:test";
 
 import assert from "node:assert";
 import type { ModelMessage } from "ai";
-import { getApproxTokens } from "./utils.ts";
+import { strToApproxTokens } from "./utils.ts";
 import { actions, getState, type MCPToolSet } from "./state.ts";
 import { maybeCompactMessageParams, resolveApiCall } from "./api.ts";
 import {
@@ -416,7 +416,7 @@ response text
         capturedMessages = opts["messages"] as ModelMessage[];
         return Promise.resolve(
           makeGenerateTextResult({
-            text: "compacted summary",
+            output: { compacted: "compacted summary" },
             usage: {
               inputTokens: 0,
               outputTokens: 25_000,
@@ -469,13 +469,16 @@ response text
       let called = false;
       mock.method(aiDeps, "generateText", () => {
         called = true;
-        return Promise.resolve(makeGenerateTextResult());
+        return Promise.resolve(
+          makeGenerateTextResult({ output: { compacted: "" } }),
+        );
       });
       await maybeCompactMessageParams("hi");
-      const systemContentTokensApprox = getApproxTokens(systemContent);
-      assert.strictEqual(getApproxTokens(longUserContent) < 70_000, true);
+      const systemContentTokensApprox = strToApproxTokens(systemContent);
+      assert.strictEqual(strToApproxTokens(longUserContent) < 70_000, true);
       assert.strictEqual(
-        getApproxTokens(longUserContent) + systemContentTokensApprox >= 70_000,
+        strToApproxTokens(longUserContent) + systemContentTokensApprox >=
+          70_000,
         true,
       );
       assert.strictEqual(called, true);
@@ -513,7 +516,7 @@ response text
         capturedMessages = opts["messages"] as ModelMessage[];
         return Promise.resolve(
           makeGenerateTextResult({
-            text: "compacted summary",
+            output: { compacted: "compacted summary" },
             usage: {
               inputTokens: 0,
               outputTokens: 25_000,
@@ -528,7 +531,7 @@ response text
       assert(capturedMessage !== undefined);
       assert.strictEqual(
         capturedMessage.content,
-        `Compact the following conversation. Your summary must be less than 25000 tokens:\n[{"role":"user","content":"hi"}]\n`,
+        `Compact the following conversation:\n[{"role":"user","content":"hi"}]\n`,
       );
       assert.deepStrictEqual(getState().app.messageParams, {
         tokens: 25_000,
@@ -557,7 +560,7 @@ response text
         capturedMessages = opts["messages"] as ModelMessage[];
         return Promise.resolve(
           makeGenerateTextResult({
-            text: "compacted summary",
+            output: { compacted: "compacted summary" },
             usage: {
               inputTokens: 0,
               outputTokens: 25_000,
@@ -586,7 +589,7 @@ response text
       mock.method(aiDeps, "generateText", () =>
         Promise.resolve(
           makeGenerateTextResult({
-            text: "compacted summary",
+            output: { compacted: "compacted summary" },
             usage: {
               inputTokens: 0,
               outputTokens: 30_000,
@@ -655,7 +658,7 @@ Compacted to 30,000, 5,000 over the target.
         const overrides = (() => {
           if (callCount === 0) {
             return {
-              text: "compacted summary",
+              output: { compacted: "compacted summary" },
               usage: {
                 inputTokens: 0,
                 outputTokens: 25,
@@ -692,7 +695,7 @@ Compacted to 30,000, 5,000 over the target.
       assert.deepStrictEqual(compactionCall, [
         {
           role: "user",
-          content: `Compact the following conversation. Your summary must be less than 25000 tokens:\n[{"role":"user","content":"old"}]\n`,
+          content: `Compact the following conversation:\n[{"role":"user","content":"old"}]\n`,
         },
       ]);
       assert.strictEqual(calls.length, 2);

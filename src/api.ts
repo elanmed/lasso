@@ -1,12 +1,14 @@
 import assert from "node:assert";
-import type { ModelMessage } from "ai";
+import { Output, type ModelMessage } from "ai";
+import { z } from "zod";
 import { actions, getState, promptDeps } from "./state.ts";
 import {
   isAbortError,
-  getApproxTokens,
+  strToApproxTokens,
   tryCatchAsync,
   getMessageFromError,
   safeStringify,
+  approxTokensToCharLen,
 } from "./utils.ts";
 import { createToolCallDiffer } from "./differ.ts";
 import { getUnicodeChar } from "./text.ts";
@@ -111,7 +113,7 @@ export async function resolveApiCall(userInput: string) {
 
       actions.appendToMessageParams(interruptMessageParam);
       actions.appendToMessageParamTokens(
-        getApproxTokens(userInput) + getApproxTokens(interruptContent),
+        strToApproxTokens(userInput) + strToApproxTokens(interruptContent),
       );
       actions.setMessageParamTokensStale(true);
 
@@ -154,7 +156,7 @@ function getApproxTokensFromMessages(messages: ModelMessage[]) {
       ),
     };
   });
-  return getApproxTokens(JSON.stringify(textOnly));
+  return strToApproxTokens(JSON.stringify(textOnly));
 }
 
 export async function maybeCompactMessageParams(userInput: string) {
@@ -167,9 +169,9 @@ export async function maybeCompactMessageParams(userInput: string) {
   // maybeCompactMessageParams runs before each api call turn, so we don't know the token
   // count of userInput until after the API call. This can be problematic when the userInput
   // would large enough to trigger compaction, so we approximate for the userInput
-  const userInputTokensApprox = getApproxTokens(userInput);
+  const userInputTokensApprox = strToApproxTokens(userInput);
   // the same applies to the system content, which is sent with every api call
-  const systemContentTokensApprox = getApproxTokens(
+  const systemContentTokensApprox = strToApproxTokens(
     promptDeps.getSystemContent(),
   );
 
@@ -189,9 +191,12 @@ export async function maybeCompactMessageParams(userInput: string) {
   if (currRatio <= getState().config.compactTriggerRatio) return;
   print.doing("Compacting" + getUnicodeChar("…"));
 
-  const targetTokens = getState().config.compactTargetRatio * contextWindow;
+  const targetTokens = Math.floor(
+    getState().config.compactTargetRatio * contextWindow,
+  );
+  const targetCharLen = approxTokensToCharLen(targetTokens);
 
-  const compactMessageParam = `Compact the following conversation. Your summary must be less than ${String(targetTokens)} tokens:
+  const compactMessageParam = `Compact the following conversation:
 ${JSON.stringify(getState().app.messageParams.messages)}
 `;
 
@@ -203,6 +208,11 @@ ${JSON.stringify(getState().app.messageParams.messages)}
       messages: [{ content: compactMessageParam, role: "user" }],
       stopWhen: aiDeps.isLoopFinished(),
       abortSignal: getApiStreamAbortSignal(),
+      output: Output.object({
+        schema: z.object({
+          compacted: z.string().max(targetCharLen),
+        }),
+      }),
     }),
   );
   stopLoadingState();
@@ -220,12 +230,13 @@ ${JSON.stringify(getState().app.messageParams.messages)}
     return;
   }
 
-  const { usage, text } = generateTextResult.value;
+  const { usage, output } = generateTextResult.value;
+  const { compacted } = output;
   await appendModelUsage(usage);
   const afterCompactionTokens = usage.outputTokens ?? 0;
 
   actions.resetMessageParams();
-  actions.appendToMessageParams({ content: text, role: "assistant" });
+  actions.appendToMessageParams({ content: compacted, role: "assistant" });
   actions.setMessageParamTokens(
     afterCompactionTokens + systemContentTokensApprox,
   );
