@@ -293,21 +293,22 @@ usageLimit:
 
 ## Environment Variables
 
-| Variable                | Description                                                                                                            |
-| ----------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| `LASSO_API_KEY`         | API key for the configured provider (required)                                                                         |
-| `LASSO_EDIT`            | Editor command with `__FILE__` placeholder for multi-line input (fallback: `$EDITOR __FILE__`)                         |
-| `LASSO_PAGER_EDIT`      | Pager command with `__FILE__` placeholder for viewing the current editor input (fallback: `$LASSO_PAGER`)              |
-| `LASSO_PAGER_HISTORY`   | Pager command with `__FILE__` placeholder for viewing chat history (fallback: `$LASSO_PAGER`)                          |
-| `LASSO_PAGER_MESSAGES`  | Pager command with `__FILE__` placeholder for viewing the message list (fallback: `$LASSO_PAGER`)                      |
-| `LASSO_PAGER_CONFIG`    | Pager command with `__FILE__` placeholder for viewing config (fallback: `$LASSO_PAGER`)                                |
-| `LASSO_PAGER_CONTEXT`   | Pager command with `__FILE__` placeholder for viewing context (fallback: `$LASSO_PAGER`)                               |
-| `LASSO_PAGER_COMMANDS`  | Pager command with `__FILE__` placeholder for viewing custom commands (fallback: `$LASSO_PAGER`)                       |
-| `LASSO_PAGER_RELOAD`    | Pager command with `__FILE__` placeholder for viewing the reload config diff (fallback: `$LASSO_PAGER`)                |
-| `LASSO_PAGER`           | Default pager command with `__FILE__` placeholder (fallback: `$PAGER`, then `bat`, then `less`)                        |
-| `LASSO_CLIPBOARD_PASTE` | Command used by `/paste` to read the clipboard (default: `pbpaste` on macOS, `xclip -selection clipboard -o` on Linux) |
-| `NO_COLOR`              | Disables all ansi color output (color is also disabled automatically when stdout is not a tty)                         |
-| `DEBUG`                 | Set to `1` to enable debug logging                                                                                     |
+| Variable                   | Description                                                                                                            |
+| -------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `LASSO_API_KEY`            | API key for the configured provider (required)                                                                         |
+| `LASSO_EDIT`               | Editor command with `__FILE__` placeholder for multi-line input (fallback: `$EDITOR __FILE__`)                         |
+| `LASSO_PAGER_EDIT`         | Pager command with `__FILE__` placeholder for viewing the current editor input (fallback: `$LASSO_PAGER`)              |
+| `LASSO_PAGER_HISTORY`      | Pager command with `__FILE__` placeholder for viewing chat history (fallback: `$LASSO_PAGER`)                          |
+| `LASSO_PAGER_MESSAGES`     | Pager command with `__FILE__` placeholder for viewing the message list (fallback: `$LASSO_PAGER`)                      |
+| `LASSO_PAGER_LAST_MESSAGE` | Pager command with `__FILE__` placeholder for viewing the last user message (fallback: `$LASSO_PAGER`)                 |
+| `LASSO_PAGER_CONFIG`       | Pager command with `__FILE__` placeholder for viewing config (fallback: `$LASSO_PAGER`)                                |
+| `LASSO_PAGER_CONTEXT`      | Pager command with `__FILE__` placeholder for viewing context (fallback: `$LASSO_PAGER`)                               |
+| `LASSO_PAGER_COMMANDS`     | Pager command with `__FILE__` placeholder for viewing custom commands (fallback: `$LASSO_PAGER`)                       |
+| `LASSO_PAGER_RELOAD`       | Pager command with `__FILE__` placeholder for viewing the reload config diff (fallback: `$LASSO_PAGER`)                |
+| `LASSO_PAGER`              | Default pager command with `__FILE__` placeholder (fallback: `$PAGER`, then `bat`, then `less`)                        |
+| `LASSO_CLIPBOARD_PASTE`    | Command used by `/paste` to read the clipboard (default: `pbpaste` on macOS, `xclip -selection clipboard -o` on Linux) |
+| `NO_COLOR`                 | Disables all ansi color output (color is also disabled automatically when stdout is not a tty)                         |
+| `DEBUG`                    | Set to `1` to enable debug logging                                                                                     |
 
 ## Builtin Slash Commands
 
@@ -320,6 +321,7 @@ Slash commands are triggered with `/command` at the prompt.
 | `/clear`        | Clear conversation context                                                 |
 | `/history`      | View chat history in a pager                                               |
 | `/lastresponse` | View the latest assistant response in a pager                              |
+| `/lastmessage`  | View the last user message in a pager                                      |
 | `/messages`     | View the full message list in a pager                                      |
 | `/paste`        | Call the `paste` keymap                                                    |
 | `/model`        | Switch the model at runtime (e.g. `/model kimi-k2.6`)                      |

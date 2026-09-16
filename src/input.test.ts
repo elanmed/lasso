@@ -24,6 +24,7 @@ import {
   initGlobalConfig,
   pageMessages,
   pageHistory,
+  pageLastMessage,
   pageLastResponse,
   resolveInterruptWithEditor,
 } from "./input.ts";
@@ -1178,7 +1179,7 @@ log content`,
 
     it("prints no messages when there is no assistant response", async () => {
       await pageLastResponse();
-      assert.strictEqual(stripAnsi(getCapturedStdout()), "No messages\n");
+      assert.strictEqual(stripAnsi(getCapturedStdout()), "No llm messages\n");
     });
 
     it("opens the latest assistant response in a pager", async () => {
@@ -1203,6 +1204,42 @@ log content`,
 first
 second
 `,
+      );
+    });
+  });
+
+  describe("pageLastMessage", () => {
+    beforeEach(() => {
+      actions.resetState();
+      actions.resetStdout();
+    });
+
+    it("prints no messages when there is no user message", async () => {
+      await pageLastMessage();
+      assert.strictEqual(stripAnsi(getCapturedStdout()), "No user messages\n");
+    });
+
+    it("opens the latest user message in a pager", async () => {
+      const { spawned } = mockPagerSpawn();
+      testProcessEnv._set("LASSO_PAGER_LAST_MESSAGE", "nano __FILE__");
+      actions.appendToMessageParams({ role: "user", content: "older" });
+      actions.appendToMessageParams({
+        role: "assistant",
+        content: [{ type: "text", text: "answer" }],
+      });
+      actions.appendToMessageParams({
+        role: "user",
+        content: "latest question",
+      });
+
+      await pageLastMessage();
+
+      assert.strictEqual(spawned[0], "nano /tmp/lasso-test-uuid.txt");
+      assert.strictEqual(
+        testFs._files.get("/tmp/lasso-test-uuid.txt"),
+        `# [lasso] Last message
+
+latest question`,
       );
     });
   });
@@ -1469,6 +1506,7 @@ Available commands:
 - /initlocal
 - /initglobal
 - /lastresponse
+- /lastmessage
 - /messages
 - /test/.lasso/commands/custom.md
 `,
@@ -1942,6 +1980,15 @@ log content`,
       );
     });
 
+    it("handles /lastmessage command by opening the last user message in a pager", async () => {
+      const { spawned } = mockPagerSpawn();
+      testProcessEnv._set("LASSO_PAGER_LAST_MESSAGE", "nano __FILE__");
+      actions.appendToMessageParams({ role: "user", content: "question" });
+      const result = await resolveSlashCommand("/lastmessage");
+      assert.strictEqual(result, null);
+      assert.strictEqual(spawned[0], "nano /tmp/lasso-test-uuid.txt");
+    });
+
     it("handles /messages command by opening the message list in a pager", async () => {
       const { spawned } = mockPagerSpawn();
       testProcessEnv._set("LASSO_PAGER_MESSAGES", "nano __FILE__");
@@ -2022,6 +2069,7 @@ Available commands:
 - /initlocal
 - /initglobal
 - /lastresponse
+- /lastmessage
 - /messages
 `,
       );
@@ -2452,6 +2500,7 @@ Invalid command: /unknown, valid commands:
 - /initlocal
 - /initglobal
 - /lastresponse
+- /lastmessage
 - /messages
 - /test-cwd/.lasso/commands/known.md
 `,

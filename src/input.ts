@@ -248,6 +248,11 @@ export function initKeypress() {
             redrawPendingQuestion();
             return;
           }
+          case "lastmessage": {
+            await pageLastMessage();
+            redrawPendingQuestion();
+            return;
+          }
           case "messages": {
             await pageMessages();
             redrawPendingQuestion();
@@ -633,6 +638,10 @@ async function resolveBuiltinSlashCommand(
     }
     case "lastresponse": {
       await pageLastResponse();
+      return { handled: true, inputFromCommand: null };
+    }
+    case "lastmessage": {
+      await pageLastMessage();
       return { handled: true, inputFromCommand: null };
     }
     case "messages": {
@@ -1203,13 +1212,13 @@ export async function pageLastResponse() {
   );
 
   if (lastMessage == undefined) {
-    print.doing("No messages");
+    print.doing("No llm messages");
     return;
   }
 
   const contentStr = getStrFromAssistantContent(lastMessage.content);
   if (contentStr.length === 0) {
-    print.doing("No messages");
+    print.doing("No llm messages");
     return;
   }
 
@@ -1220,6 +1229,32 @@ export async function pageLastResponse() {
 
 ${formattedContentStr}`,
     pagerEnvKey: "LASSO_PAGER_LAST_RESPONSE",
+    contentType: "markdown",
+  });
+}
+
+export async function pageLastMessage() {
+  const { messages } = getState().app.messageParams;
+  const lastMessage = messages.findLast((message) => message.role === "user");
+
+  if (lastMessage == undefined) {
+    print.doing("No user messages");
+    return;
+  }
+
+  const contentStr = lastMessage.content;
+  assert(typeof contentStr === "string");
+
+  if (contentStr.length === 0) {
+    print.doing("No user messages");
+    return;
+  }
+
+  await openWithPager({
+    initialContentStr: `# [lasso] Last message
+
+${contentStr}`,
+    pagerEnvKey: "LASSO_PAGER_LAST_MESSAGE",
     contentType: "markdown",
   });
 }
