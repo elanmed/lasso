@@ -12,7 +12,7 @@ _A minimal agent harness to rein in your llm_
   - Messages can be queued by typing a custom delimiter (default `l---`) in the spawned editor
 - **Tools**: 9 tools to execute bash, fetch from the web, edit files, and launch subagents
   - A `git diff` with `delta` is output whenever a tool changes a file
-- **Multiple providers**: Anthropic, OpenAI, or OpenAI-compatible APIs
+- **Multiple providers**: Anthropic, OpenAI, Google, or OpenAI-compatible APIs
 - **MCP support**: Connect HTTP, SSE, and stdio servers
 - **AGENTS.md support**: The root file is included in context, nested files are internally represented as skills
 - **Slash commands**: Change agent settings or execute reusable prompts
@@ -59,29 +59,29 @@ If `model`, `baseURL`, or `LASSO_API_KEY` are missing at startup, lasso warns an
 
 ### Config Options
 
-| Option                          | Type                                                                                     | Default                  | Description                                                                |
-| ------------------------------- | ---------------------------------------------------------------------------------------- | ------------------------ | -------------------------------------------------------------------------- |
-| `model`                         | `string`                                                                                 | —                        | Model name (required in the merged config)                                 |
-| `sdkProvider`                   | `"anthropic"` \| `"openai"` \| `"openai-compatible"`                                     | `openai-compatible`      | AI SDK provider                                                            |
-| `gateway`                       | `"opencode"`                                                                             | —                        | Used to append gateway-specific headers                                    |
-| `baseURL`                       | `string`                                                                                 | `null`                   | API base URL (required for `openai-compatible`)                            |
-| `pricingPerModel`               | `object`                                                                                 | `{}`                     | Token pricing per model per million                                        |
-| `contextWindowPerModel`         | `object`                                                                                 | `{}`                     | Context window size in tokens per model                                    |
-| `compactTriggerRatio`           | `number`                                                                                 | `0.7`                    | Compact when context usage exceeds this ratio                              |
-| `compactTargetRatio`            | `number`                                                                                 | `0.3`                    | Compact down to this context ratio                                         |
-| `keymaps`                       | `object`                                                                                 | see below                | Custom keybindings                                                         |
-| `customSlashCommandDirs`        | `string[]`                                                                               | `[]`                     | Additional directories for custom slash commands                           |
-| `customSkillDirs`               | `string[]`                                                                               | `[]`                     | Additional directories for skills                                          |
-| `subagentModels`                | `string[]`                                                                               | `[]`                     | Models available to subagents                                              |
-| `loadingStateFrames`            | `string[]`                                                                               | `["\|", "/", "-", "\\"]` | Custom spinner frames                                                      |
-| `loadingStateFrameDuration`     | `number`                                                                                 | `80`                     | Spinner frame interval in ms                                               |
-| `promptPrefix`                  | `string`                                                                                 | `"> "`                   | Prompt prefix string                                                       |
-| `suppressBatUnavailableWarning` | `boolean`                                                                                | `false`                  | Suppress the startup warning when `bat` is missing                         |
-| `asciiOnly`                     | `boolean`                                                                                | `false`                  | Replace unicode characters with ASCII equivalents                          |
-| `messageQueueDelimiter`         | `string`                                                                                 | `l---\\n`                | Delimiter line separating multiple messages in the editor input            |
-| `reasoning`                     | `"provider-default" \| "none" \| "minimal" \| "low" \|<br>"medium" \| "high" \| "xhigh"` | `provider-default`       | Reasoning effort (`provider-default` uses the provider's default behavior) |
-| `mcps`                          | `object`                                                                                 | `{}`                     | Named MCP servers                                                          |
-| `usageLimit`                    | `object`                                                                                 | `undefined`              | Dollar limit and tracking window                                           |
+| Option                          | Type                                                                                 | Default                  | Description                                                                |
+| ------------------------------- | ------------------------------------------------------------------------------------ | ------------------------ | -------------------------------------------------------------------------- |
+| `model`                         | `string`                                                                             | —                        | Model name (required in the merged config)                                 |
+| `sdkProvider`                   | `"anthropic"` \| `"openai"` \| `"google"` \| `"openai-compatible"`                   | `openai-compatible`      | AI SDK provider                                                            |
+| `gateway`                       | `"opencode"`                                                                         | —                        | Used to append gateway-specific headers                                    |
+| `baseURL`                       | `string`                                                                             | `null`                   | API base URL (required for `openai-compatible`)                            |
+| `pricingPerModel`               | `object`                                                                             | `{}`                     | Token pricing per model per million                                        |
+| `contextWindowPerModel`         | `object`                                                                             | `{}`                     | Context window size in tokens per model                                    |
+| `compactTriggerRatio`           | `number`                                                                             | `0.7`                    | Compact when context usage exceeds this ratio                              |
+| `compactTargetRatio`            | `number`                                                                             | `0.3`                    | Compact down to this context ratio                                         |
+| `keymaps`                       | `object`                                                                             | see below                | Custom keybindings                                                         |
+| `customSlashCommandDirs`        | `string[]`                                                                           | `[]`                     | Additional directories for custom slash commands                           |
+| `customSkillDirs`               | `string[]`                                                                           | `[]`                     | Additional directories for skills                                          |
+| `subagentModels`                | `string[]`                                                                           | `[]`                     | Models available to subagents                                              |
+| `loadingStateFrames`            | `string[]`                                                                           | `["\|", "/", "-", "\\"]` | Custom spinner frames                                                      |
+| `loadingStateFrameDuration`     | `number`                                                                             | `80`                     | Spinner frame interval in ms                                               |
+| `promptPrefix`                  | `string`                                                                             | `"> "`                   | Prompt prefix string                                                       |
+| `suppressBatUnavailableWarning` | `boolean`                                                                            | `false`                  | Suppress the startup warning when `bat` is missing                         |
+| `asciiOnly`                     | `boolean`                                                                            | `false`                  | Replace unicode characters with ASCII equivalents                          |
+| `messageQueueDelimiter`         | `string`                                                                             | `l---\\n`                | Delimiter line separating multiple messages in the editor input            |
+| `reasoning`                     | `"provider-default" \| "none" \| "minimal" \| "low" \|"medium" \| "high" \| "xhigh"` | `provider-default`       | Reasoning effort (`provider-default` uses the provider's default behavior) |
+| `mcps`                          | `object`                                                                             | `{}`                     | Named MCP servers                                                          |
+| `usageLimit`                    | `object`                                                                             | `undefined`              | Dollar limit and tracking window                                           |
 
 ### Local Overwrite vs Extend
 
@@ -452,13 +452,14 @@ Available skills are listed in the system prompt, the LLM can use the `load_skil
 
 ## Dependencies
 
-Minimal runtime dependencies (9 total):
+Minimal runtime dependencies (10 total):
 
 | Package                     | Purpose                                 |
 | --------------------------- | --------------------------------------- |
 | `ai`                        | AI SDK core                             |
 | `@ai-sdk/anthropic`         | Anthropic provider                      |
 | `@ai-sdk/openai`            | OpenAI provider                         |
+| `@ai-sdk/google`            | Google provider                         |
 | `@ai-sdk/openai-compatible` | OpenAI-compatible provider              |
 | `zod`                       | Schema validation                       |
 | `happy-dom`                 | DOM parsing for `web_fetch_html`        |

@@ -43,6 +43,18 @@ describe("model", () => {
         { modelId: "claude-sonnet-4-20250514", provider: "openai.responses" },
       );
     });
+
+    it("creates a Google language model", () => {
+      actions.setSdkProvider("google");
+      const model = getLanguageModel();
+      assert.deepStrictEqual(
+        { modelId: model.modelId, provider: model.provider },
+        {
+          modelId: "claude-sonnet-4-20250514",
+          provider: "google.generative-ai",
+        },
+      );
+    });
   });
 
   describe("getHeaders", () => {

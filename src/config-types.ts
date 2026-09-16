@@ -41,6 +41,7 @@ const SdkProviderSchema = z.enum([
   "anthropic",
   "openai-compatible",
   "openai",
+  "google",
   MISSING,
 ]);
 export type SdkProvider = z.infer<typeof SdkProviderSchema>;

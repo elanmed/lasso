@@ -2,6 +2,7 @@ import assert from "node:assert";
 import { createAnthropic } from "@ai-sdk/anthropic";
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 import { createOpenAI } from "@ai-sdk/openai";
+import { createGoogle } from "@ai-sdk/google";
 import { getState } from "./state.ts";
 import { MISSING } from "./missing.ts";
 import { processDeps } from "./deps.ts";
@@ -44,6 +45,13 @@ export function getLanguageModel(model = getState().config.model) {
     }
     case "openai": {
       return createOpenAI({
+        apiKey,
+        headers,
+        ...(baseURL === undefined ? {} : { baseURL }),
+      })(model);
+    }
+    case "google": {
+      return createGoogle({
         apiKey,
         headers,
         ...(baseURL === undefined ? {} : { baseURL }),
