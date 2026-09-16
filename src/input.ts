@@ -517,13 +517,13 @@ export async function resolveInterruptWithEditor() {
   const abortController =
     getState().abortControllers.interruptWithEditorContent;
   assert(abortController !== null);
+  print.warning(
+    `You have queued messages! Edit them with ${JSON.stringify(getState().config.keymaps.edit)} or press enter to continue`,
+  );
   const continueResult = await tryCatchAsync(
-    rl.question(
-      `There are pending messages! Update the editor with the keymap ${JSON.stringify(getState().config.keymaps.edit)} and/or press enter when ready to continue.`,
-      {
-        signal: abortController.signal,
-      },
-    ),
+    rl.question("Ready? ", {
+      signal: abortController.signal,
+    }),
   );
   actions.setInterruptWithEditorAbortController(null);
 

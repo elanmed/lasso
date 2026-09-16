@@ -103,7 +103,6 @@ export async function resolveApiCall(userInput: string) {
     toolCallDiffer.cleanupAllTempFileBefore();
 
     if (isAbortError(generateTextResult.error)) {
-      print.error("Interrupted!");
       const interruptContent = "[Interrupted before a response was generated]";
       const interruptMessageParam: ModelMessage = {
         role: "assistant",
@@ -211,8 +210,6 @@ ${JSON.stringify(getState().app.messageParams.messages)}
 
   if (!generateTextResult.ok) {
     if (isAbortError(generateTextResult.error)) {
-      print.error("Interrupted compaction!");
-
       if (getState().app.editorInputValue !== null) {
         await resolveInterruptWithEditor();
       }

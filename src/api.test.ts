@@ -623,7 +623,7 @@ Compacted to 30,000, 5,000 over the target.
       });
     });
 
-    it("keeps messages and prints Interrupted compaction on abort error", async () => {
+    it("keeps messages on abort error during compaction", async () => {
       const getCaptured = mockStdout();
       actions.appendToMessageParams({ role: "user", content: "hi" });
       actions.setMessageParamTokens(80_000);
@@ -640,7 +640,6 @@ Compacted to 30,000, 5,000 over the target.
       assert.strictEqual(
         stripAnsi(getCaptured()),
         `Compacting…
-Interrupted compaction!
 `,
       );
     });

@@ -64,10 +64,13 @@ describe("input", () => {
 
   describe("resolveInterruptWithEditor", () => {
     it("waits for enter and clears the interrupt controller", async () => {
+      const prompts: string[] = [];
       let questionOptions: { signal: AbortSignal } | undefined;
+      actions.setKeymap("edit", { name: "e", ctrl: true });
       actions.setRl(
         makeFakeRl({
-          question: (_prompt: string, options: { signal: AbortSignal }) => {
+          question: (prompt: string, options: { signal: AbortSignal }) => {
+            prompts.push(prompt);
             questionOptions = options;
             return Promise.resolve("");
           },
@@ -82,6 +85,11 @@ describe("input", () => {
         getState().abortControllers.interruptWithEditorContent,
         null,
       );
+      assert.equal(
+        stripAnsi(getCapturedStdout()),
+        `You have queued messages! Edit them with ${JSON.stringify(getState().config.keymaps.edit)} or press enter to continue\n`,
+      );
+      assert.deepStrictEqual(prompts, ["Ready? "]);
     });
 
     it("returns normally when interrupted", async () => {
