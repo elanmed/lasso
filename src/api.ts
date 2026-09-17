@@ -7,6 +7,9 @@ import {
   tryCatchAsync,
   getMessageFromError,
   safeStringify,
+  getApproxTokensFromMessages,
+  strToApproxTokens,
+  approxTokensToCharLen,
   decimalToPercent,
 } from "./utils.ts";
 import { createToolCallDiffer } from "./differ.ts";
@@ -22,11 +25,6 @@ import {
 import { MISSING } from "./missing.ts";
 import { aiDeps } from "./deps.ts";
 import { prependToChatHistory } from "./log.ts";
-import {
-  getApproxTokensFromMessages,
-  strToApproxTokens,
-  approxTokensToCharLen,
-} from "./tokens.ts";
 import { getLanguageModel } from "./model.ts";
 import { resolveInterruptWithEditor } from "./input.ts";
 

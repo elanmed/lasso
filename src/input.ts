@@ -17,9 +17,9 @@ import {
   isExisty,
   listChatHistoryFiles,
   stringify,
+  strToApproxTokens,
   getStrFromAssistantContent,
 } from "./utils.ts";
-import { strToApproxTokens } from "./tokens.ts";
 import { truncate } from "./text.ts";
 import {
   print,

@@ -3,11 +3,36 @@ import os from "node:os";
 import crypto from "node:crypto";
 import childProcess from "node:child_process";
 import assert from "node:assert";
-import type { AssistantContent } from "ai";
+import type { AssistantContent, ModelMessage } from "ai";
 import { fsDeps, processDeps } from "./deps.ts";
 import { getPromptHistoryDir } from "./paths.ts";
 
 export type Result<T> = { ok: true; value: T } | { ok: false; error: unknown };
+
+export function getApproxTokensFromMessages(messages: ModelMessage[]) {
+  const textOnly = messages.map((message) => {
+    if (typeof message.content === "string") return message;
+    return {
+      ...message,
+      content: message.content.filter(
+        (part) => part.type !== "image" && part.type !== "file",
+      ),
+    };
+  });
+  return strToApproxTokens(JSON.stringify(textOnly));
+}
+
+export function strToApproxTokens(str: string) {
+  return charLenToApproxTokens(str.length);
+}
+
+function charLenToApproxTokens(charLen: number) {
+  return Math.floor(charLen / 3);
+}
+
+export function approxTokensToCharLen(tokenCount: number) {
+  return 3 * tokenCount;
+}
 
 export function isAbortError(error: unknown): boolean {
   return error instanceof Error && error.name === "AbortError";

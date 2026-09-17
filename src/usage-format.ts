@@ -1,13 +1,12 @@
 import assert from "node:assert";
 import { promptDeps, getState } from "./state.ts";
-import { decimalToPercent } from "./utils.ts";
+import { decimalToPercent, getApproxTokensFromMessages, strToApproxTokens } from "./utils.ts";
 import { processDeps } from "./deps.ts";
 import {
   isUsageLimitDisabled,
   type ModelUsage,
   type TokenUsage,
 } from "./usage.ts";
-import { getApproxTokensFromMessages, strToApproxTokens } from "./tokens.ts";
 
 const DOLLARS_PER_MILLION = 1_000_000;
 
