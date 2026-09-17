@@ -738,36 +738,6 @@ Lasso reserves 50% of the context window for compacted summaries and 30% for sys
       });
     });
 
-    it("warns when compaction does not reach the target", async () => {
-      const getCaptured = mockStdout();
-      actions.appendToMessageParams({ role: "user", content: "hi" });
-      actions.setMessageParamTokens(85_000);
-      mock.method(aiDeps, "generateText", () =>
-        Promise.resolve(
-          makeGenerateTextResult({
-            output: { compacted: "compacted summary" },
-            usage: {
-              inputTokens: 0,
-              outputTokens: 35_000,
-              inputTokenDetails: { cacheReadTokens: 0, cacheWriteTokens: 0 },
-            },
-          }),
-        ),
-      );
-      await maybeCompactMessageParams("hi");
-      assert.deepStrictEqual(getState().app.messageParams, {
-        tokens: 35_000 + getApproxAdditions(),
-        tokensStale: false,
-        messages: [{ role: "assistant", content: "compacted summary" }],
-      });
-      assert.strictEqual(
-        stripAnsi(getCaptured()),
-        `Compacting…
-Compacted to 35,000, 5,000 over the target.
-`,
-      );
-    });
-
     it("keeps messages when generateText fails", async () => {
       actions.appendToMessageParams({ role: "user", content: "hi" });
       actions.setMessageParamTokens(85_000);

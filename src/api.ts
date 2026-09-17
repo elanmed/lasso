@@ -243,11 +243,6 @@ ${JSON.stringify(getState().app.messageParams.messages)}
   actions.setMessageParamTokens(
     afterCompactionTokens + systemInstructionsTokensApprox,
   );
-  if (afterCompactionTokens >= targetTokens) {
-    print.warning(
-      `Compacted to ${afterCompactionTokens.toLocaleString()}, ${(afterCompactionTokens - targetTokens).toLocaleString()} over the target.`,
-    );
-  }
 }
 
 function getSystemInstructionsTokensApprox() {
