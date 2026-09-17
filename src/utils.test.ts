@@ -15,6 +15,7 @@ import {
   listChatHistoryFiles,
   getStrFromAssistantContent,
   shouldDisableColor,
+  decimalToPercent,
 } from "./utils.ts";
 import {
   testFs,
@@ -55,6 +56,21 @@ describe("utils", () => {
       assert.equal(strToApproxTokens("abc"), 1);
       assert.equal(strToApproxTokens("abcdef"), 2);
       assert.equal(strToApproxTokens("abcdefg"), 2);
+    });
+  });
+
+  describe("decimalToPercent", () => {
+    it("scales decimals to a percent with two decimals by default", () => {
+      assert.equal(decimalToPercent(0), "0%");
+      assert.equal(decimalToPercent(0.5), "50%");
+      assert.equal(decimalToPercent(1), "100%");
+      assert.equal(decimalToPercent(1 / 6), "16.67%");
+      assert.equal(decimalToPercent(1.5), "150%");
+    });
+
+    it("rounds to the configured precision", () => {
+      assert.equal(decimalToPercent(1 / 6, { precision: 0 }), "17%");
+      assert.equal(decimalToPercent(1 / 6, { precision: 3 }), "16.667%");
     });
   });
 

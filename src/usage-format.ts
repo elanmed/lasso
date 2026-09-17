@@ -1,5 +1,6 @@
 import assert from "node:assert";
 import { getState } from "./state.ts";
+import { decimalToPercent } from "./utils.ts";
 import { processDeps } from "./deps.ts";
 import {
   isUsageLimitDisabled,
@@ -109,6 +110,5 @@ export function getPrettyContextWindowUsage() {
   if (contextWindow === undefined) return "";
 
   const currRatio = getState().app.messageParams.tokens / contextWindow;
-  const currPercent = String(Number((currRatio * 100).toFixed(3)));
-  return `${currPercent}% of context window`;
+  return `${decimalToPercent(currRatio, { precision: 3 })} of context window`;
 }

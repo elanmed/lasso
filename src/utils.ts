@@ -280,3 +280,10 @@ export function shouldDisableColor() {
     processDeps.env.get("NO_COLOR") !== undefined || !processDeps.stdout.isTTY()
   );
 }
+
+export function decimalToPercent(
+  decimal: number,
+  { precision = 2 }: { precision?: number } = {},
+) {
+  return `${String(Number((decimal * 100).toFixed(precision)))}%`;
+}
