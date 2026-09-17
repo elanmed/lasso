@@ -11,7 +11,6 @@ import {
   tryCatch,
   tryCatchAsync,
   getMessageFromError,
-  strToApproxTokens,
   normalizeLine,
   getTempFileName,
   execPromise,
@@ -20,6 +19,7 @@ import {
   stringify,
   getStrFromAssistantContent,
 } from "./utils.ts";
+import { strToApproxTokens } from "./tokens.ts";
 import { truncate } from "./text.ts";
 import {
   print,
@@ -224,9 +224,11 @@ export function initKeypress() {
             return;
           }
           case "config": {
+            const initialContentStr = getAllPrettyConfig();
+
             await openWithPager({
               pagerEnvKey: "LASSO_PAGER_CONFIG",
-              initialContentStr: getAllPrettyConfig(),
+              initialContentStr: normalizeLine(initialContentStr),
               contentType: "markdown",
             });
             redrawPendingQuestion();
@@ -612,9 +614,11 @@ async function resolveBuiltinSlashCommand(
       return { handled: true, inputFromCommand: null };
     }
     case "config": {
+      const initialContentStr = getAllPrettyConfig();
+
       await openWithPager({
         pagerEnvKey: "LASSO_PAGER_CONFIG",
-        initialContentStr: getAllPrettyConfig(),
+        initialContentStr: normalizeLine(initialContentStr),
         contentType: "markdown",
       });
 
@@ -856,9 +860,11 @@ export async function pageContextStr() {
     return;
   }
 
+  const initialContentStr = getState().app.contextStr;
+
   await openWithPager({
     pagerEnvKey: "LASSO_PAGER_CONTEXT",
-    initialContentStr: getState().app.contextStr,
+    initialContentStr: normalizeLine(initialContentStr),
     contentType: "markdown",
   });
 }
@@ -875,7 +881,7 @@ export async function pageEditStr() {
 ${editorInputValue}`;
 
   await openWithPager({
-    initialContentStr,
+    initialContentStr: normalizeLine(initialContentStr),
     pagerEnvKey: "LASSO_PAGER_EDIT",
     contentType: "markdown",
   });
@@ -893,9 +899,11 @@ export async function pageCustomSlashCommandsStr() {
     return;
   }
 
+  const initialContentStr = getCustomSlashCommandsStr();
+
   await openWithPager({
     pagerEnvKey: "LASSO_PAGER_COMMANDS",
-    initialContentStr: getCustomSlashCommandsStr(),
+    initialContentStr: normalizeLine(initialContentStr),
     contentType: "markdown",
   });
 }
@@ -1118,7 +1126,7 @@ ${diffResult.value.stdout}
 
   await openWithPager({
     pagerEnvKey: "LASSO_PAGER_RELOAD",
-    initialContentStr: diff,
+    initialContentStr: normalizeLine(diff),
     contentType: "diff",
   });
 }
@@ -1198,10 +1206,12 @@ export async function pageHistory() {
     return;
   }
 
-  await openWithPager({
-    initialContentStr: `# [lasso] Chat history
+  const initialContentStr = `# [lasso] Chat history
 
-${historyStr}`,
+${historyStr}`;
+
+  await openWithPager({
+    initialContentStr: normalizeLine(initialContentStr),
     pagerEnvKey: "LASSO_PAGER_HISTORY",
     contentType: "markdown",
   });
@@ -1226,10 +1236,12 @@ export async function pageLastResponse() {
 
   const formattedContentStr = await formatMarkdown(contentStr);
 
-  await openWithPager({
-    initialContentStr: `# [lasso] Last response
+  const initialContentStr = `# [lasso] Last response
 
-${formattedContentStr}`,
+${formattedContentStr}`;
+
+  await openWithPager({
+    initialContentStr: normalizeLine(initialContentStr),
     pagerEnvKey: "LASSO_PAGER_LAST_RESPONSE",
     contentType: "markdown",
   });
@@ -1252,20 +1264,24 @@ export async function pageLastMessage() {
     return;
   }
 
-  await openWithPager({
-    initialContentStr: `# [lasso] Last message
+  const initialContentStr = `# [lasso] Last message
 
-${contentStr}`,
+${contentStr}`;
+
+  await openWithPager({
+    initialContentStr: normalizeLine(initialContentStr),
     pagerEnvKey: "LASSO_PAGER_LAST_MESSAGE",
     contentType: "markdown",
   });
 }
 
 export async function pageMessages() {
-  await openWithPager({
-    initialContentStr: `# [lasso] Messages
+  const initialContentStr = `# [lasso] Messages
 
-${stringify(getState().app.messageParams.messages.toReversed())}`,
+${stringify(getState().app.messageParams.messages.toReversed())}`;
+
+  await openWithPager({
+    initialContentStr: normalizeLine(initialContentStr),
     pagerEnvKey: "LASSO_PAGER_MESSAGES",
     contentType: "markdown",
   });

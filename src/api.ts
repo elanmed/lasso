@@ -4,11 +4,9 @@ import { z } from "zod";
 import { actions, getState, promptDeps } from "./state.ts";
 import {
   isAbortError,
-  strToApproxTokens,
   tryCatchAsync,
   getMessageFromError,
   safeStringify,
-  approxTokensToCharLen,
   decimalToPercent,
 } from "./utils.ts";
 import { createToolCallDiffer } from "./differ.ts";
@@ -24,6 +22,11 @@ import {
 import { MISSING } from "./missing.ts";
 import { aiDeps } from "./deps.ts";
 import { prependToChatHistory } from "./log.ts";
+import {
+  getApproxTokensFromMessages,
+  strToApproxTokens,
+  approxTokensToCharLen,
+} from "./tokens.ts";
 import { getLanguageModel } from "./model.ts";
 import { resolveInterruptWithEditor } from "./input.ts";
 
@@ -153,17 +156,14 @@ export async function resolveApiCall(userInput: string) {
   return text;
 }
 
-function getApproxTokensFromMessages(messages: ModelMessage[]) {
-  const textOnly = messages.map((message) => {
-    if (typeof message.content === "string") return message;
-    return {
-      ...message,
-      content: message.content.filter(
-        (part) => part.type !== "image" && part.type !== "file",
-      ),
-    };
-  });
-  return strToApproxTokens(JSON.stringify(textOnly));
+export function getSystemInstructionsTokensApprox() {
+  const systemContentTokensApprox = strToApproxTokens(
+    promptDeps.getSystemContent(),
+  );
+  const toolsTokensApprox = strToApproxTokens(
+    safeStringify({ ...harnessTools, ...getState().mcp.tools }),
+  );
+  return systemContentTokensApprox + toolsTokensApprox;
 }
 
 export async function maybeCompactMessageParams(userInput: string) {
@@ -243,16 +243,6 @@ ${JSON.stringify(getState().app.messageParams.messages)}
   actions.setMessageParamTokens(
     afterCompactionTokens + systemInstructionsTokensApprox,
   );
-}
-
-function getSystemInstructionsTokensApprox() {
-  const systemContentTokensApprox = strToApproxTokens(
-    promptDeps.getSystemContent(),
-  );
-  const toolsTokensApprox = strToApproxTokens(
-    safeStringify({ ...harnessTools, ...getState().mcp.tools }),
-  );
-  return systemContentTokensApprox + toolsTokensApprox;
 }
 
 export function warnOnLargeSystemInstructions() {

@@ -1,7 +1,8 @@
 import { describe, it, beforeEach, afterEach, mock } from "node:test";
 import assert from "node:assert";
 import type { ModelMessage } from "ai";
-import { strToApproxTokens, safeStringify } from "./utils.ts";
+import { safeStringify } from "./utils.ts";
+import { strToApproxTokens } from "./tokens.ts";
 import { actions, getState, type MCPToolSet } from "./state.ts";
 import {
   maybeCompactMessageParams,

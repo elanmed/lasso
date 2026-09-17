@@ -2,7 +2,7 @@ import { describe, it, beforeEach, afterEach, mock } from "node:test";
 import assert from "node:assert";
 import childProcess from "node:child_process";
 import { actions, getState, promptDeps } from "./state.ts";
-import { strToApproxTokens } from "./utils.ts";
+import { strToApproxTokens } from "./tokens.ts";
 import {
   parseInputFromEditor,
   resolveSlashCommand,
@@ -307,7 +307,7 @@ describe("input", () => {
         testFs.writeFileSync("/tmp/lasso-test-uuid.txt", "  hello  ");
       });
       const result = await spawnAndReadEditorContent();
-      assert.strictEqual(result, "hello\n");
+      assert.strictEqual(result, "  hello\n");
     });
 
     it("uses LASSO_EDIT env var with __FILE__ when available", async () => {
@@ -348,7 +348,7 @@ describe("input", () => {
       const result = await spawnAndReadEditorContent({
         includeClipboardSuffix: true,
       });
-      assert.strictEqual(result, "hello world modified\n");
+      assert.strictEqual(result, "  hello world modified\n");
     });
 
     it("returns content when includeClipboardSuffix is true and editor saves unchanged content", async () => {
@@ -425,7 +425,7 @@ editor content
         testFs._files.get("/tmp/test-history.log"),
         `
 1970-01-01T00:00:00.000Z  *user*
-hello
+  hello
 
 ---
 `,
@@ -1132,7 +1132,7 @@ transcript content
       await pageContextStr();
       assert.strictEqual(
         testFs._files.get("/tmp/lasso-test-uuid.txt"),
-        `context string content`,
+        `context string content\n`,
       );
       assert.strictEqual(getCapturedStdout(), "");
     });
@@ -1166,7 +1166,8 @@ transcript content
         testFs._files.get("/tmp/lasso-test-uuid.txt"),
         `# [lasso] Chat history
 
-log content`,
+log content
+`,
       );
     });
   });
@@ -1239,7 +1240,8 @@ second
         testFs._files.get("/tmp/lasso-test-uuid.txt"),
         `# [lasso] Last message
 
-latest question`,
+latest question
+`,
       );
     });
   });
@@ -1283,7 +1285,8 @@ latest question`,
     "role": "user",
     "content": "question"
   }
-]`,
+]
+`,
       );
     });
   });
@@ -1311,7 +1314,8 @@ latest question`,
         testFs._files.get("/tmp/lasso-test-uuid.txt"),
         `# [lasso] Editor content
 
-editor input`,
+editor input
+`,
       );
     });
   });
@@ -1562,7 +1566,7 @@ Available commands:
       harness.emitKey({ name: "g", ctrl: true });
       await harness.flush();
       assert.deepStrictEqual(prompts, []);
-      assert.strictEqual(getState().app.editorInputValue, "edited\n");
+      assert.strictEqual(getState().app.editorInputValue, "  edited\n");
     });
 
     it("runs paste command with clipboard when its keymap matches", async () => {
@@ -1578,7 +1582,7 @@ Available commands:
       await harness.flush();
       assert.strictEqual(
         getState().app.editorInputValue,
-        "hello world modified\n",
+        "  hello world modified\n",
       );
     });
 
@@ -1613,7 +1617,8 @@ Available commands:
         testFs._files.get("/tmp/lasso-test-uuid.txt"),
         `# [lasso] Chat history
 
-log content`,
+log content
+`,
       );
       assert.strictEqual(getCapturedStdout(), "");
       assert.deepStrictEqual(prompts, [true]);
@@ -1705,7 +1710,8 @@ log content`,
         testFs._files.get("/tmp/lasso-test-uuid.txt"),
         `# [lasso] Editor content
 
-editor input`,
+editor input
+`,
       );
       assert.strictEqual(getCapturedStdout(), "");
       assert.deepStrictEqual(prompts, [true]);
@@ -1747,7 +1753,7 @@ editor input`,
       await harness.flush();
       assert.strictEqual(
         testFs._files.get("/tmp/lasso-test-uuid.txt"),
-        `context string content`,
+        `context string content\n`,
       );
       assert.strictEqual(getCapturedStdout(), "");
       assert.deepStrictEqual(prompts, [true]);
@@ -1770,7 +1776,7 @@ editor input`,
 
 ## /test/.lasso/commands/custom.md
 
-custom command content`,
+custom command content\n`,
       );
       assert.strictEqual(getCapturedStdout(), "");
       assert.deepStrictEqual(prompts, [true]);
@@ -1920,7 +1926,8 @@ custom command content`,
         testFs._files.get("/tmp/lasso-test-uuid.txt"),
         `# [lasso] Editor content
 
-editor input`,
+editor input
+`,
       );
     });
 
@@ -1976,7 +1983,8 @@ pasted content
         testFs._files.get("/tmp/lasso-test-uuid.txt"),
         `# [lasso] Chat history
 
-log content`,
+log content
+`,
       );
     });
 
@@ -2092,7 +2100,7 @@ Available commands:
 
 ## /test/.lasso/commands/custom.md
 
-custom command content`,
+custom command content\n`,
       );
     });
 
@@ -2141,7 +2149,7 @@ custom command content`,
       assert.strictEqual(result, null);
       assert.strictEqual(
         testFs._files.get("/tmp/lasso-test-uuid.txt"),
-        `context string content`,
+        `context string content\n`,
       );
     });
 
@@ -2267,7 +2275,6 @@ skills diff
 
 Custom slash commands:
 commands diff
-
 `,
       );
     });
@@ -2295,7 +2302,6 @@ commands diff
         testFs._files.get("/tmp/lasso-test-uuid.txt"),
         `Local config from path: /test-cwd/.lasso/settings.yaml
 local diff
-
 `,
       );
     });

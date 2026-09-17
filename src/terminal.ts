@@ -1,4 +1,3 @@
-import assert from "node:assert";
 import childProcess from "node:child_process";
 import { format } from "prettier";
 import { processDeps } from "./deps.ts";
@@ -103,18 +102,14 @@ export async function executeBat(content: string) {
 
 export async function openWithPager({
   pagerEnvKey,
-  initialContentPath,
   initialContentStr,
   contentType,
 }: {
-  initialContentPath?: string;
   initialContentStr?: string;
   pagerEnvKey: string;
   contentType: "diff" | "markdown";
 }) {
-  assert(initialContentPath === undefined || initialContentStr === undefined);
-
-  const tempFile = getTempFileName({ initialContentPath, initialContentStr });
+  const tempFile = getTempFileName({ initialContentStr });
 
   const pagerCommand = await (async () => {
     const pagerEnvValue = processDeps.env.get(pagerEnvKey);

@@ -9,18 +9,6 @@ import { getPromptHistoryDir } from "./paths.ts";
 
 export type Result<T> = { ok: true; value: T } | { ok: false; error: unknown };
 
-export function strToApproxTokens(str: string) {
-  return charLenToApproxTokens(str.length);
-}
-
-function charLenToApproxTokens(charLen: number) {
-  return Math.floor(charLen / 3);
-}
-
-export function approxTokensToCharLen(tokenCount: number) {
-  return 3 * tokenCount;
-}
-
 export function isAbortError(error: unknown): boolean {
   return error instanceof Error && error.name === "AbortError";
 }
@@ -54,7 +42,7 @@ export async function tryCatchAsync<T>(
 }
 
 export function normalizeLine(content: string): string {
-  return content.trim().concat("\n");
+  return content.trimEnd().concat("\n");
 }
 
 export function getShortId(): string {

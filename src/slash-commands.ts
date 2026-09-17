@@ -47,6 +47,7 @@ export function getCustomSlashCommandsStr() {
 ${content}`,
     )
     .join("\n\n");
+
   return `# [lasso] Slash commands:
 
 ${contents}`;

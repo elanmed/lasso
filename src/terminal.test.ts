@@ -89,19 +89,6 @@ describe("terminal", () => {
       );
     });
 
-    it("copies initial content into the temp file", async () => {
-      testFs._files.set("/source/file.txt", "initial content");
-      await openWithPager({
-        pagerEnvKey: "LASSO_PAGER_HISTORY",
-        initialContentPath: "/source/file.txt",
-        contentType: "markdown",
-      });
-      assert.strictEqual(
-        testFs._files.get("/tmp/lasso-test-uuid.txt"),
-        "initial content",
-      );
-    });
-
     it("spawns pager with shell and inherit stdio", async () => {
       let spawnArgs: unknown[] = [];
       mock.method(childProcess, "spawnSync", (...args: unknown[]) => {
@@ -126,18 +113,6 @@ describe("terminal", () => {
       assert.strictEqual(
         testFs._files.get("/tmp/lasso-test-uuid.txt"),
         "string content",
-      );
-    });
-
-    it("throws when both initialContentPath and initialContentStr are provided", async () => {
-      await assert.rejects(
-        openWithPager({
-          pagerEnvKey: "LASSO_PAGER_HISTORY",
-          initialContentPath: "/source/file.txt",
-          initialContentStr: "string content",
-          contentType: "markdown",
-        }),
-        /falsy value/,
       );
     });
 

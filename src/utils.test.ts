@@ -5,8 +5,6 @@ import {
   tryCatch,
   safeStringify,
   tryCatchAsync,
-  strToApproxTokens,
-  approxTokensToCharLen,
   normalizeLine,
   execPromise,
   getMessageFromError,
@@ -51,15 +49,6 @@ describe("utils", () => {
     });
   });
 
-  describe("strToApproxTokens", () => {
-    it("splits character length by 3", () => {
-      assert.equal(strToApproxTokens(""), 0);
-      assert.equal(strToApproxTokens("abc"), 1);
-      assert.equal(strToApproxTokens("abcdef"), 2);
-      assert.equal(strToApproxTokens("abcdefg"), 2);
-    });
-  });
-
   describe("decimalToPercent", () => {
     it("scales decimals to a percent with two decimals by default", () => {
       assert.equal(decimalToPercent(0), "0%");
@@ -72,14 +61,6 @@ describe("utils", () => {
     it("rounds to the configured precision", () => {
       assert.equal(decimalToPercent(1 / 6, { precision: 0 }), "17%");
       assert.equal(decimalToPercent(1 / 6, { precision: 3 }), "16.667%");
-    });
-  });
-
-  describe("approxTokensToCharLen", () => {
-    it("multiplies token count by 3", () => {
-      assert.equal(approxTokensToCharLen(0), 0);
-      assert.equal(approxTokensToCharLen(1), 3);
-      assert.equal(approxTokensToCharLen(250), 750);
     });
   });
 
@@ -218,12 +199,9 @@ describe("utils", () => {
   });
 
   describe("normalizeLine", () => {
-    it("trims whitespace and appends newline", () => {
-      assert.equal(normalizeLine("  hello  "), "hello\n");
-    });
-
-    it("trims leading whitespace", () => {
-      assert.equal(normalizeLine("\t\tcontent"), "content\n");
+    it("preserves leading whitespace and appends newline", () => {
+      assert.equal(normalizeLine("  hello  "), "  hello\n");
+      assert.equal(normalizeLine("\t\tcontent"), "\t\tcontent\n");
     });
 
     it("trims trailing whitespace", () => {
