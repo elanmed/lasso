@@ -14,7 +14,11 @@ import {
   initSigInt,
   resolveUserInput,
 } from "./input.ts";
-import { resolveApiCall, maybeCompactMessageParams } from "./api.ts";
+import {
+  resolveApiCall,
+  maybeCompactMessageParams,
+  warnOnLargeSystemInstructions,
+} from "./api.ts";
 import { initLogs } from "./log.ts";
 import { getState } from "./state.ts";
 
@@ -27,6 +31,7 @@ async function main() {
   initSigInt();
 
   await warnOnMissingBat();
+  warnOnLargeSystemInstructions();
 
   let isFirstInput = true;
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition

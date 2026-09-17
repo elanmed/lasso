@@ -9,6 +9,7 @@ import {
   getMessageFromError,
   safeStringify,
   approxTokensToCharLen,
+  decimalToPercent,
 } from "./utils.ts";
 import { createToolCallDiffer } from "./differ.ts";
 import { getUnicodeChar } from "./text.ts";
@@ -20,12 +21,17 @@ import {
   type HarnessToolName,
   toolPrint,
 } from "./tools.ts";
-import { compactTargetRatio, compactTriggerRatio } from "./config-types.ts";
 import { MISSING } from "./missing.ts";
 import { aiDeps } from "./deps.ts";
 import { prependToChatHistory } from "./log.ts";
 import { getLanguageModel } from "./model.ts";
 import { resolveInterruptWithEditor } from "./input.ts";
+
+const compactTriggerRatio = 0.8;
+const compactTargetRatio = 0.3;
+const dedicatedSummaryRatio = 0.5;
+const dedicatedSystemInstructionsRatio =
+  compactTriggerRatio - dedicatedSummaryRatio;
 
 function getApiStreamAbortSignal() {
   const controller = getState().abortControllers.apiStream;
@@ -171,21 +177,15 @@ export async function maybeCompactMessageParams(userInput: string) {
   // count of userInput until after the API call. This can be problematic when the userInput
   // would large enough to trigger compaction, so we approximate for the userInput
   const userInputTokensApprox = strToApproxTokens(userInput);
-  // the same applies to the system content, which is sent with every api call
-  const systemContentTokensApprox = strToApproxTokens(
-    promptDeps.getSystemContent(),
-  );
-  const toolsTokensApprox = strToApproxTokens(
-    safeStringify({ ...harnessTools, ...getState().mcp.tools }),
-  );
+  // the same applies to the system instructions, which is sent with every api call
+  const systemInstructionsTokensApprox = getSystemInstructionsTokensApprox();
 
   const nextApiTokens = (() => {
     if (getState().app.messageParams.tokensStale) {
       return (
         getApproxTokensFromMessages(getState().app.messageParams.messages) +
         userInputTokensApprox +
-        systemContentTokensApprox +
-        toolsTokensApprox
+        systemInstructionsTokensApprox
       );
     } else {
       return getState().app.messageParams.tokens + userInputTokensApprox;
@@ -241,11 +241,39 @@ ${JSON.stringify(getState().app.messageParams.messages)}
   actions.resetMessageParams();
   actions.appendToMessageParams({ content: compacted, role: "assistant" });
   actions.setMessageParamTokens(
-    afterCompactionTokens + systemContentTokensApprox + toolsTokensApprox,
+    afterCompactionTokens + systemInstructionsTokensApprox,
   );
   if (afterCompactionTokens >= targetTokens) {
     print.warning(
       `Compacted to ${afterCompactionTokens.toLocaleString()}, ${(afterCompactionTokens - targetTokens).toLocaleString()} over the target.`,
+    );
+  }
+}
+
+function getSystemInstructionsTokensApprox() {
+  const systemContentTokensApprox = strToApproxTokens(
+    promptDeps.getSystemContent(),
+  );
+  const toolsTokensApprox = strToApproxTokens(
+    safeStringify({ ...harnessTools, ...getState().mcp.tools }),
+  );
+  return systemContentTokensApprox + toolsTokensApprox;
+}
+
+export function warnOnLargeSystemInstructions() {
+  const { model } = getState().config;
+  const contextWindow = getState().config.contextWindowPerModel[model];
+  if (contextWindow === undefined) return;
+
+  const systemInstructionsTokensApprox = getSystemInstructionsTokensApprox();
+
+  const systemInstructionsRatio =
+    systemInstructionsTokensApprox / contextWindow;
+  if (systemInstructionsRatio >= dedicatedSystemInstructionsRatio) {
+    print.warning(
+      `The current set of context, skills, and tools is ${decimalToPercent(systemInstructionsRatio)} of the ${String(contextWindow)} token context window!
+
+Lasso reserves ${decimalToPercent(dedicatedSummaryRatio)} of the context window for compacted summaries and ${decimalToPercent(dedicatedSystemInstructionsRatio)} for system instructions. As is, the system instructions may breach the llm's context window and cause API calls to be rejected. Consider converting some of your context to skills and minimizing MCP servers.`,
     );
   }
 }

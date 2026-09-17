@@ -162,10 +162,6 @@ export const DefaultedConfigSchema = z.strictObject({
 
 export type DefaultedConfig = z.infer<typeof DefaultedConfigSchema>;
 
-export const compactTriggerRatio = 0.8;
-
-export const compactTargetRatio = 0.3;
-
 export type Key = z.infer<typeof KeySchema>;
 
 export const defaultConfig: DefaultedConfig = {
