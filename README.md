@@ -542,8 +542,6 @@ vim.g.clipboard = {
 - [ ] Update tools to support reading, writing base64 for images
 - [ ] Move all config validation into blockOnMissingConfig, don't throw at start
   - [ ] Separate error message for no config (`initlocal` and `initglobal`)
-
-## TODO (later)
-
+- [ ] Improve compaction
 - [ ] Support code-mode
-- [ ] Support Windows-style newlines
+- [ ] Remove windows support
