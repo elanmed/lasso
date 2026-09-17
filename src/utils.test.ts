@@ -106,10 +106,7 @@ describe("utils", () => {
     });
 
     it("retuns empty strings for unrecognised content types at runtime", () => {
-      assert.equal(
-        getStrFromAssistantContent([{ type: "wat" } as never]),
-        "",
-      );
+      assert.equal(getStrFromAssistantContent([{ type: "wat" } as never]), "");
     });
 
     it("excludes tool-result and tool-approval-request content", () => {
