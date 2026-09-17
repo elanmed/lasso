@@ -151,22 +151,6 @@ export function initStateFromConfig() {
     ...localConfig.contextWindowPerModel,
   });
   actions.setContextWindowPerModel(defaultedContextWindowPerModel);
-  const defaultedCompactTriggerRatio =
-    localConfig.compactTriggerRatio ??
-    globalConfig.compactTriggerRatio ??
-    defaultConfig.compactTriggerRatio;
-  const defaultedCompactTargetRatio =
-    localConfig.compactTargetRatio ??
-    globalConfig.compactTargetRatio ??
-    defaultConfig.compactTargetRatio;
-  if (defaultedCompactTriggerRatio <= defaultedCompactTargetRatio) {
-    throw new Error(
-      `compactTriggerRatio (${String(defaultedCompactTriggerRatio)}) must be greater than compactTargetRatio (${String(defaultedCompactTargetRatio)})`,
-    );
-  }
-  actions.setCompactTriggerRatio(defaultedCompactTriggerRatio);
-  actions.setCompactTargetRatio(defaultedCompactTargetRatio);
-
   actions.setCustomSlashCommandDirs(
     localConfig.customSlashCommandDirs ??
       globalConfig.customSlashCommandDirs ??

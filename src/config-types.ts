@@ -56,8 +56,6 @@ const PricingPerModelSchema = z.record(
 const ContextWindowPerModelSchema = z.record(z.string(), z.number().nullable());
 const DefaultedPricingPerModelSchema = z.record(z.string(), ModelPricingSchema);
 const DefaultedContextWindowPerModelSchema = z.record(z.string(), z.number());
-const CompactTriggerRatioSchema = z.number().min(0).max(1);
-const CompactTargetRatioSchema = z.number().min(0).max(1);
 const KeymapsSchema = z.record(z.string(), KeySchema);
 const DefaultedKeymapsSchema = z
   .object({ edit: KeySchema })
@@ -123,8 +121,6 @@ export const ConfigSchema = z.strictObject({
   gateway: GatewaySchema.optional(),
   pricingPerModel: PricingPerModelSchema.optional(),
   contextWindowPerModel: ContextWindowPerModelSchema.optional(),
-  compactTriggerRatio: CompactTriggerRatioSchema.optional(),
-  compactTargetRatio: CompactTargetRatioSchema.optional(),
   keymaps: KeymapsSchema.optional(),
   customSlashCommandDirs: CustomSlashCommandDirsSchema.optional(),
   customSkillDirs: CustomSkillDirsSchema.optional(),
@@ -149,8 +145,6 @@ export const DefaultedConfigSchema = z.strictObject({
   gateway: GatewaySchema.optional(),
   pricingPerModel: DefaultedPricingPerModelSchema,
   contextWindowPerModel: DefaultedContextWindowPerModelSchema,
-  compactTriggerRatio: CompactTriggerRatioSchema,
-  compactTargetRatio: CompactTargetRatioSchema,
   keymaps: DefaultedKeymapsSchema,
   customSlashCommandDirs: CustomSlashCommandDirsSchema,
   customSkillDirs: CustomSkillDirsSchema,
@@ -168,6 +162,10 @@ export const DefaultedConfigSchema = z.strictObject({
 
 export type DefaultedConfig = z.infer<typeof DefaultedConfigSchema>;
 
+export const compactTriggerRatio = 0.8;
+
+export const compactTargetRatio = 0.3;
+
 export type Key = z.infer<typeof KeySchema>;
 
 export const defaultConfig: DefaultedConfig = {
@@ -176,8 +174,6 @@ export const defaultConfig: DefaultedConfig = {
   gateway: undefined,
   pricingPerModel: {},
   contextWindowPerModel: {},
-  compactTriggerRatio: 0.8,
-  compactTargetRatio: 0.3,
   keymaps: {
     edit: {
       name: "g",

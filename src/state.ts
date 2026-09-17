@@ -106,8 +106,6 @@ const createInitialState = (): State => ({
     gateway: undefined,
     pricingPerModel: structuredClone(defaultConfig.pricingPerModel),
     contextWindowPerModel: structuredClone(defaultConfig.contextWindowPerModel),
-    compactTriggerRatio: defaultConfig.compactTriggerRatio,
-    compactTargetRatio: defaultConfig.compactTargetRatio,
     keymaps: structuredClone(defaultConfig.keymaps),
     customSlashCommandDirs: structuredClone(
       defaultConfig.customSlashCommandDirs,
@@ -247,26 +245,6 @@ export const actions = {
       "set-context-window-per-model",
       stringify(before),
       stringify(contextWindowPerModel),
-    );
-  },
-
-  setCompactTriggerRatio(compactTriggerRatio: number) {
-    const before = state.config.compactTriggerRatio;
-    state.config.compactTriggerRatio = compactTriggerRatio;
-    logStateChange(
-      "set-compact-trigger-ratio",
-      String(before),
-      String(compactTriggerRatio),
-    );
-  },
-
-  setCompactTargetRatio(compactTargetRatio: number) {
-    const before = state.config.compactTargetRatio;
-    state.config.compactTargetRatio = compactTargetRatio;
-    logStateChange(
-      "set-compact-target-ratio",
-      String(before),
-      String(compactTargetRatio),
     );
   },
 

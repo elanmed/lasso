@@ -17,8 +17,7 @@ _A minimal agent harness to rein in your llm_
 - **AGENTS.md support**: The root file is included in context, nested files are internally represented as skills
 - **Slash commands**: Change agent settings or execute reusable prompts
 - **Token usage tracking**: Track spending per model within a configurable time window
-- **Context compaction**: The conversation is automatically compacted when nearing the model's context window limit
-  - Triggered at `compactTriggerRatio`, down to `compactTargetRatio`
+- **Context compaction**: The conversation is automatically compacted at 80% context usage, compacted down to 30%
 - **Session history**: Transcripts are persisted per session and past sessions can be resumed with `/resume`
 - **Keymaps**: Customizable shortcuts for executing built-in slash commands
 
@@ -67,8 +66,6 @@ If `model`, `baseURL`, or `LASSO_API_KEY` are missing at startup, lasso warns an
 | `baseURL`                       | `string`                                                                             | `null`                   | API base URL (required for `openai-compatible`)                            |
 | `pricingPerModel`               | `object`                                                                             | `{}`                     | Token pricing per model per million                                        |
 | `contextWindowPerModel`         | `object`                                                                             | `{}`                     | Context window size in tokens per model                                    |
-| `compactTriggerRatio`           | `number`                                                                             | `0.7`                    | Compact when context usage exceeds this ratio                              |
-| `compactTargetRatio`            | `number`                                                                             | `0.3`                    | Compact down to this context ratio                                         |
 | `keymaps`                       | `object`                                                                             | see below                | Custom keybindings                                                         |
 | `customSlashCommandDirs`        | `string[]`                                                                           | `[]`                     | Additional directories for custom slash commands                           |
 | `customSkillDirs`               | `string[]`                                                                           | `[]`                     | Additional directories for skills                                          |
@@ -87,7 +84,7 @@ If `model`, `baseURL`, or `LASSO_API_KEY` are missing at startup, lasso warns an
 
 The local config either overwrites or extends the global config per option:
 
-- **Overwrite**: scalar options (`model`, `sdkProvider`, `gateway`, `baseURL`, `compactTriggerRatio`, `compactTargetRatio`, `loadingStateFrameDuration`, `promptPrefix`, `suppressBatUnavailableWarning`, `asciiOnly`, `messageQueueDelimiter`, `reasoning`, `usageLimit`) and arrays (`customSlashCommandDirs`, `customSkillDirs`, `subagentModels`, `loadingStateFrames`) replace the global value wholesale — arrays are not merged.
+- **Overwrite**: scalar options (`model`, `sdkProvider`, `gateway`, `baseURL`, `loadingStateFrameDuration`, `promptPrefix`, `suppressBatUnavailableWarning`, `asciiOnly`, `messageQueueDelimiter`, `reasoning`, `usageLimit`) and arrays (`customSlashCommandDirs`, `customSkillDirs`, `subagentModels`, `loadingStateFrames`) replace the global value wholesale — arrays are not merged.
 - **Extend**: `keymaps`, `mcps`, `pricingPerModel`, and `contextWindowPerModel` merge entry-by-entry with the default and global entries, the local entry winning on conflicts. `pricingPerModel` and `contextWindowPerModel` entries set to `null` cancel the global or default entry (see the relevant sections below).
 
 ### MCP Servers
@@ -249,8 +246,6 @@ model: claude-sonnet-4-6
 sdkProvider: openai-compatible
 gateway: opencode
 baseURL: https://api.example.com/v1
-compactTriggerRatio: 0.8
-compactTargetRatio: 0.3
 keymaps:
   edit:
     name: x

@@ -382,8 +382,6 @@ response text
   describe("maybeCompactMessageParams", () => {
     beforeEach(() => {
       actions.setContextWindowPerModel({ "claude-sonnet-4-20250514": 100_000 });
-      actions.setCompactTriggerRatio(0.7);
-      actions.setCompactTargetRatio(0.3);
     });
 
     const getApproxAdditions = () =>
@@ -409,7 +407,6 @@ response text
     });
 
     it("uses approximated tokens when stale to decide compaction", async () => {
-      actions.setCompactTargetRatio(0.25);
       const longUserContent = "a".repeat(240_000);
       actions.appendToMessageParams({
         role: "user",
@@ -463,7 +460,7 @@ response text
     });
 
     it("includes the system prompt in the stale approximation when deciding compaction", async () => {
-      const systemContent = "s".repeat(60_000);
+      const systemContent = "s".repeat(100_000);
       mock.method(promptDeps, "getSystemContent", () => systemContent);
       const longUserContent = "a".repeat(150_000);
       actions.appendToMessageParams({
@@ -491,7 +488,7 @@ response text
     });
 
     it("includes the tools in the stale approximation when deciding compaction", async () => {
-      const longUserContent = "a".repeat(205_000);
+      const longUserContent = "a".repeat(237_000);
       actions.appendToMessageParams({
         role: "user",
         content: longUserContent,
@@ -507,19 +504,18 @@ response text
       });
       await maybeCompactMessageParams("hi");
       const toolsTokensApprox = strToApproxTokens(safeStringify(harnessTools));
-      assert.strictEqual(strToApproxTokens(longUserContent) < 70_000, true);
+      assert.strictEqual(strToApproxTokens(longUserContent) < 80_000, true);
       assert.strictEqual(
-        strToApproxTokens(longUserContent) + toolsTokensApprox >= 70_000,
+        strToApproxTokens(longUserContent) + toolsTokensApprox >= 80_000,
         true,
       );
       assert.strictEqual(called, true);
     });
 
     it("includes mcp tools in the tokens after compaction", async () => {
-      actions.setCompactTargetRatio(0.25);
       actions.setMcp({}, { mcp_tool: makeMcpTool() });
       actions.appendToMessageParams({ role: "user", content: "hi" });
-      actions.setMessageParamTokens(80_000);
+      actions.setMessageParamTokens(85_000);
       mock.method(aiDeps, "generateText", () =>
         Promise.resolve(
           makeGenerateTextResult({
@@ -569,9 +565,8 @@ response text
     });
 
     it("compacts the conversation when above the threshold", async () => {
-      actions.setCompactTargetRatio(0.25);
       actions.appendToMessageParams({ role: "user", content: "hi" });
-      actions.setMessageParamTokens(80_000);
+      actions.setMessageParamTokens(85_000);
       let capturedMessages: ModelMessage[] = [];
       mock.method(aiDeps, "generateText", (opts: Record<string, unknown>) => {
         capturedMessages = opts["messages"] as ModelMessage[];
@@ -613,9 +608,8 @@ response text
     });
 
     it("compacts when the user input pushes tokens over the threshold", async () => {
-      actions.setCompactTargetRatio(0.25);
       actions.appendToMessageParams({ role: "user", content: "hi" });
-      actions.setMessageParamTokens(70_000);
+      actions.setMessageParamTokens(80_000);
       let capturedMessages: ModelMessage[] = [];
       mock.method(aiDeps, "generateText", (opts: Record<string, unknown>) => {
         capturedMessages = opts["messages"] as ModelMessage[];
@@ -631,7 +625,7 @@ response text
         );
       });
 
-      // 300 chars ≈ 100 tokens, pushing 70_000 over the 0.7 trigger (70_000 tokens).
+      // 300 chars ≈ 100 tokens, pushing 80_000 over the 0.8 trigger (80_000 tokens).
       await maybeCompactMessageParams("x".repeat(300));
 
       assert.strictEqual(capturedMessages.length, 1);
@@ -644,16 +638,15 @@ response text
 
     it("warns when compaction does not reach the target", async () => {
       const getCaptured = mockStdout();
-      actions.setCompactTargetRatio(0.25);
       actions.appendToMessageParams({ role: "user", content: "hi" });
-      actions.setMessageParamTokens(80_000);
+      actions.setMessageParamTokens(85_000);
       mock.method(aiDeps, "generateText", () =>
         Promise.resolve(
           makeGenerateTextResult({
             output: { compacted: "compacted summary" },
             usage: {
               inputTokens: 0,
-              outputTokens: 30_000,
+              outputTokens: 35_000,
               inputTokenDetails: { cacheReadTokens: 0, cacheWriteTokens: 0 },
             },
           }),
@@ -661,27 +654,27 @@ response text
       );
       await maybeCompactMessageParams("hi");
       assert.deepStrictEqual(getState().app.messageParams, {
-        tokens: 30_000 + getApproxAdditions(),
+        tokens: 35_000 + getApproxAdditions(),
         tokensStale: false,
         messages: [{ role: "assistant", content: "compacted summary" }],
       });
       assert.strictEqual(
         stripAnsi(getCaptured()),
         `Compacting…
-Compacted to 30,000, 5,000 over the target.
+Compacted to 35,000, 5,000 over the target.
 `,
       );
     });
 
     it("keeps messages when generateText fails", async () => {
       actions.appendToMessageParams({ role: "user", content: "hi" });
-      actions.setMessageParamTokens(80_000);
+      actions.setMessageParamTokens(85_000);
       mock.method(aiDeps, "generateText", () =>
         Promise.reject(new Error("network error")),
       );
       await maybeCompactMessageParams("hi");
       assert.deepStrictEqual(getState().app.messageParams, {
-        tokens: 80_000,
+        tokens: 85_000,
         tokensStale: false,
         messages: [{ role: "user", content: "hi" }],
       });
@@ -690,14 +683,14 @@ Compacted to 30,000, 5,000 over the target.
     it("keeps messages on abort error during compaction", async () => {
       const getCaptured = mockStdout();
       actions.appendToMessageParams({ role: "user", content: "hi" });
-      actions.setMessageParamTokens(80_000);
+      actions.setMessageParamTokens(85_000);
       const err = new Error("aborted");
       err.name = "AbortError";
       mock.method(aiDeps, "generateText", () => Promise.reject(err));
       await maybeCompactMessageParams("hi");
       assert.strictEqual(getState().abortControllers.apiStream, null);
       assert.deepStrictEqual(getState().app.messageParams, {
-        tokens: 80_000,
+        tokens: 85_000,
         tokensStale: false,
         messages: [{ role: "user", content: "hi" }],
       });
@@ -709,9 +702,8 @@ Compacted to 30,000, 5,000 over the target.
     });
 
     it("resets messages before the api call so the summary and new user input are both sent", async () => {
-      actions.setCompactTargetRatio(0.25);
       actions.appendToMessageParams({ role: "user", content: "old" });
-      actions.setMessageParamTokens(80_000);
+      actions.setMessageParamTokens(85_000);
       const calls: ModelMessage[][] = [];
       let callCount = 0;
       mock.method(aiDeps, "generateText", (opts: Record<string, unknown>) => {

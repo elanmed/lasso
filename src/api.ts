@@ -20,6 +20,7 @@ import {
   type HarnessToolName,
   toolPrint,
 } from "./tools.ts";
+import { compactTargetRatio, compactTriggerRatio } from "./config-types.ts";
 import { MISSING } from "./missing.ts";
 import { aiDeps } from "./deps.ts";
 import { prependToChatHistory } from "./log.ts";
@@ -192,12 +193,10 @@ export async function maybeCompactMessageParams(userInput: string) {
   })();
 
   const currRatio = nextApiTokens / contextWindow;
-  if (currRatio <= getState().config.compactTriggerRatio) return;
+  if (currRatio <= compactTriggerRatio) return;
   print.doing("Compacting" + getUnicodeChar("…"));
 
-  const targetTokens = Math.floor(
-    getState().config.compactTargetRatio * contextWindow,
-  );
+  const targetTokens = Math.floor(compactTargetRatio * contextWindow);
   const targetCharLen = approxTokensToCharLen(targetTokens);
 
   const compactMessageParam = `Compact the following conversation:

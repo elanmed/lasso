@@ -215,18 +215,6 @@ describe("state", () => {
     });
   });
 
-  it("set-compact-trigger-ratio", () => {
-    assert.strictEqual(getState().config.compactTriggerRatio, 0.8);
-    actions.setCompactTriggerRatio(0.5);
-    assert.strictEqual(getState().config.compactTriggerRatio, 0.5);
-  });
-
-  it("set-compact-target-ratio", () => {
-    assert.strictEqual(getState().config.compactTargetRatio, 0.3);
-    actions.setCompactTargetRatio(0.25);
-    assert.strictEqual(getState().config.compactTargetRatio, 0.25);
-  });
-
   it("set-keymap", () => {
     assert.deepStrictEqual(
       getState().config.keymaps.edit,
