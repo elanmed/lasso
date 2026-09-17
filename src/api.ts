@@ -33,6 +33,8 @@ const compactTargetRatio = 0.3;
 const dedicatedSummaryRatio = 0.5;
 const dedicatedSystemInstructionsRatio =
   compactTriggerRatio - dedicatedSummaryRatio;
+const maxNumberSummaries = 5;
+const maxRatioPerSummary = dedicatedSummaryRatio / maxNumberSummaries;
 
 function getApiStreamAbortSignal() {
   const controller = getState().abortControllers.apiStream;
@@ -162,6 +164,25 @@ export function getSystemInstructionsTokensApprox() {
     safeStringify({ ...harnessTools, ...getState().mcp.tools }),
   );
   return systemContentTokensApprox + toolsTokensApprox;
+}
+
+export async function compactSummaries() {
+  // [{summary: string, compactedAt: number}]
+  const { summaries } = getState().app.messageParams;
+  if (summaries.length < maxNumberSummaries) return null;
+
+  const sortedSummaries = summaries.toSorted((a, b) => {
+    return b.compactedAt - a.compactedAt;
+  });
+  const summariesToMerge = sortedSummaries.slice(0, 2);
+  const compactedAtsToMerge = summariesToMerge.map(
+    ({ compactedAt }) => summary.compacted,
+  );
+  const restSummaries = summaries.filter(
+    (compactedAt) => !compactedAtsToMerge.includes(compactedAt),
+  );
+
+  // I'll do the rest later
 }
 
 export async function compactMessageParams(): Promise<{
