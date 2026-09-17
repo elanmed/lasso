@@ -1,6 +1,10 @@
 import assert from "node:assert";
 import { promptDeps, getState } from "./state.ts";
-import { decimalToPercent, getApproxTokensFromMessages, strToApproxTokens } from "./utils.ts";
+import {
+  decimalToPercent,
+  getApproxTokensFromMessages,
+  strToApproxTokens,
+} from "./utils.ts";
 import { processDeps } from "./deps.ts";
 import {
   isUsageLimitDisabled,
