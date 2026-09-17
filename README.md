@@ -544,4 +544,3 @@ vim.g.clipboard = {
   - [ ] Separate error message for no config (`initlocal` and `initglobal`)
 - [ ] Improve compaction
 - [ ] Support code-mode
-- [ ] Remove windows support
