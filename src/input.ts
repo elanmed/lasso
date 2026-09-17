@@ -870,7 +870,7 @@ export async function pageEditStr() {
     return;
   }
 
-  const initialContentStr = `[lasso] Editor content
+  const initialContentStr = `# [lasso] Editor content
 
 ${editorInputValue}`;
 

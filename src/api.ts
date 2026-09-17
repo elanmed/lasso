@@ -271,7 +271,7 @@ export function warnOnLargeSystemInstructions() {
     systemInstructionsTokensApprox / contextWindow;
   if (systemInstructionsRatio >= dedicatedSystemInstructionsRatio) {
     print.warning(
-      `The current set of context, skills, and tools is ${decimalToPercent(systemInstructionsRatio)} of the ${String(contextWindow)} token context window!
+      `The current set of context, skills, and tools is ${decimalToPercent(systemInstructionsRatio)} of the ${contextWindow.toLocaleString()} token context window!
 
 Lasso reserves ${decimalToPercent(dedicatedSummaryRatio)} of the context window for compacted summaries and ${decimalToPercent(dedicatedSystemInstructionsRatio)} for system instructions. As is, the system instructions may breach the llm's context window and cause API calls to be rejected. Consider converting some of your context to skills and minimizing MCP servers.`,
     );

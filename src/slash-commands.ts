@@ -42,10 +42,14 @@ export function getAvailableCommandsStr() {
 export function getCustomSlashCommandsStr() {
   const contents = getState()
     .app.slashCommands.map(
-      ({ content, filePath }) => `## ${filePath}\n\n${content}`,
+      ({ content, filePath }) => `## ${filePath}
+
+${content}`,
     )
     .join("\n\n");
-  return `# [lasso] Slash commands:\n\n${contents}`;
+  return `# [lasso] Slash commands:
+
+${contents}`;
 }
 
 export function getAvailableSlashCommands() {
