@@ -1309,7 +1309,7 @@ latest question`,
       assert.strictEqual(spawned[0], "nano /tmp/lasso-test-uuid.txt");
       assert.strictEqual(
         testFs._files.get("/tmp/lasso-test-uuid.txt"),
-        `[lasso] Editor content
+        `# [lasso] Editor content
 
 editor input`,
       );
@@ -1703,7 +1703,7 @@ log content`,
       await harness.flush();
       assert.strictEqual(
         testFs._files.get("/tmp/lasso-test-uuid.txt"),
-        `[lasso] Editor content
+        `# [lasso] Editor content
 
 editor input`,
       );
@@ -1918,7 +1918,7 @@ custom command content`,
       assert.strictEqual(result, null);
       assert.strictEqual(
         testFs._files.get("/tmp/lasso-test-uuid.txt"),
-        `[lasso] Editor content
+        `# [lasso] Editor content
 
 editor input`,
       );

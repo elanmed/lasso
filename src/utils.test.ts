@@ -3,6 +3,7 @@ import assert from "node:assert";
 import {
   isAbortError,
   tryCatch,
+  safeStringify,
   tryCatchAsync,
   strToApproxTokens,
   approxTokensToCharLen,
@@ -101,6 +102,52 @@ describe("utils", () => {
           { type: "text", text: "second" },
         ]),
         "first\n\n\nsecond",
+      );
+    });
+
+    it("retuns empty strings for unrecognised content types at runtime", () => {
+      assert.equal(
+        getStrFromAssistantContent([{ type: "wat" } as never]),
+        "",
+      );
+    });
+
+    it("excludes tool-result and tool-approval-request content", () => {
+      assert.equal(
+        getStrFromAssistantContent([
+          {
+            type: "tool-result",
+            toolCallId: "call-1",
+            toolName: "tool",
+            output: { type: "text", value: "result" },
+          },
+          {
+            type: "tool-approval-request",
+            toolCallId: "call-2",
+            approvalId: "approval-1",
+          },
+          { type: "text", text: "after tools" },
+        ]),
+        "\n\nafter tools",
+      );
+    });
+  });
+
+  describe("safeStringify", () => {
+    it("returns an empty string for undefined", () => {
+      assert.equal(safeStringify(undefined), "");
+    });
+
+    it("returns stringify of regular values", () => {
+      assert.equal(safeStringify({ a: 1 }), '{"a":1}');
+    });
+
+    it("returns the error message for circular structures", () => {
+      const circular: Record<string, unknown> = {};
+      circular["self"] = circular;
+      assert.match(
+        safeStringify(circular),
+        /Converting circular structure to JSON/,
       );
     });
   });

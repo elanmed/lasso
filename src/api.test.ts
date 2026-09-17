@@ -1,10 +1,13 @@
 import { describe, it, beforeEach, afterEach, mock } from "node:test";
-
 import assert from "node:assert";
 import type { ModelMessage } from "ai";
 import { strToApproxTokens, safeStringify } from "./utils.ts";
 import { actions, getState, type MCPToolSet } from "./state.ts";
-import { maybeCompactMessageParams, resolveApiCall } from "./api.ts";
+import {
+  maybeCompactMessageParams,
+  resolveApiCall,
+  warnOnLargeSystemInstructions,
+} from "./api.ts";
 import { harnessTools } from "./tools.ts";
 import {
   setupTestContext,
@@ -15,6 +18,7 @@ import {
   makeGenerateTextResult,
   mockGenerateText,
   makeMcpTool,
+  makeFakeRl,
   getCapturedTool,
 } from "./test-helpers.ts";
 import { aiDeps } from "./deps.ts";
@@ -88,6 +92,43 @@ response text
       actions.setReasoning("high");
       await resolveApiCall("hello");
       assert.strictEqual(captured[1]?.["reasoning"], "high");
+    });
+
+    it("prints the [mcp] prefix on mcp tool call start", async () => {
+      const getCaptured = mockStdout();
+      actions.setMcp({}, { mcp_tool: makeMcpTool() });
+      mockGenerateText((options: Record<string, unknown>) => {
+        const onStart = options["onToolExecutionStart"] as (
+          arg: Record<string, unknown>,
+        ) => void;
+        onStart({
+          toolCall: {
+            toolName: "mcp_tool",
+            toolCallId: "call-9",
+            input: { a: 1 },
+          },
+        });
+        return Promise.resolve(makeGenerateTextResult());
+      });
+      await resolveApiCall("hello");
+      assert.strictEqual(stripAnsi(getCaptured()), `[mcp] mcp_tool: {"a":1}\n`);
+    });
+
+    it("resolves the queued editor input when the api call is interrupted", async () => {
+      actions.setChatHistoryPath("/tmp/test-history.log");
+      actions.setRl(makeFakeRl());
+      actions.setEditorInputValue("queued input");
+      const err = new Error("aborted");
+      err.name = "AbortError";
+      mock.method(aiDeps, "generateText", () => Promise.reject(err));
+      const getCaptured = mockStdout();
+      const result = await resolveApiCall("hello");
+      assert.strictEqual(result, null);
+      assert.strictEqual(getState().app.editorInputValue, "queued input");
+      assert.strictEqual(
+        stripAnsi(getCaptured()),
+        `You have queued messages! Edit them with {"name":"g","ctrl":true} or press enter to continue\n`,
+      );
     });
 
     it("returns null on abort error", async () => {
@@ -206,6 +247,24 @@ response text
           { role: "assistant", content: "answer" },
         ],
       });
+    });
+
+    it("creates temp file on tool call start for create_file", async () => {
+      mockGenerateText((options: Record<string, unknown>) => {
+        const onStart = options["onToolExecutionStart"] as (
+          arg: Record<string, unknown>,
+        ) => void;
+        onStart({
+          toolCall: {
+            toolName: "create_file",
+            toolCallId: "call-11",
+            input: { path: "/test/file.txt" },
+          },
+        });
+        return Promise.resolve(makeGenerateTextResult());
+      });
+      await resolveApiCall("create file");
+      assert.ok(testFs._files.has("/tmp/lasso-test-uuid.txt"));
     });
 
     it("creates temp file on tool call start for str_replace", async () => {
@@ -376,6 +435,49 @@ response text
         role: "user",
         content: "hello",
       });
+    });
+  });
+
+  describe("warnOnLargeSystemInstructions", () => {
+    beforeEach(() => {
+      actions.setContextWindowPerModel({ "claude-sonnet-4-20250514": 100_000 });
+    });
+
+    function getSystemInstructionsRatio() {
+      return (
+        (strToApproxTokens(promptDeps.getSystemContent()) +
+          strToApproxTokens(safeStringify(harnessTools))) /
+        100_000
+      );
+    }
+
+    it("returns early without a warning when the model has no context window", () => {
+      actions.setContextWindowPerModel({});
+      const getCaptured = mockStdout();
+      warnOnLargeSystemInstructions();
+      assert.strictEqual(stripAnsi(getCaptured()), "");
+    });
+
+    it("does not warn when system instructions are below the dedicated share", () => {
+      mock.method(promptDeps, "getSystemContent", () => "s".repeat(30_000));
+      const getCaptured = mockStdout();
+      warnOnLargeSystemInstructions();
+      assert.strictEqual(getSystemInstructionsRatio() < 0.5, true);
+      assert.strictEqual(stripAnsi(getCaptured()), "");
+    });
+
+    it("warns when system instructions reach the dedicated share", () => {
+      const systemContent = "s".repeat(150_000);
+      mock.method(promptDeps, "getSystemContent", () => systemContent);
+      const getCaptured = mockStdout();
+      warnOnLargeSystemInstructions();
+      assert.strictEqual(getSystemInstructionsRatio() >= 0.5, true);
+      assert.strictEqual(
+        stripAnsi(getCaptured()),
+        `The current set of context, skills, and tools is 51.91% of the 100,000 token context window!
+
+Lasso reserves 50% of the context window for compacted summaries and 30% for system instructions. As is, the system instructions may breach the llm's context window and cause API calls to be rejected. Consider converting some of your context to skills and minimizing MCP servers.\n`,
+      );
     });
   });
 
@@ -678,6 +780,24 @@ Compacted to 35,000, 5,000 over the target.
         tokensStale: false,
         messages: [{ role: "user", content: "hi" }],
       });
+    });
+
+    it("resolves the queued editor input when compaction is aborted", async () => {
+      const getCaptured = mockStdout();
+      actions.appendToMessageParams({ role: "user", content: "hi" });
+      actions.setMessageParamTokens(85_000);
+      actions.setRl(makeFakeRl());
+      actions.setEditorInputValue("queued input");
+      const err = new Error("aborted");
+      err.name = "AbortError";
+      mock.method(aiDeps, "generateText", () => Promise.reject(err));
+      await maybeCompactMessageParams("hi");
+      assert.strictEqual(getState().abortControllers.apiStream, null);
+      assert.strictEqual(getState().app.editorInputValue, "queued input");
+      assert.strictEqual(
+        stripAnsi(getCaptured()),
+        `Compacting…\nYou have queued messages! Edit them with {"name":"g","ctrl":true} or press enter to continue\n`,
+      );
     });
 
     it("keeps messages on abort error during compaction", async () => {
