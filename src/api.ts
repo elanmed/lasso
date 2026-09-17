@@ -1,5 +1,5 @@
 import assert from "node:assert";
-import { Output, type ModelMessage } from "ai";
+import { Output, type LanguageModelUsage, type ModelMessage } from "ai";
 import { z } from "zod";
 import { actions, getState, promptDeps } from "./state.ts";
 import {
@@ -164,35 +164,15 @@ export function getSystemInstructionsTokensApprox() {
   return systemContentTokensApprox + toolsTokensApprox;
 }
 
-export async function maybeCompactMessageParams(userInput: string) {
+export async function compactMessageParams(): Promise<{
+  compacted: string;
+  usage: LanguageModelUsage;
+} | null> {
   const { model } = getState().config;
-  if (model === MISSING) return;
+  assert(model !== MISSING);
 
   const contextWindow = getState().config.contextWindowPerModel[model];
-  if (contextWindow === undefined) return;
-
-  // maybeCompactMessageParams runs before each api call turn, so we don't know the token
-  // count of userInput until after the API call. This can be problematic when the userInput
-  // would large enough to trigger compaction, so we approximate for the userInput
-  const userInputTokensApprox = strToApproxTokens(userInput);
-  // the same applies to the system instructions, which is sent with every api call
-  const systemInstructionsTokensApprox = getSystemInstructionsTokensApprox();
-
-  const nextApiTokens = (() => {
-    if (getState().app.messageParams.tokensStale) {
-      return (
-        getApproxTokensFromMessages(getState().app.messageParams.messages) +
-        userInputTokensApprox +
-        systemInstructionsTokensApprox
-      );
-    } else {
-      return getState().app.messageParams.tokens + userInputTokensApprox;
-    }
-  })();
-
-  const currRatio = nextApiTokens / contextWindow;
-  if (currRatio <= compactTriggerRatio) return;
-  print.doing("Compacting" + getUnicodeChar("…"));
+  assert(contextWindow !== undefined);
 
   const targetTokens = Math.floor(compactTargetRatio * contextWindow);
   const targetCharLen = approxTokensToCharLen(targetTokens);
@@ -224,15 +204,52 @@ ${JSON.stringify(getState().app.messageParams.messages)}
       if (getState().app.editorInputValue !== null) {
         await resolveInterruptWithEditor();
       }
-      return;
+      return null;
     }
 
     print.error(getMessageFromError(generateTextResult.error));
-    return;
+    return null;
   }
 
   const { usage, output } = generateTextResult.value;
   const { compacted } = output;
+  return { compacted, usage };
+}
+
+export async function maybeCompact(userInput: string) {
+  const { model } = getState().config;
+  if (model === MISSING) return;
+
+  const contextWindow = getState().config.contextWindowPerModel[model];
+  if (contextWindow === undefined) return;
+
+  // maybeCompactMessageParams runs before each api call turn, so we don't know the token
+  // count of userInput until after the API call. This can be problematic when the userInput
+  // would large enough to trigger compaction, so we approximate for the userInput
+  const userInputTokensApprox = strToApproxTokens(userInput);
+  // the same applies to the system instructions, which is sent with every api call
+  const systemInstructionsTokensApprox = getSystemInstructionsTokensApprox();
+
+  const nextApiTokens = (() => {
+    if (getState().app.messageParams.tokensStale) {
+      return (
+        getApproxTokensFromMessages(getState().app.messageParams.messages) +
+        userInputTokensApprox +
+        systemInstructionsTokensApprox
+      );
+    } else {
+      return getState().app.messageParams.tokens + userInputTokensApprox;
+    }
+  })();
+
+  const currRatio = nextApiTokens / contextWindow;
+  if (currRatio <= compactTriggerRatio) return;
+
+  print.doing("Compacting" + getUnicodeChar("…"));
+  const compactMessageParamsResult = await compactMessageParams();
+  if (compactMessageParamsResult === null) return;
+  const { compacted, usage } = compactMessageParamsResult;
+
   await appendModelUsage(usage);
   const afterCompactionTokens = usage.outputTokens ?? 0;
 

@@ -4,7 +4,8 @@ import type { ModelMessage } from "ai";
 import { safeStringify, strToApproxTokens } from "./utils.ts";
 import { actions, getState, type MCPToolSet } from "./state.ts";
 import {
-  maybeCompactMessageParams,
+  maybeCompact,
+  compactMessageParams,
   resolveApiCall,
   warnOnLargeSystemInstructions,
 } from "./api.ts";
@@ -481,7 +482,7 @@ Lasso reserves 50% of the context window for compacted summaries and 30% for sys
     });
   });
 
-  describe("maybeCompactMessageParams", () => {
+  describe("maybeCompact", () => {
     beforeEach(() => {
       actions.setContextWindowPerModel({ "claude-sonnet-4-20250514": 100_000 });
     });
@@ -499,7 +500,7 @@ Lasso reserves 50% of the context window for compacted summaries and 30% for sys
         called = true;
         return Promise.resolve(makeGenerateTextResult());
       });
-      await maybeCompactMessageParams("hi");
+      await maybeCompact("hi");
       assert.strictEqual(called, false);
       assert.deepStrictEqual(getState().app.messageParams, {
         tokens: 60_000,
@@ -530,7 +531,7 @@ Lasso reserves 50% of the context window for compacted summaries and 30% for sys
           }),
         );
       });
-      await maybeCompactMessageParams("hi");
+      await maybeCompact("hi");
       assert.strictEqual(capturedMessages.length, 1);
       assert.deepStrictEqual(getState().app.messageParams, {
         tokens: 25_000 + getApproxAdditions(),
@@ -552,7 +553,7 @@ Lasso reserves 50% of the context window for compacted summaries and 30% for sys
         called = true;
         return Promise.resolve(makeGenerateTextResult());
       });
-      await maybeCompactMessageParams("hi");
+      await maybeCompact("hi");
       assert.strictEqual(called, false);
       assert.deepStrictEqual(getState().app.messageParams, {
         tokens: 2_000,
@@ -578,7 +579,7 @@ Lasso reserves 50% of the context window for compacted summaries and 30% for sys
           makeGenerateTextResult({ output: { compacted: "" } }),
         );
       });
-      await maybeCompactMessageParams("hi");
+      await maybeCompact("hi");
       const systemContentTokensApprox = strToApproxTokens(systemContent);
       assert.strictEqual(strToApproxTokens(longUserContent) < 70_000, true);
       assert.strictEqual(
@@ -604,7 +605,7 @@ Lasso reserves 50% of the context window for compacted summaries and 30% for sys
           makeGenerateTextResult({ output: { compacted: "" } }),
         );
       });
-      await maybeCompactMessageParams("hi");
+      await maybeCompact("hi");
       const toolsTokensApprox = strToApproxTokens(safeStringify(harnessTools));
       assert.strictEqual(strToApproxTokens(longUserContent) < 80_000, true);
       assert.strictEqual(
@@ -630,7 +631,7 @@ Lasso reserves 50% of the context window for compacted summaries and 30% for sys
           }),
         ),
       );
-      await maybeCompactMessageParams("hi");
+      await maybeCompact("hi");
       const withMcpTools = strToApproxTokens(
         safeStringify({ ...harnessTools, ...getState().mcp.tools }),
       );
@@ -662,7 +663,7 @@ Lasso reserves 50% of the context window for compacted summaries and 30% for sys
         called = true;
         return Promise.resolve(makeGenerateTextResult());
       });
-      await maybeCompactMessageParams("hi");
+      await maybeCompact("hi");
       assert.strictEqual(called, false);
     });
 
@@ -683,7 +684,7 @@ Lasso reserves 50% of the context window for compacted summaries and 30% for sys
           }),
         );
       });
-      await maybeCompactMessageParams("hi");
+      await maybeCompact("hi");
       assert.strictEqual(capturedMessages.length, 1);
       const capturedMessage = capturedMessages[0];
       assert(capturedMessage !== undefined);
@@ -728,7 +729,7 @@ Lasso reserves 50% of the context window for compacted summaries and 30% for sys
       });
 
       // 300 chars ≈ 100 tokens, pushing 80_000 over the 0.8 trigger (80_000 tokens).
-      await maybeCompactMessageParams("x".repeat(300));
+      await maybeCompact("x".repeat(300));
 
       assert.strictEqual(capturedMessages.length, 1);
       assert.deepStrictEqual(getState().app.messageParams, {
@@ -744,7 +745,7 @@ Lasso reserves 50% of the context window for compacted summaries and 30% for sys
       mock.method(aiDeps, "generateText", () =>
         Promise.reject(new Error("network error")),
       );
-      await maybeCompactMessageParams("hi");
+      await maybeCompact("hi");
       assert.deepStrictEqual(getState().app.messageParams, {
         tokens: 85_000,
         tokensStale: false,
@@ -761,7 +762,7 @@ Lasso reserves 50% of the context window for compacted summaries and 30% for sys
       const err = new Error("aborted");
       err.name = "AbortError";
       mock.method(aiDeps, "generateText", () => Promise.reject(err));
-      await maybeCompactMessageParams("hi");
+      await maybeCompact("hi");
       assert.strictEqual(getState().abortControllers.apiStream, null);
       assert.strictEqual(getState().app.editorInputValue, "queued input");
       assert.strictEqual(
@@ -777,7 +778,7 @@ Lasso reserves 50% of the context window for compacted summaries and 30% for sys
       const err = new Error("aborted");
       err.name = "AbortError";
       mock.method(aiDeps, "generateText", () => Promise.reject(err));
-      await maybeCompactMessageParams("hi");
+      await maybeCompact("hi");
       assert.strictEqual(getState().abortControllers.apiStream, null);
       assert.deepStrictEqual(getState().app.messageParams, {
         tokens: 85_000,
@@ -822,7 +823,7 @@ Lasso reserves 50% of the context window for compacted summaries and 30% for sys
         callCount = callCount + 1;
         return Promise.resolve(makeGenerateTextResult(overrides));
       });
-      await maybeCompactMessageParams("new input");
+      await maybeCompact("new input");
       await resolveApiCall("new input");
       assert.deepStrictEqual(getState().app.messageParams, {
         tokens: 25,
@@ -848,6 +849,71 @@ Lasso reserves 50% of the context window for compacted summaries and 30% for sys
         { role: "assistant", content: "compacted summary" },
         { role: "user", content: "new input" },
       ]);
+    });
+  });
+
+  describe("compactMessageParams", () => {
+    beforeEach(() => {
+      actions.setContextWindowPerModel({ "claude-sonnet-4-20250514": 100_000 });
+    });
+
+    it("returns null and does not touch messages when generateText fails", async () => {
+      actions.appendToMessageParams({ role: "user", content: "hi" });
+      actions.setMessageParamTokens(85_000);
+      mock.method(aiDeps, "generateText", () =>
+        Promise.reject(new Error("network error")),
+      );
+      const result = await compactMessageParams();
+      assert.strictEqual(result, null);
+      assert.deepStrictEqual(getState().app.messageParams, {
+        tokens: 85_000,
+        tokensStale: false,
+        messages: [{ role: "user", content: "hi" }],
+      });
+    });
+
+    it("returns null and does not touch messages on abort error", async () => {
+      const getCaptured = mockStdout();
+      actions.appendToMessageParams({ role: "user", content: "hi" });
+      actions.setMessageParamTokens(85_000);
+      const err = new Error("aborted");
+      err.name = "AbortError";
+      mock.method(aiDeps, "generateText", () => Promise.reject(err));
+      const result = await compactMessageParams();
+      assert.strictEqual(result, null);
+      assert.strictEqual(getState().abortControllers.apiStream, null);
+      assert.deepStrictEqual(getState().app.messageParams, {
+        tokens: 85_000,
+        tokensStale: false,
+        messages: [{ role: "user", content: "hi" }],
+      });
+      assert.strictEqual(stripAnsi(getCaptured()), "");
+    });
+
+    it("returns the compacted summary and usage on success", async () => {
+      actions.appendToMessageParams({ role: "user", content: "hi" });
+      actions.setMessageParamTokens(85_000);
+      const usage = {
+        inputTokens: 0,
+        outputTokens: 25_000,
+        inputTokenDetails: { cacheReadTokens: 0, cacheWriteTokens: 0 },
+      };
+      mock.method(aiDeps, "generateText", () =>
+        Promise.resolve(
+          makeGenerateTextResult({
+            output: { compacted: "compacted summary" },
+            usage,
+          }),
+        ),
+      );
+      const result = await compactMessageParams();
+      assert.deepStrictEqual(result, { compacted: "compacted summary", usage });
+      assert.deepStrictEqual(getState().app.messageParams, {
+        tokens: 85_000,
+        tokensStale: false,
+        messages: [{ role: "user", content: "hi" }],
+      });
+      assert.deepStrictEqual(getState().app.modelUsageForSession, {});
     });
   });
 });

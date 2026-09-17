@@ -16,7 +16,7 @@ import {
 } from "./input.ts";
 import {
   resolveApiCall,
-  maybeCompactMessageParams,
+  maybeCompact,
   warnOnLargeSystemInstructions,
 } from "./api.ts";
 import { initLogs } from "./log.ts";
@@ -48,7 +48,7 @@ async function main() {
     const missingConfig = blockOnMissingConfig();
     if (missingConfig) continue;
 
-    await maybeCompactMessageParams(userInput);
+    await maybeCompact(userInput);
 
     const text = await resolveApiCall(userInput);
     if (text === null) continue;
