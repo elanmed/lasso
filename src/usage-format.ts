@@ -1,5 +1,5 @@
 import assert from "node:assert";
-import { getState } from "./state.ts";
+import { promptDeps, getState } from "./state.ts";
 import { decimalToPercent } from "./utils.ts";
 import { processDeps } from "./deps.ts";
 import {
@@ -7,6 +7,7 @@ import {
   type ModelUsage,
   type TokenUsage,
 } from "./usage.ts";
+import { getApproxTokensFromMessages, strToApproxTokens } from "./tokens.ts";
 
 const DOLLARS_PER_MILLION = 1_000_000;
 
@@ -109,6 +110,21 @@ export function getPrettyContextWindowUsage() {
   const contextWindow = getState().config.contextWindowPerModel[model];
   if (contextWindow === undefined) return "";
 
-  const currRatio = getState().app.messageParams.tokens / contextWindow;
+  const currTokens = (() => {
+    if (getState().app.messageParams.tokensStale) {
+      const systemInstructionsTokensApprox = strToApproxTokens(
+        promptDeps.getSystemContent(),
+      );
+
+      return (
+        getApproxTokensFromMessages(getState().app.messageParams.messages) +
+        systemInstructionsTokensApprox
+      );
+    } else {
+      return getState().app.messageParams.tokens;
+    }
+  })();
+
+  const currRatio = currTokens / contextWindow;
   return `${decimalToPercent(currRatio, { precision: 3 })} of context window`;
 }

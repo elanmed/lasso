@@ -343,6 +343,26 @@ describe("usage-format", () => {
       assert.strictEqual(result, "150% of context window");
     });
 
+    it("uses approximated message tokens when tokens are stale", () => {
+      actions.setModel("test-model");
+      actions.setContextWindowPerModel({ "test-model": 10_000 });
+      actions.appendToMessageParams({ role: "user", content: "hihoho" });
+      actions.setMessageParamTokens(5_000);
+      actions.setMessageParamTokensStale(true);
+      const result = getPrettyContextWindowUsage();
+      assert.strictEqual(result, "0.12% of context window");
+    });
+
+    it("uses the stored token count when tokens are not stale", () => {
+      actions.setModel("test-model");
+      actions.setContextWindowPerModel({ "test-model": 10_000 });
+      actions.appendToMessageParams({ role: "user", content: "hihoho" });
+      actions.setMessageParamTokens(5_000);
+      actions.setMessageParamTokensStale(false);
+      const result = getPrettyContextWindowUsage();
+      assert.strictEqual(result, "50% of context window");
+    });
+
     it("returns empty string when there are fewer than 80 columns", () => {
       mock.method(processDeps.stdout, "getColumns", () => 79);
       actions.setModel("test-model");
