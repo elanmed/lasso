@@ -756,12 +756,10 @@ export async function resolveSlashCommand(rawInput: string) {
 
 export function clearCommand() {
   print.infoSubtle(`Context cleared (${getPrettyTokenUsage()})`);
-  actions.resetMessageParams();
+  actions.resetConversation();
   // the next api call only reports its token usage after it completes, so seeding with the
   // system prompt approx keeps the context window percent from displaying 0% in the meantime
-  actions.setMessageParamTokens(
-    strToApproxTokens(promptDeps.getSystemContent()),
-  );
+  actions.setPromptTokens(strToApproxTokens(promptDeps.getSystemContent()));
   actions.setModelUsageForSession({});
 }
 
@@ -851,7 +849,7 @@ export function setModelCommand(rawInput: string) {
   const prevModel = getState().config.model;
   actions.setModel(model);
   print.doing(`Model updated from \`${prevModel}\` to \`${model}\``);
-  actions.setMessageParamTokensStale(true);
+  actions.setPromptTokensDirty(true);
 }
 
 export async function pageContextStr() {
@@ -979,7 +977,7 @@ export function resume(rawInput: string) {
     );
     if (!readResult.ok) continue;
 
-    actions.resetMessageParams();
+    actions.resetConversation();
     return `Continue the conversation recorded in the transcript below. Respond to this message with "Ready to continue chatting."
 Transcript:
 ${readResult.value}
@@ -1218,7 +1216,7 @@ ${historyStr}`;
 }
 
 export async function pageLastResponse() {
-  const { messages } = getState().app.messageParams;
+  const { messages } = getState().app.conversation;
   const lastMessage = messages.findLast(
     (message) => message.role === "assistant",
   );
@@ -1248,7 +1246,7 @@ ${formattedContentStr}`;
 }
 
 export async function pageLastMessage() {
-  const { messages } = getState().app.messageParams;
+  const { messages } = getState().app.conversation;
   const lastMessage = messages.findLast((message) => message.role === "user");
 
   if (lastMessage == undefined) {
@@ -1278,7 +1276,7 @@ ${contentStr}`;
 export async function pageMessages() {
   const initialContentStr = `# [lasso] Messages
 
-${stringify(getState().app.messageParams.messages.toReversed())}`;
+${stringify(getState().app.conversation.messages.toReversed())}`;
 
   await openWithPager({
     initialContentStr: normalizeLine(initialContentStr),

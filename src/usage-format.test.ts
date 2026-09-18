@@ -33,8 +33,8 @@ describe("usage-format", () => {
     it("includes context window usage when configured", () => {
       actions.setModel("test-model");
       actions.setContextWindowPerModel({ "test-model": 10_000 });
-      actions.appendToMessageParams({ role: "user", content: "hi" });
-      actions.setMessageParamTokens(5_000);
+      actions.appendToConversation({ role: "user", content: "hi" });
+      actions.setPromptTokens(5_000);
       const result = getPrettyUsage();
       assert.strictEqual(result, "0 tokens in session, 50% of context window");
     });
@@ -319,8 +319,8 @@ describe("usage-format", () => {
     it("returns the percent of the context window used", () => {
       actions.setModel("test-model");
       actions.setContextWindowPerModel({ "test-model": 10_000 });
-      actions.appendToMessageParams({ role: "user", content: "hi" });
-      actions.setMessageParamTokens(5_000);
+      actions.appendToConversation({ role: "user", content: "hi" });
+      actions.setPromptTokens(5_000);
       const result = getPrettyContextWindowUsage();
       assert.strictEqual(result, "50% of context window");
     });
@@ -328,8 +328,8 @@ describe("usage-format", () => {
     it("rounds partial percents to 3 decimal places", () => {
       actions.setModel("test-model");
       actions.setContextWindowPerModel({ "test-model": 10_000 });
-      actions.appendToMessageParams({ role: "user", content: "hi" });
-      actions.setMessageParamTokens(1_666);
+      actions.appendToConversation({ role: "user", content: "hi" });
+      actions.setPromptTokens(1_666);
       const result = getPrettyContextWindowUsage();
       assert.strictEqual(result, "16.66% of context window");
     });
@@ -337,8 +337,8 @@ describe("usage-format", () => {
     it("returns percents above 100", () => {
       actions.setModel("test-model");
       actions.setContextWindowPerModel({ "test-model": 10_000 });
-      actions.appendToMessageParams({ role: "user", content: "hi" });
-      actions.setMessageParamTokens(15_000);
+      actions.appendToConversation({ role: "user", content: "hi" });
+      actions.setPromptTokens(15_000);
       const result = getPrettyContextWindowUsage();
       assert.strictEqual(result, "150% of context window");
     });
@@ -346,9 +346,9 @@ describe("usage-format", () => {
     it("uses approximated message tokens when tokens are stale", () => {
       actions.setModel("test-model");
       actions.setContextWindowPerModel({ "test-model": 10_000 });
-      actions.appendToMessageParams({ role: "user", content: "hihoho" });
-      actions.setMessageParamTokens(5_000);
-      actions.setMessageParamTokensStale(true);
+      actions.appendToConversation({ role: "user", content: "hihoho" });
+      actions.setPromptTokens(5_000);
+      actions.setPromptTokensDirty(true);
       const result = getPrettyContextWindowUsage();
       assert.strictEqual(result, "0.12% of context window");
     });
@@ -356,9 +356,9 @@ describe("usage-format", () => {
     it("uses the stored token count when tokens are not stale", () => {
       actions.setModel("test-model");
       actions.setContextWindowPerModel({ "test-model": 10_000 });
-      actions.appendToMessageParams({ role: "user", content: "hihoho" });
-      actions.setMessageParamTokens(5_000);
-      actions.setMessageParamTokensStale(false);
+      actions.appendToConversation({ role: "user", content: "hihoho" });
+      actions.setPromptTokens(5_000);
+      actions.setPromptTokensDirty(false);
       const result = getPrettyContextWindowUsage();
       assert.strictEqual(result, "50% of context window");
     });

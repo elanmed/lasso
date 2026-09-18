@@ -664,7 +664,7 @@ export async function createSubagentTool(
       const subagentIndent = "   ";
       toolPrint(`${subagentIndent}create_subagent`, message);
 
-      const inputMessageParam: ModelMessage = {
+      const userMessage: ModelMessage = {
         role: "user",
         content: subagentSchema.prompt,
       };
@@ -674,7 +674,7 @@ export async function createSubagentTool(
           model: getLanguageModel(model),
           // Subagents should always use the provider's default reasoning
           instructions: systemContent,
-          messages: [inputMessageParam],
+          messages: [userMessage],
           tools: subagentTools,
           stopWhen: aiDeps.isLoopFinished(),
           abortSignal: controller.signal,

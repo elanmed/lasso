@@ -114,17 +114,17 @@ export function getPrettyContextWindowUsage() {
   if (contextWindow === undefined) return "";
 
   const currTokens = (() => {
-    if (getState().app.messageParams.tokensStale) {
+    if (getState().app.promptTokens.dirty) {
       const systemInstructionsTokensApprox = strToApproxTokens(
         promptDeps.getSystemContent(),
       );
 
       return (
-        getApproxTokensFromMessages(getState().app.messageParams.messages) +
+        getApproxTokensFromMessages(getState().app.conversation.messages) +
         systemInstructionsTokensApprox
       );
     } else {
-      return getState().app.messageParams.tokens;
+      return getState().app.promptTokens.value;
     }
   })();
 

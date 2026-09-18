@@ -42,12 +42,13 @@ export interface McpState {
 
 interface State {
   app: {
-    // TODO (not you ai): restructure this state
-    messageParams: {
-      tokens: number;
-      tokensStale: boolean;
+    conversation: {
       messages: ModelMessage[];
       summaries: ModelSummary[];
+    };
+    promptTokens: {
+      value: number;
+      dirty: boolean;
     };
     editorInputValue: string | null;
     slashCommands: SlashCommand[];
@@ -83,11 +84,13 @@ interface State {
 
 const createInitialState = (): State => ({
   app: {
-    messageParams: {
-      tokens: 0,
-      tokensStale: false,
+    conversation: {
       messages: [],
       summaries: [],
+    },
+    promptTokens: {
+      value: 0,
+      dirty: false,
     },
     editorInputValue: null,
     slashCommands: [],
@@ -170,43 +173,39 @@ const logStateChange = (actionType: string, before: string, after: string) => {
 
 export const actions = {
   setSummaries(summaries: ModelSummary[]) {
-    const before = state.app.messageParams.summaries;
-    state.app.messageParams.summaries = summaries;
+    const before = state.app.conversation.summaries;
+    state.app.conversation.summaries = summaries;
     logStateChange("set-summaries", stringify(before), stringify(summaries));
   },
 
-  appendToMessageParams(message: ModelMessage) {
-    const before = state.app.messageParams.messages.length;
-    state.app.messageParams.messages.push(message);
+  appendToConversation(message: ModelMessage) {
+    const before = state.app.conversation.messages.length;
+    state.app.conversation.messages.push(message);
     logStateChange(
-      "append-to-message-params",
+      "append-to-conversation",
       String(before),
-      String(state.app.messageParams.messages.length),
+      String(state.app.conversation.messages.length),
     );
   },
 
-  setMessageParamTokens(tokens: number) {
-    const before = state.app.messageParams.tokens;
-    state.app.messageParams.tokens = tokens;
-    logStateChange("set-message-param-tokens", String(before), String(tokens));
+  setPromptTokens(tokens: number) {
+    const before = state.app.promptTokens.value;
+    state.app.promptTokens.value = tokens;
+    logStateChange("set-prompt-tokens", String(before), String(tokens));
   },
 
-  appendToMessageParamTokens(tokens: number) {
-    const before = state.app.messageParams.tokens;
-    const after = state.app.messageParams.tokens + tokens;
-    state.app.messageParams.tokens = after;
-    logStateChange(
-      "append-to-message-param-tokens",
-      String(before),
-      String(after),
-    );
+  appendToPromptTokens(tokens: number) {
+    const before = state.app.promptTokens.value;
+    const after = state.app.promptTokens.value + tokens;
+    state.app.promptTokens.value = after;
+    logStateChange("append-to-prompt-tokens", String(before), String(after));
   },
 
-  setMessageParamTokensStale(tokensStale: boolean) {
-    const before = state.app.messageParams.tokensStale;
-    state.app.messageParams.tokensStale = tokensStale;
+  setPromptTokensDirty(tokensStale: boolean) {
+    const before = state.app.promptTokens.dirty;
+    state.app.promptTokens.dirty = tokensStale;
     logStateChange(
-      "set-message-param-tokens-stale",
+      "set-prompt-tokens-dirty",
       String(before),
       String(tokensStale),
     );
@@ -283,15 +282,17 @@ export const actions = {
     );
   },
 
-  resetMessageParams() {
-    const before = state.app.messageParams.tokens;
-    state.app.messageParams = {
-      tokens: 0,
-      tokensStale: false,
+  resetConversation() {
+    const before = state.app.promptTokens.value;
+    state.app.conversation = {
       messages: [],
       summaries: [],
     };
-    logStateChange("reset-message-params", String(before), "0");
+    state.app.promptTokens = {
+      value: 0,
+      dirty: false,
+    };
+    logStateChange("reset-conversation", String(before), "0");
   },
 
   setQuestionAbortController(controller: AbortController | null) {

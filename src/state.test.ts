@@ -17,7 +17,7 @@ describe("state", () => {
   });
 
   it("resetState restores initial state after mutations", () => {
-    actions.appendToMessageParams({ role: "user", content: "hi" });
+    actions.appendToConversation({ role: "user", content: "hi" });
     actions.setQuestionAbortController(new AbortController());
     actions.setApiStreamAbortController(new AbortController());
     actions.setInterruptWithEditorAbortController(new AbortController());
@@ -28,11 +28,13 @@ describe("state", () => {
     actions.resetState();
     clearTimeout(timeout);
 
-    assert.deepStrictEqual(getState().app.messageParams, {
+    assert.deepStrictEqual(getState().app.conversation, {
       summaries: [],
-      tokens: 0,
-      tokensStale: false,
       messages: [],
+    });
+    assert.deepStrictEqual(getState().app.promptTokens, {
+      value: 0,
+      dirty: false,
     });
     assert.deepStrictEqual(getState().app.modelUsageForLimitWindow, {});
     assert.deepStrictEqual(getState().app.modelUsageForSession, {});
@@ -49,11 +51,13 @@ describe("state", () => {
   });
 
   it("initial state", () => {
-    assert.deepStrictEqual(getState().app.messageParams, {
+    assert.deepStrictEqual(getState().app.conversation, {
       summaries: [],
-      tokens: 0,
-      tokensStale: false,
       messages: [],
+    });
+    assert.deepStrictEqual(getState().app.promptTokens, {
+      value: 0,
+      dirty: false,
     });
     assert.deepStrictEqual(getState().app.modelUsageForLimitWindow, {});
     assert.deepStrictEqual(getState().app.modelUsageForSession, {});
@@ -67,35 +71,41 @@ describe("state", () => {
     assert.equal(getState().app.chatHistoryPath, "");
   });
 
-  describe("append-to-message-params", () => {
+  describe("append-to-conversation", () => {
     it("appends new message to the list", () => {
-      assert.deepStrictEqual(getState().app.messageParams, {
+      assert.deepStrictEqual(getState().app.conversation, {
         summaries: [],
-        tokens: 0,
-        tokensStale: false,
         messages: [],
       });
-      actions.appendToMessageParams({ role: "user", content: "hi" });
-      assert.equal(getState().app.messageParams.messages.length, 1);
-      assert.deepStrictEqual(getState().app.messageParams, {
+      assert.deepStrictEqual(getState().app.promptTokens, {
+        value: 0,
+        dirty: false,
+      });
+      actions.appendToConversation({ role: "user", content: "hi" });
+      assert.equal(getState().app.conversation.messages.length, 1);
+      assert.deepStrictEqual(getState().app.conversation, {
         summaries: [],
-        tokens: 0,
-        tokensStale: false,
         messages: [{ role: "user", content: "hi" }],
+      });
+      assert.deepStrictEqual(getState().app.promptTokens, {
+        value: 0,
+        dirty: false,
       });
     });
 
     it("appends multiple messages in order", () => {
-      assert.deepStrictEqual(getState().app.messageParams, {
+      assert.deepStrictEqual(getState().app.conversation, {
         summaries: [],
-        tokens: 0,
-        tokensStale: false,
         messages: [],
       });
-      actions.appendToMessageParams({ role: "user", content: "hi" });
-      actions.appendToMessageParams({ role: "assistant", content: "hello" });
+      assert.deepStrictEqual(getState().app.promptTokens, {
+        value: 0,
+        dirty: false,
+      });
+      actions.appendToConversation({ role: "user", content: "hi" });
+      actions.appendToConversation({ role: "assistant", content: "hello" });
 
-      const params = getState().app.messageParams.messages;
+      const params = getState().app.conversation.messages;
       assert.equal(params.length, 2);
       const first = params[0];
       assert(first !== undefined);
@@ -105,40 +115,42 @@ describe("state", () => {
 
       assert.equal(first.role, "user");
       assert.equal(second.role, "assistant");
-      assert.equal(getState().app.messageParams.tokens, 0);
+      assert.equal(getState().app.promptTokens.value, 0);
     });
   });
 
-  it("set-message-param-tokens", () => {
-    assert.equal(getState().app.messageParams.tokens, 0);
-    actions.setMessageParamTokens(42);
-    assert.equal(getState().app.messageParams.tokens, 42);
+  it("set-prompt-tokens", () => {
+    assert.equal(getState().app.promptTokens.value, 0);
+    actions.setPromptTokens(42);
+    assert.equal(getState().app.promptTokens.value, 42);
   });
 
-  it("append-to-message-param-tokens", () => {
-    actions.setMessageParamTokens(40);
-    actions.appendToMessageParamTokens(2);
-    assert.equal(getState().app.messageParams.tokens, 42);
-    assert.equal(getState().app.messageParams.tokensStale, false);
+  it("append-to-prompt-tokens", () => {
+    actions.setPromptTokens(40);
+    actions.appendToPromptTokens(2);
+    assert.equal(getState().app.promptTokens.value, 42);
+    assert.equal(getState().app.promptTokens.dirty, false);
   });
 
-  it("set-message-param-tokens-stale", () => {
-    assert.equal(getState().app.messageParams.tokensStale, false);
-    actions.setMessageParamTokensStale(true);
-    assert.equal(getState().app.messageParams.tokensStale, true);
+  it("set-prompt-tokens-dirty", () => {
+    assert.equal(getState().app.promptTokens.dirty, false);
+    actions.setPromptTokensDirty(true);
+    assert.equal(getState().app.promptTokens.dirty, true);
   });
 
-  it("reset-message-params resets summaries", () => {
-    actions.appendToMessageParams({ role: "user", content: "hi" });
+  it("reset-conversation resets summaries", () => {
+    actions.appendToConversation({ role: "user", content: "hi" });
     actions.setSummaries([{ compacted: "summary", compactedAt: 4, tokens: 5 }]);
-    actions.setMessageParamTokens(7);
-    assert.equal(getState().app.messageParams.tokens, 7);
-    actions.resetMessageParams();
-    assert.deepStrictEqual(getState().app.messageParams, {
+    actions.setPromptTokens(7);
+    assert.equal(getState().app.promptTokens.value, 7);
+    actions.resetConversation();
+    assert.deepStrictEqual(getState().app.conversation, {
       summaries: [],
-      tokens: 0,
-      tokensStale: false,
       messages: [],
+    });
+    assert.deepStrictEqual(getState().app.promptTokens, {
+      value: 0,
+      dirty: false,
     });
   });
 

@@ -5,7 +5,7 @@ import { safeStringify, strToApproxTokens } from "./utils.ts";
 import { actions, getState, type MCPToolSet } from "./state.ts";
 import {
   maybeCompact,
-  getMessageParamsSummary,
+  getConversationSummary,
   getMergedSummaries,
   resolveApiCall,
   warnOnLargeSystemInstructions,
@@ -141,10 +141,8 @@ response text
       mock.method(aiDeps, "generateText", () => Promise.reject(err));
       const result = await resolveApiCall("hello");
       assert.strictEqual(result, null);
-      assert.deepStrictEqual(getState().app.messageParams, {
+      assert.deepStrictEqual(getState().app.conversation, {
         summaries: [],
-        tokens: 16,
-        tokensStale: true,
         messages: [
           { role: "user", content: "hello" },
           {
@@ -152,6 +150,10 @@ response text
             content: "[Interrupted before a response was generated]",
           },
         ],
+      });
+      assert.deepStrictEqual(getState().app.promptTokens, {
+        value: 16,
+        dirty: true,
       });
     });
 
@@ -185,21 +187,23 @@ response text
         ],
       });
       assert.deepStrictEqual(getState().app.modelUsageForLimitWindow, {});
-      assert.deepStrictEqual(getState().app.messageParams, {
+      assert.deepStrictEqual(getState().app.conversation, {
         summaries: [],
-        tokens: 49,
-        tokensStale: false,
         messages: [
           { role: "user", content: "hello" },
           { role: "assistant", content: "tool call" },
           { role: "tool", content: "tool result" },
         ],
       });
+      assert.deepStrictEqual(getState().app.promptTokens, {
+        value: 49,
+        dirty: false,
+      });
     });
 
     it("sets tokens to input plus output tokens on each call", async () => {
       await resolveApiCall("first");
-      assert.strictEqual(getState().app.messageParams.tokens, 15);
+      assert.strictEqual(getState().app.promptTokens.value, 15);
 
       mock.method(aiDeps, "generateText", () =>
         Promise.resolve(
@@ -210,22 +214,24 @@ response text
         ),
       );
       await resolveApiCall("second");
-      assert.deepStrictEqual(getState().app.messageParams, {
+      assert.deepStrictEqual(getState().app.conversation, {
         summaries: [],
-        tokens: 17,
-        tokensStale: false,
         messages: [
           { role: "user", content: "first" },
           { role: "user", content: "second" },
           { role: "assistant", content: "answer" },
         ],
       });
+      assert.deepStrictEqual(getState().app.promptTokens, {
+        value: 17,
+        dirty: false,
+      });
     });
 
     it("re-baselines tokens from usage when stale after model switch", async () => {
-      actions.appendToMessageParams({ role: "user", content: "existing" });
-      actions.setMessageParamTokens(100);
-      actions.setMessageParamTokensStale(true);
+      actions.appendToConversation({ role: "user", content: "existing" });
+      actions.setPromptTokens(100);
+      actions.setPromptTokensDirty(true);
       mock.method(aiDeps, "generateText", () =>
         Promise.resolve(
           makeGenerateTextResult({
@@ -235,15 +241,17 @@ response text
         ),
       );
       await resolveApiCall("hello");
-      assert.deepStrictEqual(getState().app.messageParams, {
+      assert.deepStrictEqual(getState().app.conversation, {
         summaries: [],
-        tokens: 55,
-        tokensStale: false,
         messages: [
           { role: "user", content: "existing" },
           { role: "user", content: "hello" },
           { role: "assistant", content: "answer" },
         ],
+      });
+      assert.deepStrictEqual(getState().app.promptTokens, {
+        value: 55,
+        dirty: false,
       });
     });
 
@@ -412,8 +420,8 @@ response text
     });
 
     it("includes previous messages in request", async () => {
-      actions.appendToMessageParams({ role: "user", content: "previous" });
-      actions.appendToMessageParams({ role: "assistant", content: "response" });
+      actions.appendToConversation({ role: "user", content: "previous" });
+      actions.appendToConversation({ role: "assistant", content: "response" });
       let capturedOpts: Record<string, unknown> | undefined;
       mock.method(aiDeps, "generateText", (opts: Record<string, unknown>) => {
         capturedOpts = opts;
@@ -491,8 +499,8 @@ Lasso reserves 50% of the context window for compacted summaries and 30% for sys
       ) + strToApproxTokens(promptDeps.getSystemContent());
 
     it("returns early when below the compact threshold", async () => {
-      actions.appendToMessageParams({ role: "user", content: "hi" });
-      actions.setMessageParamTokens(60_000);
+      actions.appendToConversation({ role: "user", content: "hi" });
+      actions.setPromptTokens(60_000);
       let called = false;
       mock.method(aiDeps, "generateText", () => {
         called = true;
@@ -500,22 +508,24 @@ Lasso reserves 50% of the context window for compacted summaries and 30% for sys
       });
       await maybeCompact("hi");
       assert.strictEqual(called, false);
-      assert.deepStrictEqual(getState().app.messageParams, {
+      assert.deepStrictEqual(getState().app.conversation, {
         summaries: [],
-        tokens: 60_000,
-        tokensStale: false,
         messages: [{ role: "user", content: "hi" }],
+      });
+      assert.deepStrictEqual(getState().app.promptTokens, {
+        value: 60_000,
+        dirty: false,
       });
     });
 
     it("uses approximated tokens when stale to decide compaction", async () => {
       const longUserContent = "a".repeat(240_000);
-      actions.appendToMessageParams({
+      actions.appendToConversation({
         role: "user",
         content: longUserContent,
       });
-      actions.setMessageParamTokens(0);
-      actions.setMessageParamTokensStale(true);
+      actions.setPromptTokens(0);
+      actions.setPromptTokensDirty(true);
       let capturedOpts: Record<string, unknown> | undefined;
       mock.method(aiDeps, "generateText", (opts: Record<string, unknown>) => {
         capturedOpts = opts;
@@ -529,24 +539,26 @@ Lasso reserves 50% of the context window for compacted summaries and 30% for sys
       const getMessages = () => getCapturedMessages(capturedOpts);
       await maybeCompact("hi");
       assert.strictEqual(getMessages().length, 1);
-      assert.deepStrictEqual(getState().app.messageParams, {
+      assert.deepStrictEqual(getState().app.conversation, {
         summaries: [
           { compacted: "compacted summary", compactedAt: 0, tokens: 25_000 },
         ],
-        tokens: 25_000 + getApproxAdditions(),
-        tokensStale: false,
         messages: [{ role: "assistant", content: "compacted summary" }],
+      });
+      assert.deepStrictEqual(getState().app.promptTokens, {
+        value: 25_000 + getApproxAdditions(),
+        dirty: false,
       });
     });
 
     it("returns early when approximated tokens are below the compact threshold only even when stale", async () => {
       const longUserContent = "a".repeat(20_000);
-      actions.appendToMessageParams({
+      actions.appendToConversation({
         role: "user",
         content: longUserContent,
       });
-      actions.setMessageParamTokens(2_000);
-      actions.setMessageParamTokensStale(true);
+      actions.setPromptTokens(2_000);
+      actions.setPromptTokensDirty(true);
       let called = false;
       mock.method(aiDeps, "generateText", () => {
         called = true;
@@ -554,11 +566,13 @@ Lasso reserves 50% of the context window for compacted summaries and 30% for sys
       });
       await maybeCompact("hi");
       assert.strictEqual(called, false);
-      assert.deepStrictEqual(getState().app.messageParams, {
+      assert.deepStrictEqual(getState().app.conversation, {
         summaries: [],
-        tokens: 2_000,
-        tokensStale: true,
         messages: [{ role: "user", content: longUserContent }],
+      });
+      assert.deepStrictEqual(getState().app.promptTokens, {
+        value: 2_000,
+        dirty: true,
       });
     });
 
@@ -566,12 +580,12 @@ Lasso reserves 50% of the context window for compacted summaries and 30% for sys
       const systemContent = "s".repeat(100_000);
       mock.method(promptDeps, "getSystemContent", () => systemContent);
       const longUserContent = "a".repeat(150_000);
-      actions.appendToMessageParams({
+      actions.appendToConversation({
         role: "user",
         content: longUserContent,
       });
-      actions.setMessageParamTokens(0);
-      actions.setMessageParamTokensStale(true);
+      actions.setPromptTokens(0);
+      actions.setPromptTokensDirty(true);
       let called = false;
       mock.method(aiDeps, "generateText", () => {
         called = true;
@@ -592,12 +606,12 @@ Lasso reserves 50% of the context window for compacted summaries and 30% for sys
 
     it("includes the tools in the stale approximation when deciding compaction", async () => {
       const longUserContent = "a".repeat(237_000);
-      actions.appendToMessageParams({
+      actions.appendToConversation({
         role: "user",
         content: longUserContent,
       });
-      actions.setMessageParamTokens(0);
-      actions.setMessageParamTokensStale(true);
+      actions.setPromptTokens(0);
+      actions.setPromptTokensDirty(true);
       let called = false;
       mock.method(aiDeps, "generateText", () => {
         called = true;
@@ -617,8 +631,8 @@ Lasso reserves 50% of the context window for compacted summaries and 30% for sys
 
     it("includes mcp tools in the tokens after compaction", async () => {
       actions.setMcp({}, { mcp_tool: makeMcpTool() });
-      actions.appendToMessageParams({ role: "user", content: "hi" });
-      actions.setMessageParamTokens(85_000);
+      actions.appendToConversation({ role: "user", content: "hi" });
+      actions.setPromptTokens(85_000);
       mock.method(aiDeps, "generateText", () =>
         Promise.resolve(
           makeGenerateTextResult({
@@ -632,19 +646,21 @@ Lasso reserves 50% of the context window for compacted summaries and 30% for sys
         safeStringify({ ...harnessTools, ...getState().mcp.tools }),
       );
       const withoutMcpTools = strToApproxTokens(safeStringify(harnessTools));
-      assert.deepStrictEqual(getState().app.messageParams, {
+      assert.deepStrictEqual(getState().app.conversation, {
         summaries: [
           { compacted: "compacted summary", compactedAt: 0, tokens: 25_000 },
         ],
-        tokens: 25_000 + withMcpTools,
-        tokensStale: false,
         messages: [{ role: "assistant", content: "compacted summary" }],
+      });
+      assert.deepStrictEqual(getState().app.promptTokens, {
+        value: 25_000 + withMcpTools,
+        dirty: false,
       });
       assert.strictEqual(withMcpTools > withoutMcpTools, true);
     });
 
     it("excludes image and file parts from the stale approximation", async () => {
-      actions.appendToMessageParams({
+      actions.appendToConversation({
         role: "user",
         content: [
           {
@@ -655,8 +671,8 @@ Lasso reserves 50% of the context window for compacted summaries and 30% for sys
           { type: "text", text: "after image" },
         ],
       });
-      actions.setMessageParamTokens(0);
-      actions.setMessageParamTokensStale(true);
+      actions.setPromptTokens(0);
+      actions.setPromptTokensDirty(true);
       let called = false;
       mock.method(aiDeps, "generateText", () => {
         called = true;
@@ -667,8 +683,8 @@ Lasso reserves 50% of the context window for compacted summaries and 30% for sys
     });
 
     it("compacts the conversation when above the threshold", async () => {
-      actions.appendToMessageParams({ role: "user", content: "hi" });
-      actions.setMessageParamTokens(85_000);
+      actions.appendToConversation({ role: "user", content: "hi" });
+      actions.setPromptTokens(85_000);
       let capturedOpts: Record<string, unknown> | undefined;
       mock.method(aiDeps, "generateText", (opts: Record<string, unknown>) => {
         capturedOpts = opts;
@@ -688,13 +704,15 @@ Lasso reserves 50% of the context window for compacted summaries and 30% for sys
         capturedMessage.content,
         `Compact the following conversation:\n[{"role":"user","content":"hi"}]\n`,
       );
-      assert.deepStrictEqual(getState().app.messageParams, {
+      assert.deepStrictEqual(getState().app.conversation, {
         summaries: [
           { compacted: "compacted summary", compactedAt: 0, tokens: 25_000 },
         ],
-        tokens: 25_000 + getApproxAdditions(),
-        tokensStale: false,
         messages: [{ role: "assistant", content: "compacted summary" }],
+      });
+      assert.deepStrictEqual(getState().app.promptTokens, {
+        value: 25_000 + getApproxAdditions(),
+        dirty: false,
       });
       assert.deepStrictEqual(getState().app.modelUsageForSession, {
         "claude-sonnet-4-20250514": [
@@ -710,8 +728,8 @@ Lasso reserves 50% of the context window for compacted summaries and 30% for sys
     });
 
     it("compacts when the user input pushes tokens over the threshold", async () => {
-      actions.appendToMessageParams({ role: "user", content: "hi" });
-      actions.setMessageParamTokens(80_000);
+      actions.appendToConversation({ role: "user", content: "hi" });
+      actions.setPromptTokens(80_000);
       let capturedOpts: Record<string, unknown> | undefined;
       mock.method(aiDeps, "generateText", (opts: Record<string, unknown>) => {
         capturedOpts = opts;
@@ -728,35 +746,39 @@ Lasso reserves 50% of the context window for compacted summaries and 30% for sys
       await maybeCompact("x".repeat(300));
 
       assert.strictEqual(getMessages().length, 1);
-      assert.deepStrictEqual(getState().app.messageParams, {
+      assert.deepStrictEqual(getState().app.conversation, {
         summaries: [
           { compacted: "compacted summary", compactedAt: 0, tokens: 25_000 },
         ],
-        tokens: 25_000 + getApproxAdditions(),
-        tokensStale: false,
         messages: [{ role: "assistant", content: "compacted summary" }],
+      });
+      assert.deepStrictEqual(getState().app.promptTokens, {
+        value: 25_000 + getApproxAdditions(),
+        dirty: false,
       });
     });
 
     it("keeps messages when generateText fails", async () => {
-      actions.appendToMessageParams({ role: "user", content: "hi" });
-      actions.setMessageParamTokens(85_000);
+      actions.appendToConversation({ role: "user", content: "hi" });
+      actions.setPromptTokens(85_000);
       mock.method(aiDeps, "generateText", () =>
         Promise.reject(new Error("network error")),
       );
       await maybeCompact("hi");
-      assert.deepStrictEqual(getState().app.messageParams, {
+      assert.deepStrictEqual(getState().app.conversation, {
         summaries: [],
-        tokens: 85_000,
-        tokensStale: false,
         messages: [{ role: "user", content: "hi" }],
+      });
+      assert.deepStrictEqual(getState().app.promptTokens, {
+        value: 85_000,
+        dirty: false,
       });
     });
 
     it("resolves the queued editor input when compaction is aborted", async () => {
       const getCaptured = mockStdout();
-      actions.appendToMessageParams({ role: "user", content: "hi" });
-      actions.setMessageParamTokens(85_000);
+      actions.appendToConversation({ role: "user", content: "hi" });
+      actions.setPromptTokens(85_000);
       actions.setRl(makeFakeRl());
       actions.setEditorInputValue("queued input");
       const err = makeAbortError();
@@ -772,17 +794,19 @@ Lasso reserves 50% of the context window for compacted summaries and 30% for sys
 
     it("keeps messages on abort error during compaction", async () => {
       const getCaptured = mockStdout();
-      actions.appendToMessageParams({ role: "user", content: "hi" });
-      actions.setMessageParamTokens(85_000);
+      actions.appendToConversation({ role: "user", content: "hi" });
+      actions.setPromptTokens(85_000);
       const err = makeAbortError();
       mock.method(aiDeps, "generateText", () => Promise.reject(err));
       await maybeCompact("hi");
       assert.strictEqual(getState().abortControllers.apiStream, null);
-      assert.deepStrictEqual(getState().app.messageParams, {
+      assert.deepStrictEqual(getState().app.conversation, {
         summaries: [],
-        tokens: 85_000,
-        tokensStale: false,
         messages: [{ role: "user", content: "hi" }],
+      });
+      assert.deepStrictEqual(getState().app.promptTokens, {
+        value: 85_000,
+        dirty: false,
       });
       assert.strictEqual(
         stripAnsi(getCaptured()),
@@ -792,8 +816,8 @@ Lasso reserves 50% of the context window for compacted summaries and 30% for sys
     });
 
     it("resets messages before the api call so the summary and new user input are both sent", async () => {
-      actions.appendToMessageParams({ role: "user", content: "old" });
-      actions.setMessageParamTokens(85_000);
+      actions.appendToConversation({ role: "user", content: "old" });
+      actions.setPromptTokens(85_000);
       const calls: ModelMessage[][] = [];
       let callCount = 0;
       mock.method(aiDeps, "generateText", (opts: Record<string, unknown>) => {
@@ -816,17 +840,19 @@ Lasso reserves 50% of the context window for compacted summaries and 30% for sys
       });
       await maybeCompact("new input");
       await resolveApiCall("new input");
-      assert.deepStrictEqual(getState().app.messageParams, {
+      assert.deepStrictEqual(getState().app.conversation, {
         summaries: [
           { compacted: "compacted summary", compactedAt: 0, tokens: 25 },
         ],
-        tokens: 25,
-        tokensStale: false,
         messages: [
           { role: "assistant", content: "compacted summary" },
           { role: "user", content: "new input" },
           { role: "assistant", content: "answer text" },
         ],
+      });
+      assert.deepStrictEqual(getState().app.promptTokens, {
+        value: 25,
+        dirty: false,
       });
       const compactionCall = calls[0];
       assert(compactionCall !== undefined);
@@ -848,12 +874,12 @@ Lasso reserves 50% of the context window for compacted summaries and 30% for sys
     it("merges existing summaries when at the summary max during compaction", async () => {
       for (const i of [1, 2, 3, 4, 5]) {
         actions.setSummaries([
-          ...getState().app.messageParams.summaries,
+          ...getState().app.conversation.summaries,
           { compacted: `summary ${String(i)}`, compactedAt: i, tokens: 100 },
         ]);
       }
-      actions.appendToMessageParams({ role: "user", content: "hi" });
-      actions.setMessageParamTokens(85_000);
+      actions.appendToConversation({ role: "user", content: "hi" });
+      actions.setPromptTokens(85_000);
       const generate = mockGenerateTextResults([
         {
           output: { compacted: "compacted summary" },
@@ -866,7 +892,7 @@ Lasso reserves 50% of the context window for compacted summaries and 30% for sys
       ]);
       await maybeCompact("hi");
       assert.strictEqual(generate.callCount(), 2);
-      assert.deepStrictEqual(getState().app.messageParams, {
+      assert.deepStrictEqual(getState().app.conversation, {
         summaries: [
           { compacted: "merged summary", compactedAt: 0, tokens: 15 },
           { compacted: "summary 3", compactedAt: 3, tokens: 100 },
@@ -874,8 +900,6 @@ Lasso reserves 50% of the context window for compacted summaries and 30% for sys
           { compacted: "summary 5", compactedAt: 5, tokens: 100 },
           { compacted: "compacted summary", compactedAt: 0, tokens: 20 },
         ],
-        tokens: 15 + 300 + 20 + getApproxAdditions(),
-        tokensStale: false,
         messages: [
           { role: "assistant", content: "merged summary" },
           { role: "assistant", content: "summary 3" },
@@ -884,17 +908,21 @@ Lasso reserves 50% of the context window for compacted summaries and 30% for sys
           { role: "assistant", content: "compacted summary" },
         ],
       });
+      assert.deepStrictEqual(getState().app.promptTokens, {
+        value: 15 + 300 + 20 + getApproxAdditions(),
+        dirty: false,
+      });
     });
 
     it("keeps the existing summaries when merging fails during compaction", async () => {
       for (const i of [1, 2, 3, 4, 5]) {
         actions.setSummaries([
-          ...getState().app.messageParams.summaries,
+          ...getState().app.conversation.summaries,
           { compacted: `summary ${String(i)}`, compactedAt: i, tokens: 100 },
         ]);
       }
-      actions.appendToMessageParams({ role: "user", content: "hi" });
-      actions.setMessageParamTokens(85_000);
+      actions.appendToConversation({ role: "user", content: "hi" });
+      actions.setPromptTokens(85_000);
       const generate = mockGenerateTextResults([
         {
           output: { compacted: "compacted summary" },
@@ -904,7 +932,7 @@ Lasso reserves 50% of the context window for compacted summaries and 30% for sys
       ]);
       await maybeCompact("hi");
       assert.strictEqual(generate.callCount(), 2);
-      assert.deepStrictEqual(getState().app.messageParams, {
+      assert.deepStrictEqual(getState().app.conversation, {
         summaries: [
           { compacted: "summary 1", compactedAt: 1, tokens: 100 },
           { compacted: "summary 2", compactedAt: 2, tokens: 100 },
@@ -913,8 +941,6 @@ Lasso reserves 50% of the context window for compacted summaries and 30% for sys
           { compacted: "summary 5", compactedAt: 5, tokens: 100 },
           { compacted: "compacted summary", compactedAt: 0, tokens: 20 },
         ],
-        tokens: 500 + 20 + getApproxAdditions(),
-        tokensStale: false,
         messages: [
           { role: "assistant", content: "summary 1" },
           { role: "assistant", content: "summary 2" },
@@ -924,10 +950,14 @@ Lasso reserves 50% of the context window for compacted summaries and 30% for sys
           { role: "assistant", content: "compacted summary" },
         ],
       });
+      assert.deepStrictEqual(getState().app.promptTokens, {
+        value: 500 + 20 + getApproxAdditions(),
+        dirty: false,
+      });
     });
   });
 
-  describe("getMessageParamsSummary", () => {
+  describe("getConversationSummary", () => {
     beforeEach(() => {
       actions.setContextWindowPerModel({ "claude-sonnet-4-20250514": 100_000 });
       mock.method(Date, "now", () => 42);
@@ -935,16 +965,16 @@ Lasso reserves 50% of the context window for compacted summaries and 30% for sys
 
     const usage = makeMockUsage();
 
-    const seedMessageParams = () => {
+    const seedConversation = () => {
       actions.setSummaries([
         { compacted: "prior summary", compactedAt: 1, tokens: 10 },
       ]);
-      actions.appendToMessageParams({ role: "user", content: "hi" });
-      actions.setMessageParamTokens(85_000);
+      actions.appendToConversation({ role: "user", content: "hi" });
+      actions.setPromptTokens(85_000);
     };
 
     it("sends the messages as a compact prompt to the api", async () => {
-      seedMessageParams();
+      seedConversation();
       let capturedOpts: Record<string, unknown> | undefined;
       mock.method(aiDeps, "generateText", (opts: Record<string, unknown>) => {
         capturedOpts = opts;
@@ -956,7 +986,7 @@ Lasso reserves 50% of the context window for compacted summaries and 30% for sys
         );
       });
       const getMessages = () => getCapturedMessages(capturedOpts);
-      await getMessageParamsSummary();
+      await getConversationSummary();
       assert.strictEqual(getMessages().length, 1);
       const capturedMessage = getMessages()[0];
       assert(capturedMessage !== undefined);
@@ -967,7 +997,7 @@ Lasso reserves 50% of the context window for compacted summaries and 30% for sys
     });
 
     it("returns the compacted summary with usage tokens on success", async () => {
-      seedMessageParams();
+      seedConversation();
       mock.method(aiDeps, "generateText", () =>
         Promise.resolve(
           makeGenerateTextResult({
@@ -976,7 +1006,7 @@ Lasso reserves 50% of the context window for compacted summaries and 30% for sys
           }),
         ),
       );
-      const result = await getMessageParamsSummary();
+      const result = await getConversationSummary();
       assert.deepStrictEqual(result, {
         compacted: "compacted summary",
         compactedAt: 42,
@@ -996,7 +1026,7 @@ Lasso reserves 50% of the context window for compacted summaries and 30% for sys
     });
 
     it("falls back to approximated tokens when usage has no outputTokens", async () => {
-      seedMessageParams();
+      seedConversation();
       mock.method(aiDeps, "generateText", () =>
         Promise.resolve(
           makeGenerateTextResult({
@@ -1005,7 +1035,7 @@ Lasso reserves 50% of the context window for compacted summaries and 30% for sys
           }),
         ),
       );
-      const result = await getMessageParamsSummary();
+      const result = await getConversationSummary();
       assert.deepStrictEqual(result, {
         compacted: "four chars ≈ one token",
         compactedAt: 42,
@@ -1014,45 +1044,49 @@ Lasso reserves 50% of the context window for compacted summaries and 30% for sys
     });
 
     it("returns null and does not touch messages when generateText fails", async () => {
-      seedMessageParams();
+      seedConversation();
       mock.method(aiDeps, "generateText", () =>
         Promise.reject(new Error("network error")),
       );
-      const result = await getMessageParamsSummary();
+      const result = await getConversationSummary();
       assert.strictEqual(result, null);
-      assert.deepStrictEqual(getState().app.messageParams, {
+      assert.deepStrictEqual(getState().app.conversation, {
         summaries: [{ compacted: "prior summary", compactedAt: 1, tokens: 10 }],
-        tokens: 85_000,
-        tokensStale: false,
         messages: [{ role: "user", content: "hi" }],
+      });
+      assert.deepStrictEqual(getState().app.promptTokens, {
+        value: 85_000,
+        dirty: false,
       });
     });
 
     it("returns null and does not touch messages on abort error", async () => {
       const getCaptured = mockStdout();
-      seedMessageParams();
+      seedConversation();
       const err = makeAbortError();
       mock.method(aiDeps, "generateText", () => Promise.reject(err));
-      const result = await getMessageParamsSummary();
+      const result = await getConversationSummary();
       assert.strictEqual(result, null);
       assert.strictEqual(getState().abortControllers.apiStream, null);
-      assert.deepStrictEqual(getState().app.messageParams, {
+      assert.deepStrictEqual(getState().app.conversation, {
         summaries: [{ compacted: "prior summary", compactedAt: 1, tokens: 10 }],
-        tokens: 85_000,
-        tokensStale: false,
         messages: [{ role: "user", content: "hi" }],
+      });
+      assert.deepStrictEqual(getState().app.promptTokens, {
+        value: 85_000,
+        dirty: false,
       });
       assert.strictEqual(stripAnsi(getCaptured()), "");
     });
 
     it("resolves the queued editor input on abort error", async () => {
-      seedMessageParams();
+      seedConversation();
       actions.setRl(makeFakeRl());
       actions.setEditorInputValue("queued input");
       const getCaptured = mockStdout();
       const err = makeAbortError();
       mock.method(aiDeps, "generateText", () => Promise.reject(err));
-      const result = await getMessageParamsSummary();
+      const result = await getConversationSummary();
       assert.strictEqual(result, null);
       assert.strictEqual(getState().app.editorInputValue, "queued input");
       assert.strictEqual(getState().abortControllers.apiStream, null);
@@ -1074,7 +1108,7 @@ Lasso reserves 50% of the context window for compacted summaries and 30% for sys
     const seedSummaries = () => {
       for (const i of [1, 2, 3, 4, 5]) {
         actions.setSummaries([
-          ...getState().app.messageParams.summaries,
+          ...getState().app.conversation.summaries,
           { compacted: `summary ${String(i)}`, compactedAt: i, tokens: 100 },
         ]);
       }
@@ -1122,7 +1156,7 @@ Lasso reserves 50% of the context window for compacted summaries and 30% for sys
         { compacted: "summary 4", compactedAt: 4, tokens: 100 },
         { compacted: "summary 5", compactedAt: 5, tokens: 100 },
       ]);
-      assert.deepStrictEqual(getState().app.messageParams.summaries, [
+      assert.deepStrictEqual(getState().app.conversation.summaries, [
         { compacted: "summary 1", compactedAt: 1, tokens: 100 },
         { compacted: "summary 2", compactedAt: 2, tokens: 100 },
         { compacted: "summary 3", compactedAt: 3, tokens: 100 },
@@ -1153,7 +1187,7 @@ Lasso reserves 50% of the context window for compacted summaries and 30% for sys
         ),
       );
       await getMergedSummaries();
-      assert.deepStrictEqual(getState().app.messageParams.summaries, [
+      assert.deepStrictEqual(getState().app.conversation.summaries, [
         { compacted: "summary 1", compactedAt: 1, tokens: 100 },
         { compacted: "summary 2", compactedAt: 2, tokens: 100 },
         { compacted: "summary 3", compactedAt: 3, tokens: 100 },
@@ -1187,8 +1221,8 @@ Lasso reserves 50% of the context window for compacted summaries and 30% for sys
         Promise.reject(new Error("network error")),
       );
       const result = await getMergedSummaries();
-      assert.strictEqual(result, getState().app.messageParams.summaries);
-      assert.deepStrictEqual(getState().app.messageParams.summaries, [
+      assert.strictEqual(result, getState().app.conversation.summaries);
+      assert.deepStrictEqual(getState().app.conversation.summaries, [
         { compacted: "summary 1", compactedAt: 1, tokens: 100 },
         { compacted: "summary 2", compactedAt: 2, tokens: 100 },
         { compacted: "summary 3", compactedAt: 3, tokens: 100 },

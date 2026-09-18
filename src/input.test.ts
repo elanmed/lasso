@@ -919,7 +919,7 @@ l---
       actions.setModel("old-model");
       setModelCommand("/model new-model");
       assert.strictEqual(getState().config.model, "new-model");
-      assert.strictEqual(getState().app.messageParams.tokensStale, true);
+      assert.strictEqual(getState().app.promptTokens.dirty, true);
       assert.strictEqual(
         stripAnsi(getCapturedStdout()),
         "Model updated from `old-model` to `new-model`\n",
@@ -987,17 +987,19 @@ l---
     });
 
     it("resets params", () => {
-      actions.appendToMessageParams({ role: "user", content: "hello" });
+      actions.appendToConversation({ role: "user", content: "hello" });
       actions.setSummaries([
         { compacted: "summary", compactedAt: 3, tokens: 5 },
       ]);
       mock.method(promptDeps, "getSystemContent", () => "abc");
       clearCommand();
-      assert.deepStrictEqual(getState().app.messageParams, {
+      assert.deepStrictEqual(getState().app.conversation, {
         summaries: [],
-        tokens: strToApproxTokens("abc"),
-        tokensStale: false,
         messages: [],
+      });
+      assert.deepStrictEqual(getState().app.promptTokens, {
+        value: strToApproxTokens("abc"),
+        dirty: false,
       });
       assert.strictEqual(
         stripAnsi(getCapturedStdout()),
@@ -1048,7 +1050,7 @@ l---
     });
 
     it("returns transcript and resets message params when conversation is found", () => {
-      actions.appendToMessageParams({ role: "user", content: "hello" });
+      actions.appendToConversation({ role: "user", content: "hello" });
       testFs._dirs.add("/fake-home/.config/lasso/history");
       testFs._files.set(
         "/fake-home/.config/lasso/history/chat-history-1234567890000.md",
@@ -1062,11 +1064,13 @@ Transcript:
 transcript content
     `,
       );
-      assert.deepStrictEqual(getState().app.messageParams, {
+      assert.deepStrictEqual(getState().app.conversation, {
         summaries: [],
-        tokens: 0,
-        tokensStale: false,
         messages: [],
+      });
+      assert.deepStrictEqual(getState().app.promptTokens, {
+        value: 0,
+        dirty: false,
       });
     });
 
@@ -1186,8 +1190,8 @@ log content
     it("opens the latest assistant response in a pager", async () => {
       const { spawned } = mockPagerSpawn();
       testProcessEnv._set("LASSO_PAGER_LAST_RESPONSE", "nano __FILE__");
-      actions.appendToMessageParams({ role: "user", content: "question" });
-      actions.appendToMessageParams({
+      actions.appendToConversation({ role: "user", content: "question" });
+      actions.appendToConversation({
         role: "assistant",
         content: [
           { type: "text", text: "first" },
@@ -1223,12 +1227,12 @@ second
     it("opens the latest user message in a pager", async () => {
       const { spawned } = mockPagerSpawn();
       testProcessEnv._set("LASSO_PAGER_LAST_MESSAGE", "nano __FILE__");
-      actions.appendToMessageParams({ role: "user", content: "older" });
-      actions.appendToMessageParams({
+      actions.appendToConversation({ role: "user", content: "older" });
+      actions.appendToConversation({
         role: "assistant",
         content: [{ type: "text", text: "answer" }],
       });
-      actions.appendToMessageParams({
+      actions.appendToConversation({
         role: "user",
         content: "latest question",
       });
@@ -1255,11 +1259,11 @@ latest question
     it("opens the message list newest first in a pager", async () => {
       const { spawned } = mockPagerSpawn();
       testProcessEnv._set("LASSO_PAGER_MESSAGES", "nano __FILE__");
-      actions.appendToMessageParams({
+      actions.appendToConversation({
         role: "user",
         content: "question",
       });
-      actions.appendToMessageParams({
+      actions.appendToConversation({
         role: "assistant",
         content: [{ type: "text", text: "answer" }],
       });
@@ -1649,8 +1653,8 @@ log content
       const { spawned } = mockPagerSpawn();
       testProcessEnv._set("LASSO_PAGER_LAST_RESPONSE", "nano __FILE__");
       actions.setKeymap("lastresponse", { name: "u", ctrl: true });
-      actions.appendToMessageParams({ role: "user", content: "question" });
-      actions.appendToMessageParams({
+      actions.appendToConversation({ role: "user", content: "question" });
+      actions.appendToConversation({
         role: "assistant",
         content: [{ type: "text", text: "first" }],
       });
@@ -1991,7 +1995,7 @@ log content
     it("handles /lastmessage command by opening the last user message in a pager", async () => {
       const { spawned } = mockPagerSpawn();
       testProcessEnv._set("LASSO_PAGER_LAST_MESSAGE", "nano __FILE__");
-      actions.appendToMessageParams({ role: "user", content: "question" });
+      actions.appendToConversation({ role: "user", content: "question" });
       const result = await resolveSlashCommand("/lastmessage");
       assert.strictEqual(result, null);
       assert.strictEqual(spawned[0], "nano /tmp/lasso-test-uuid.txt");
@@ -2000,7 +2004,7 @@ log content
     it("handles /messages command by opening the message list in a pager", async () => {
       const { spawned } = mockPagerSpawn();
       testProcessEnv._set("LASSO_PAGER_MESSAGES", "nano __FILE__");
-      actions.appendToMessageParams({ role: "user", content: "question" });
+      actions.appendToConversation({ role: "user", content: "question" });
       const result = await resolveSlashCommand("/messages");
       assert.strictEqual(result, null);
       assert.strictEqual(spawned[0], "nano /tmp/lasso-test-uuid.txt");
@@ -2194,8 +2198,8 @@ Keymaps:
       actions.resetStdout();
       actions.setModel("test-model");
       actions.setContextWindowPerModel({ "test-model": 10_000 });
-      actions.appendToMessageParams({ role: "user", content: "hi" });
-      actions.setMessageParamTokens(5_000);
+      actions.appendToConversation({ role: "user", content: "hi" });
+      actions.setPromptTokens(5_000);
       const result = await resolveSlashCommand("/usage");
       assert.strictEqual(result, null);
       assert.strictEqual(

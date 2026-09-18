@@ -46,14 +46,14 @@ function getApiStreamAbortSignal() {
 export async function resolveApiCall(userInput: string) {
   const toolCallDiffer = createToolCallDiffer();
 
-  const inputMessageParam: ModelMessage = {
+  const userMessage: ModelMessage = {
     role: "user",
     content: userInput,
   };
 
   const systemContent = promptDeps.getSystemContent();
 
-  actions.appendToMessageParams(inputMessageParam);
+  actions.appendToConversation(userMessage);
 
   actions.setApiStartTime();
   actions.setApiStreamAbortController(new AbortController());
@@ -63,7 +63,7 @@ export async function resolveApiCall(userInput: string) {
       model: getLanguageModel(getState().config.model),
       reasoning: getState().config.reasoning,
       instructions: systemContent,
-      messages: [...getState().app.messageParams.messages],
+      messages: [...getState().app.conversation.messages],
       tools: { ...harnessTools, ...getState().mcp.tools },
       stopWhen: aiDeps.isLoopFinished(),
       abortSignal: getApiStreamAbortSignal(),
@@ -117,16 +117,16 @@ export async function resolveApiCall(userInput: string) {
 
     if (isAbortError(generateTextResult.error)) {
       const interruptContent = "[Interrupted before a response was generated]";
-      const interruptMessageParam: ModelMessage = {
+      const interruptMessage: ModelMessage = {
         role: "assistant",
         content: interruptContent,
       };
 
-      actions.appendToMessageParams(interruptMessageParam);
-      actions.appendToMessageParamTokens(
+      actions.appendToConversation(interruptMessage);
+      actions.appendToPromptTokens(
         strToApproxTokens(userInput) + strToApproxTokens(interruptContent),
       );
-      actions.setMessageParamTokensStale(true);
+      actions.setPromptTokensDirty(true);
 
       if (getState().app.editorInputValue !== null) {
         await resolveInterruptWithEditor();
@@ -143,16 +143,16 @@ export async function resolveApiCall(userInput: string) {
   await appendModelUsage(usage);
 
   const inputTokensApprox =
-    getApproxTokensFromMessages(getState().app.messageParams.messages) +
+    getApproxTokensFromMessages(getState().app.conversation.messages) +
     getSystemInstructionsTokensApprox();
   const inputTokens = usage.inputTokens ?? inputTokensApprox;
   const outputTokens = usage.outputTokens ?? strToApproxTokens(text);
 
-  actions.setMessageParamTokens(inputTokens + outputTokens);
-  actions.setMessageParamTokensStale(false);
+  actions.setPromptTokens(inputTokens + outputTokens);
+  actions.setPromptTokensDirty(false);
 
   for (const message of responseMessages) {
-    actions.appendToMessageParams(message);
+    actions.appendToConversation(message);
   }
   prependToChatHistory(text, "assistant");
 
@@ -170,9 +170,9 @@ export function getSystemInstructionsTokensApprox() {
 }
 
 export async function getMergedSummaries() {
-  const { summaries } = getState().app.messageParams;
+  const { summaries } = getState().app.conversation;
   if (summaries.length < maxNumberSummaries) {
-    return getState().app.messageParams.summaries;
+    return getState().app.conversation.summaries;
   }
 
   // [S1(@1), S2(@2), S3(@3), S4(@4), S5(@5)]
@@ -226,7 +226,7 @@ export async function getMergedSummaries() {
   const targetTokens = Math.floor(maxRatioPerSummary * contextWindow);
   const targetCharLen = approxTokensToCharLen(targetTokens);
 
-  const compactMessageParam = `Merge the following two summaries into one:
+  const compactPrompt = `Merge the following two summaries into one:
 ${JSON.stringify([firstSummary, secondSummary].map(({ compacted }) => compacted))}
 `;
 
@@ -235,7 +235,7 @@ ${JSON.stringify([firstSummary, secondSummary].map(({ compacted }) => compacted)
   const generateTextResult = await tryCatchAsync(
     aiDeps.generateText({
       model: getLanguageModel(model),
-      messages: [{ content: compactMessageParam, role: "user" }],
+      messages: [{ content: compactPrompt, role: "user" }],
       stopWhen: aiDeps.isLoopFinished(),
       abortSignal: getApiStreamAbortSignal(),
       output: Output.object({
@@ -253,11 +253,11 @@ ${JSON.stringify([firstSummary, secondSummary].map(({ compacted }) => compacted)
       if (getState().app.editorInputValue !== null) {
         await resolveInterruptWithEditor();
       }
-      return getState().app.messageParams.summaries;
+      return getState().app.conversation.summaries;
     }
 
     print.error(getMessageFromError(generateTextResult.error));
-    return getState().app.messageParams.summaries;
+    return getState().app.conversation.summaries;
   }
 
   const { output, usage } = generateTextResult.value;
@@ -277,7 +277,7 @@ ${JSON.stringify([firstSummary, secondSummary].map(({ compacted }) => compacted)
   return nextSummaries;
 }
 
-export async function getMessageParamsSummary() {
+export async function getConversationSummary() {
   const { model } = getState().config;
   assert(model !== MISSING);
 
@@ -287,8 +287,8 @@ export async function getMessageParamsSummary() {
   const targetTokens = Math.floor(compactTargetRatio * contextWindow);
   const targetCharLen = approxTokensToCharLen(targetTokens);
 
-  const compactMessageParam = `Compact the following conversation:
-${JSON.stringify(getState().app.messageParams.messages)}
+  const compactPrompt = `Compact the following conversation:
+${JSON.stringify(getState().app.conversation.messages)}
 `;
 
   // TODO (not you ai): more clearly differentiate between different types of tokens
@@ -298,7 +298,7 @@ ${JSON.stringify(getState().app.messageParams.messages)}
   const generateTextResult = await tryCatchAsync(
     aiDeps.generateText({
       model: getLanguageModel(getState().config.model),
-      messages: [{ content: compactMessageParam, role: "user" }],
+      messages: [{ content: compactPrompt, role: "user" }],
       stopWhen: aiDeps.isLoopFinished(),
       abortSignal: getApiStreamAbortSignal(),
       output: Output.object({
@@ -350,14 +350,14 @@ export async function maybeCompact(userInput: string) {
   const systemInstructionsTokensApprox = getSystemInstructionsTokensApprox();
 
   const nextApiTokens = (() => {
-    if (getState().app.messageParams.tokensStale) {
+    if (getState().app.promptTokens.dirty) {
       return (
-        getApproxTokensFromMessages(getState().app.messageParams.messages) +
+        getApproxTokensFromMessages(getState().app.conversation.messages) +
         userInputTokensApprox +
         systemInstructionsTokensApprox
       );
     } else {
-      return getState().app.messageParams.tokens + userInputTokensApprox;
+      return getState().app.promptTokens.value + userInputTokensApprox;
     }
   })();
 
@@ -367,25 +367,25 @@ export async function maybeCompact(userInput: string) {
   print.doing("Compacting" + getUnicodeChar("…"));
 
   // If summarizing the message params failed, don't reset the message params
-  const messageParamsSummary = await getMessageParamsSummary();
-  if (messageParamsSummary === null) return;
+  const conversationSummary = await getConversationSummary();
+  if (conversationSummary === null) return;
 
   // If merging the existing summaries failed, use existing summaries
   const mergedSummaries = await getMergedSummaries();
 
-  actions.resetMessageParams();
-  actions.setSummaries([...mergedSummaries, messageParamsSummary]);
-  for (const summary of getState().app.messageParams.summaries) {
-    actions.appendToMessageParams({
+  actions.resetConversation();
+  actions.setSummaries([...mergedSummaries, conversationSummary]);
+  for (const summary of getState().app.conversation.summaries) {
+    actions.appendToConversation({
       content: summary.compacted,
       role: "assistant",
     });
   }
 
   const summaryTokens = getState()
-    .app.messageParams.summaries.map(({ tokens }) => tokens)
+    .app.conversation.summaries.map(({ tokens }) => tokens)
     .reduce((accum, curr) => accum + curr, 0);
-  actions.setMessageParamTokens(summaryTokens + systemInstructionsTokensApprox);
+  actions.setPromptTokens(summaryTokens + systemInstructionsTokensApprox);
 }
 
 export function warnOnLargeSystemInstructions() {
