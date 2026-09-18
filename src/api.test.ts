@@ -22,6 +22,10 @@ import {
   makeMcpTool,
   makeFakeRl,
   getCapturedTool,
+  getCapturedMessages,
+  makeMockUsage,
+  makeAbortError,
+  mockGenerateTextResults,
 } from "./test-helpers.ts";
 import { aiDeps } from "./deps.ts";
 import { promptDeps } from "./state.ts";
@@ -120,8 +124,7 @@ response text
       actions.setChatHistoryPath("/tmp/test-history.log");
       actions.setRl(makeFakeRl());
       actions.setEditorInputValue("queued input");
-      const err = new Error("aborted");
-      err.name = "AbortError";
+      const err = makeAbortError();
       mock.method(aiDeps, "generateText", () => Promise.reject(err));
       const getCaptured = mockStdout();
       const result = await resolveApiCall("hello");
@@ -134,8 +137,7 @@ response text
     });
 
     it("returns null on abort error", async () => {
-      const err = new Error("aborted");
-      err.name = "AbortError";
+      const err = makeAbortError();
       mock.method(aiDeps, "generateText", () => Promise.reject(err));
       const result = await resolveApiCall("hello");
       assert.strictEqual(result, null);
@@ -157,14 +159,12 @@ response text
       mock.method(aiDeps, "generateText", () =>
         Promise.resolve(
           makeGenerateTextResult({
-            usage: {
+            usage: makeMockUsage({
               inputTokens: 42,
               outputTokens: 7,
-              inputTokenDetails: {
-                cacheReadTokens: 3,
-                cacheWriteTokens: 1,
-              },
-            },
+              cacheReadTokens: 3,
+              cacheWriteTokens: 1,
+            }),
             responseMessages: [
               { role: "assistant", content: "tool call" },
               { role: "tool", content: "tool result" },
@@ -204,11 +204,7 @@ response text
       mock.method(aiDeps, "generateText", () =>
         Promise.resolve(
           makeGenerateTextResult({
-            usage: {
-              inputTokens: 14,
-              outputTokens: 3,
-              inputTokenDetails: { cacheReadTokens: 0, cacheWriteTokens: 0 },
-            },
+            usage: makeMockUsage({ inputTokens: 14, outputTokens: 3 }),
             responseMessages: [{ role: "assistant", content: "answer" }],
           }),
         ),
@@ -233,11 +229,7 @@ response text
       mock.method(aiDeps, "generateText", () =>
         Promise.resolve(
           makeGenerateTextResult({
-            usage: {
-              inputTokens: 50,
-              outputTokens: 5,
-              inputTokenDetails: { cacheReadTokens: 0, cacheWriteTokens: 0 },
-            },
+            usage: makeMockUsage({ inputTokens: 50, outputTokens: 5 }),
             responseMessages: [{ role: "assistant", content: "answer" }],
           }),
         ),
@@ -422,22 +414,23 @@ response text
     it("includes previous messages in request", async () => {
       actions.appendToMessageParams({ role: "user", content: "previous" });
       actions.appendToMessageParams({ role: "assistant", content: "response" });
-      let capturedMessages: ModelMessage[] = [];
+      let capturedOpts: Record<string, unknown> | undefined;
       mock.method(aiDeps, "generateText", (opts: Record<string, unknown>) => {
-        capturedMessages = opts["messages"] as ModelMessage[];
+        capturedOpts = opts;
         return makeGenerateTextResult();
       });
+      const getMessages = () => getCapturedMessages(capturedOpts);
       await resolveApiCall("hello");
-      assert.strictEqual(capturedMessages.length, 3);
-      assert.deepStrictEqual(capturedMessages[0], {
+      assert.strictEqual(getMessages().length, 3);
+      assert.deepStrictEqual(getMessages()[0], {
         role: "user",
         content: "previous",
       });
-      assert.deepStrictEqual(capturedMessages[1], {
+      assert.deepStrictEqual(getMessages()[1], {
         role: "assistant",
         content: "response",
       });
-      assert.deepStrictEqual(capturedMessages[2], {
+      assert.deepStrictEqual(getMessages()[2], {
         role: "user",
         content: "hello",
       });
@@ -523,22 +516,19 @@ Lasso reserves 50% of the context window for compacted summaries and 30% for sys
       });
       actions.setMessageParamTokens(0);
       actions.setMessageParamTokensStale(true);
-      let capturedMessages: ModelMessage[] = [];
+      let capturedOpts: Record<string, unknown> | undefined;
       mock.method(aiDeps, "generateText", (opts: Record<string, unknown>) => {
-        capturedMessages = opts["messages"] as ModelMessage[];
+        capturedOpts = opts;
         return Promise.resolve(
           makeGenerateTextResult({
             output: { compacted: "compacted summary" },
-            usage: {
-              inputTokens: 0,
-              outputTokens: 25_000,
-              inputTokenDetails: { cacheReadTokens: 0, cacheWriteTokens: 0 },
-            },
+            usage: makeMockUsage(),
           }),
         );
       });
+      const getMessages = () => getCapturedMessages(capturedOpts);
       await maybeCompact("hi");
-      assert.strictEqual(capturedMessages.length, 1);
+      assert.strictEqual(getMessages().length, 1);
       assert.deepStrictEqual(getState().app.messageParams, {
         summaries: [
           { compacted: "compacted summary", compactedAt: 0, tokens: 25_000 },
@@ -633,11 +623,7 @@ Lasso reserves 50% of the context window for compacted summaries and 30% for sys
         Promise.resolve(
           makeGenerateTextResult({
             output: { compacted: "compacted summary" },
-            usage: {
-              inputTokens: 0,
-              outputTokens: 25_000,
-              inputTokenDetails: { cacheReadTokens: 0, cacheWriteTokens: 0 },
-            },
+            usage: makeMockUsage(),
           }),
         ),
       );
@@ -683,23 +669,20 @@ Lasso reserves 50% of the context window for compacted summaries and 30% for sys
     it("compacts the conversation when above the threshold", async () => {
       actions.appendToMessageParams({ role: "user", content: "hi" });
       actions.setMessageParamTokens(85_000);
-      let capturedMessages: ModelMessage[] = [];
+      let capturedOpts: Record<string, unknown> | undefined;
       mock.method(aiDeps, "generateText", (opts: Record<string, unknown>) => {
-        capturedMessages = opts["messages"] as ModelMessage[];
+        capturedOpts = opts;
         return Promise.resolve(
           makeGenerateTextResult({
             output: { compacted: "compacted summary" },
-            usage: {
-              inputTokens: 0,
-              outputTokens: 25_000,
-              inputTokenDetails: { cacheReadTokens: 0, cacheWriteTokens: 0 },
-            },
+            usage: makeMockUsage(),
           }),
         );
       });
+      const getMessages = () => getCapturedMessages(capturedOpts);
       await maybeCompact("hi");
-      assert.strictEqual(capturedMessages.length, 1);
-      const capturedMessage = capturedMessages[0];
+      assert.strictEqual(getMessages().length, 1);
+      const capturedMessage = getMessages()[0];
       assert(capturedMessage !== undefined);
       assert.strictEqual(
         capturedMessage.content,
@@ -729,25 +712,22 @@ Lasso reserves 50% of the context window for compacted summaries and 30% for sys
     it("compacts when the user input pushes tokens over the threshold", async () => {
       actions.appendToMessageParams({ role: "user", content: "hi" });
       actions.setMessageParamTokens(80_000);
-      let capturedMessages: ModelMessage[] = [];
+      let capturedOpts: Record<string, unknown> | undefined;
       mock.method(aiDeps, "generateText", (opts: Record<string, unknown>) => {
-        capturedMessages = opts["messages"] as ModelMessage[];
+        capturedOpts = opts;
         return Promise.resolve(
           makeGenerateTextResult({
             output: { compacted: "compacted summary" },
-            usage: {
-              inputTokens: 0,
-              outputTokens: 25_000,
-              inputTokenDetails: { cacheReadTokens: 0, cacheWriteTokens: 0 },
-            },
+            usage: makeMockUsage(),
           }),
         );
       });
 
       // 300 chars ≈ 100 tokens, pushing 80_000 over the 0.8 trigger (80_000 tokens).
+      const getMessages = () => getCapturedMessages(capturedOpts);
       await maybeCompact("x".repeat(300));
 
-      assert.strictEqual(capturedMessages.length, 1);
+      assert.strictEqual(getMessages().length, 1);
       assert.deepStrictEqual(getState().app.messageParams, {
         summaries: [
           { compacted: "compacted summary", compactedAt: 0, tokens: 25_000 },
@@ -779,8 +759,7 @@ Lasso reserves 50% of the context window for compacted summaries and 30% for sys
       actions.setMessageParamTokens(85_000);
       actions.setRl(makeFakeRl());
       actions.setEditorInputValue("queued input");
-      const err = new Error("aborted");
-      err.name = "AbortError";
+      const err = makeAbortError();
       mock.method(aiDeps, "generateText", () => Promise.reject(err));
       await maybeCompact("hi");
       assert.strictEqual(getState().abortControllers.apiStream, null);
@@ -795,8 +774,7 @@ Lasso reserves 50% of the context window for compacted summaries and 30% for sys
       const getCaptured = mockStdout();
       actions.appendToMessageParams({ role: "user", content: "hi" });
       actions.setMessageParamTokens(85_000);
-      const err = new Error("aborted");
-      err.name = "AbortError";
+      const err = makeAbortError();
       mock.method(aiDeps, "generateText", () => Promise.reject(err));
       await maybeCompact("hi");
       assert.strictEqual(getState().abortControllers.apiStream, null);
@@ -824,20 +802,12 @@ Lasso reserves 50% of the context window for compacted summaries and 30% for sys
           if (callCount === 0) {
             return {
               output: { compacted: "compacted summary" },
-              usage: {
-                inputTokens: 0,
-                outputTokens: 25,
-                inputTokenDetails: { cacheReadTokens: 0, cacheWriteTokens: 0 },
-              },
+              usage: makeMockUsage({ outputTokens: 25 }),
             };
           }
           return {
             text: "answer text",
-            usage: {
-              inputTokens: 0,
-              outputTokens: 25,
-              inputTokenDetails: { cacheReadTokens: 0, cacheWriteTokens: 0 },
-            },
+            usage: makeMockUsage({ outputTokens: 25 }),
             responseMessages: [{ role: "assistant", content: "answer text" }],
           };
         })();
@@ -884,33 +854,18 @@ Lasso reserves 50% of the context window for compacted summaries and 30% for sys
       }
       actions.appendToMessageParams({ role: "user", content: "hi" });
       actions.setMessageParamTokens(85_000);
-      let callCount = 0;
-      mock.method(aiDeps, "generateText", () => {
-        const overrides = (() => {
-          if (callCount === 0) {
-            return {
-              output: { compacted: "compacted summary" },
-              usage: {
-                inputTokens: 0,
-                outputTokens: 20,
-                inputTokenDetails: { cacheReadTokens: 0, cacheWriteTokens: 0 },
-              },
-            };
-          }
-          return {
-            output: { compacted: "merged summary" },
-            usage: {
-              inputTokens: 0,
-              outputTokens: 15,
-              inputTokenDetails: { cacheReadTokens: 0, cacheWriteTokens: 0 },
-            },
-          };
-        })();
-        callCount = callCount + 1;
-        return Promise.resolve(makeGenerateTextResult(overrides));
-      });
+      const generate = mockGenerateTextResults([
+        {
+          output: { compacted: "compacted summary" },
+          usage: makeMockUsage({ outputTokens: 20 }),
+        },
+        {
+          output: { compacted: "merged summary" },
+          usage: makeMockUsage({ outputTokens: 15 }),
+        },
+      ]);
       await maybeCompact("hi");
-      assert.strictEqual(callCount, 2);
+      assert.strictEqual(generate.callCount(), 2);
       assert.deepStrictEqual(getState().app.messageParams, {
         summaries: [
           { compacted: "merged summary", compactedAt: 0, tokens: 15 },
@@ -940,25 +895,15 @@ Lasso reserves 50% of the context window for compacted summaries and 30% for sys
       }
       actions.appendToMessageParams({ role: "user", content: "hi" });
       actions.setMessageParamTokens(85_000);
-      let callCount = 0;
-      mock.method(aiDeps, "generateText", () => {
-        callCount = callCount + 1;
-        if (callCount === 2) {
-          return Promise.reject(new Error("network error"));
-        }
-        return Promise.resolve(
-          makeGenerateTextResult({
-            output: { compacted: "compacted summary" },
-            usage: {
-              inputTokens: 0,
-              outputTokens: 20,
-              inputTokenDetails: { cacheReadTokens: 0, cacheWriteTokens: 0 },
-            },
-          }),
-        );
-      });
+      const generate = mockGenerateTextResults([
+        {
+          output: { compacted: "compacted summary" },
+          usage: makeMockUsage({ outputTokens: 20 }),
+        },
+        new Error("network error"),
+      ]);
       await maybeCompact("hi");
-      assert.strictEqual(callCount, 2);
+      assert.strictEqual(generate.callCount(), 2);
       assert.deepStrictEqual(getState().app.messageParams, {
         summaries: [
           { compacted: "summary 1", compactedAt: 1, tokens: 100 },
@@ -988,11 +933,7 @@ Lasso reserves 50% of the context window for compacted summaries and 30% for sys
       mock.method(Date, "now", () => 42);
     });
 
-    const usage = {
-      inputTokens: 0,
-      outputTokens: 25_000,
-      inputTokenDetails: { cacheReadTokens: 0, cacheWriteTokens: 0 },
-    };
+    const usage = makeMockUsage();
 
     const seedMessageParams = () => {
       actions.setSummaries([
@@ -1004,9 +945,9 @@ Lasso reserves 50% of the context window for compacted summaries and 30% for sys
 
     it("sends the messages as a compact prompt to the api", async () => {
       seedMessageParams();
-      let capturedMessages: ModelMessage[] = [];
+      let capturedOpts: Record<string, unknown> | undefined;
       mock.method(aiDeps, "generateText", (opts: Record<string, unknown>) => {
-        capturedMessages = opts["messages"] as ModelMessage[];
+        capturedOpts = opts;
         return Promise.resolve(
           makeGenerateTextResult({
             output: { compacted: "compacted summary" },
@@ -1014,9 +955,10 @@ Lasso reserves 50% of the context window for compacted summaries and 30% for sys
           }),
         );
       });
+      const getMessages = () => getCapturedMessages(capturedOpts);
       await getMessageParamsSummary();
-      assert.strictEqual(capturedMessages.length, 1);
-      const capturedMessage = capturedMessages[0];
+      assert.strictEqual(getMessages().length, 1);
+      const capturedMessage = getMessages()[0];
       assert(capturedMessage !== undefined);
       assert.strictEqual(
         capturedMessage.content,
@@ -1059,11 +1001,7 @@ Lasso reserves 50% of the context window for compacted summaries and 30% for sys
         Promise.resolve(
           makeGenerateTextResult({
             output: { compacted: "four chars ≈ one token" },
-            usage: {
-              inputTokens: 0,
-              outputTokens: undefined,
-              inputTokenDetails: { cacheReadTokens: 0, cacheWriteTokens: 0 },
-            },
+            usage: makeMockUsage({ outputTokens: undefined }),
           }),
         ),
       );
@@ -1093,8 +1031,7 @@ Lasso reserves 50% of the context window for compacted summaries and 30% for sys
     it("returns null and does not touch messages on abort error", async () => {
       const getCaptured = mockStdout();
       seedMessageParams();
-      const err = new Error("aborted");
-      err.name = "AbortError";
+      const err = makeAbortError();
       mock.method(aiDeps, "generateText", () => Promise.reject(err));
       const result = await getMessageParamsSummary();
       assert.strictEqual(result, null);
@@ -1113,8 +1050,7 @@ Lasso reserves 50% of the context window for compacted summaries and 30% for sys
       actions.setRl(makeFakeRl());
       actions.setEditorInputValue("queued input");
       const getCaptured = mockStdout();
-      const err = new Error("aborted");
-      err.name = "AbortError";
+      const err = makeAbortError();
       mock.method(aiDeps, "generateText", () => Promise.reject(err));
       const result = await getMessageParamsSummary();
       assert.strictEqual(result, null);
@@ -1133,11 +1069,7 @@ Lasso reserves 50% of the context window for compacted summaries and 30% for sys
       mock.method(Date, "now", () => 42);
     });
 
-    const usage = {
-      inputTokens: 0,
-      outputTokens: 25_000,
-      inputTokenDetails: { cacheReadTokens: 0, cacheWriteTokens: 0 },
-    };
+    const usage = makeMockUsage();
 
     const seedSummaries = () => {
       for (const i of [1, 2, 3, 4, 5]) {
@@ -1166,9 +1098,9 @@ Lasso reserves 50% of the context window for compacted summaries and 30% for sys
 
     it("merges the two summaries with the smallest largerCompactedAt when at the summary max", async () => {
       seedSummaries();
-      let capturedMessages: ModelMessage[] = [];
+      let capturedOpts: Record<string, unknown> | undefined;
       mock.method(aiDeps, "generateText", (opts: Record<string, unknown>) => {
-        capturedMessages = opts["messages"] as ModelMessage[];
+        capturedOpts = opts;
         return Promise.resolve(
           makeGenerateTextResult({
             output: { compacted: "merged summary" },
@@ -1176,8 +1108,9 @@ Lasso reserves 50% of the context window for compacted summaries and 30% for sys
           }),
         );
       });
+      const getMessages = () => getCapturedMessages(capturedOpts);
       const result = await getMergedSummaries();
-      const capturedMessage = capturedMessages[0];
+      const capturedMessage = getMessages()[0];
       assert(capturedMessage !== undefined);
       assert.strictEqual(
         capturedMessage.content,
@@ -1235,11 +1168,7 @@ Lasso reserves 50% of the context window for compacted summaries and 30% for sys
         Promise.resolve(
           makeGenerateTextResult({
             output: { compacted: "twelve chars ≈ four tokens" },
-            usage: {
-              inputTokens: 0,
-              outputTokens: undefined,
-              inputTokenDetails: { cacheReadTokens: 0, cacheWriteTokens: 0 },
-            },
+            usage: makeMockUsage({ outputTokens: undefined }),
           }),
         ),
       );
@@ -1270,8 +1199,7 @@ Lasso reserves 50% of the context window for compacted summaries and 30% for sys
 
     it("returns the existing summaries and clears the abort controller on abort error", async () => {
       seedSummaries();
-      const err = new Error("aborted");
-      err.name = "AbortError";
+      const err = makeAbortError();
       mock.method(aiDeps, "generateText", () => Promise.reject(err));
       const result = await getMergedSummaries();
       assert.strictEqual(getState().abortControllers.apiStream, null);

@@ -6,7 +6,7 @@ import assert from "node:assert";
 import readline from "node:readline/promises";
 import { stdin } from "node:process";
 import { z } from "zod/v4";
-import type { ToolSet } from "ai";
+import type { ModelMessage, ToolSet } from "ai";
 import { aiDeps, fsDeps, processDeps } from "./deps.ts";
 import { promptDeps, actions } from "./state.ts";
 import { initKeypress } from "./input.ts";
@@ -276,11 +276,73 @@ export function makeGenerateTextResult(
   };
 }
 
+export function makeMockUsage(
+  overrides: {
+    inputTokens?: number;
+    outputTokens?: number | undefined;
+    cacheReadTokens?: number;
+    cacheWriteTokens?: number;
+  } = {},
+) {
+  const usage: {
+    inputTokens: number;
+    outputTokens: number | undefined;
+    inputTokenDetails: { cacheReadTokens: number; cacheWriteTokens: number };
+  } = {
+    inputTokens: 0,
+    outputTokens: 25_000,
+    inputTokenDetails: { cacheReadTokens: 0, cacheWriteTokens: 0 },
+  };
+  if (overrides.inputTokens !== undefined) {
+    usage.inputTokens = overrides.inputTokens;
+  }
+  if ("outputTokens" in overrides) {
+    usage.outputTokens = overrides.outputTokens;
+  }
+  if (overrides.cacheReadTokens !== undefined) {
+    usage.inputTokenDetails.cacheReadTokens = overrides.cacheReadTokens;
+  }
+  if (overrides.cacheWriteTokens !== undefined) {
+    usage.inputTokenDetails.cacheWriteTokens = overrides.cacheWriteTokens;
+  }
+  return usage;
+}
+
+export function makeAbortError(message = "aborted") {
+  const err = new Error(message);
+  err.name = "AbortError";
+  return err;
+}
+
+export function mockGenerateTextResults(results: unknown[]) {
+  let callCount = 0;
+  const m = mock.method(aiDeps, "generateText", () => {
+    const result = results[callCount];
+    callCount = callCount + 1;
+    if (result instanceof Error) return Promise.reject(result);
+    return Promise.resolve(makeGenerateTextResult(result as never));
+  });
+  return {
+    callCount() {
+      return callCount;
+    },
+    mock: m,
+  };
+}
+
 type ExecCallback = (
   error: Error | null,
   stdout: string,
   stderr: string,
 ) => void;
+
+export function getCapturedMessages(
+  options: Record<string, unknown> | undefined,
+) {
+  const messages = options?.["messages"];
+  assert.ok(Array.isArray(messages), "Expected messages in generateText call");
+  return messages as ModelMessage[];
+}
 
 export function mockExec(opts: {
   stdout: string;

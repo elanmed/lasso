@@ -2,6 +2,10 @@
 
 This is a Node.js project. Only Node.js APIs should be used. Use `node` for running and testing, and `pnpm` as the package manager.
 
+Create commits only from `containers/.local/lib/lasso`, and include only changes within that directory.
+
+Do not create any commits unless explicitly told to do so.
+
 ## Architecture
 
 For a high-level overview of the main loop, the `null` vs `""` return conventions, and the abort controllers, see `ARCHITECTURE.md`.

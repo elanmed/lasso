@@ -21,6 +21,7 @@ import {
 import {
   testFs,
   mockSetTimeout,
+  makeAbortError,
   setupTestContext,
   testProcessEnv,
 } from "./test-helpers.ts";
@@ -154,8 +155,7 @@ describe("utils", () => {
 
   describe("isAbortError", () => {
     it("returns true for an Error with name === 'AbortError'", () => {
-      const err = new Error("aborted");
-      err.name = "AbortError";
+      const err = makeAbortError("aborted");
       assert.equal(isAbortError(err), true);
     });
 

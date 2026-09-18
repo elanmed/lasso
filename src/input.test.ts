@@ -42,6 +42,7 @@ import {
   batPagerCmd,
   stripAnsi,
   mockStdout,
+  makeAbortError,
 } from "./test-helpers.ts";
 import { fsDeps } from "./deps.ts";
 import { getGlobalConfigPath, getGlobalContextDir } from "./paths.ts";
@@ -98,8 +99,7 @@ describe("input", () => {
       actions.setRl(
         makeFakeRl({
           question: () => {
-            const error = new Error("interrupted");
-            error.name = "AbortError";
+            const error = makeAbortError("interrupted");
             return Promise.reject(error);
           },
         }),
@@ -472,8 +472,7 @@ read failed
       actions.setChatHistoryPath("/tmp/test-history.log");
       mock.method(getTestRl(), "question", () => {
         actions.setEditorInputValue("from editor");
-        const err = new Error("This operation was aborted");
-        err.name = "AbortError";
+        const err = makeAbortError("This operation was aborted");
         return Promise.reject(err);
       });
       const result = await resolveUserInput({ isFirstInput: false });
@@ -495,8 +494,7 @@ from editor
         throw new Error("process.exit called");
       });
       const questionMock = mock.method(getTestRl(), "question", () => {
-        const err = new Error("This operation was aborted");
-        err.name = "AbortError";
+        const err = makeAbortError("This operation was aborted");
         return Promise.reject(err);
       });
       await assert.rejects(
@@ -507,8 +505,7 @@ from editor
     });
 
     it("returns null when user declines exit confirmation", async () => {
-      const err = new Error("This operation was aborted");
-      err.name = "AbortError";
+      const err = makeAbortError("This operation was aborted");
       const questionMock = mock.method(getTestRl(), "question", () =>
         Promise.resolve("n"),
       );
@@ -522,8 +519,7 @@ from editor
       mock.method(process, "exit", () => {
         throw new Error("process.exit called");
       });
-      const err = new Error("This operation was aborted");
-      err.name = "AbortError";
+      const err = makeAbortError("This operation was aborted");
       const questionMock = mock.method(getTestRl(), "question", () =>
         Promise.resolve("yes"),
       );
@@ -544,8 +540,7 @@ from editor
       });
       actions.setRl(makeFakeRl());
       actions.resetStdout();
-      const err = new Error("This operation was aborted");
-      err.name = "AbortError";
+      const err = makeAbortError("This operation was aborted");
       const questionMock = mock.method(getTestRl(), "question", () =>
         Promise.resolve("yes"),
       );
