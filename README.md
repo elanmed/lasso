@@ -543,7 +543,6 @@ vim.g.clipboard = {
 - [ ] Move all config validation into blockOnMissingConfig, don't throw at start
   - [ ] Separate error message for no config (`initlocal` and `initglobal`)
 - [ ] Support code-mode
-- [ ] Compact with sliding window
 - [ ] Reference history file for compacted summaries
 - [ ] Remove unnecessary tools
 - [ ] Print MCP, fs read startup times
