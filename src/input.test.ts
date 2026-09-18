@@ -24,6 +24,7 @@ import {
   initLocalConfig,
   initGlobalConfig,
   pageMessages,
+  pageSummaries,
   pageHistory,
   pageLastMessage,
   pageLastResponse,
@@ -1296,6 +1297,44 @@ latest question
     });
   });
 
+  describe("pageSummaries", () => {
+    beforeEach(() => {
+      actions.resetState();
+      actions.resetStdout();
+    });
+
+    it("opens the summaries list newest first in a pager", async () => {
+      const { spawned } = mockPagerSpawn();
+      testProcessEnv._set("LASSO_PAGER_SUMMARIES", "nano __FILE__");
+      actions.setSummaries([
+        { compacted: "older summary", compactedAt: 100, tokens: 10 },
+        { compacted: "latest summary", compactedAt: 200, tokens: 20 },
+      ]);
+
+      await pageSummaries();
+
+      assert.strictEqual(spawned[0], "nano /tmp/lasso-test-uuid.txt");
+      assert.deepStrictEqual(
+        stripAnsi(testFs._files.get("/tmp/lasso-test-uuid.txt") ?? ""),
+        `# [lasso] Conversation summaries
+
+[
+  {
+    "compacted": "latest summary",
+    "compactedAt": 200,
+    "tokens": 20
+  },
+  {
+    "compacted": "older summary",
+    "compactedAt": 100,
+    "tokens": 10
+  }
+]
+`,
+      );
+    });
+  });
+
   describe("pageEditStr", () => {
     beforeEach(() => {
       actions.resetState();
@@ -1517,6 +1556,7 @@ Available commands:
 - /lastresponse
 - /lastmessage
 - /messages
+- /summaries
 - /test/.lasso/commands/custom.md
 `,
       );
@@ -2084,6 +2124,7 @@ Available commands:
 - /lastresponse
 - /lastmessage
 - /messages
+- /summaries
 `,
       );
     });
@@ -2513,6 +2554,7 @@ Invalid command: /unknown, valid commands:
 - /lastresponse
 - /lastmessage
 - /messages
+- /summaries
 - /test-cwd/.lasso/commands/known.md
 `,
       );
