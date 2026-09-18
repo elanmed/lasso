@@ -8,7 +8,7 @@ import { stdin } from "node:process";
 import { z } from "zod/v4";
 import type { ModelMessage, ToolSet } from "ai";
 import { aiDeps, fsDeps, processDeps } from "./deps.ts";
-import { promptDeps, actions } from "./state.ts";
+import { actions, promptDeps } from "./state.ts";
 import { initKeypress } from "./input.ts";
 import type { Key, SdkProvider } from "./config-types.ts";
 import { baseBatFlags, markdownBatFlags } from "./terminal.ts";

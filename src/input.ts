@@ -17,7 +17,6 @@ import {
   isExisty,
   listChatHistoryFiles,
   stringify,
-  strToApproxTokens,
   getStrFromAssistantContent,
 } from "./utils.ts";
 import { truncate } from "./text.ts";
@@ -28,7 +27,8 @@ import {
   printSessionStartDate,
 } from "./print.ts";
 import { getPrettyTokenUsage, getPrettyUsage } from "./usage-format.ts";
-import { actions, getState, promptDeps } from "./state.ts";
+import { getApproxPromptTokens } from "./usage.ts";
+import { actions, getState } from "./state.ts";
 import { initStateRepeatable } from "./config.ts";
 import type { Key } from "./config-types.ts";
 import { prependToChatHistory } from "./log.ts";
@@ -759,7 +759,7 @@ export function clearCommand() {
   actions.resetConversation();
   // the next api call only reports its token usage after it completes, so seeding with the
   // system prompt approx keeps the context window percent from displaying 0% in the meantime
-  actions.setPromptTokens(strToApproxTokens(promptDeps.getSystemContent()));
+  actions.setPromptTokens(getApproxPromptTokens());
   actions.setModelUsageForSession({});
 }
 

@@ -2,20 +2,27 @@ import assert from "node:assert";
 import { Output, type ModelMessage } from "ai";
 import { z } from "zod";
 import { actions, getState, promptDeps } from "./state.ts";
+
 import {
   isAbortError,
   tryCatchAsync,
   getMessageFromError,
   safeStringify,
-  getApproxTokensFromMessages,
   strToApproxTokens,
   approxTokensToCharLen,
   decimalToPercent,
 } from "./utils.ts";
 import { createToolCallDiffer } from "./differ.ts";
+
 import { getUnicodeChar } from "./text.ts";
 import { print, startLoadingState, stopLoadingState } from "./print.ts";
-import { appendModelUsage } from "./usage.ts";
+import {
+  appendModelUsage,
+  getApproxPromptTokens,
+  getCurrentPromptTokens,
+  getSystemInstructionsTokensApprox,
+  orApproxTokens,
+} from "./usage.ts";
 import {
   objectWithPathSchema,
   harnessTools,
@@ -36,6 +43,15 @@ const dedicatedSystemInstructionsRatio =
   compactTriggerRatio - dedicatedSummaryRatio;
 const maxNumberSummaries = 5;
 const maxRatioPerSummary = dedicatedSummaryRatio / maxNumberSummaries;
+
+function getTools() {
+  return { ...harnessTools, ...getState().mcp.tools };
+}
+
+// getToolsContent lives here because the full tools set is only visible above tools.ts in the import graph
+// promptDeps defaults to an empty string because state.ts cannot see tools.ts without forming a cycle
+// TODO: find a better way to handle this
+promptDeps.getToolsContent = () => safeStringify(getTools());
 
 function getApiStreamAbortSignal() {
   const controller = getState().abortControllers.apiStream;
@@ -64,7 +80,7 @@ export async function resolveApiCall(userInput: string) {
       reasoning: getState().config.reasoning,
       instructions: systemContent,
       messages: [...getState().app.conversation.messages],
-      tools: { ...harnessTools, ...getState().mcp.tools },
+      tools: getTools(),
       stopWhen: aiDeps.isLoopFinished(),
       abortSignal: getApiStreamAbortSignal(),
       onToolExecutionStart: ({ toolCall }) => {
@@ -142,11 +158,8 @@ export async function resolveApiCall(userInput: string) {
 
   await appendModelUsage(usage);
 
-  const inputTokensApprox =
-    getApproxTokensFromMessages(getState().app.conversation.messages) +
-    getSystemInstructionsTokensApprox();
-  const inputTokens = usage.inputTokens ?? inputTokensApprox;
-  const outputTokens = usage.outputTokens ?? strToApproxTokens(text);
+  const inputTokens = usage.inputTokens ?? getApproxPromptTokens();
+  const outputTokens = orApproxTokens(usage.outputTokens, text);
 
   actions.setPromptTokens(inputTokens + outputTokens);
   actions.setPromptTokensDirty(false);
@@ -157,16 +170,6 @@ export async function resolveApiCall(userInput: string) {
   prependToChatHistory(text, "assistant");
 
   return text;
-}
-
-export function getSystemInstructionsTokensApprox() {
-  const systemContentTokensApprox = strToApproxTokens(
-    promptDeps.getSystemContent(),
-  );
-  const toolsTokensApprox = strToApproxTokens(
-    safeStringify({ ...harnessTools, ...getState().mcp.tools }),
-  );
-  return systemContentTokensApprox + toolsTokensApprox;
 }
 
 export async function getMergedSummaries() {
@@ -267,7 +270,7 @@ ${JSON.stringify([firstSummary, secondSummary].map(({ compacted }) => compacted)
   const mergedSummary: ModelSummary = {
     compacted,
     compactedAt: Date.now(),
-    tokens: usage.outputTokens ?? strToApproxTokens(compacted),
+    tokens: orApproxTokens(usage.outputTokens, compacted),
   };
 
   const nextSummaries = summaries
@@ -328,7 +331,7 @@ ${JSON.stringify(getState().app.conversation.messages)}
   const summary: ModelSummary = {
     compacted: output.compacted,
     compactedAt: Date.now(),
-    tokens: usage.outputTokens ?? strToApproxTokens(summaryText),
+    tokens: orApproxTokens(usage.outputTokens, summaryText),
   };
   await appendModelUsage(usage);
 
@@ -346,20 +349,9 @@ export async function maybeCompact(userInput: string) {
   // count of userInput until after the API call. This can be problematic when the userInput
   // would large enough to trigger compaction, so we approximate for the userInput
   const userInputTokensApprox = strToApproxTokens(userInput);
-  // the same applies to the system instructions, which is sent with every api call
   const systemInstructionsTokensApprox = getSystemInstructionsTokensApprox();
 
-  const nextApiTokens = (() => {
-    if (getState().app.promptTokens.dirty) {
-      return (
-        getApproxTokensFromMessages(getState().app.conversation.messages) +
-        userInputTokensApprox +
-        systemInstructionsTokensApprox
-      );
-    } else {
-      return getState().app.promptTokens.value + userInputTokensApprox;
-    }
-  })();
+  const nextApiTokens = getCurrentPromptTokens() + userInputTokensApprox;
 
   const currRatio = nextApiTokens / contextWindow;
   if (currRatio <= compactTriggerRatio) return;

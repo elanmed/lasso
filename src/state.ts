@@ -161,6 +161,7 @@ export const promptDeps = {
       getState().app.contextStr,
       getState().app.skillsStr,
     ].join("\n"),
+  getToolsContent: () => "",
 };
 
 const logStateChange = (actionType: string, before: string, after: string) => {

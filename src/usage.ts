@@ -2,8 +2,14 @@ import assert from "node:assert";
 import { dirname } from "node:path";
 import { z } from "zod";
 import type { LanguageModelUsage } from "ai";
-import { actions, getState } from "./state.ts";
-import { createLockUtils, tryCatch } from "./utils.ts";
+import { actions, getState, promptDeps } from "./state.ts";
+
+import {
+  createLockUtils,
+  tryCatch,
+  getApproxTokensFromMessages,
+  strToApproxTokens,
+} from "./utils.ts";
 import { fsDeps, processDeps } from "./deps.ts";
 import { getUsageLogLockPath, getUsageLogPath } from "./paths.ts";
 
@@ -167,4 +173,30 @@ export async function syncNewModelUsageForLimitWindow(
   lockUtils.deleteLock();
 
   actions.setModelUsageForLimitWindow(filtered);
+}
+
+export function getSystemInstructionsTokensApprox() {
+  const systemContentTokensApprox = strToApproxTokens(
+    promptDeps.getSystemContent(),
+  );
+  const toolsTokensApprox = strToApproxTokens(promptDeps.getToolsContent());
+  return systemContentTokensApprox + toolsTokensApprox;
+}
+
+export function getApproxPromptTokens() {
+  return (
+    getApproxTokensFromMessages(getState().app.conversation.messages) +
+    getSystemInstructionsTokensApprox()
+  );
+}
+
+export function getCurrentPromptTokens() {
+  if (getState().app.promptTokens.dirty) {
+    return getApproxPromptTokens();
+  }
+  return getState().app.promptTokens.value;
+}
+
+export function orApproxTokens(value: number | undefined, text: string) {
+  return value ?? strToApproxTokens(text);
 }

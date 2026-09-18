@@ -5,12 +5,16 @@ import type { LanguageModelUsage } from "ai";
 import {
   appendModelUsage,
   filterExpiredModelUsage,
+  getApproxPromptTokens,
+  getCurrentPromptTokens,
   getExpiredTime,
+  getSystemInstructionsTokensApprox,
   isUsageLimitDisabled,
+  orApproxTokens,
   syncInitialModelUsageForLimitWindow,
   syncNewModelUsageForLimitWindow,
 } from "./usage.ts";
-import { actions, getState } from "./state.ts";
+import { actions, getState, promptDeps } from "./state.ts";
 import { fsDeps } from "./deps.ts";
 import { setupTestContext, testFs } from "./test-helpers.ts";
 import { getUsageLogLockPath, getUsageLogPath } from "./paths.ts";
@@ -828,5 +832,63 @@ describe("usage", () => {
       actions.setUsageLimit({ duration: "3d", dollarAmount: 10 });
       assert.strictEqual(getExpiredTime(), 1_000_000 - 259_200_000);
     });
+  });
+});
+
+describe("orApproxTokens", () => {
+  it("returns the usage tokens when present", () => {
+    assert.strictEqual(orApproxTokens(7, "one two three"), 7);
+  });
+
+  it("returns approx tokens from the text when usage is undefined", () => {
+    assert.strictEqual(orApproxTokens(undefined, "abcdef"), 2);
+  });
+});
+
+describe("getSystemInstructionsTokensApprox", () => {
+  beforeEach(() => {
+    setupTestContext();
+    mock.method(promptDeps, "getSystemContent", () => "abc");
+    mock.method(promptDeps, "getToolsContent", () => "defdef");
+  });
+
+  it("sums the approx of system content and tools", () => {
+    assert.strictEqual(getSystemInstructionsTokensApprox(), 3);
+  });
+
+  it("takes tools into account when computing the system instructions approx", () => {
+    assert.strictEqual(getApproxPromptTokens(), 3);
+  });
+});
+
+describe("getApproxPromptTokens", () => {
+  beforeEach(() => {
+    setupTestContext();
+    mock.method(promptDeps, "getSystemContent", () => "abc");
+    mock.method(promptDeps, "getToolsContent", () => "defdef");
+  });
+
+  it("sums messages approx with the system instructions approx", () => {
+    actions.appendToConversation({ role: "user", content: "hello" });
+    assert.strictEqual(getApproxPromptTokens(), 14);
+  });
+});
+
+describe("getCurrentPromptTokens", () => {
+  beforeEach(() => {
+    setupTestContext();
+    mock.method(promptDeps, "getSystemContent", () => "abc");
+    mock.method(promptDeps, "getToolsContent", () => "defdef");
+  });
+
+  it("returns the cached prompt tokens when not dirty", () => {
+    actions.setPromptTokens(50);
+    assert.strictEqual(getCurrentPromptTokens(), 50);
+  });
+
+  it("returns the approx prompt tokens when dirty", () => {
+    actions.setPromptTokens(50);
+    actions.setPromptTokensDirty(true);
+    assert.strictEqual(getCurrentPromptTokens(), 3);
   });
 });
