@@ -262,10 +262,12 @@ ${JSON.stringify([firstSummary, secondSummary].map(({ compacted }) => compacted)
   const { compacted } = output;
   await appendModelUsage(usage);
 
-  const mergedSummary = {
+  const mergedSummary: ModelSummary = {
     compacted,
     compactedAt: Date.now(),
+    tokens: usage.outputTokens ?? 0,
   };
+
   const nextSummaries = summaries
     .slice(0, smallestFirstSummaryIdx)
     .concat(mergedSummary)
@@ -321,6 +323,7 @@ ${JSON.stringify(getState().app.messageParams.messages)}
   const summary: ModelSummary = {
     compacted: output.compacted,
     compactedAt: Date.now(),
+    tokens: usage.outputTokens ?? 0,
   };
   await appendModelUsage(usage);
 
@@ -375,10 +378,10 @@ export async function maybeCompact(userInput: string) {
     });
   }
 
-  // TODO: handle tokens
-  // actions.setMessageParamTokens(
-  //   afterCompactionTokens + systemInstructionsTokensApprox,
-  // );
+  const summaryTokens = getState()
+    .app.messageParams.summaries.map(({ tokens }) => tokens)
+    .reduce((accum, curr) => accum + curr, 0);
+  actions.setMessageParamTokens(summaryTokens + systemInstructionsTokensApprox);
 }
 
 export function warnOnLargeSystemInstructions() {

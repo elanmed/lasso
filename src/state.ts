@@ -29,6 +29,7 @@ export interface SlashCommand {
 export interface ModelSummary {
   compacted: string;
   compactedAt: number;
+  tokens: number;
 }
 
 export type MCPToolSet = Awaited<ReturnType<MCPClient["tools"]>>;
