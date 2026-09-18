@@ -167,9 +167,11 @@ export function getSystemInstructionsTokensApprox() {
   return systemContentTokensApprox + toolsTokensApprox;
 }
 
-export async function compactSummaries() {
+export async function getMergedSummaries() {
   const { summaries } = getState().app.messageParams;
-  if (summaries.length < maxNumberSummaries) return null;
+  if (summaries.length < maxNumberSummaries) {
+    return getState().app.messageParams.summaries;
+  }
 
   // [S1(@1), S2(@2), S3(@3), S4(@4), S5(@5)]
 
@@ -249,11 +251,11 @@ ${JSON.stringify([firstSummary, secondSummary].map(({ compacted }) => compacted)
       if (getState().app.editorInputValue !== null) {
         await resolveInterruptWithEditor();
       }
-      return;
+      return getState().app.messageParams.summaries;
     }
 
     print.error(getMessageFromError(generateTextResult.error));
-    return;
+    return getState().app.messageParams.summaries;
   }
 
   const { output, usage } = generateTextResult.value;
@@ -268,11 +270,10 @@ ${JSON.stringify([firstSummary, secondSummary].map(({ compacted }) => compacted)
     .slice(0, smallestFirstSummaryIdx)
     .concat(mergedSummary)
     .concat(summaries.slice(smallestSecondSummaryIdx + 1));
-  actions.setSummaries(nextSummaries);
-  return;
+  return nextSummaries;
 }
 
-export async function compactMessageParams() {
+export async function getMessageParamsSummary() {
   const { model } = getState().config;
   assert(model !== MISSING);
 
@@ -321,7 +322,6 @@ ${JSON.stringify(getState().app.messageParams.messages)}
     compacted: output.compacted,
     compactedAt: Date.now(),
   };
-  actions.appendToSummaries(summary);
   await appendModelUsage(usage);
 
   return summary;
@@ -358,9 +358,14 @@ export async function maybeCompact(userInput: string) {
 
   print.doing("Compacting" + getUnicodeChar("…"));
 
-  // TODO: handle errors
-  await compactSummaries();
-  await compactMessageParams();
+  // If summarizing the message params failed, don't reset the message params
+  const messageParamsSummary = await getMessageParamsSummary();
+  if (messageParamsSummary === null) return;
+
+  // If merging the existing summaries failed, use existing summaries
+  const mergedSummaries = await getMergedSummaries();
+
+  actions.setSummaries([...mergedSummaries, messageParamsSummary]);
 
   actions.resetMessageParams();
   for (const summary of getState().app.messageParams.summaries) {
