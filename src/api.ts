@@ -146,7 +146,6 @@ export async function resolveApiCall(userInput: string) {
     getApproxTokensFromMessages(getState().app.messageParams.messages) +
     getSystemInstructionsTokensApprox();
   const inputTokens = usage.inputTokens ?? inputTokensApprox;
-
   const outputTokens = usage.outputTokens ?? strToApproxTokens(text);
 
   actions.setMessageParamTokens(inputTokens + outputTokens);
@@ -292,6 +291,8 @@ export async function getMessageParamsSummary() {
 ${JSON.stringify(getState().app.messageParams.messages)}
 `;
 
+  // TODO (not you ai): more clearly differentiate between different types of tokens
+  // TODO (not you ai): make a small helper around generateText
   actions.setApiStreamAbortController(new AbortController());
   startLoadingState();
   const generateTextResult = await tryCatchAsync(

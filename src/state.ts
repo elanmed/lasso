@@ -42,6 +42,7 @@ export interface McpState {
 
 interface State {
   app: {
+    // TODO (not you ai): restructure this state
     messageParams: {
       tokens: number;
       tokensStale: boolean;

@@ -5,8 +5,8 @@ import { safeStringify, strToApproxTokens } from "./utils.ts";
 import { actions, getState, type MCPToolSet } from "./state.ts";
 import {
   maybeCompact,
-  compactMessageParams,
-  compactSummaries,
+  getMessageParamsSummary,
+  getMergedSummaries,
   resolveApiCall,
   warnOnLargeSystemInstructions,
 } from "./api.ts";
@@ -540,7 +540,9 @@ Lasso reserves 50% of the context window for compacted summaries and 30% for sys
       await maybeCompact("hi");
       assert.strictEqual(capturedMessages.length, 1);
       assert.deepStrictEqual(getState().app.messageParams, {
-        summaries: [{ compacted: "compacted summary", compactedAt: 0 }],
+        summaries: [
+          { compacted: "compacted summary", compactedAt: 0, tokens: 25_000 },
+        ],
         tokens: 25_000 + getApproxAdditions(),
         tokensStale: false,
         messages: [{ role: "assistant", content: "compacted summary" }],
@@ -645,7 +647,9 @@ Lasso reserves 50% of the context window for compacted summaries and 30% for sys
       );
       const withoutMcpTools = strToApproxTokens(safeStringify(harnessTools));
       assert.deepStrictEqual(getState().app.messageParams, {
-        summaries: [{ compacted: "compacted summary", compactedAt: 0 }],
+        summaries: [
+          { compacted: "compacted summary", compactedAt: 0, tokens: 25_000 },
+        ],
         tokens: 25_000 + withMcpTools,
         tokensStale: false,
         messages: [{ role: "assistant", content: "compacted summary" }],
@@ -702,7 +706,9 @@ Lasso reserves 50% of the context window for compacted summaries and 30% for sys
         `Compact the following conversation:\n[{"role":"user","content":"hi"}]\n`,
       );
       assert.deepStrictEqual(getState().app.messageParams, {
-        summaries: [{ compacted: "compacted summary", compactedAt: 0 }],
+        summaries: [
+          { compacted: "compacted summary", compactedAt: 0, tokens: 25_000 },
+        ],
         tokens: 25_000 + getApproxAdditions(),
         tokensStale: false,
         messages: [{ role: "assistant", content: "compacted summary" }],
@@ -743,7 +749,9 @@ Lasso reserves 50% of the context window for compacted summaries and 30% for sys
 
       assert.strictEqual(capturedMessages.length, 1);
       assert.deepStrictEqual(getState().app.messageParams, {
-        summaries: [{ compacted: "compacted summary", compactedAt: 0 }],
+        summaries: [
+          { compacted: "compacted summary", compactedAt: 0, tokens: 25_000 },
+        ],
         tokens: 25_000 + getApproxAdditions(),
         tokensStale: false,
         messages: [{ role: "assistant", content: "compacted summary" }],
@@ -839,7 +847,9 @@ Lasso reserves 50% of the context window for compacted summaries and 30% for sys
       await maybeCompact("new input");
       await resolveApiCall("new input");
       assert.deepStrictEqual(getState().app.messageParams, {
-        summaries: [{ compacted: "compacted summary", compactedAt: 0 }],
+        summaries: [
+          { compacted: "compacted summary", compactedAt: 0, tokens: 25 },
+        ],
         tokens: 25,
         tokensStale: false,
         messages: [
@@ -864,56 +874,158 @@ Lasso reserves 50% of the context window for compacted summaries and 30% for sys
         { role: "user", content: "new input" },
       ]);
     });
+
+    it("merges existing summaries when at the summary max during compaction", async () => {
+      for (const i of [1, 2, 3, 4, 5]) {
+        actions.setSummaries([
+          ...getState().app.messageParams.summaries,
+          { compacted: `summary ${String(i)}`, compactedAt: i, tokens: 100 },
+        ]);
+      }
+      actions.appendToMessageParams({ role: "user", content: "hi" });
+      actions.setMessageParamTokens(85_000);
+      let callCount = 0;
+      mock.method(aiDeps, "generateText", () => {
+        const overrides = (() => {
+          if (callCount === 0) {
+            return {
+              output: { compacted: "compacted summary" },
+              usage: {
+                inputTokens: 0,
+                outputTokens: 20,
+                inputTokenDetails: { cacheReadTokens: 0, cacheWriteTokens: 0 },
+              },
+            };
+          }
+          return {
+            output: { compacted: "merged summary" },
+            usage: {
+              inputTokens: 0,
+              outputTokens: 15,
+              inputTokenDetails: { cacheReadTokens: 0, cacheWriteTokens: 0 },
+            },
+          };
+        })();
+        callCount = callCount + 1;
+        return Promise.resolve(makeGenerateTextResult(overrides));
+      });
+      await maybeCompact("hi");
+      assert.strictEqual(callCount, 2);
+      assert.deepStrictEqual(getState().app.messageParams, {
+        summaries: [
+          { compacted: "merged summary", compactedAt: 0, tokens: 15 },
+          { compacted: "summary 3", compactedAt: 3, tokens: 100 },
+          { compacted: "summary 4", compactedAt: 4, tokens: 100 },
+          { compacted: "summary 5", compactedAt: 5, tokens: 100 },
+          { compacted: "compacted summary", compactedAt: 0, tokens: 20 },
+        ],
+        tokens: 15 + 300 + 20 + getApproxAdditions(),
+        tokensStale: false,
+        messages: [
+          { role: "assistant", content: "merged summary" },
+          { role: "assistant", content: "summary 3" },
+          { role: "assistant", content: "summary 4" },
+          { role: "assistant", content: "summary 5" },
+          { role: "assistant", content: "compacted summary" },
+        ],
+      });
+    });
+
+    it("keeps the existing summaries when merging fails during compaction", async () => {
+      for (const i of [1, 2, 3, 4, 5]) {
+        actions.setSummaries([
+          ...getState().app.messageParams.summaries,
+          { compacted: `summary ${String(i)}`, compactedAt: i, tokens: 100 },
+        ]);
+      }
+      actions.appendToMessageParams({ role: "user", content: "hi" });
+      actions.setMessageParamTokens(85_000);
+      let callCount = 0;
+      mock.method(aiDeps, "generateText", () => {
+        callCount = callCount + 1;
+        if (callCount === 2) {
+          return Promise.reject(new Error("network error"));
+        }
+        return Promise.resolve(
+          makeGenerateTextResult({
+            output: { compacted: "compacted summary" },
+            usage: {
+              inputTokens: 0,
+              outputTokens: 20,
+              inputTokenDetails: { cacheReadTokens: 0, cacheWriteTokens: 0 },
+            },
+          }),
+        );
+      });
+      await maybeCompact("hi");
+      assert.strictEqual(callCount, 2);
+      assert.deepStrictEqual(getState().app.messageParams, {
+        summaries: [
+          { compacted: "summary 1", compactedAt: 1, tokens: 100 },
+          { compacted: "summary 2", compactedAt: 2, tokens: 100 },
+          { compacted: "summary 3", compactedAt: 3, tokens: 100 },
+          { compacted: "summary 4", compactedAt: 4, tokens: 100 },
+          { compacted: "summary 5", compactedAt: 5, tokens: 100 },
+          { compacted: "compacted summary", compactedAt: 0, tokens: 20 },
+        ],
+        tokens: 500 + 20 + getApproxAdditions(),
+        tokensStale: false,
+        messages: [
+          { role: "assistant", content: "summary 1" },
+          { role: "assistant", content: "summary 2" },
+          { role: "assistant", content: "summary 3" },
+          { role: "assistant", content: "summary 4" },
+          { role: "assistant", content: "summary 5" },
+          { role: "assistant", content: "compacted summary" },
+        ],
+      });
+    });
   });
 
-  describe("compactMessageParams", () => {
+  describe("getMessageParamsSummary", () => {
     beforeEach(() => {
       actions.setContextWindowPerModel({ "claude-sonnet-4-20250514": 100_000 });
+      mock.method(Date, "now", () => 42);
     });
 
-    it("returns null and does not touch messages when generateText fails", async () => {
+    const usage = {
+      inputTokens: 0,
+      outputTokens: 25_000,
+      inputTokenDetails: { cacheReadTokens: 0, cacheWriteTokens: 0 },
+    };
+
+    const seedMessageParams = () => {
+      actions.setSummaries([
+        { compacted: "prior summary", compactedAt: 1, tokens: 10 },
+      ]);
       actions.appendToMessageParams({ role: "user", content: "hi" });
       actions.setMessageParamTokens(85_000);
-      mock.method(aiDeps, "generateText", () =>
-        Promise.reject(new Error("network error")),
+    };
+
+    it("sends the messages as a compact prompt to the api", async () => {
+      seedMessageParams();
+      let capturedMessages: ModelMessage[] = [];
+      mock.method(aiDeps, "generateText", (opts: Record<string, unknown>) => {
+        capturedMessages = opts["messages"] as ModelMessage[];
+        return Promise.resolve(
+          makeGenerateTextResult({
+            output: { compacted: "compacted summary" },
+            usage,
+          }),
+        );
+      });
+      await getMessageParamsSummary();
+      assert.strictEqual(capturedMessages.length, 1);
+      const capturedMessage = capturedMessages[0];
+      assert(capturedMessage !== undefined);
+      assert.strictEqual(
+        capturedMessage.content,
+        `Compact the following conversation:\n[{"role":"user","content":"hi"}]\n`,
       );
-      const result = await compactMessageParams();
-      assert.strictEqual(result, null);
-      assert.deepStrictEqual(getState().app.messageParams, {
-        summaries: [],
-        tokens: 85_000,
-        tokensStale: false,
-        messages: [{ role: "user", content: "hi" }],
-      });
     });
 
-    it("returns null and does not touch messages on abort error", async () => {
-      const getCaptured = mockStdout();
-      actions.appendToMessageParams({ role: "user", content: "hi" });
-      actions.setMessageParamTokens(85_000);
-      const err = new Error("aborted");
-      err.name = "AbortError";
-      mock.method(aiDeps, "generateText", () => Promise.reject(err));
-      const result = await compactMessageParams();
-      assert.strictEqual(result, null);
-      assert.strictEqual(getState().abortControllers.apiStream, null);
-      assert.deepStrictEqual(getState().app.messageParams, {
-        summaries: [],
-        tokens: 85_000,
-        tokensStale: false,
-        messages: [{ role: "user", content: "hi" }],
-      });
-      assert.strictEqual(stripAnsi(getCaptured()), "");
-    });
-
-    it("returns the compacted summary and usage on success", async () => {
-      actions.appendToMessageParams({ role: "user", content: "hi" });
-      actions.setMessageParamTokens(85_000);
-      const usage = {
-        inputTokens: 0,
-        outputTokens: 25_000,
-        inputTokenDetails: { cacheReadTokens: 0, cacheWriteTokens: 0 },
-      };
+    it("returns the compacted summary with usage tokens on success", async () => {
+      seedMessageParams();
       mock.method(aiDeps, "generateText", () =>
         Promise.resolve(
           makeGenerateTextResult({
@@ -922,105 +1034,253 @@ Lasso reserves 50% of the context window for compacted summaries and 30% for sys
           }),
         ),
       );
-      const result = await compactMessageParams();
-      assert.deepStrictEqual(result, { compacted: "compacted summary", usage });
+      const result = await getMessageParamsSummary();
+      assert.deepStrictEqual(result, {
+        compacted: "compacted summary",
+        compactedAt: 42,
+        tokens: 25_000,
+      });
+      assert.deepStrictEqual(getState().app.modelUsageForSession, {
+        "claude-sonnet-4-20250514": [
+          {
+            inputTokens: 0,
+            outputTokens: 25_000,
+            cacheReadTokens: 0,
+            cacheWriteTokens: 0,
+            date: 42,
+          },
+        ],
+      });
+    });
+
+    it("falls back to approximated tokens when usage has no outputTokens", async () => {
+      seedMessageParams();
+      mock.method(aiDeps, "generateText", () =>
+        Promise.resolve(
+          makeGenerateTextResult({
+            output: { compacted: "four chars ≈ one token" },
+            usage: {
+              inputTokens: 0,
+              outputTokens: undefined,
+              inputTokenDetails: { cacheReadTokens: 0, cacheWriteTokens: 0 },
+            },
+          }),
+        ),
+      );
+      const result = await getMessageParamsSummary();
+      assert.deepStrictEqual(result, {
+        compacted: "four chars ≈ one token",
+        compactedAt: 42,
+        tokens: strToApproxTokens("four chars ≈ one token"),
+      });
+    });
+
+    it("returns null and does not touch messages when generateText fails", async () => {
+      seedMessageParams();
+      mock.method(aiDeps, "generateText", () =>
+        Promise.reject(new Error("network error")),
+      );
+      const result = await getMessageParamsSummary();
+      assert.strictEqual(result, null);
       assert.deepStrictEqual(getState().app.messageParams, {
-        summaries: [],
+        summaries: [{ compacted: "prior summary", compactedAt: 1, tokens: 10 }],
         tokens: 85_000,
         tokensStale: false,
         messages: [{ role: "user", content: "hi" }],
       });
-      assert.deepStrictEqual(getState().app.modelUsageForSession, {});
+    });
+
+    it("returns null and does not touch messages on abort error", async () => {
+      const getCaptured = mockStdout();
+      seedMessageParams();
+      const err = new Error("aborted");
+      err.name = "AbortError";
+      mock.method(aiDeps, "generateText", () => Promise.reject(err));
+      const result = await getMessageParamsSummary();
+      assert.strictEqual(result, null);
+      assert.strictEqual(getState().abortControllers.apiStream, null);
+      assert.deepStrictEqual(getState().app.messageParams, {
+        summaries: [{ compacted: "prior summary", compactedAt: 1, tokens: 10 }],
+        tokens: 85_000,
+        tokensStale: false,
+        messages: [{ role: "user", content: "hi" }],
+      });
+      assert.strictEqual(stripAnsi(getCaptured()), "");
+    });
+
+    it("resolves the queued editor input on abort error", async () => {
+      seedMessageParams();
+      actions.setRl(makeFakeRl());
+      actions.setEditorInputValue("queued input");
+      const getCaptured = mockStdout();
+      const err = new Error("aborted");
+      err.name = "AbortError";
+      mock.method(aiDeps, "generateText", () => Promise.reject(err));
+      const result = await getMessageParamsSummary();
+      assert.strictEqual(result, null);
+      assert.strictEqual(getState().app.editorInputValue, "queued input");
+      assert.strictEqual(getState().abortControllers.apiStream, null);
+      assert.strictEqual(
+        stripAnsi(getCaptured()),
+        `You have queued messages! Edit them with {"name":"g","ctrl":true} or press enter to continue\n`,
+      );
     });
   });
 
-  describe("compactSummaries", () => {
+  describe("getMergedSummaries", () => {
     beforeEach(() => {
       actions.setContextWindowPerModel({ "claude-sonnet-4-20250514": 100_000 });
+      mock.method(Date, "now", () => 42);
     });
+
+    const usage = {
+      inputTokens: 0,
+      outputTokens: 25_000,
+      inputTokenDetails: { cacheReadTokens: 0, cacheWriteTokens: 0 },
+    };
 
     const seedSummaries = () => {
       for (const i of [1, 2, 3, 4, 5]) {
-        actions.appendToSummaries({
-          compacted: `summary ${String(i)}`,
-          compactedAt: i,
-        });
+        actions.setSummaries([
+          ...getState().app.messageParams.summaries,
+          { compacted: `summary ${String(i)}`, compactedAt: i, tokens: 100 },
+        ]);
       }
     };
 
-    it("returns null and does not call the api when below the summary max", async () => {
-      actions.appendToSummaries({ compacted: "summary", compactedAt: 1 });
+    it("returns the existing summaries without calling the api when below the summary max", async () => {
+      actions.setSummaries([
+        { compacted: "summary", compactedAt: 1, tokens: 100 },
+      ]);
       let called = false;
       mock.method(aiDeps, "generateText", () => {
         called = true;
         return Promise.resolve(makeGenerateTextResult());
       });
-      const result = await compactSummaries();
-      assert.strictEqual(result, null);
+      const result = await getMergedSummaries();
       assert.strictEqual(called, false);
-      assert.deepStrictEqual(getState().app.messageParams.summaries, [
-        { compacted: "summary", compactedAt: 1 },
+      assert.deepStrictEqual(result, [
+        { compacted: "summary", compactedAt: 1, tokens: 100 },
       ]);
     });
 
-    it("merges the two newest summaries into one when at the summary max", async () => {
+    it("merges the two summaries with the smallest largerCompactedAt when at the summary max", async () => {
       seedSummaries();
       let capturedMessages: ModelMessage[] = [];
       mock.method(aiDeps, "generateText", (opts: Record<string, unknown>) => {
         capturedMessages = opts["messages"] as ModelMessage[];
         return Promise.resolve(
-          makeGenerateTextResult({ output: { compacted: "merged summary" } }),
+          makeGenerateTextResult({
+            output: { compacted: "merged summary" },
+            usage,
+          }),
         );
       });
-      const result = await compactSummaries();
+      const result = await getMergedSummaries();
       const capturedMessage = capturedMessages[0];
       assert(capturedMessage !== undefined);
       assert.strictEqual(
         capturedMessage.content,
-        `Merge the following two summaries into one:\n["summary 5","summary 4"]\n`,
+        `Merge the following two summaries into one:\n["summary 1","summary 2"]\n`,
       );
-      assert.deepStrictEqual(result, {
-        compacted: "merged summary",
-        compactedAt: 5,
-      });
+      assert.deepStrictEqual(result, [
+        { compacted: "merged summary", compactedAt: 42, tokens: 25_000 },
+        { compacted: "summary 3", compactedAt: 3, tokens: 100 },
+        { compacted: "summary 4", compactedAt: 4, tokens: 100 },
+        { compacted: "summary 5", compactedAt: 5, tokens: 100 },
+      ]);
       assert.deepStrictEqual(getState().app.messageParams.summaries, [
-        { compacted: "summary 1", compactedAt: 1 },
-        { compacted: "summary 2", compactedAt: 2 },
-        { compacted: "summary 3", compactedAt: 3 },
-        { compacted: "merged summary", compactedAt: 5 },
+        { compacted: "summary 1", compactedAt: 1, tokens: 100 },
+        { compacted: "summary 2", compactedAt: 2, tokens: 100 },
+        { compacted: "summary 3", compactedAt: 3, tokens: 100 },
+        { compacted: "summary 4", compactedAt: 4, tokens: 100 },
+        { compacted: "summary 5", compactedAt: 5, tokens: 100 },
+      ]);
+      assert.deepStrictEqual(getState().app.modelUsageForSession, {
+        "claude-sonnet-4-20250514": [
+          {
+            inputTokens: 0,
+            outputTokens: 25_000,
+            cacheReadTokens: 0,
+            cacheWriteTokens: 0,
+            date: 42,
+          },
+        ],
+      });
+    });
+
+    it("does not mutate the existing state summaries when merging", async () => {
+      seedSummaries();
+      mock.method(aiDeps, "generateText", () =>
+        Promise.resolve(
+          makeGenerateTextResult({
+            output: { compacted: "merged summary" },
+            usage,
+          }),
+        ),
+      );
+      await getMergedSummaries();
+      assert.deepStrictEqual(getState().app.messageParams.summaries, [
+        { compacted: "summary 1", compactedAt: 1, tokens: 100 },
+        { compacted: "summary 2", compactedAt: 2, tokens: 100 },
+        { compacted: "summary 3", compactedAt: 3, tokens: 100 },
+        { compacted: "summary 4", compactedAt: 4, tokens: 100 },
+        { compacted: "summary 5", compactedAt: 5, tokens: 100 },
       ]);
     });
 
-    it("keeps summaries when generateText fails", async () => {
+    it("falls back to approximated tokens when usage has no outputTokens", async () => {
+      seedSummaries();
+      mock.method(aiDeps, "generateText", () =>
+        Promise.resolve(
+          makeGenerateTextResult({
+            output: { compacted: "twelve chars ≈ four tokens" },
+            usage: {
+              inputTokens: 0,
+              outputTokens: undefined,
+              inputTokenDetails: { cacheReadTokens: 0, cacheWriteTokens: 0 },
+            },
+          }),
+        ),
+      );
+      const result = await getMergedSummaries();
+      const mergedSummary = result[0];
+      assert(mergedSummary !== undefined);
+      assert.strictEqual(
+        mergedSummary.tokens,
+        strToApproxTokens("twelve chars ≈ four tokens"),
+      );
+    });
+
+    it("keeps the existing summaries when generateText fails", async () => {
       seedSummaries();
       mock.method(aiDeps, "generateText", () =>
         Promise.reject(new Error("network error")),
       );
-      const result = await compactSummaries();
-      assert.strictEqual(result, null);
+      const result = await getMergedSummaries();
+      assert.strictEqual(result, getState().app.messageParams.summaries);
       assert.deepStrictEqual(getState().app.messageParams.summaries, [
-        { compacted: "summary 1", compactedAt: 1 },
-        { compacted: "summary 2", compactedAt: 2 },
-        { compacted: "summary 3", compactedAt: 3 },
-        { compacted: "summary 4", compactedAt: 4 },
-        { compacted: "summary 5", compactedAt: 5 },
+        { compacted: "summary 1", compactedAt: 1, tokens: 100 },
+        { compacted: "summary 2", compactedAt: 2, tokens: 100 },
+        { compacted: "summary 3", compactedAt: 3, tokens: 100 },
+        { compacted: "summary 4", compactedAt: 4, tokens: 100 },
+        { compacted: "summary 5", compactedAt: 5, tokens: 100 },
       ]);
     });
 
-    it("returns null and keeps summaries on abort error", async () => {
+    it("returns the existing summaries and clears the abort controller on abort error", async () => {
       seedSummaries();
       const err = new Error("aborted");
       err.name = "AbortError";
       mock.method(aiDeps, "generateText", () => Promise.reject(err));
-      const result = await compactSummaries();
-      assert.strictEqual(result, null);
+      const result = await getMergedSummaries();
       assert.strictEqual(getState().abortControllers.apiStream, null);
-      assert.deepStrictEqual(getState().app.messageParams.summaries, [
-        { compacted: "summary 1", compactedAt: 1 },
-        { compacted: "summary 2", compactedAt: 2 },
-        { compacted: "summary 3", compactedAt: 3 },
-        { compacted: "summary 4", compactedAt: 4 },
-        { compacted: "summary 5", compactedAt: 5 },
+      assert.deepStrictEqual(result, [
+        { compacted: "summary 1", compactedAt: 1, tokens: 100 },
+        { compacted: "summary 2", compactedAt: 2, tokens: 100 },
+        { compacted: "summary 3", compactedAt: 3, tokens: 100 },
+        { compacted: "summary 4", compactedAt: 4, tokens: 100 },
+        { compacted: "summary 5", compactedAt: 5, tokens: 100 },
       ]);
     });
   });
