@@ -29,6 +29,7 @@ describe("state", () => {
     clearTimeout(timeout);
 
     assert.deepStrictEqual(getState().app.messageParams, {
+      summaries: [],
       tokens: 0,
       tokensStale: false,
       messages: [],
@@ -49,6 +50,7 @@ describe("state", () => {
 
   it("initial state", () => {
     assert.deepStrictEqual(getState().app.messageParams, {
+      summaries: [],
       tokens: 0,
       tokensStale: false,
       messages: [],
@@ -68,6 +70,7 @@ describe("state", () => {
   describe("append-to-message-params", () => {
     it("appends new message to the list", () => {
       assert.deepStrictEqual(getState().app.messageParams, {
+        summaries: [],
         tokens: 0,
         tokensStale: false,
         messages: [],
@@ -75,6 +78,7 @@ describe("state", () => {
       actions.appendToMessageParams({ role: "user", content: "hi" });
       assert.equal(getState().app.messageParams.messages.length, 1);
       assert.deepStrictEqual(getState().app.messageParams, {
+        summaries: [],
         tokens: 0,
         tokensStale: false,
         messages: [{ role: "user", content: "hi" }],
@@ -83,6 +87,7 @@ describe("state", () => {
 
     it("appends multiple messages in order", () => {
       assert.deepStrictEqual(getState().app.messageParams, {
+        summaries: [],
         tokens: 0,
         tokensStale: false,
         messages: [],
@@ -123,12 +128,14 @@ describe("state", () => {
     assert.equal(getState().app.messageParams.tokensStale, true);
   });
 
-  it("reset-message-params", () => {
+  it("reset-message-params resets summaries", () => {
     actions.appendToMessageParams({ role: "user", content: "hi" });
+    actions.appendToSummaries({ compacted: "summary", compactedAt: 4 });
     actions.setMessageParamTokens(7);
     assert.equal(getState().app.messageParams.tokens, 7);
     actions.resetMessageParams();
     assert.deepStrictEqual(getState().app.messageParams, {
+      summaries: [],
       tokens: 0,
       tokensStale: false,
       messages: [],

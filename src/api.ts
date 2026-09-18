@@ -23,6 +23,7 @@ import {
   toolPrint,
 } from "./tools.ts";
 import { MISSING } from "./missing.ts";
+import type { ModelSummary } from "./state.ts";
 import { aiDeps } from "./deps.ts";
 import { prependToChatHistory } from "./log.ts";
 import { getLanguageModel } from "./model.ts";
@@ -167,28 +168,111 @@ export function getSystemInstructionsTokensApprox() {
 }
 
 export async function compactSummaries() {
-  // [{summary: string, compactedAt: number}]
   const { summaries } = getState().app.messageParams;
   if (summaries.length < maxNumberSummaries) return null;
 
-  const sortedSummaries = summaries.toSorted((a, b) => {
-    return b.compactedAt - a.compactedAt;
-  });
-  const summariesToMerge = sortedSummaries.slice(0, 2);
-  const compactedAtsToMerge = summariesToMerge.map(
-    ({ compactedAt }) => summary.compacted,
-  );
-  const restSummaries = summaries.filter(
-    (compactedAt) => !compactedAtsToMerge.includes(compactedAt),
-  );
+  // [S1(@1), S2(@2), S3(@3), S4(@4), S5(@5)]
 
-  // I'll do the rest later
+  // [S1(@1), S2(@2), S3(@3), S4(@4), S5(@5), S6(@6)]
+  // [M2(@6), S3(@3), S4(@4), S5(@5), S6(@6)]
+
+  // [M2(@6), S3(@3), S4(@4), S5(@5), S6(@6)]
+  // [M2(@6), S3(@3), S4(@4), S5(@5), S6(@6), S7(@7)]
+
+  let smallestSecondSummaryIdx = -1;
+  let smallestFirstSummaryIdx = -1;
+
+  let smallestSummaryCompactedAt = Infinity;
+  for (let idx = 0; idx < summaries.length - 1; idx++) {
+    const firstSummary = summaries[idx];
+    assert(
+      firstSummary !== undefined,
+      "Guaranteed by `idx < summaries.length - 1`",
+    );
+
+    const secondSummary = summaries[idx + 1];
+    assert(
+      secondSummary !== undefined,
+      "Guaranteed by `idx < summaries.length - 1`",
+    );
+
+    const largerCompactedAt = Math.max(
+      firstSummary.compactedAt,
+      secondSummary.compactedAt,
+    );
+    if (largerCompactedAt < smallestSummaryCompactedAt) {
+      smallestSummaryCompactedAt = largerCompactedAt;
+      smallestFirstSummaryIdx = idx;
+      smallestSecondSummaryIdx = idx + 1;
+    }
+  }
+
+  const firstSummary = summaries[smallestFirstSummaryIdx];
+  assert(firstSummary !== undefined, "Guaranteed by loop");
+
+  const secondSummary = summaries[smallestSecondSummaryIdx];
+  assert(secondSummary !== undefined, "Guaranteed by loop");
+
+  const { model } = getState().config;
+  assert(model !== MISSING, "Early return in `maybeCompact`");
+
+  const contextWindow = getState().config.contextWindowPerModel[model];
+  assert(contextWindow !== undefined, "Early return in `maybeCompact`");
+
+  const targetTokens = Math.floor(maxRatioPerSummary * contextWindow);
+  const targetCharLen = approxTokensToCharLen(targetTokens);
+
+  const compactMessageParam = `Merge the following two summaries into one:
+${JSON.stringify([firstSummary, secondSummary].map(({ compacted }) => compacted))}
+`;
+
+  actions.setApiStreamAbortController(new AbortController());
+  startLoadingState();
+  const generateTextResult = await tryCatchAsync(
+    aiDeps.generateText({
+      model: getLanguageModel(model),
+      messages: [{ content: compactMessageParam, role: "user" }],
+      stopWhen: aiDeps.isLoopFinished(),
+      abortSignal: getApiStreamAbortSignal(),
+      output: Output.object({
+        schema: z.object({
+          compacted: z.string().max(targetCharLen),
+        }),
+      }),
+    }),
+  );
+  stopLoadingState();
+  actions.setApiStreamAbortController(null);
+
+  if (!generateTextResult.ok) {
+    if (isAbortError(generateTextResult.error)) {
+      if (getState().app.editorInputValue !== null) {
+        await resolveInterruptWithEditor();
+      }
+      return;
+    }
+
+    print.error(getMessageFromError(generateTextResult.error));
+    return;
+  }
+
+  const { output, usage } = generateTextResult.value;
+  const { compacted } = output;
+  await appendModelUsage(usage);
+
+  const mergedSummary = {
+    compacted,
+    compactedAt: Date.now(),
+  };
+  const nextSummaries = summaries
+    .slice(0, smallestFirstSummaryIdx)
+    .concat(mergedSummary)
+    .concat(summaries.slice(smallestSecondSummaryIdx + 1));
+  actions.setSummaries(nextSummaries);
+  return;
 }
 
-export async function compactMessageParams(): Promise<{
-  compacted: string;
-  usage: LanguageModelUsage;
-} | null> {
+export async function compactMessageParams() {
   const { model } = getState().config;
   assert(model !== MISSING);
 
@@ -233,8 +317,14 @@ ${JSON.stringify(getState().app.messageParams.messages)}
   }
 
   const { usage, output } = generateTextResult.value;
-  const { compacted } = output;
-  return { compacted, usage };
+  const summary: ModelSummary = {
+    compacted: output.compacted,
+    compactedAt: Date.now(),
+  };
+  actions.appendToSummaries(summary);
+  await appendModelUsage(usage);
+
+  return summary;
 }
 
 export async function maybeCompact(userInput: string) {
@@ -244,7 +334,7 @@ export async function maybeCompact(userInput: string) {
   const contextWindow = getState().config.contextWindowPerModel[model];
   if (contextWindow === undefined) return;
 
-  // maybeCompactMessageParams runs before each api call turn, so we don't know the token
+  // maybeCompact runs before each api call turn, so we don't know the token
   // count of userInput until after the API call. This can be problematic when the userInput
   // would large enough to trigger compaction, so we approximate for the userInput
   const userInputTokensApprox = strToApproxTokens(userInput);
@@ -267,18 +357,23 @@ export async function maybeCompact(userInput: string) {
   if (currRatio <= compactTriggerRatio) return;
 
   print.doing("Compacting" + getUnicodeChar("…"));
-  const compactMessageParamsResult = await compactMessageParams();
-  if (compactMessageParamsResult === null) return;
-  const { compacted, usage } = compactMessageParamsResult;
 
-  await appendModelUsage(usage);
-  const afterCompactionTokens = usage.outputTokens ?? 0;
+  // TODO: handle errors
+  await compactSummaries();
+  await compactMessageParams();
 
   actions.resetMessageParams();
-  actions.appendToMessageParams({ content: compacted, role: "assistant" });
-  actions.setMessageParamTokens(
-    afterCompactionTokens + systemInstructionsTokensApprox,
-  );
+  for (const summary of getState().app.messageParams.summaries) {
+    actions.appendToMessageParams({
+      content: summary.compacted,
+      role: "assistant",
+    });
+  }
+
+  // TODO: handle tokens
+  // actions.setMessageParamTokens(
+  //   afterCompactionTokens + systemInstructionsTokensApprox,
+  // );
 }
 
 export function warnOnLargeSystemInstructions() {

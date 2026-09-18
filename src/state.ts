@@ -26,6 +26,11 @@ export interface SlashCommand {
   content: string;
 }
 
+export interface ModelSummary {
+  compacted: string;
+  compactedAt: number;
+}
+
 export type MCPToolSet = Awaited<ReturnType<MCPClient["tools"]>>;
 
 export interface McpState {
@@ -40,6 +45,7 @@ interface State {
       tokens: number;
       tokensStale: boolean;
       messages: ModelMessage[];
+      summaries: ModelSummary[];
     };
     editorInputValue: string | null;
     slashCommands: SlashCommand[];
@@ -75,7 +81,12 @@ interface State {
 
 const createInitialState = (): State => ({
   app: {
-    messageParams: { tokens: 0, tokensStale: false, messages: [] },
+    messageParams: {
+      tokens: 0,
+      tokensStale: false,
+      messages: [],
+      summaries: [],
+    },
     editorInputValue: null,
     slashCommands: [],
     stdout: "",
@@ -156,6 +167,22 @@ const logStateChange = (actionType: string, before: string, after: string) => {
 };
 
 export const actions = {
+  appendToSummaries(summary: ModelSummary) {
+    const before = state.app.messageParams.summaries.length;
+    state.app.messageParams.summaries.push(summary);
+    logStateChange(
+      "append-to-summaries",
+      String(before),
+      String(state.app.messageParams.summaries.length),
+    );
+  },
+
+  setSummaries(summaries: ModelSummary[]) {
+    const before = state.app.messageParams.summaries;
+    state.app.messageParams.summaries = summaries;
+    logStateChange("set-summaries", stringify(before), stringify(summaries));
+  },
+
   appendToMessageParams(message: ModelMessage) {
     const before = state.app.messageParams.messages.length;
     state.app.messageParams.messages.push(message);
@@ -266,7 +293,12 @@ export const actions = {
 
   resetMessageParams() {
     const before = state.app.messageParams.tokens;
-    state.app.messageParams = { tokens: 0, tokensStale: false, messages: [] };
+    state.app.messageParams = {
+      tokens: 0,
+      tokensStale: false,
+      messages: [],
+      summaries: [],
+    };
     logStateChange("reset-message-params", String(before), "0");
   },
 

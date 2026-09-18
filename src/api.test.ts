@@ -6,6 +6,7 @@ import { actions, getState, type MCPToolSet } from "./state.ts";
 import {
   maybeCompact,
   compactMessageParams,
+  compactSummaries,
   resolveApiCall,
   warnOnLargeSystemInstructions,
 } from "./api.ts";
@@ -139,6 +140,7 @@ response text
       const result = await resolveApiCall("hello");
       assert.strictEqual(result, null);
       assert.deepStrictEqual(getState().app.messageParams, {
+        summaries: [],
         tokens: 16,
         tokensStale: true,
         messages: [
@@ -184,6 +186,7 @@ response text
       });
       assert.deepStrictEqual(getState().app.modelUsageForLimitWindow, {});
       assert.deepStrictEqual(getState().app.messageParams, {
+        summaries: [],
         tokens: 49,
         tokensStale: false,
         messages: [
@@ -212,6 +215,7 @@ response text
       );
       await resolveApiCall("second");
       assert.deepStrictEqual(getState().app.messageParams, {
+        summaries: [],
         tokens: 17,
         tokensStale: false,
         messages: [
@@ -240,6 +244,7 @@ response text
       );
       await resolveApiCall("hello");
       assert.deepStrictEqual(getState().app.messageParams, {
+        summaries: [],
         tokens: 55,
         tokensStale: false,
         messages: [
@@ -503,6 +508,7 @@ Lasso reserves 50% of the context window for compacted summaries and 30% for sys
       await maybeCompact("hi");
       assert.strictEqual(called, false);
       assert.deepStrictEqual(getState().app.messageParams, {
+        summaries: [],
         tokens: 60_000,
         tokensStale: false,
         messages: [{ role: "user", content: "hi" }],
@@ -534,6 +540,7 @@ Lasso reserves 50% of the context window for compacted summaries and 30% for sys
       await maybeCompact("hi");
       assert.strictEqual(capturedMessages.length, 1);
       assert.deepStrictEqual(getState().app.messageParams, {
+        summaries: [{ compacted: "compacted summary", compactedAt: 0 }],
         tokens: 25_000 + getApproxAdditions(),
         tokensStale: false,
         messages: [{ role: "assistant", content: "compacted summary" }],
@@ -556,6 +563,7 @@ Lasso reserves 50% of the context window for compacted summaries and 30% for sys
       await maybeCompact("hi");
       assert.strictEqual(called, false);
       assert.deepStrictEqual(getState().app.messageParams, {
+        summaries: [],
         tokens: 2_000,
         tokensStale: true,
         messages: [{ role: "user", content: longUserContent }],
@@ -637,6 +645,7 @@ Lasso reserves 50% of the context window for compacted summaries and 30% for sys
       );
       const withoutMcpTools = strToApproxTokens(safeStringify(harnessTools));
       assert.deepStrictEqual(getState().app.messageParams, {
+        summaries: [{ compacted: "compacted summary", compactedAt: 0 }],
         tokens: 25_000 + withMcpTools,
         tokensStale: false,
         messages: [{ role: "assistant", content: "compacted summary" }],
@@ -693,6 +702,7 @@ Lasso reserves 50% of the context window for compacted summaries and 30% for sys
         `Compact the following conversation:\n[{"role":"user","content":"hi"}]\n`,
       );
       assert.deepStrictEqual(getState().app.messageParams, {
+        summaries: [{ compacted: "compacted summary", compactedAt: 0 }],
         tokens: 25_000 + getApproxAdditions(),
         tokensStale: false,
         messages: [{ role: "assistant", content: "compacted summary" }],
@@ -733,6 +743,7 @@ Lasso reserves 50% of the context window for compacted summaries and 30% for sys
 
       assert.strictEqual(capturedMessages.length, 1);
       assert.deepStrictEqual(getState().app.messageParams, {
+        summaries: [{ compacted: "compacted summary", compactedAt: 0 }],
         tokens: 25_000 + getApproxAdditions(),
         tokensStale: false,
         messages: [{ role: "assistant", content: "compacted summary" }],
@@ -747,6 +758,7 @@ Lasso reserves 50% of the context window for compacted summaries and 30% for sys
       );
       await maybeCompact("hi");
       assert.deepStrictEqual(getState().app.messageParams, {
+        summaries: [],
         tokens: 85_000,
         tokensStale: false,
         messages: [{ role: "user", content: "hi" }],
@@ -781,6 +793,7 @@ Lasso reserves 50% of the context window for compacted summaries and 30% for sys
       await maybeCompact("hi");
       assert.strictEqual(getState().abortControllers.apiStream, null);
       assert.deepStrictEqual(getState().app.messageParams, {
+        summaries: [],
         tokens: 85_000,
         tokensStale: false,
         messages: [{ role: "user", content: "hi" }],
@@ -826,6 +839,7 @@ Lasso reserves 50% of the context window for compacted summaries and 30% for sys
       await maybeCompact("new input");
       await resolveApiCall("new input");
       assert.deepStrictEqual(getState().app.messageParams, {
+        summaries: [{ compacted: "compacted summary", compactedAt: 0 }],
         tokens: 25,
         tokensStale: false,
         messages: [
@@ -866,6 +880,7 @@ Lasso reserves 50% of the context window for compacted summaries and 30% for sys
       const result = await compactMessageParams();
       assert.strictEqual(result, null);
       assert.deepStrictEqual(getState().app.messageParams, {
+        summaries: [],
         tokens: 85_000,
         tokensStale: false,
         messages: [{ role: "user", content: "hi" }],
@@ -883,6 +898,7 @@ Lasso reserves 50% of the context window for compacted summaries and 30% for sys
       assert.strictEqual(result, null);
       assert.strictEqual(getState().abortControllers.apiStream, null);
       assert.deepStrictEqual(getState().app.messageParams, {
+        summaries: [],
         tokens: 85_000,
         tokensStale: false,
         messages: [{ role: "user", content: "hi" }],
@@ -909,11 +925,103 @@ Lasso reserves 50% of the context window for compacted summaries and 30% for sys
       const result = await compactMessageParams();
       assert.deepStrictEqual(result, { compacted: "compacted summary", usage });
       assert.deepStrictEqual(getState().app.messageParams, {
+        summaries: [],
         tokens: 85_000,
         tokensStale: false,
         messages: [{ role: "user", content: "hi" }],
       });
       assert.deepStrictEqual(getState().app.modelUsageForSession, {});
+    });
+  });
+
+  describe("compactSummaries", () => {
+    beforeEach(() => {
+      actions.setContextWindowPerModel({ "claude-sonnet-4-20250514": 100_000 });
+    });
+
+    const seedSummaries = () => {
+      for (const i of [1, 2, 3, 4, 5]) {
+        actions.appendToSummaries({
+          compacted: `summary ${String(i)}`,
+          compactedAt: i,
+        });
+      }
+    };
+
+    it("returns null and does not call the api when below the summary max", async () => {
+      actions.appendToSummaries({ compacted: "summary", compactedAt: 1 });
+      let called = false;
+      mock.method(aiDeps, "generateText", () => {
+        called = true;
+        return Promise.resolve(makeGenerateTextResult());
+      });
+      const result = await compactSummaries();
+      assert.strictEqual(result, null);
+      assert.strictEqual(called, false);
+      assert.deepStrictEqual(getState().app.messageParams.summaries, [
+        { compacted: "summary", compactedAt: 1 },
+      ]);
+    });
+
+    it("merges the two newest summaries into one when at the summary max", async () => {
+      seedSummaries();
+      let capturedMessages: ModelMessage[] = [];
+      mock.method(aiDeps, "generateText", (opts: Record<string, unknown>) => {
+        capturedMessages = opts["messages"] as ModelMessage[];
+        return Promise.resolve(
+          makeGenerateTextResult({ output: { compacted: "merged summary" } }),
+        );
+      });
+      const result = await compactSummaries();
+      const capturedMessage = capturedMessages[0];
+      assert(capturedMessage !== undefined);
+      assert.strictEqual(
+        capturedMessage.content,
+        `Merge the following two summaries into one:\n["summary 5","summary 4"]\n`,
+      );
+      assert.deepStrictEqual(result, {
+        compacted: "merged summary",
+        compactedAt: 5,
+      });
+      assert.deepStrictEqual(getState().app.messageParams.summaries, [
+        { compacted: "summary 1", compactedAt: 1 },
+        { compacted: "summary 2", compactedAt: 2 },
+        { compacted: "summary 3", compactedAt: 3 },
+        { compacted: "merged summary", compactedAt: 5 },
+      ]);
+    });
+
+    it("keeps summaries when generateText fails", async () => {
+      seedSummaries();
+      mock.method(aiDeps, "generateText", () =>
+        Promise.reject(new Error("network error")),
+      );
+      const result = await compactSummaries();
+      assert.strictEqual(result, null);
+      assert.deepStrictEqual(getState().app.messageParams.summaries, [
+        { compacted: "summary 1", compactedAt: 1 },
+        { compacted: "summary 2", compactedAt: 2 },
+        { compacted: "summary 3", compactedAt: 3 },
+        { compacted: "summary 4", compactedAt: 4 },
+        { compacted: "summary 5", compactedAt: 5 },
+      ]);
+    });
+
+    it("returns null and keeps summaries on abort error", async () => {
+      seedSummaries();
+      const err = new Error("aborted");
+      err.name = "AbortError";
+      mock.method(aiDeps, "generateText", () => Promise.reject(err));
+      const result = await compactSummaries();
+      assert.strictEqual(result, null);
+      assert.strictEqual(getState().abortControllers.apiStream, null);
+      assert.deepStrictEqual(getState().app.messageParams.summaries, [
+        { compacted: "summary 1", compactedAt: 1 },
+        { compacted: "summary 2", compactedAt: 2 },
+        { compacted: "summary 3", compactedAt: 3 },
+        { compacted: "summary 4", compactedAt: 4 },
+        { compacted: "summary 5", compactedAt: 5 },
+      ]);
     });
   });
 });

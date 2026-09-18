@@ -993,9 +993,11 @@ l---
 
     it("resets params", () => {
       actions.appendToMessageParams({ role: "user", content: "hello" });
+      actions.appendToSummaries({ compacted: "summary", compactedAt: 3 });
       mock.method(promptDeps, "getSystemContent", () => "abc");
       clearCommand();
       assert.deepStrictEqual(getState().app.messageParams, {
+        summaries: [],
         tokens: strToApproxTokens("abc"),
         tokensStale: false,
         messages: [],
@@ -1064,6 +1066,7 @@ transcript content
     `,
       );
       assert.deepStrictEqual(getState().app.messageParams, {
+        summaries: [],
         tokens: 0,
         tokensStale: false,
         messages: [],
