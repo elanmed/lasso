@@ -19,6 +19,7 @@ import {
 import { syncInitialModelUsageForLimitWindow } from "./usage.ts";
 import { print } from "./print.ts";
 import { initMcpState } from "./mcp.ts";
+import { registerToolsContent } from "./tools.ts";
 import { ConfigSchema, defaultConfig, type Config } from "./config-types.ts";
 
 export function readConfigFileStr(path: string) {
@@ -262,6 +263,7 @@ export function initStateForDebug() {
 
 export async function initStateRepeatable() {
   initStateForDebug();
+  registerToolsContent();
   initStateFromConfig();
   await initMcpState();
   await initStateFromFs();
@@ -272,6 +274,7 @@ export async function initState() {
   const debugLogPath = join(getDebugLogDir(), `debug-${getShortId()}.log`);
   actions.setDebugLogPath(debugLogPath);
 
+  registerToolsContent();
   initStateFromConfig();
   await initMcpState();
   await initStateFromFs();

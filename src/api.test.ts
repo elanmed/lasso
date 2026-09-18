@@ -10,7 +10,7 @@ import {
   resolveApiCall,
   warnOnLargeSystemInstructions,
 } from "./api.ts";
-import { harnessTools } from "./tools.ts";
+import { harnessTools, registerToolsContent } from "./tools.ts";
 import {
   setupTestContext,
   testFs,
@@ -37,6 +37,7 @@ describe("api", () => {
 
   beforeEach(() => {
     setupTestContext({ model: "claude-sonnet-4-20250514" });
+    registerToolsContent();
     actions.setBaseURL("https://api.anthropic.com");
     actions.setContextStr("");
     actions.setSkillsStr("");

@@ -26,6 +26,7 @@ import {
 import {
   objectWithPathSchema,
   harnessTools,
+  getTools,
   type HarnessToolName,
   toolPrint,
 } from "./tools.ts";
@@ -43,15 +44,6 @@ const dedicatedSystemInstructionsRatio =
   compactTriggerRatio - dedicatedSummaryRatio;
 const maxNumberSummaries = 5;
 const maxRatioPerSummary = dedicatedSummaryRatio / maxNumberSummaries;
-
-function getTools() {
-  return { ...harnessTools, ...getState().mcp.tools };
-}
-
-// getToolsContent lives here because the full tools set is only visible above tools.ts in the import graph
-// promptDeps defaults to an empty string because state.ts cannot see tools.ts without forming a cycle
-// TODO: find a better way to handle this
-promptDeps.getToolsContent = () => safeStringify(getTools());
 
 function getApiStreamAbortSignal() {
   const controller = getState().abortControllers.apiStream;
