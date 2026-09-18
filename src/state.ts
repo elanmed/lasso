@@ -168,16 +168,6 @@ const logStateChange = (actionType: string, before: string, after: string) => {
 };
 
 export const actions = {
-  appendToSummaries(summary: ModelSummary) {
-    const before = state.app.messageParams.summaries.length;
-    state.app.messageParams.summaries.push(summary);
-    logStateChange(
-      "append-to-summaries",
-      String(before),
-      String(state.app.messageParams.summaries.length),
-    );
-  },
-
   setSummaries(summaries: ModelSummary[]) {
     const before = state.app.messageParams.summaries;
     state.app.messageParams.summaries = summaries;

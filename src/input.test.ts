@@ -993,7 +993,9 @@ l---
 
     it("resets params", () => {
       actions.appendToMessageParams({ role: "user", content: "hello" });
-      actions.appendToSummaries({ compacted: "summary", compactedAt: 3 });
+      actions.setSummaries([
+        { compacted: "summary", compactedAt: 3, tokens: 5 },
+      ]);
       mock.method(promptDeps, "getSystemContent", () => "abc");
       clearCommand();
       assert.deepStrictEqual(getState().app.messageParams, {

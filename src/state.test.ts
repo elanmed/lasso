@@ -130,7 +130,7 @@ describe("state", () => {
 
   it("reset-message-params resets summaries", () => {
     actions.appendToMessageParams({ role: "user", content: "hi" });
-    actions.appendToSummaries({ compacted: "summary", compactedAt: 4 });
+    actions.setSummaries([{ compacted: "summary", compactedAt: 4, tokens: 5 }]);
     actions.setMessageParamTokens(7);
     assert.equal(getState().app.messageParams.tokens, 7);
     actions.resetMessageParams();

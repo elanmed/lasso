@@ -1,5 +1,5 @@
 import assert from "node:assert";
-import { Output, type LanguageModelUsage, type ModelMessage } from "ai";
+import { Output, type ModelMessage } from "ai";
 import { z } from "zod";
 import { actions, getState, promptDeps } from "./state.ts";
 import {
@@ -142,10 +142,13 @@ export async function resolveApiCall(userInput: string) {
 
   await appendModelUsage(usage);
 
-  const inputTokens = usage.inputTokens ?? 0;
-  const outputTokens = usage.outputTokens ?? 0;
+  const inputTokensApprox =
+    getApproxTokensFromMessages(getState().app.messageParams.messages) +
+    getSystemInstructionsTokensApprox();
+  const inputTokens = usage.inputTokens ?? inputTokensApprox;
 
-  // no need to approximate the system prompt tokens here — inputTokens already includes them
+  const outputTokens = usage.outputTokens ?? strToApproxTokens(text);
+
   actions.setMessageParamTokens(inputTokens + outputTokens);
   actions.setMessageParamTokensStale(false);
 
@@ -265,7 +268,7 @@ ${JSON.stringify([firstSummary, secondSummary].map(({ compacted }) => compacted)
   const mergedSummary: ModelSummary = {
     compacted,
     compactedAt: Date.now(),
-    tokens: usage.outputTokens ?? 0,
+    tokens: usage.outputTokens ?? strToApproxTokens(compacted),
   };
 
   const nextSummaries = summaries
@@ -320,10 +323,11 @@ ${JSON.stringify(getState().app.messageParams.messages)}
   }
 
   const { usage, output } = generateTextResult.value;
+  const summaryText = output.compacted;
   const summary: ModelSummary = {
     compacted: output.compacted,
     compactedAt: Date.now(),
-    tokens: usage.outputTokens ?? 0,
+    tokens: usage.outputTokens ?? strToApproxTokens(summaryText),
   };
   await appendModelUsage(usage);
 
@@ -368,9 +372,8 @@ export async function maybeCompact(userInput: string) {
   // If merging the existing summaries failed, use existing summaries
   const mergedSummaries = await getMergedSummaries();
 
-  actions.setSummaries([...mergedSummaries, messageParamsSummary]);
-
   actions.resetMessageParams();
+  actions.setSummaries([...mergedSummaries, messageParamsSummary]);
   for (const summary of getState().app.messageParams.summaries) {
     actions.appendToMessageParams({
       content: summary.compacted,
