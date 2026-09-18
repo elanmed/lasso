@@ -143,6 +143,10 @@ export function getPrettyApiDuration() {
   const endTime = getState().app.apiEndTime;
   assert(endTime !== null);
 
+  return getPrettyDuration(startTime, endTime);
+}
+
+export function getPrettyDuration(startTime: number, endTime: number) {
   const diff = Math.max(0, endTime - startTime);
 
   const ms = Math.floor(diff % 1000);
