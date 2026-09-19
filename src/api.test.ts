@@ -971,10 +971,14 @@ Lasso reserves 50% of the context window for compacted summaries and 30% for sys
         { compacted: "prior summary", compactedAt: 1, tokens: 10 },
       ]);
       actions.appendToConversation({ role: "user", content: "hi" });
+      actions.appendToConversation({
+        role: "user",
+        content: "not yet summarized",
+      });
       actions.setPromptTokens(85_000);
     };
 
-    it("sends the messages as a compact prompt to the api", async () => {
+    it("sends the unsummarized messages as a compact prompt to the api", async () => {
       seedConversation();
       let capturedOpts: Record<string, unknown> | undefined;
       mock.method(aiDeps, "generateText", (opts: Record<string, unknown>) => {
@@ -993,7 +997,7 @@ Lasso reserves 50% of the context window for compacted summaries and 30% for sys
       assert(capturedMessage !== undefined);
       assert.strictEqual(
         capturedMessage.content,
-        `Compact the following conversation:\n[{"role":"user","content":"hi"}]\n`,
+        `Compact the following conversation:\n[{"role":"user","content":"not yet summarized"}]\n`,
       );
     });
 
@@ -1053,7 +1057,10 @@ Lasso reserves 50% of the context window for compacted summaries and 30% for sys
       assert.strictEqual(result, null);
       assert.deepStrictEqual(getState().app.conversation, {
         summaries: [{ compacted: "prior summary", compactedAt: 1, tokens: 10 }],
-        messages: [{ role: "user", content: "hi" }],
+        messages: [
+          { role: "user", content: "hi" },
+          { role: "user", content: "not yet summarized" },
+        ],
       });
       assert.deepStrictEqual(getState().app.promptTokens, {
         value: 85_000,
@@ -1071,7 +1078,10 @@ Lasso reserves 50% of the context window for compacted summaries and 30% for sys
       assert.strictEqual(getState().abortControllers.apiStream, null);
       assert.deepStrictEqual(getState().app.conversation, {
         summaries: [{ compacted: "prior summary", compactedAt: 1, tokens: 10 }],
-        messages: [{ role: "user", content: "hi" }],
+        messages: [
+          { role: "user", content: "hi" },
+          { role: "user", content: "not yet summarized" },
+        ],
       });
       assert.deepStrictEqual(getState().app.promptTokens, {
         value: 85_000,
