@@ -34,19 +34,44 @@ EOF
 \`\`\`
 
 ### Insert content starting after a line
-1. Write content to a temp file (see above).
-2. \`\`\`bash
-   sed -e "\${LINE}r insertfile.txt" target.txt > tmp && mv tmp target.txt
+1. Write content to a temp file:
+   \`\`\`bash
+   INSERTFILE=$(mktemp)
+   cat > "$INSERTFILE" << 'EOF'
+   Content to insert
+   EOF
+   \`\`\`
+2. Insert it after the target line:
+   \`\`\`bash
+   TMPFILE=$(mktemp)
+   sed -e "\${LINE}r $INSERTFILE" target.txt > "$TMPFILE" && mv "$TMPFILE" target.txt
+   \`\`\`
+3. Clean up:
+   \`\`\`bash
+   rm "$INSERTFILE"
    \`\`\`
 
 ### Replace a range of lines
-1. Write content to a temp file (see above).
-2. \`\`\`bash
-   sed -e "\${END}r insertfile.txt" -e "\${START},\${END}d" target.txt > tmp && mv tmp target.txt
+1. Write content to a temp file:
+   \`\`\`bash
+   INSERTFILE=$(mktemp)
+   cat > "$INSERTFILE" << 'EOF'
+   Replacement content
+   EOF
+   \`\`\`
+2. Replace the range:
+   \`\`\`bash
+   TMPFILE=$(mktemp)
+   sed -e "\${END}r $INSERTFILE" -e "\${START},\${END}d" target.txt > "$TMPFILE" && mv "$TMPFILE" target.txt
+   \`\`\`
+3. Clean up:
+   \`\`\`bash
+   rm "$INSERTFILE"
    \`\`\`
 
 ### Delete a range of lines
 \`\`\`bash
-sed -e "\${START},\${END}d" target.txt > tmp && mv tmp target.txt
+TMPFILE=$(mktemp)
+sed -e "\${START},\${END}d" target.txt > "$TMPFILE" && mv "$TMPFILE" target.txt
 \`\`\`
 `;
