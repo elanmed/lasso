@@ -283,10 +283,9 @@ export async function getConversationSummary() {
   const targetCharLen = approxTokensToCharLen(targetTokens);
 
   const compactPrompt = `Compact the following conversation:
-${JSON.stringify(getState().app.conversation.messages)}
+${JSON.stringify(getState().app.conversation.messages.slice(getState().app.conversation.summaries.length))}
 `;
 
-  // TODO (not you ai): more clearly differentiate between different types of tokens
   // TODO (not you ai): make a small helper around generateText
   actions.setApiStreamAbortController(new AbortController());
   startLoadingState();
