@@ -88,7 +88,20 @@ export interface ToolResult {
   isError?: boolean;
 }
 
-const bashToolInputSchema = z.object({ command: z.string() });
+export const bashToolInputSchema = z.discriminatedUnion(
+  "fileSystemAccessType",
+  [
+    z.object({
+      fileSystemAccessType: z.literal("read"),
+      command: z.string(),
+    }),
+    z.object({
+      fileSystemAccessType: z.literal("create-update-delete"),
+      filePath: z.string(),
+      command: z.string(),
+    }),
+  ],
+);
 export type BashToolInput = z.infer<typeof bashToolInputSchema>;
 
 export async function executeBashTool(
@@ -120,260 +133,6 @@ export async function executeBashTool(
   };
 }
 
-const createFileToolSchema = z.object({
-  path: z.string(),
-  content: z.string(),
-});
-export type CreateFileTool = z.infer<typeof createFileToolSchema>;
-
-export function executeCreateFileTool(
-  { content, path }: CreateFileTool,
-  signal?: AbortSignal,
-): ToolResult {
-  toolPrint("create_file", path);
-
-  if (fsDeps.existsSync(path)) {
-    return {
-      content: `${path} already exists`,
-      isError: true,
-    };
-  }
-
-  const createFileResult = tryCatch(() =>
-    fsDeps.writeFileSync(path, content, { signal }),
-  );
-
-  if (!createFileResult.ok) {
-    if (isAbortError(createFileResult.error)) {
-      throw createFileResult.error;
-    }
-
-    const error = getMessageFromError(createFileResult.error);
-    return {
-      content: error,
-      isError: true,
-    };
-  }
-  return {
-    content: `${path} created successfully`,
-  };
-}
-const viewFileToolInputSchema = z.object({
-  path: z.string(),
-  start_line: z.number().int().optional(),
-  end_line: z.number().int().optional(),
-});
-export type ViewFileToolInput = z.infer<typeof viewFileToolInputSchema>;
-
-export function executeViewFileTool({
-  path,
-  start_line,
-  end_line,
-}: ViewFileToolInput): ToolResult {
-  toolPrint("view_file", path);
-
-  const statResult = tryCatch(() => fsDeps.statSync(path));
-  if (!statResult.ok) {
-    const error = getMessageFromError(statResult.error);
-    return {
-      content: error,
-      isError: true,
-    };
-  }
-
-  if (statResult.value.isDirectory()) {
-    const readdirResult = tryCatch(() => fsDeps.readdirSync(path));
-    if (!readdirResult.ok) {
-      const error = getMessageFromError(readdirResult.error);
-      return {
-        content: error,
-        isError: true,
-      };
-    }
-    const listing = readdirResult.value.join("\n");
-    return {
-      content: listing,
-    };
-  }
-
-  const readResult = tryCatch(() => fsDeps.readFileSync(path));
-  if (!readResult.ok) {
-    const error = getMessageFromError(readResult.error);
-    return {
-      content: error,
-      isError: true,
-    };
-  }
-
-  const lines = readResult.value.toString().split("\n");
-
-  if (start_line !== undefined && start_line < 1) {
-    return {
-      content: `start_line must be at least 1, got ${String(start_line)}`,
-      isError: true,
-    };
-  }
-
-  if (end_line !== undefined && end_line !== -1 && end_line < 1) {
-    return {
-      content: `end_line must be at least 1 or -1, got ${String(end_line)}`,
-      isError: true,
-    };
-  }
-
-  const start = (start_line ?? 1) - 1;
-  const end =
-    end_line === undefined || end_line === -1 ? lines.length : end_line;
-
-  if (start >= lines.length) {
-    return {
-      content: `start_line ${String(start_line)} is past end of file (file has ${String(lines.length)} lines)`,
-      isError: true,
-    };
-  }
-
-  if (end > lines.length) {
-    return {
-      content: `end_line ${String(end_line)} is past end of file (file has ${String(lines.length)} lines)`,
-      isError: true,
-    };
-  }
-
-  if (start >= end) {
-    return {
-      content: `start_line (${String(start_line)}) must be less than end_line (${String(end_line)})`,
-      isError: true,
-    };
-  }
-
-  const slice = lines.slice(start, end);
-  const numbered = slice
-    .map((line, i) => `${String(start + i + 1)}\t${line}`)
-    .join("\n");
-
-  return {
-    content: numbered,
-  };
-}
-
-export const objectWithPathSchema = z.object({
-  path: z.string(),
-});
-
-export const strReplaceToolInputSchema = z.object({
-  path: z.string(),
-  old_str: z.string(),
-  new_str: z.string(),
-});
-export type StrReplaceToolInput = z.infer<typeof strReplaceToolInputSchema>;
-
-export function executeStrReplaceTool(
-  { path, old_str, new_str }: StrReplaceToolInput,
-  signal?: AbortSignal,
-): ToolResult {
-  toolPrint("str_replace", path);
-
-  const readResult = tryCatch(() => fsDeps.readFileSync(path));
-  if (!readResult.ok) {
-    const error = getMessageFromError(readResult.error);
-    return {
-      content: error,
-      isError: true,
-    };
-  }
-
-  const content = readResult.value.toString();
-  const occurrences = content.split(old_str).length - 1;
-
-  if (occurrences === 0) {
-    return {
-      content: "old_str not found in file",
-      isError: true,
-    };
-  }
-
-  if (occurrences > 1) {
-    return {
-      content: `old_str matched ${String(occurrences)} times — must match exactly once`,
-      isError: true,
-    };
-  }
-
-  const writeResult = tryCatch(() =>
-    fsDeps.writeFileSync(path, content.replace(old_str, new_str), {
-      signal,
-    }),
-  );
-  if (!writeResult.ok) {
-    if (isAbortError(writeResult.error)) {
-      throw writeResult.error;
-    }
-
-    const error = getMessageFromError(writeResult.error);
-    return {
-      content: error,
-      isError: true,
-    };
-  }
-
-  return {
-    content: `${path} updated successfully`,
-  };
-}
-const insertLinesToolInputSchema = z.object({
-  path: z.string(),
-  after_line: z.number().int(),
-  content: z.string(),
-});
-export type InsertLinesToolInput = z.infer<typeof insertLinesToolInputSchema>;
-
-export function executeInsertLinesTool(
-  { path, after_line, content }: InsertLinesToolInput,
-  signal?: AbortSignal,
-): ToolResult {
-  toolPrint("insert_lines", path);
-
-  const readResult = tryCatch(() => fsDeps.readFileSync(path));
-  if (!readResult.ok) {
-    const error = getMessageFromError(readResult.error);
-    return {
-      content: error,
-      isError: true,
-    };
-  }
-
-  const lines = readResult.value.toString().split("\n");
-
-  if (after_line < 0 || after_line > lines.length) {
-    return {
-      content: `after_line ${String(after_line)} is out of range (file has ${String(lines.length)} lines)`,
-      isError: true,
-    };
-  }
-
-  lines.splice(after_line, 0, content);
-
-  const writeResult = tryCatch(() => {
-    fsDeps.writeFileSync(path, lines.join("\n"), {
-      signal,
-    });
-  });
-  if (!writeResult.ok) {
-    if (isAbortError(writeResult.error)) {
-      throw writeResult.error;
-    }
-
-    const error = getMessageFromError(writeResult.error);
-    return {
-      content: error,
-      isError: true,
-    };
-  }
-
-  return {
-    content: `${path} updated successfully`,
-  };
-}
 const webFetchToolSchema = z.object({
   href: z.string(),
 });
@@ -654,11 +413,6 @@ export async function createSubagentTool(
         .filter((content) => content.length > 0)
         .join("\n");
 
-      const subagentTools = (() => {
-        if (subagentSchema.access === "read-only") return readTools;
-        return { ...readTools, ...writeTools, ...getState().mcp.tools };
-      })();
-
       const toolCallDiffer = createToolCallDiffer();
 
       const message = `[${model}] ${subagentSchema.prompt}`;
@@ -676,53 +430,38 @@ export async function createSubagentTool(
           // Subagents should always use the provider's default reasoning
           instructions: systemContent,
           messages: [userMessage],
-          tools: subagentTools,
+          tools: { ...subagentSafeTools, ...getState().mcp.tools },
           stopWhen: aiDeps.isLoopFinished(),
           abortSignal: controller.signal,
-          onToolExecutionStart: ({
-            toolCall,
-          }: {
-            toolCall: { toolName: string; toolCallId: string; input: unknown };
-          }) => {
+          onToolExecutionStart: ({ toolCall }) => {
             if (subagentSchema.access !== "read-write") return;
+            if (toolCall.toolName !== "bash") return;
 
-            switch (toolCall.toolName as HarnessToolName) {
-              case "create_file": {
-                toolCallDiffer.setTempFileBefore(toolCall.toolCallId);
-                break;
-              }
-              case "insert_lines":
-              case "str_replace": {
-                const { path } = objectWithPathSchema.parse(toolCall.input);
-                toolCallDiffer.setTempFileBefore(toolCall.toolCallId, {
-                  initialContentPath: path,
-                });
-                break;
-              }
+            const bashSchemaResult = bashToolInputSchema.parse(toolCall.input);
+            if (
+              bashSchemaResult.fileSystemAccessType === "create-update-delete"
+            ) {
+              toolCallDiffer.setTempFileBefore(toolCall.toolCallId);
             }
           },
-          onToolExecutionEnd: async ({
-            toolCall,
-            toolOutput,
-          }: {
-            toolCall: { toolName: string; toolCallId: string; input: unknown };
-            toolOutput: { type: "tool-result" | "tool-error" };
-          }) => {
+          onToolExecutionEnd: async ({ toolCall, toolOutput }) => {
             if (subagentSchema.access !== "read-write") return;
+            if (toolCall.toolName !== "bash") return;
             const success = toolOutput.type === "tool-result";
 
-            switch (toolCall.toolName as HarnessToolName) {
-              case "create_file":
-              case "insert_lines":
-              case "str_replace": {
-                if (!success) {
-                  toolCallDiffer.cleanupTempFileBefore(toolCall.toolCallId);
-                  return;
-                }
-                const { path } = objectWithPathSchema.parse(toolCall.input);
-                await toolCallDiffer.diffAndCleanup(toolCall.toolCallId, path);
-                break;
+            const bashSchemaResult = bashToolInputSchema.parse(toolCall.input);
+
+            if (
+              bashSchemaResult.fileSystemAccessType === "create-update-delete"
+            ) {
+              if (!success) {
+                toolCallDiffer.cleanupTempFileBefore(toolCall.toolCallId);
+                return;
               }
+              await toolCallDiffer.diffAndCleanup(
+                toolCall.toolCallId,
+                bashSchemaResult.filePath,
+              );
             }
           },
         }),
@@ -790,7 +529,7 @@ export async function createSubagentTool(
   };
 }
 
-const readTools = {
+const subagentSafeTools = {
   web_fetch_html: tool({
     description:
       "Fetch a web page by URL and return its readable content, parsed to extract the main article.",
@@ -803,37 +542,10 @@ const readTools = {
     inputSchema: webFetchToolSchema,
     execute: (args, opts) => executeWebFetchJsonTool(args, opts.abortSignal),
   }),
-  view_file: tool({
-    description:
-      "View the contents of a file or list a directory. File contents are returned with line numbers. Optional start_line and end_line are 1-based and inclusive; end_line -1 (or omitted) reads to end of file.",
-    inputSchema: viewFileToolInputSchema,
-    execute: (args) => executeViewFileTool(args),
-  }),
   load_skill: tool({
     description: "Load a skill to get specialized instructions",
     inputSchema: loadSkillToolSchema,
     execute: (args) => loadSkillTool(args),
-  }),
-};
-
-const writeTools = {
-  create_file: tool({
-    description:
-      "Create a new file with the given content. Fails if the file already exists.",
-    inputSchema: createFileToolSchema,
-    execute: (args, opts) => executeCreateFileTool(args, opts.abortSignal),
-  }),
-  str_replace: tool({
-    description:
-      "Replace an exact string in a file. The old_str must match exactly once. Include enough surrounding lines to make the match unique.",
-    inputSchema: strReplaceToolInputSchema,
-    execute: (args, opts) => executeStrReplaceTool(args, opts.abortSignal),
-  }),
-  insert_lines: tool({
-    description:
-      "Insert text after a specific line number in a file. Use line 0 to insert at the beginning of the file.",
-    inputSchema: insertLinesToolInputSchema,
-    execute: (args, opts) => executeInsertLinesTool(args, opts.abortSignal),
   }),
   bash: tool({
     description: "Execute a bash command and return its output.",
@@ -852,8 +564,7 @@ const baseAgentTools = {
 };
 
 export const harnessTools = {
-  ...readTools,
-  ...writeTools,
+  ...subagentSafeTools,
   ...baseAgentTools,
 };
 

@@ -24,11 +24,10 @@ import {
   orApproxTokens,
 } from "./usage.ts";
 import {
-  objectWithPathSchema,
   harnessTools,
   getTools,
-  type HarnessToolName,
   toolPrint,
+  bashToolInputSchema,
 } from "./tools.ts";
 import { MISSING } from "./missing.ts";
 import type { ModelSummary } from "./state.ts";
@@ -82,36 +81,26 @@ export async function resolveApiCall(userInput: string) {
             safeStringify(toolCall.input),
           );
         }
-
-        switch (toolCall.toolName as HarnessToolName) {
-          case "create_file": {
-            toolCallDiffer.setTempFileBefore(toolCall.toolCallId);
-            break;
-          }
-          case "insert_lines":
-          case "str_replace": {
-            const { path } = objectWithPathSchema.parse(toolCall.input);
-            toolCallDiffer.setTempFileBefore(toolCall.toolCallId, {
-              initialContentPath: path,
-            });
-            break;
-          }
+        if (toolCall.toolName !== "bash") return;
+        const bashSchemaResult = bashToolInputSchema.parse(toolCall.input);
+        if (bashSchemaResult.fileSystemAccessType === "create-update-delete") {
+          toolCallDiffer.setTempFileBefore(toolCall.toolCallId);
         }
       },
       onToolExecutionEnd: async ({ toolCall, toolOutput }) => {
-        switch (toolCall.toolName as HarnessToolName) {
-          case "create_file":
-          case "insert_lines":
-          case "str_replace": {
-            if (toolOutput.type === "tool-error") {
-              toolCallDiffer.cleanupTempFileBefore(toolCall.toolCallId);
-              return;
-            }
+        if (toolCall.toolName !== "bash") return;
+        const success = toolOutput.type === "tool-result";
 
-            const { path } = objectWithPathSchema.parse(toolCall.input);
-            await toolCallDiffer.diffAndCleanup(toolCall.toolCallId, path);
-            break;
+        const bashSchemaResult = bashToolInputSchema.parse(toolCall.input);
+        if (bashSchemaResult.fileSystemAccessType === "create-update-delete") {
+          if (!success) {
+            toolCallDiffer.cleanupTempFileBefore(toolCall.toolCallId);
+            return;
           }
+          await toolCallDiffer.diffAndCleanup(
+            toolCall.toolCallId,
+            bashSchemaResult.filePath,
+          );
         }
       },
     }),
