@@ -5,7 +5,7 @@ import { actions, getState } from "./state.ts";
 import {
   initState,
   initStateFromConfig,
-  initStateForDebug,
+  initStateFirst,
   initStateRepeatable,
   blockOnMissingConfig,
 } from "./config.ts";
@@ -536,6 +536,27 @@ describe("config", () => {
       assert.strictEqual(getState().config.promptPrefix, "🤖 ");
     });
 
+    it("uses its hideStartupDurations over the global config, default config", async () => {
+      testFs._files.set(
+        getGlobalConfigPath(),
+        JSON.stringify({
+          ...testConfig,
+          hideStartupDurations: true,
+        }),
+      );
+      testFs._files.set(
+        getLocalConfigPath(),
+        JSON.stringify({
+          ...testConfig,
+          hideStartupDurations: false,
+        }),
+      );
+
+      await initState();
+
+      assert.strictEqual(getState().config.hideStartupDurations, false);
+    });
+
     it("uses its suppressBatUnavailableWarning over the global config, default config", async () => {
       testFs._files.set(
         getGlobalConfigPath(),
@@ -874,6 +895,18 @@ describe("config", () => {
       await assert.rejects(initState(), /Invalid input: expected boolean/);
     });
 
+    it("rejects non-boolean hideStartupDurations", async () => {
+      testFs._files.set(
+        getGlobalConfigPath(),
+        JSON.stringify({
+          ...testConfig,
+          hideStartupDurations: "yes",
+        }),
+      );
+
+      await assert.rejects(initState(), /Invalid input: expected boolean/);
+    });
+
     it("rejects non-boolean suppressBatUnavailableWarning", async () => {
       testFs._files.set(
         getGlobalConfigPath(),
@@ -995,6 +1028,26 @@ describe("config", () => {
         );
       });
 
+      it("hides startup durations when hideStartupDurations is true", async () => {
+        mock.method(process.hrtime, "bigint", () => BigInt(0));
+        testFs._files.set(
+          getGlobalConfigPath(),
+          JSON.stringify({
+            model: testConfig.model,
+            sdkProvider: "anthropic",
+            hideStartupDurations: true,
+            baseURL: "https://api.example.com",
+          }),
+        );
+
+        const getCaptured = mockStdout();
+        await initState();
+        assert.deepStrictEqual(
+          stripAnsi(getCaptured()),
+          "The `baseURL` option is not used when `sdkProvider=anthropic`\n",
+        );
+      });
+
       it("uses its pricingPerModel over the default config", async () => {
         const globalPricing = structuredClone(defaultConfig.pricingPerModel);
         globalPricing["test-model"] = {
@@ -1103,6 +1156,20 @@ describe("config", () => {
         await initState();
 
         assert.strictEqual(getState().config.promptPrefix, "❯ ");
+      });
+
+      it("uses its hideStartupDurations over the default config", async () => {
+        testFs._files.set(
+          getGlobalConfigPath(),
+          JSON.stringify({
+            ...testConfig,
+            hideStartupDurations: true,
+          }),
+        );
+
+        await initState();
+
+        assert.strictEqual(getState().config.hideStartupDurations, true);
       });
 
       it("uses its suppressBatUnavailableWarning over the default config", async () => {
@@ -1502,17 +1569,17 @@ hello
     );
   });
 
-  describe("initStateForDebug", () => {
+  describe("initStateFirst", () => {
     it("sets debug flag when DEBUG=1", () => {
       testProcessEnv._clear();
       testProcessEnv._set("DEBUG", "1");
 
-      initStateForDebug();
+      initStateFirst();
 
       assert.strictEqual(getState().app.debugLog, true);
     });
     it("keeps debug flag off when DEBUG is not set", () => {
-      initStateForDebug();
+      initStateFirst();
 
       assert.strictEqual(getState().app.debugLog, false);
     });

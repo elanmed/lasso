@@ -10,7 +10,7 @@ import {
   resolveApiCall,
   warnOnLargeSystemInstructions,
 } from "./api.ts";
-import { harnessTools, registerToolsContent } from "./tools.ts";
+import { harnessTools, getTools } from "./tools.ts";
 import {
   setupTestContext,
   testFs,
@@ -37,7 +37,7 @@ describe("api", () => {
 
   beforeEach(() => {
     setupTestContext({ model: "claude-sonnet-4-20250514" });
-    registerToolsContent();
+    actions.setToolsContentStr(safeStringify(getTools()));
     actions.setBaseURL("https://api.anthropic.com");
     actions.setContextStr("");
     actions.setSkillsStr("");
@@ -614,6 +614,7 @@ Lasso reserves 50% of the context window for compacted summaries and 30% for sys
 
     it("includes mcp tools in the tokens after compaction", async () => {
       actions.setMcp({}, { mcp_tool: makeMcpTool() });
+      actions.setToolsContentStr(safeStringify(getTools()));
       actions.appendToConversation({ role: "user", content: "hi" });
       actions.setPromptTokens(85_000);
       mock.method(aiDeps, "generateText", () =>

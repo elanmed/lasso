@@ -61,6 +61,7 @@ interface State {
     globalConfigStr: string;
     localConfigStr: string;
     skillsStr: string;
+    toolsContentStr: string;
     skills: Skill[];
     subagentModels: string[];
     rl: readline.Interface | null;
@@ -103,6 +104,7 @@ const createInitialState = (): State => ({
     globalConfigStr: "",
     localConfigStr: "",
     skillsStr: "",
+    toolsContentStr: "",
     skills: [],
     subagentModels: [],
     rl: null,
@@ -133,6 +135,7 @@ const createInitialState = (): State => ({
     promptPrefix: defaultConfig.promptPrefix,
     suppressBatUnavailableWarning: defaultConfig.suppressBatUnavailableWarning,
     asciiOnly: defaultConfig.asciiOnly,
+    hideStartupDurations: defaultConfig.hideStartupDurations,
     messageQueueDelimiter: defaultConfig.messageQueueDelimiter,
     reasoning: defaultConfig.reasoning,
     mcps: structuredClone(defaultConfig.mcps),
@@ -161,12 +164,6 @@ export const promptDeps = {
       getState().app.contextStr,
       getState().app.skillsStr,
     ].join("\n"),
-  toolsContent: {
-    get: () => "",
-    register: (fn: () => string) => {
-      promptDeps.toolsContent.get = fn;
-    },
-  },
 };
 
 const logStateChange = (actionType: string, before: string, after: string) => {
@@ -435,6 +432,12 @@ export const actions = {
     );
   },
 
+  setToolsContentStr(toolsContentStr: string) {
+    const before = state.app.toolsContentStr;
+    state.app.toolsContentStr = toolsContentStr;
+    logStateChange("set-tools-content-str", before, toolsContentStr);
+  },
+
   setSkillsStr(skillsStr: string) {
     const before = state.app.skillsStr;
     state.app.skillsStr = skillsStr;
@@ -599,6 +602,16 @@ export const actions = {
     const before = state.config.asciiOnly;
     state.config.asciiOnly = asciiOnly;
     logStateChange("set-ascii-only", String(before), String(asciiOnly));
+  },
+
+  setHideStartupDurations(hideStartupDurations: boolean) {
+    const before = state.config.hideStartupDurations;
+    state.config.hideStartupDurations = hideStartupDurations;
+    logStateChange(
+      "set-hide-startup-durations",
+      String(before),
+      String(hideStartupDurations),
+    );
   },
 
   setReasoning(reasoning: Reasoning) {

@@ -849,7 +849,7 @@ describe("getSystemInstructionsTokensApprox", () => {
   beforeEach(() => {
     setupTestContext();
     mock.method(promptDeps, "getSystemContent", () => "abc");
-    mock.method(promptDeps.toolsContent, "get", () => "defdef");
+    actions.setToolsContentStr("defdef");
   });
 
   it("sums the approx of system content and tools", () => {
@@ -865,7 +865,7 @@ describe("getApproxPromptTokens", () => {
   beforeEach(() => {
     setupTestContext();
     mock.method(promptDeps, "getSystemContent", () => "abc");
-    mock.method(promptDeps.toolsContent, "get", () => "defdef");
+    actions.setToolsContentStr("defdef");
   });
 
   it("sums messages approx with the system instructions approx", () => {
@@ -878,7 +878,7 @@ describe("getCurrentPromptTokens", () => {
   beforeEach(() => {
     setupTestContext();
     mock.method(promptDeps, "getSystemContent", () => "abc");
-    mock.method(promptDeps.toolsContent, "get", () => "defdef");
+    actions.setToolsContentStr("defdef");
   });
 
   it("returns the cached prompt tokens when not dirty", () => {

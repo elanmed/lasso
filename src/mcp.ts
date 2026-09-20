@@ -51,7 +51,9 @@ async function getMcpClients() {
 
   await Promise.all(
     Object.entries(getState().config.mcps).map(async ([name, config]) => {
-      const performanceLogger = createPerformanceLogger();
+      const performanceLogger = createPerformanceLogger({
+        logDuration: !getState().config.hideStartupDurations,
+      });
       performanceLogger.start();
       const createMcpResult = await tryCatchAsync(createMcpClient(config));
       performanceLogger.end((duration) =>

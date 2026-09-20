@@ -10,12 +10,11 @@ import {
   tryCatchAsync,
   execPromise,
   getMaxColLength,
-  safeStringify,
 } from "./utils.ts";
 import { getUnicodeChar } from "./text.ts";
 import { createToolCallDiffer } from "./differ.ts";
 import { print, bold } from "./print.ts";
-import { getState, promptDeps } from "./state.ts";
+import { getState } from "./state.ts";
 import { BASE_SYSTEM_PROMPT } from "./prompts.ts";
 import { getLanguageModel } from "./model.ts";
 import { aiDeps } from "./deps.ts";
@@ -590,10 +589,6 @@ export const harnessTools = {
   ...subagentSafeTools,
   ...baseAgentTools,
 };
-
-export function registerToolsContent() {
-  promptDeps.toolsContent.register(() => safeStringify(getTools()));
-}
 
 export function getTools() {
   return { ...harnessTools, ...getState().mcp.tools };

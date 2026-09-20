@@ -179,7 +179,7 @@ export function getSystemInstructionsTokensApprox() {
   const systemContentTokensApprox = strToApproxTokens(
     promptDeps.getSystemContent(),
   );
-  const toolsTokensApprox = strToApproxTokens(promptDeps.toolsContent.get());
+  const toolsTokensApprox = strToApproxTokens(getState().app.toolsContentStr);
   return systemContentTokensApprox + toolsTokensApprox;
 }
 

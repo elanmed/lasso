@@ -250,7 +250,7 @@ describe("utils", () => {
   describe("createPerformanceLogger", () => {
     it("prints the duration with microseconds precision", () => {
       mock.method(process.hrtime, "bigint", () => BigInt(1_000_000_000));
-      const logger = createPerformanceLogger();
+      const logger = createPerformanceLogger({ logDuration: true });
       logger.start();
       mock.method(process.hrtime, "bigint", () => BigInt(1_234_567_890));
 
@@ -268,7 +268,7 @@ describe("utils", () => {
       mock.method(process.hrtime, "bigint", () =>
         BigInt(values[callIdx++] ?? 0),
       );
-      const logger = createPerformanceLogger();
+      const logger = createPerformanceLogger({ logDuration: true });
 
       const durations: string[] = [];
       logger.start();
@@ -279,14 +279,23 @@ describe("utils", () => {
       assert.deepStrictEqual(durations, ["0.0ms", "1s 0.0ms"]);
     });
 
-    it("throws when started twice", () => {
+    it("does nothing when logDuration is false", () => {
+      mock.method(process.hrtime, "bigint", () => BigInt(1_000_000_000));
       const logger = createPerformanceLogger();
+      let endCalls = 0;
+      logger.start();
+      logger.end(() => (endCalls += 1));
+      assert.strictEqual(endCalls, 0);
+    });
+
+    it("throws when started twice", () => {
+      const logger = createPerformanceLogger({ logDuration: true });
       logger.start();
       assert.throws(() => logger.start());
     });
 
     it("throws when ended without start", () => {
-      const logger = createPerformanceLogger();
+      const logger = createPerformanceLogger({ logDuration: true });
       assert.throws(() => logger.end(() => undefined));
     });
   });

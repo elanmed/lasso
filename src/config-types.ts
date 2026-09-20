@@ -79,6 +79,7 @@ const LoadingStateFramesSchema = z
 const PromptPrefixSchema = z.string();
 const SuppressBatUnavailableWarningSchema = z.boolean();
 const AsciiOnlySchema = z.boolean();
+const HideStartupDurationsSchema = z.boolean();
 const MessageQueueDelimiterSchema = z.string().endsWith("\n");
 const ReasoningSchema = z.enum([
   "provider-default",
@@ -130,6 +131,7 @@ export const ConfigSchema = z.strictObject({
   promptPrefix: PromptPrefixSchema.optional(),
   suppressBatUnavailableWarning: SuppressBatUnavailableWarningSchema.optional(),
   asciiOnly: AsciiOnlySchema.optional(),
+  hideStartupDurations: HideStartupDurationsSchema.optional(),
   messageQueueDelimiter: MessageQueueDelimiterSchema.optional(),
   reasoning: ReasoningSchema.optional(),
   mcps: McpsSchema.optional(),
@@ -154,6 +156,7 @@ export const DefaultedConfigSchema = z.strictObject({
   promptPrefix: PromptPrefixSchema,
   suppressBatUnavailableWarning: SuppressBatUnavailableWarningSchema,
   asciiOnly: AsciiOnlySchema,
+  hideStartupDurations: HideStartupDurationsSchema,
   messageQueueDelimiter: MessageQueueDelimiterSchema,
   reasoning: ReasoningSchema,
   mcps: McpsSchema,
@@ -184,6 +187,7 @@ export const defaultConfig: DefaultedConfig = {
   promptPrefix: "> ",
   suppressBatUnavailableWarning: false,
   asciiOnly: false,
+  hideStartupDurations: false,
   messageQueueDelimiter: "l---\n",
   reasoning: "provider-default",
   mcps: {},

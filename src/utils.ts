@@ -301,14 +301,18 @@ export function decimalToPercent(
   return `${String(Number((decimal * 100).toFixed(precision)))}%`;
 }
 
-export function createPerformanceLogger() {
+export function createPerformanceLogger({
+  logDuration = false,
+}: { logDuration?: boolean } = {}) {
   let startTime: bigint | null = null;
   function start() {
+    if (!logDuration) return;
     assert(startTime === null);
     startTime = process.hrtime.bigint();
   }
 
   function end(print: (durationStr: string) => void) {
+    if (!logDuration) return;
     assert(startTime !== null);
     const endTime = process.hrtime.bigint();
     const duration = getPrettyDuration(startTime, endTime, {

@@ -3,6 +3,7 @@ import * as YAML from "yaml";
 import {
   createPerformanceLogger,
   getShortId,
+  safeStringify,
   stringify,
   tryCatch,
 } from "./utils.ts";
@@ -24,7 +25,7 @@ import {
 import { syncInitialModelUsageForLimitWindow } from "./usage.ts";
 import { print } from "./print.ts";
 import { initMcpState } from "./mcp.ts";
-import { registerToolsContent } from "./tools.ts";
+import { getTools } from "./tools.ts";
 import { ConfigSchema, defaultConfig, type Config } from "./config-types.ts";
 
 export function readConfigFileStr(path: string) {
@@ -111,16 +112,19 @@ function filterNulls<T>(entries: Record<string, T | null>): Record<string, T> {
 export function initStateFromConfig({
   logDuration = false,
 }: { logDuration?: boolean } = {}) {
-  const performanceLogger = createPerformanceLogger();
+  const shouldLogDuration =
+    logDuration && !getState().config.hideStartupDurations;
+  const performanceLogger = createPerformanceLogger({
+    logDuration: shouldLogDuration,
+  });
 
   performanceLogger.start();
   const globalConfig = readConfigFile(getGlobalConfigPath());
   const localConfig = readConfigFile(getLocalConfigPath());
   actions.setGlobalConfigStr(readConfigFileStr(getGlobalConfigPath()));
   actions.setLocalConfigStr(readConfigFileStr(getLocalConfigPath()));
-  performanceLogger.end(
-    (duration) =>
-      logDuration && print.doing(`Reading config files: ${duration}`),
+  performanceLogger.end((duration) =>
+    print.doing(`Reading config files: ${duration}`),
   );
 
   const defaultedModel =
@@ -259,16 +263,19 @@ export function initStateFromConfig({
 export async function initStateFromFs({
   logDuration = false,
 }: { logDuration?: boolean } = {}) {
-  const performanceLogger = createPerformanceLogger();
+  const shouldLogDuration =
+    logDuration && !getState().config.hideStartupDurations;
+  const performanceLogger = createPerformanceLogger({
+    logDuration: shouldLogDuration,
+  });
   await syncInitialModelUsageForLimitWindow();
 
   performanceLogger.start();
   const contextEntries = getContextEntries();
   actions.setContextEntries(contextEntries);
   actions.setContextStr(getContextFilesStr(contextEntries));
-  performanceLogger.end(
-    (duration) =>
-      logDuration && print.doing(`Reading context files: ${duration}`),
+  performanceLogger.end((duration) =>
+    print.doing(`Reading context files: ${duration}`),
   );
 
   performanceLogger.start();
@@ -288,25 +295,33 @@ export async function initStateFromFs({
   );
 }
 
-export function initStateForDebug() {
+export function initStateFirst() {
   actions.setDebugLog(processDeps.env.get("DEBUG") === "1");
+  const globalConfig = readConfigFile(getGlobalConfigPath());
+  const localConfig = readConfigFile(getLocalConfigPath());
+
+  actions.setHideStartupDurations(
+    localConfig.hideStartupDurations ??
+      globalConfig.hideStartupDurations ??
+      defaultConfig.hideStartupDurations,
+  );
 }
 
 export async function initStateRepeatable() {
-  initStateForDebug();
-  registerToolsContent();
+  initStateFirst();
   initStateFromConfig();
   await initMcpState();
+  actions.setToolsContentStr(safeStringify(getTools()));
   await initStateFromFs();
 }
 
 export async function initState() {
-  initStateForDebug();
+  initStateFirst();
   const debugLogPath = join(getDebugLogDir(), `debug-${getShortId()}.log`);
   actions.setDebugLogPath(debugLogPath);
 
-  registerToolsContent();
   initStateFromConfig();
   await initMcpState();
+  actions.setToolsContentStr(safeStringify(getTools()));
   await initStateFromFs({ logDuration: true });
 }
