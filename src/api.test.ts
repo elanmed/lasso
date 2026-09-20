@@ -1013,6 +1013,43 @@ Lasso reserves 50% of the context window for compacted summaries and 30% for sys
       });
     });
 
+    it("uses a structured output schema when compactWithStructuredOutput is true", async () => {
+      seedConversation();
+      let capturedOpts: Record<string, unknown> | undefined;
+      mock.method(aiDeps, "generateText", (opts: Record<string, unknown>) => {
+        capturedOpts = opts;
+        return Promise.resolve(
+          makeGenerateTextResult({
+            output: { compacted: "compacted summary" },
+            usage,
+          }),
+        );
+      });
+      await getConversationSummary();
+      assert(capturedOpts !== undefined);
+      assert.strictEqual("output" in capturedOpts, true);
+    });
+
+    it("uses the plain text result when compactWithStructuredOutput is false", async () => {
+      seedConversation();
+      actions.setCompactWithStructuredOutput(false);
+      let capturedOpts: Record<string, unknown> | undefined;
+      mock.method(aiDeps, "generateText", (opts: Record<string, unknown>) => {
+        capturedOpts = opts;
+        return Promise.resolve(
+          makeGenerateTextResult({ text: "plain summary", usage }),
+        );
+      });
+      const result = await getConversationSummary();
+      assert(capturedOpts !== undefined);
+      assert.strictEqual("output" in capturedOpts, false);
+      assert.deepStrictEqual(result, {
+        compacted: "plain summary",
+        compactedAt: 42,
+        tokens: 25_000,
+      });
+    });
+
     it("falls back to approximated tokens when usage has no outputTokens", async () => {
       seedConversation();
       mock.method(aiDeps, "generateText", () =>
@@ -1190,6 +1227,43 @@ Lasso reserves 50% of the context window for compacted summaries and 30% for sys
       ]);
     });
 
+    it("uses a structured output schema when compactWithStructuredOutput is true", async () => {
+      seedSummaries();
+      let capturedOpts: Record<string, unknown> | undefined;
+      mock.method(aiDeps, "generateText", (opts: Record<string, unknown>) => {
+        capturedOpts = opts;
+        return Promise.resolve(
+          makeGenerateTextResult({
+            output: { compacted: "merged summary" },
+            usage,
+          }),
+        );
+      });
+      await getMergedSummaries();
+      assert(capturedOpts !== undefined);
+      assert.strictEqual("output" in capturedOpts, true);
+    });
+
+    it("uses the plain text result when compactWithStructuredOutput is false", async () => {
+      seedSummaries();
+      actions.setCompactWithStructuredOutput(false);
+      let capturedOpts: Record<string, unknown> | undefined;
+      mock.method(aiDeps, "generateText", (opts: Record<string, unknown>) => {
+        capturedOpts = opts;
+        return Promise.resolve(
+          makeGenerateTextResult({ text: "plain merged summary", usage }),
+        );
+      });
+      const result = await getMergedSummaries();
+      assert(capturedOpts !== undefined);
+      assert.strictEqual("output" in capturedOpts, false);
+      assert.deepStrictEqual(result, [
+        { compacted: "plain merged summary", compactedAt: 42, tokens: 25_000 },
+        { compacted: "summary 3", compactedAt: 3, tokens: 100 },
+        { compacted: "summary 4", compactedAt: 4, tokens: 100 },
+        { compacted: "summary 5", compactedAt: 5, tokens: 100 },
+      ]);
+    });
     it("falls back to approximated tokens when usage has no outputTokens", async () => {
       seedSummaries();
       mock.method(aiDeps, "generateText", () =>

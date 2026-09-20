@@ -208,6 +208,19 @@ export async function getMergedSummaries() {
 ${JSON.stringify([firstSummary, secondSummary].map(({ compacted }) => compacted))}
 `;
 
+  const structuredOutputOpts = (() => {
+    if (getState().config.compactWithStructuredOutput) {
+      return {
+        output: Output.object({
+          schema: z.object({
+            compacted: z.string().max(targetCharLen),
+          }),
+        }),
+      };
+    }
+    return {};
+  })();
+
   actions.setApiStreamAbortController(new AbortController());
   startLoadingState();
   const generateTextResult = await tryCatchAsync(
@@ -216,11 +229,7 @@ ${JSON.stringify([firstSummary, secondSummary].map(({ compacted }) => compacted)
       messages: [{ content: compactPrompt, role: "user" }],
       stopWhen: aiDeps.isLoopFinished(),
       abortSignal: getApiStreamAbortSignal(),
-      output: Output.object({
-        schema: z.object({
-          compacted: z.string().max(targetCharLen),
-        }),
-      }),
+      ...structuredOutputOpts,
     }),
   );
   stopLoadingState();
@@ -238,14 +247,16 @@ ${JSON.stringify([firstSummary, secondSummary].map(({ compacted }) => compacted)
     return getState().app.conversation.summaries;
   }
 
-  const { output, usage } = generateTextResult.value;
-  const { compacted } = output;
+  const { usage, output, text } = generateTextResult.value;
+  const summaryText = getState().config.compactWithStructuredOutput
+    ? output.compacted
+    : text;
   await appendModelUsage(usage);
 
   const mergedSummary: ModelSummary = {
-    compacted,
+    compacted: summaryText,
     compactedAt: Date.now(),
-    tokens: orApproxTokens(usage.outputTokens, compacted),
+    tokens: orApproxTokens(usage.outputTokens, summaryText),
   };
 
   const nextSummaries = summaries
@@ -269,6 +280,19 @@ export async function getConversationSummary() {
 ${JSON.stringify(getState().app.conversation.messages.slice(getState().app.conversation.summaries.length))}
 `;
 
+  const structuredOutputOpts = (() => {
+    if (getState().config.compactWithStructuredOutput) {
+      return {
+        output: Output.object({
+          schema: z.object({
+            compacted: z.string().max(targetCharLen),
+          }),
+        }),
+      };
+    }
+    return {};
+  })();
+
   // TODO (not you ai): make a small helper around generateText
   actions.setApiStreamAbortController(new AbortController());
   startLoadingState();
@@ -278,11 +302,7 @@ ${JSON.stringify(getState().app.conversation.messages.slice(getState().app.conve
       messages: [{ content: compactPrompt, role: "user" }],
       stopWhen: aiDeps.isLoopFinished(),
       abortSignal: getApiStreamAbortSignal(),
-      output: Output.object({
-        schema: z.object({
-          compacted: z.string().max(targetCharLen),
-        }),
-      }),
+      ...structuredOutputOpts,
     }),
   );
   stopLoadingState();
@@ -300,10 +320,12 @@ ${JSON.stringify(getState().app.conversation.messages.slice(getState().app.conve
     return null;
   }
 
-  const { usage, output } = generateTextResult.value;
-  const summaryText = output.compacted;
+  const { usage, output, text } = generateTextResult.value;
+  const summaryText = getState().config.compactWithStructuredOutput
+    ? output.compacted
+    : text;
   const summary: ModelSummary = {
-    compacted: output.compacted,
+    compacted: summaryText,
     compactedAt: Date.now(),
     tokens: orApproxTokens(usage.outputTokens, summaryText),
   };
