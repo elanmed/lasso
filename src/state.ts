@@ -551,8 +551,13 @@ export const actions = {
   },
 
   resetState() {
+    // `createInitialState` resets `debugLog` to false, so need to log before assigning to `state`
+    logStateChange(
+      "reset-state",
+      "[truncating]",
+      stringify(createInitialState()),
+    );
     state = createInitialState();
-    logStateChange("reset-state", "[truncating]", stringify(state));
   },
 
   incrementLoadingStateFrameIdx() {

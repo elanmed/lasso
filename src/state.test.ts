@@ -2,9 +2,10 @@ import { describe, it, beforeEach, afterEach, mock } from "node:test";
 import assert from "node:assert";
 import type { MCPClient } from "@ai-sdk/mcp";
 import { actions, createPerformanceLogger, getState } from "./state.ts";
+import { stringify } from "./utils.ts";
 import { defaultConfig } from "./config-types.ts";
 import { MISSING } from "./missing.ts";
-import { makeFakeRl, setupTestContext } from "./test-helpers.ts";
+import { makeFakeRl, setupTestContext, testFs } from "./test-helpers.ts";
 import { initMcpState } from "./mcp.ts";
 
 describe("state", () => {
@@ -16,60 +17,145 @@ describe("state", () => {
     setupTestContext({ model: null, sdkProvider: null });
   });
 
+  it("reset-state writes debug-log entry using pre-reset debug settings", () => {
+    const debugLogPath = "/fake-home/.config/lasso/debug/debug-test-uuid.log";
+    testFs._files.set(debugLogPath, "");
+    actions.setDebugLogPath(debugLogPath);
+    actions.setDebugLog(true);
+    actions.setQuestionAbortController(new AbortController());
+    actions.resetState();
+
+    assert.equal(
+      testFs._files.get(debugLogPath),
+      `1970-01-01T00:00:00.000Z :: dispatch set-question-abort-controller: before=null, after=[object AbortController]
+1970-01-01T00:00:00.000Z :: dispatch reset-state: before=[truncating], after=${stringify(getState())}
+`,
+    );
+  });
+
+  const assertInitialState = () => {
+    assert.deepStrictEqual(getState().app, {
+      conversation: { summaries: [], messages: [] },
+      promptTokens: { value: 0, dirty: false },
+      editorInputValue: null,
+      slashCommands: [],
+      stdoutTail: "",
+      debugLog: false,
+      debugLogPath: "",
+      chatHistoryPath: "",
+      contextEntries: [],
+      contextStr: "",
+      globalConfigStr: "",
+      localConfigStr: "",
+      skillsStr: "",
+      toolsContentStr: "",
+      skills: [],
+      subagentModels: [],
+      rl: null,
+      loadingStateTimeout: null,
+      loadingStateFrameIdx: 0,
+      apiStartTime: null,
+      apiEndTime: null,
+      modelUsageForLimitWindow: {},
+      modelUsageForSession: {},
+      sessionStartDate: 0,
+      sessionId: "test-uuid",
+    });
+    assert.deepStrictEqual(getState().config, {
+      model: MISSING,
+      baseURL: undefined,
+      sdkProvider: MISSING,
+      gateway: undefined,
+      pricingPerModel: structuredClone(defaultConfig.pricingPerModel),
+      contextWindowPerModel: structuredClone(
+        defaultConfig.contextWindowPerModel,
+      ),
+      keymaps: structuredClone(defaultConfig.keymaps),
+      customSlashCommandDirs: structuredClone(
+        defaultConfig.customSlashCommandDirs,
+      ),
+      customSkillDirs: structuredClone(defaultConfig.customSkillDirs),
+      subagentModels: structuredClone(defaultConfig.subagentModels),
+      loadingStateFrameDuration: defaultConfig.loadingStateFrameDuration,
+      loadingStateFrames: structuredClone(defaultConfig.loadingStateFrames),
+      promptPrefix: defaultConfig.promptPrefix,
+      suppressBatUnavailableWarning:
+        defaultConfig.suppressBatUnavailableWarning,
+      asciiOnly: defaultConfig.asciiOnly,
+      hideStartupDurations: defaultConfig.hideStartupDurations,
+      compactWithStructuredOutput: defaultConfig.compactWithStructuredOutput,
+      messageQueueDelimiter: defaultConfig.messageQueueDelimiter,
+      reasoning: defaultConfig.reasoning,
+      mcps: structuredClone(defaultConfig.mcps),
+      usageLimit: undefined,
+    });
+    assert.deepStrictEqual(getState().mcp.clients, {});
+    assert.deepStrictEqual(getState().mcp.tools, {});
+    assert.deepStrictEqual(getState().abortControllers, {
+      question: null,
+      apiStream: null,
+      interruptWithEditorContent: null,
+    });
+  };
+
   it("resetState restores initial state after mutations", () => {
     actions.appendToConversation({ role: "user", content: "hi" });
+    actions.setPromptTokens(7);
+    actions.setPromptTokensDirty(true);
+    actions.setEditorInputValue("draft");
+    actions.setSlashCommands([
+      {
+        name: "custom",
+        filePath: "/test-cwd/.lasso/commands/custom.md",
+        content: "custom command content",
+      },
+    ]);
+    actions.appendStdoutTail("out\n");
+    actions.setDebugLog(true);
+    actions.setDebugLogPath("/fake-home/lasso/debug.log");
+    actions.setChatHistoryPath("/tmp/test.log");
+    actions.setContextEntries([{ filePath: "/a/AGENTS.md", content: "A" }]);
+    actions.setContextStr("# context");
+    actions.setGlobalConfigStr("global");
+    actions.setLocalConfigStr("local");
+    actions.setSkillsStr("skills");
+    actions.setToolsContentStr("tools");
+    actions.setSkills([
+      {
+        name: "demo",
+        description: "a demo skill",
+        dir: "/skills/demo",
+        content: "demo content",
+      },
+    ]);
+    actions.setModel("claude-haiku-4-5");
+    actions.setSubagentModels(["fast-model"]);
+    actions.setSdkProvider("anthropic");
+    actions.setGateway("opencode");
+    actions.setBaseURL("https://api.example.com");
+    actions.setPricingPerModel({
+      "claude-haiku-4-5": { inputPerMillion: 1, outputPerMillion: 2 },
+    });
+    actions.setContextWindowPerModel({ "claude-haiku-4-5": 200000 });
+    actions.setKeymap("edit", { name: "e", ctrl: true });
+    actions.setCustomSlashCommandDirs(["/commands"]);
+    actions.setCustomSkillDirs(["/skills"]);
+    actions.setModelUsageForLimitWindow({ "claude-haiku-4-5": [] });
+    actions.setModelUsageForSession({ "gpt-4": [] });
+    const rl = makeFakeRl({ question: () => Promise.resolve("") });
+    actions.setRl(rl);
+    const timeout = setTimeout(() => undefined, 1_000);
+    actions.setLoadingStateTimeout(timeout);
     actions.setQuestionAbortController(new AbortController());
     actions.setApiStreamAbortController(new AbortController());
     actions.setInterruptWithEditorAbortController(new AbortController());
-    const timeout = setTimeout(() => undefined, 1_000);
-    actions.setLoadingStateTimeout(timeout);
-    actions.setChatHistoryPath("/tmp/test.log");
-    actions.setModelUsageForSession({ "gpt-4": [] });
     actions.resetState();
     clearTimeout(timeout);
 
-    assert.deepStrictEqual(getState().app.conversation, {
-      summaries: [],
-      messages: [],
-    });
-    assert.deepStrictEqual(getState().app.promptTokens, {
-      value: 0,
-      dirty: false,
-    });
-    assert.deepStrictEqual(getState().app.modelUsageForLimitWindow, {});
-    assert.deepStrictEqual(getState().app.modelUsageForSession, {});
-    assert.equal(getState().abortControllers.question, null);
-    assert.equal(getState().abortControllers.apiStream, null);
-    assert.equal(getState().abortControllers.interruptWithEditorContent, null);
-    assert.equal(getState().app.loadingStateTimeout, null);
-    assert.equal(getState().app.loadingStateFrameIdx, 0);
-    assert.equal(getState().app.apiStartTime, null);
-    assert.equal(getState().app.apiEndTime, null);
-    assert.equal(getState().app.sessionStartDate, 0);
-    assert.equal(getState().app.sessionId, "test-uuid");
-    assert.equal(getState().app.chatHistoryPath, "");
+    assertInitialState();
   });
 
-  it("initial state", () => {
-    assert.deepStrictEqual(getState().app.conversation, {
-      summaries: [],
-      messages: [],
-    });
-    assert.deepStrictEqual(getState().app.promptTokens, {
-      value: 0,
-      dirty: false,
-    });
-    assert.deepStrictEqual(getState().app.modelUsageForLimitWindow, {});
-    assert.deepStrictEqual(getState().app.modelUsageForSession, {});
-    assert.equal(getState().abortControllers.question, null);
-    assert.equal(getState().abortControllers.apiStream, null);
-    assert.equal(getState().abortControllers.interruptWithEditorContent, null);
-    assert.equal(getState().app.apiStartTime, null);
-    assert.equal(getState().app.apiEndTime, null);
-    assert.equal(getState().app.sessionStartDate, 0);
-    assert.equal(getState().app.sessionId, "test-uuid");
-    assert.equal(getState().app.chatHistoryPath, "");
-  });
+  it("initial state", assertInitialState);
 
   describe("append-to-conversation", () => {
     it("appends new message to the list", () => {

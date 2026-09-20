@@ -8,19 +8,6 @@ Each item includes the file(s) involved and the reasoning behind the finding.
 
 ---
 
-### 3. `state.ts` — `resetState()`'s own debug-log entry can never be written
-
-```ts
-resetState() {
-  state = createInitialState();          // sets app.debugLog back to false
-  logStateChange("reset-state", "[truncating]", stringify(state));
-},
-```
-
-`logStateChange` reads `state.app.debugLog` to decide whether to log — but by the time it runs, `state` has already been replaced by `createInitialState()`, which always has `debugLog: false`. So the "reset-state" log line is dead code: it can never actually be written, even if debug logging was enabled immediately before the reset. (Separately, `"[truncating]"` is used as a placeholder for the "before" state but the "after" state is passed through `stringify()` in full — an inconsistent/incomplete truncation.)
-
----
-
 ### 4. `usage-format.ts` — `/usage` command silently drops context-window info on narrow terminals
 
 ```ts
