@@ -39,18 +39,3 @@ if (initialContentPath !== undefined) {
 ```
 
 The "no args" branch is careful to always create an (empty) file at the returned path, but the "`initialContentPath` given but unreadable" branch is not — it leaves the returned path pointing at nothing. This inconsistency is the root cause of the new-file crash.
-
----
-
-### 4. `utils.ts` — `safeStringify` can return `undefined` instead of a string
-
-```ts
-export function safeStringify(val: unknown) {
-  if (val === undefined) return "";
-  const stringifyResult = tryCatch(() => JSON.stringify(val));
-  if (stringifyResult.ok) return stringifyResult.value;
-  return getMessageFromError(stringifyResult.error);
-}
-```
-
-`JSON.stringify` doesn't throw for values like a bare function or `Symbol` at the top level — it returns `undefined` without an error. In that case `stringifyResult.ok` is `true` and `stringifyResult.value` is `undefined`, so `safeStringify` returns `undefined` rather than a string, silently breaking the implicit "this always returns a string" contract its callers (`safeStringify(toolCall.input)`, `safeStringify(getTools())`) rely on.

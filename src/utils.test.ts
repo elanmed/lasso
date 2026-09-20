@@ -122,6 +122,18 @@ describe("utils", () => {
       assert.equal(safeStringify(undefined), "");
     });
 
+    it("returns an empty string for function and symbol top-level values", () => {
+      assert.equal(
+        safeStringify(() => undefined),
+        "",
+      );
+      assert.equal(safeStringify(Symbol("x")), "");
+    });
+
+    it("returns the error message for bigint top-level values", () => {
+      assert.match(safeStringify(1n), /Do not know how to serialize a BigInt/);
+    });
+
     it("returns stringify of regular values", () => {
       assert.equal(safeStringify({ a: 1 }), '{"a":1}');
     });

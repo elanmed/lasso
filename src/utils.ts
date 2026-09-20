@@ -136,7 +136,11 @@ export function isExisty(val: unknown) {
 export function safeStringify(val: unknown) {
   if (val === undefined) return "";
   const stringifyResult = tryCatch(() => JSON.stringify(val));
-  if (stringifyResult.ok) return stringifyResult.value;
+  if (stringifyResult.ok) {
+    const stringified = stringifyResult.value as unknown as string | undefined;
+    if (stringified === undefined) return "";
+    return stringified;
+  }
   return getMessageFromError(stringifyResult.error);
 }
 
