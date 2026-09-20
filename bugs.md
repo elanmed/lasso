@@ -1,0 +1,351 @@
+# Bug / Code-Quality Findings for `lasso`
+
+Each item includes the file(s) involved and the reasoning behind the finding.
+
+---
+
+### 1. `differ.ts` — `createToolCallDiffer` crashes on brand-new files (unguarded `unlinkSync`)
+
+`cleanupTempFileBefore` and `cleanupAllTempFileBefore` call `fsDeps.unlinkSync(tempFile)` with **no try/catch**:
+
+```ts
+function cleanupTempFileBefore(toolCallId: string) {
+  const tempFile = getTempFileBefore(toolCallId);
+  fsDeps.unlinkSync(tempFile);           // <-- unguarded
+  ...
+}
+```
+
+`setTempFileBefore` snapshots the "before" state via `getTempFileName({ initialContentPath: path })`. If `path` doesn't exist yet (the extremely common case of the bash tool **creating a brand-new file**), `getTempFileName` never writes anything to the returned temp path (see #20). The temp "before" file therefore never exists on disk, and the later unguarded `unlinkSync` throws `ENOENT`, which is never caught. This exception happens inside `onToolExecutionEnd`/`onToolExecutionStart` callbacks passed to `generateText`, so it will surface as an unexpected rejection of an otherwise-successful model turn (e.g. "create a new file for me" would appear to fail with a cryptic `ENOENT`).
+
+No test exercises "diffing a newly-created file that didn't exist before" (see #29), which is how this went unnoticed.
+
+---
+
+### 2. `differ.ts` — `execGitDiff` treats real errors as success for exit codes < 128
+
+```ts
+const isError = isDeltaAvailable ? error.code > 1 : error.code >= 128;
+```
+
+For the non-delta (plain `git diff`) path, any exit code below 128 is treated as "just a normal diff, not an error" — including exit code `2` (git usage error) and `127` ("command not found", e.g. `git` isn't installed). The test `"resolves on plain git diff error with code below 128"` explicitly asserts that exit code `127` resolves silently instead of surfacing an error. This means a missing/broken `git` binary is silently swallowed and presented to the user as "no diff," rather than reporting the actual problem.
+
+---
+
+### 3. `mcp.ts` — one failing MCP client's `.tools()` call wipes out and leaks _all_ MCP clients
+
+```ts
+const toolSetsResult = await tryCatchAsync(toolSetsPromise); // Promise.all over every client
+if (toolSetsResult.ok) {
+  actions.setMcp(clients, tools);
+} else {
+  actions.setMcp({}, {}); // <-- discards every client, including ones that started fine
+}
+```
+
+`getMcpClients()` already individually catches client-creation errors, but `Promise.all(...tools())` rejects entirely if _any single_ client's `.tools()` call fails. On that rejection, `actions.setMcp({}, {})` throws away every successfully-created client — and since those clients are no longer referenced from state, `state.mcp.close()` (which iterates `state.mcp.clients`) can never close them: **the underlying connections leak**. No error is printed either (contrast with the client-creation failure path, which does `print.error`). No test covers a `.tools()` failure after successful client creation (see #28).
+
+---
+
+### 4. `usage.ts` — usage-log lock is keyed by PID, so parallel subagents in the _same process_ self-block
+
+`createLockUtils`'s `writeLock()` steals the lock from dead processes by checking `process.kill(pid, 0)`. But if two async calls to `syncNewModelUsageForLimitWindow` race **within the same Node process** (e.g. `createSubagentTool` runs tasks in parallel via `Promise.all`, each calling `appendModelUsage`), the second call sees a lock file written by its _own_ process. `process.kill(currentPid, 0)` trivially succeeds (the process is obviously alive), so `writeLock()` returns `false` — the second call believes the lock is legitimately held and gives up after ~250ms, printing "Failed to acquire a lock" and **silently dropping that subagent's usage from `modelUsageForLimitWindow`**, undermining the `usageLimit` dollar-cap feature exactly in the scenario (parallel subagents) the codebase explicitly supports.
+
+---
+
+### 7. `state.ts` — `app.stdout` / `appendToStdout` only ever retains the last 2 characters
+
+```ts
+appendToStdout(line: string) {
+  state.app.stdout += line;
+  state.app.stdout = state.app.stdout.slice(-2);
+  ...
+}
+```
+
+This is exercised (and locked in) by the test `"reset-stdout"`, which expects `appendToStdout("line1\n"); appendToStdout("line2\n");` to leave `app.stdout === "2\n"`. Functionally this seems to be intentional (the only consumer, `printNewline()`, just checks `.endsWith("\n\n")`), but the field is named and typed as if it holds the accumulated stdout buffer, which is highly misleading to any future reader/maintainer who might reasonably assume `app.stdout` contains actual captured output.
+
+---
+
+### 8. `state.ts` — `resetState()`'s own debug-log entry can never be written
+
+```ts
+resetState() {
+  state = createInitialState();          // sets app.debugLog back to false
+  logStateChange("reset-state", "[truncating]", stringify(state));
+},
+```
+
+`logStateChange` reads `state.app.debugLog` to decide whether to log — but by the time it runs, `state` has already been replaced by `createInitialState()`, which always has `debugLog: false`. So the "reset-state" log line is dead code: it can never actually be written, even if debug logging was enabled immediately before the reset. (Separately, `"[truncating]"` is used as a placeholder for the "before" state but the "after" state is passed through `stringify()` in full — an inconsistent/incomplete truncation.)
+
+---
+
+### 9. `usage-format.ts` — `/usage` command silently drops context-window info on narrow terminals
+
+```ts
+export function getPrettyContextWindowUsage() {
+  const columns = processDeps.stdout.getColumns();
+  if (columns !== undefined && columns < 80) return "";
+  ...
+```
+
+This width-based suppression makes sense for the compact fenced status line (`getFenceSessionLine`), which has limited horizontal room. But `getPrettyContextWindowUsage()` is also called from `getPrettyUsage()`, which backs the explicit `/usage` command (`printUsage()`). A user who explicitly asks for usage info via `/usage` in a narrow terminal silently gets no context-window percentage at all, with no indication why.
+
+---
+
+### 10. `usage-format.ts` — inconsistent token totals between the priced and unpriced branches of `getPrettyTokenUsage`
+
+```ts
+if (pricing === undefined) {
+  return `${(tokenUsageForSession.inputTokens + tokenUsageForSession.outputTokens).toLocaleString()} tokens in session`;
+}
+```
+
+When no pricing is configured for the model, the displayed total omits `cacheReadTokens` and `cacheWriteTokens` entirely. When pricing _is_ configured, the cost calculation (`getUsageMoneyForModel`) explicitly accounts for cache read/write tokens. So the same underlying usage produces a "tokens in session" figure that either does or doesn't include cache tokens depending purely on whether pricing happens to be configured — an inconsistency in what "total tokens" means.
+
+---
+
+### 11. `usage-format.ts` — `getUsageMoneyForModel` doesn't clamp negative "uncached" token counts
+
+```ts
+const uncachedInputTokens =
+  usageTokens.inputTokens -
+  usageTokens.cacheReadTokens -
+  usageTokens.cacheWriteTokens;
+```
+
+If `cacheReadTokens + cacheWriteTokens` ever exceeds `inputTokens` (e.g. if the provider reports cache tokens as _additional_ to, rather than a subset of, `inputTokens` — a real possibility depending on SDK/provider semantics), `uncachedInputTokens` goes negative and silently reduces the computed cost. There's no `Math.max(0, ...)` guard anywhere in the pipeline.
+
+---
+
+### 12. `config.ts` — keymap duplicate detection doesn't use the same equality as `isSameKey`
+
+```ts
+const hashableKeymaps = Object.entries(defaultedKeymaps).map(
+  ([command, keymap]) => ({ command, keymapStr: stringify(keymap) }),
+);
+```
+
+Duplicate keymaps are detected purely via `JSON.stringify` equality of the raw `Key` object. But the actual runtime equality used everywhere else (`isSameKey` in `input.ts`) treats missing `ctrl`/`meta`/`shift` as `false`. Two configs that are semantically identical per `isSameKey` — e.g. `{name:"g", ctrl:true}` vs. `{name:"g", ctrl:true, meta:false, shift:false}` — produce different `keymapStr` values and will _not_ be flagged as a duplicate, silently allowing two commands to be bound to what `initKeypress` will treat as "the same" key combination.
+
+---
+
+### 13. `config.ts` — global/local config files are read twice per startup
+
+`initStateFirst()` calls `readConfigFile(getGlobalConfigPath())` and `readConfigFile(getLocalConfigPath())` just to extract `hideStartupDurations`, and then `initStateFromConfig()` calls `readConfigFile()` on the exact same two paths again to extract everything else. This is redundant I/O on every startup and every `/reload`, and — however unlikely — opens a window where the two reads could observe different file contents if the config file changes between calls.
+
+---
+
+### 14. `context.ts` — root-level `AGENTS.md` can be double-surfaced as both context and a skill
+
+`getContextEntries()` always injects `<cwd>/AGENTS.md` (and the global one) directly into the system prompt. Separately, `getSkills()` walks `git ls-files **/AGENTS.md` and turns _every_ matched `AGENTS.md` (including one at the repo root) into a lazily-loadable "skill" named `__lasso-context-for-<dir>`. There's no exclusion of the root file already covered by `getContextEntries()`, so the same file's content can be both always-injected _and_ separately offered as a discoverable skill.
+
+---
+
+### 16. `input.ts` — `/clear` silently wipes session cost tracking as a side effect
+
+```ts
+export function clearCommand() {
+  print.infoSubtle(`Context cleared (${getPrettyTokenUsage()})`);
+  actions.resetConversation();
+  actions.setPromptTokens(getApproxPromptTokens());
+  actions.setModelUsageForSession({}); // <-- resets the session $ / token counter to zero
+}
+```
+
+`/clear` is documented (and named) as clearing the _conversation_, but it also resets `app.modelUsageForSession` to `{}`, permanently zeroing the "$ in session" figure shown elsewhere (e.g. in the fence status line). `modelUsageForLimitWindow` (which drives the actual dollar usage-limit enforcement) is left untouched, so the two usage trackers now diverge for no clearly-stated reason — a user could `/clear` several times and have the displayed session cost keep resetting to near-zero even though real spend continues to accumulate against their limit. Not covered by a test with nonzero prior usage (see also #33's sibling observation).
+
+---
+
+### 17. `api.ts` — stale/ambiguous scratch comments in `getMergedSummaries`
+
+```ts
+// [S1(@1), S2(@2), S3(@3), S4(@4), S5(@5)]
+
+// [S1(@1), S2(@2), S3(@3), S4(@4), S5(@5), S6(@6)]
+// [M2(@6), S3(@3), S4(@4), S5(@5), S6(@6)]
+
+// [M2(@6), S3(@3), S4(@4), S5(@5), S6(@6)]
+// [M2(@6), S3(@3), S4(@4), S5(@5), S6(@6), S7(@7)]
+```
+
+These look like leftover scratchpad notes from while the algorithm was being designed. They don't correspond 1:1 with what the function actually does (it merges once it's _at_ `maxNumberSummaries`, not after growing past it to 6/7), and they're not referenced or explained anywhere. As documentation they're confusing rather than clarifying and should either be rewritten to describe the real algorithm or removed.
+
+---
+
+### 18. `usage.ts` — `getSystemInstructionsTokensApprox` name doesn't reflect that it includes tool definitions
+
+```ts
+export function getSystemInstructionsTokensApprox() {
+  const systemContentTokensApprox = strToApproxTokens(
+    promptDeps.getSystemContent(),
+  );
+  const toolsTokensApprox = strToApproxTokens(getState().app.toolsContentStr);
+  return systemContentTokensApprox + toolsTokensApprox;
+}
+```
+
+"System instructions" and "tools" are sent to the API as two conceptually distinct things (`instructions` vs `tools` parameters in `resolveApiCall`), but this function — and the user-facing warning text in `warnOnLargeSystemInstructions` ("the current set of context, skills, and tools is X% ... Lasso reserves ... for system instructions") — bundles both under the "system instructions" label, which is a naming/documentation inaccuracy.
+
+---
+
+### 19. `api.ts` — `getConversationSummary`'s `messages.slice(summaries.length)` relies on an undocumented invariant
+
+```ts
+const compactPrompt = `Compact the following conversation:
+${JSON.stringify(getState().app.conversation.messages.slice(getState().app.conversation.summaries.length))}
+`;
+```
+
+This only produces the correct "messages not yet summarized" slice because, after a compaction, `resetConversation()` + `setSummaries()` + re-appending one assistant message per summary guarantees that the first `summaries.length` messages exactly mirror the summaries. That invariant is never stated in a comment, and nothing enforces it — any future code path that appends to `conversation.summaries` without also appending a matching message (or vice versa) would silently corrupt what gets fed into the next compaction prompt.
+
+---
+
+### 20. `utils.ts` — `getTempFileName` silently produces a non-existent file when `initialContentPath` can't be read
+
+```ts
+if (initialContentPath !== undefined) {
+  const readResult = tryCatch(() =>
+    fsDeps.readFileSync(initialContentPath).toString(),
+  );
+  if (readResult.ok) {
+    tryCatch(() => fsDeps.writeFileSync(tempFile, readResult.value));
+  }
+  // else: nothing is written — tempFile is returned but doesn't exist on disk
+} else if (initialContentStr !== undefined) {
+  tryCatch(() => fsDeps.writeFileSync(tempFile, initialContentStr));
+} else {
+  tryCatch(() => fsDeps.writeFileSync(tempFile, "")); // <-- the "no args" case DOES write a placeholder
+}
+```
+
+The "no args" branch is careful to always create an (empty) file at the returned path, but the "`initialContentPath` given but unreadable" branch is not — it leaves the returned path pointing at nothing. This inconsistency is the root cause of bug #1.
+
+---
+
+### 21. `terminal.ts` — `checkDelta` is dead code; `differ.ts` duplicates its logic instead of reusing it
+
+`checkDelta()` (`execPromise("delta --version")`) is exported from `terminal.ts` but never called anywhere. `differ.ts`'s `execGitDiff` reimplements the exact same check inline (`await tryCatchAsync(execPromise("delta --version"))`) instead of importing and using `checkDelta`. Neither the duplication nor the dead export is caught by any test.
+
+---
+
+### 22. `utils.ts` — `MIN_WIDTH_HARD` is exported but never used anywhere in the codebase.
+
+---
+
+### 23. `tools.ts` — `HarnessToolName` type is exported but never used anywhere in the codebase.
+
+---
+
+### 24. `state.ts` — `setSubagentModels` writes a second, unused copy of the data into `config.subagentModels`
+
+```ts
+setSubagentModels(subagentModels: string[]) {
+  state.app.subagentModels = subagentModels;
+  state.config.subagentModels = subagentModels;   // <-- never read anywhere
+  ...
+}
+```
+
+All actual reads (e.g. `createSubagentTaskSchema`'s model validation in `tools.ts`) use `getState().app.subagentModels`. `getState().config.subagentModels` is set but never read, making it dead/redundant state that just needs to be kept in sync for no benefit.
+
+---
+
+### 25. `test-helpers.ts` imports `"zod/v4"` while every other file imports plain `"zod"`
+
+```ts
+// test-helpers.ts
+import { z } from "zod/v4";
+```
+
+```ts
+// api.ts, tools.ts, usage.ts, config-types.ts, ...
+import { z } from "zod";
+```
+
+This is the only place in the project using the `/v4` subpath import. Depending on the installed `zod` version, this could mean schema objects created in tests (`makeMcpTool`'s `z.object({})`) are instances of a different internal `zod` implementation than the rest of the app uses, which is at minimum an inconsistency worth resolving, and at worst a source of subtle type/behavior mismatches between test doubles and production code.
+
+---
+
+### 26. `utils.ts` — `safeStringify` can return `undefined` instead of a string
+
+```ts
+export function safeStringify(val: unknown) {
+  if (val === undefined) return "";
+  const stringifyResult = tryCatch(() => JSON.stringify(val));
+  if (stringifyResult.ok) return stringifyResult.value;
+  return getMessageFromError(stringifyResult.error);
+}
+```
+
+`JSON.stringify` doesn't throw for values like a bare function or `Symbol` at the top level — it returns `undefined` without an error. In that case `stringifyResult.ok` is `true` and `stringifyResult.value` is `undefined`, so `safeStringify` returns `undefined` rather than a string, silently breaking the implicit "this always returns a string" contract its callers (`safeStringify(toolCall.input)`, `safeStringify(getTools())`) rely on.
+
+---
+
+### 27. Missing direct test coverage for most of `paths.ts`
+
+`paths.test.ts` only directly tests `getGlobalConfigDir`, `getGlobalContextDir`, and `getGlobalConfigPath`. The remaining ~10 exported helpers (`getLocalConfigDir`, `getLocalConfigPath`, `getDebugLogDir`, `getGlobalSkillDir`, `getLocalSkillDir`, `getLocalSlashCommandDir`, `getGlobalSlashCommandDir`, `getPromptHistoryDir`, `getUsageLogPath`, `getUsageLogLockPath`) are only ever exercised indirectly through other modules' tests, meaning a regression in any of them (e.g. wrong join order, wrong filename) might not be caught at the source.
+
+---
+
+### 28. Missing test coverage: MCP `.tools()` failing after successful client creation (see bug #3)
+
+`mcp.test.ts` only tests `createMCPClient` itself rejecting. There is no test where clients are created successfully but the subsequent `client.tools()` call fails, which is exactly the scenario that triggers the leak/wipe-all-clients bug described in #3.
+
+---
+
+### 29. Missing test coverage: diffing a bash-tool-created _new_ file (see bug #1)
+
+Every `api.test.ts` / `tools.test.ts` test that exercises `create-update-delete` bash tool tracking pre-populates the "before" file in `testFs` (e.g. `testFs._files.set("/test/file.txt", "original content")`). There is no test where the target file does not exist before the tool call (the "creating a brand-new file" case), which is precisely the path that crashes per bug #1.
+
+---
+
+### 31. `input.ts` — "Executing slash command" info line only fires for custom commands, not built-ins
+
+`resolveCustomSlashCommand` prints `print.infoSubtle(\`Executing slash command: ${command}\`)`before returning, but`resolveBuiltinSlashCommand` never prints anything equivalent for built-ins (`/edit`, `/clear`, etc.). This asymmetry in user-facing feedback looks unintentional rather than a deliberate design choice.
+
+---
+
+### 33. `api.ts` — `resolveApiCall`'s abort-path token bookkeeping is dead work
+
+```ts
+actions.appendToConversation(interruptMessage);
+actions.appendToPromptTokens(
+  strToApproxTokens(userInput) + strToApproxTokens(interruptContent),
+);
+actions.setPromptTokensDirty(true);
+```
+
+`appendToPromptTokens` computes and stores an approximate delta into `promptTokens.value`, but the very next line marks `promptTokens.dirty = true`. Every actual consumer of prompt-token count (`getCurrentPromptTokens()`) ignores `promptTokens.value` entirely while `dirty` is `true`, falling back to a fresh `getApproxPromptTokens()` computation instead. So the `appendToPromptTokens` call's result is never actually used for anything — it's dead computation that exists only because a test happens to assert the exact (irrelevant) stored value.
+
+---
+
+### 34. `text.ts` — `truncate()` always appends an ellipsis for multi-line input, even when the first line already fits
+
+```ts
+if (newlineIdx !== -1) {
+  return firstLine.substring(0, maxLen - 1).concat(ellipsis);
+}
+```
+
+For any string containing a newline, an ellipsis is unconditionally appended to the first line — even if that first line is far shorter than `maxLen` and wasn't actually truncated for width reasons. This conflates "there is more content after this line" with "this line was cut off," which may be intentional but isn't documented as such, and means e.g. `truncate("hi\nrest")` on a very wide terminal still yields `"hi…"` rather than `"hi"`.
+
+---
+
+### 35. `log.ts` — `prependToChatHistory` checks file existence to decide whether to create the _directory_
+
+```ts
+export function prependToChatHistory(content: string, role: "user" | "assistant") {
+  const path = getState().app.chatHistoryPath;
+  if (!fsDeps.existsSync(path)) {
+    const mkdirResult = tryCatch(() => fsDeps.mkdirSync(dirname(path), { recursive: true }));
+    ...
+```
+
+The condition tests whether the _file_ (`path`) exists, then (if not) creates the _directory_ (`dirname(path)`). This only works because, in practice, the file never exists without its directory also existing. The check reads as though it's testing directory existence and is easy to misread; it would be clearer (and more robust to being called with a fresh/unusual path) to check `existsSync(dirname(path))` directly.
+
+---
+
+## Summary of most impactful items
+
+The most actionable/impactful bugs to fix first are **#1** (crash on new-file creation via bash tool), **#3** (MCP client leak + total tool loss on one server hiccup), **#4** (usage-limit tracking silently dropped for parallel subagents), **#5** (wrong `/commands` output), and **#6** (misleading "read-only" subagent capability claim).
