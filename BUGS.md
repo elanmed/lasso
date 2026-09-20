@@ -8,19 +8,6 @@ Each item includes the file(s) involved and the reasoning behind the finding.
 
 ---
 
-### 4. `usage-format.ts` — `/usage` command silently drops context-window info on narrow terminals
-
-```ts
-export function getPrettyContextWindowUsage() {
-  const columns = processDeps.stdout.getColumns();
-  if (columns !== undefined && columns < 80) return "";
-  ...
-```
-
-This width-based suppression makes sense for the compact fenced status line (`getFenceSessionLine`), which has limited horizontal room. But `getPrettyContextWindowUsage()` is also called from `getPrettyUsage()`, which backs the explicit `/usage` command (`printUsage()`). A user who explicitly asks for usage info via `/usage` in a narrow terminal silently gets no context-window percentage at all, with no indication why.
-
----
-
 ### 5. `usage-format.ts` — inconsistent token totals between the priced and unpriced branches of `getPrettyTokenUsage`
 
 ```ts

@@ -363,16 +363,8 @@ describe("usage-format", () => {
       assert.strictEqual(result, "50% of context window");
     });
 
-    it("returns empty string when there are fewer than 80 columns", () => {
+    it("ignores terminal width", () => {
       mock.method(processDeps.stdout, "getColumns", () => 79);
-      actions.setModel("test-model");
-      actions.setContextWindowPerModel({ "test-model": 10_000 });
-      const result = getPrettyContextWindowUsage();
-      assert.strictEqual(result, "");
-    });
-
-    it("returns the percent when there are at least 80 columns", () => {
-      mock.method(processDeps.stdout, "getColumns", () => 80);
       actions.setModel("test-model");
       actions.setContextWindowPerModel({ "test-model": 10_000 });
       const result = getPrettyContextWindowUsage();
