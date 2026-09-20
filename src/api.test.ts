@@ -121,6 +121,98 @@ response text
       assert.strictEqual(stripAnsi(getCaptured()), `[mcp] mcp_tool: {"a":1}\n`);
     });
 
+    it("prints load_skill details on tool call start", async () => {
+      const getCaptured = mockStdout();
+      mockGenerateText((options: Record<string, unknown>) => {
+        const onStart = options["onToolExecutionStart"] as (
+          arg: Record<string, unknown>,
+        ) => void;
+        onStart({
+          toolCall: {
+            toolName: "load_skill",
+            toolCallId: "call-10",
+            input: { name: "demo" },
+          },
+        });
+        return Promise.resolve(makeGenerateTextResult());
+      });
+      await resolveApiCall("hello");
+      assert.strictEqual(stripAnsi(getCaptured()), `load_skill: demo\n`);
+    });
+
+    it("prints web_fetch_html and web_fetch_json details on tool call start", async () => {
+      const getCaptured = mockStdout();
+      mockGenerateText((options: Record<string, unknown>) => {
+        const onStart = options["onToolExecutionStart"] as (
+          arg: Record<string, unknown>,
+        ) => void;
+        onStart({
+          toolCall: {
+            toolName: "web_fetch_html",
+            toolCallId: "call-11",
+            input: { href: "https://example.com" },
+          },
+        });
+        onStart({
+          toolCall: {
+            toolName: "web_fetch_json",
+            toolCallId: "call-12",
+            input: { href: "https://example.com/api" },
+          },
+        });
+        return Promise.resolve(makeGenerateTextResult());
+      });
+      await resolveApiCall("hello");
+      assert.strictEqual(
+        stripAnsi(getCaptured()),
+        `web_fetch_html: https://example.com\nweb_fetch_json: https://example.com/api\n`,
+      );
+    });
+
+    it("prints one indented line per subagent task on tool call start", async () => {
+      const getCaptured = mockStdout();
+      mockGenerateText((options: Record<string, unknown>) => {
+        const onStart = options["onToolExecutionStart"] as (
+          arg: Record<string, unknown>,
+        ) => void;
+        onStart({
+          toolCall: {
+            toolName: "create_subagent",
+            toolCallId: "call-13",
+            input: {
+              tasks: [
+                {
+                  prompt: "investigate tests",
+                  access: "read-only",
+                  model: "claude-sonnet-4-20250514",
+                },
+                {
+                  prompt: "write code",
+                  access: "read-write",
+                  model: "claude-sonnet-4-20250514",
+                },
+              ],
+            },
+          },
+        });
+        return Promise.resolve(makeGenerateTextResult());
+      });
+      await resolveApiCall("hello");
+      const lines = stripAnsi(getCaptured()).trimEnd().split("\n");
+      const firstLine = lines[0];
+      const secondLine = lines[1];
+      assert(firstLine !== undefined);
+      assert(secondLine !== undefined);
+      assert.strictEqual(
+        firstLine,
+        "   create_subagent: [claude-sonnet-4-20250514] investigate tests",
+      );
+      assert.strictEqual(
+        secondLine,
+        "   create_subagent: [claude-sonnet-4-20250514] write code",
+      );
+    });
+
     it("resolves the queued editor input when the api call is interrupted", async () => {
       actions.setChatHistoryPath("/tmp/test-history.log");
       actions.setRl(makeFakeRl());
@@ -355,7 +447,12 @@ response text
       await resolveApiCall("edit file");
       assert.strictEqual(
         stripAnsi(getCaptured()),
-        "\n━━ File change: /test/file.txt ━━\n+added line\n\n",
+        `bash: write
+
+━━ File change: /test/file.txt ━━
++added line
+
+`,
       );
       assert.strictEqual(testFs._files.has("/tmp/lasso-test-uuid.txt"), false);
     });

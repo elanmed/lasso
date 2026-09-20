@@ -23,10 +23,12 @@ import {
   orApproxTokens,
 } from "./usage.ts";
 import {
-  harnessTools,
   getTools,
   toolPrint,
   bashToolInputSchema,
+  webFetchToolSchema,
+  loadSkillToolSchema,
+  createSubagentToolSchema,
 } from "./tools.ts";
 import { MISSING } from "./missing.ts";
 import type { ModelSummary } from "./state.ts";
@@ -74,19 +76,45 @@ export async function resolveApiCall(userInput: string) {
       stopWhen: aiDeps.isLoopFinished(),
       abortSignal: getApiStreamAbortSignal(),
       onToolExecutionStart: ({ toolCall }) => {
-        if (!Object.keys(harnessTools).includes(toolCall.toolName)) {
-          toolPrint(
-            `[mcp] ${toolCall.toolName}`,
-            safeStringify(toolCall.input),
-          );
-        }
-        if (toolCall.toolName !== "bash") return;
-        const bashSchemaResult = bashToolInputSchema.parse(toolCall.input);
-        if (bashSchemaResult.fileSystemAccessType === "create-update-delete") {
-          toolCallDiffer.setTempFileBefore(
-            toolCall.toolCallId,
-            bashSchemaResult.filePath,
-          );
+        switch (toolCall.toolName) {
+          case "bash": {
+            const input = bashToolInputSchema.parse(toolCall.input);
+            toolPrint("bash", input.command);
+            if (input.fileSystemAccessType === "create-update-delete") {
+              toolCallDiffer.setTempFileBefore(
+                toolCall.toolCallId,
+                input.filePath,
+              );
+            }
+            break;
+          }
+          case "web_fetch_html": {
+            const input = webFetchToolSchema.parse(toolCall.input);
+            toolPrint("web_fetch_html", input.href);
+            break;
+          }
+          case "web_fetch_json": {
+            const input = webFetchToolSchema.parse(toolCall.input);
+            toolPrint("web_fetch_json", input.href);
+            break;
+          }
+          case "load_skill": {
+            const input = loadSkillToolSchema.parse(toolCall.input);
+            toolPrint("load_skill", input.name);
+            break;
+          }
+          case "create_subagent": {
+            const input = createSubagentToolSchema.parse(toolCall.input);
+            for (const task of input.tasks) {
+              toolPrint("   create_subagent", `[${task.model}] ${task.prompt}`);
+            }
+            break;
+          }
+          default:
+            toolPrint(
+              `[mcp] ${toolCall.toolName}`,
+              safeStringify(toolCall.input),
+            );
         }
       },
       onToolExecutionEnd: async ({ toolCall, toolOutput }) => {

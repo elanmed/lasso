@@ -118,8 +118,6 @@ export async function executeBashTool(
   { command: bashCommand }: BashToolInput,
   signal?: AbortSignal,
 ): Promise<ToolResult> {
-  toolPrint("bash", bashCommand);
-
   const bashResult = await tryCatchAsync(
     execPromise(bashCommand, signal === undefined ? undefined : { signal }),
   );
@@ -143,7 +141,7 @@ export async function executeBashTool(
   };
 }
 
-const webFetchToolSchema = z.object({
+export const webFetchToolSchema = z.object({
   href: z.string().describe("The URL of the web page or JSON API to fetch"),
 });
 export type WebFetchTool = z.infer<typeof webFetchToolSchema>;
@@ -214,7 +212,6 @@ export async function executeWebFetchHtmlTool(
   { href }: WebFetchTool,
   signal?: AbortSignal,
 ): Promise<ToolResult> {
-  toolPrint("web_fetch_html", href);
   const headers = new Headers();
   headers.append("User-Agent", userAgent);
   headers.append("Accept", "text/html");
@@ -286,7 +283,6 @@ export async function executeWebFetchJsonTool(
   { href }: WebFetchTool,
   signal?: AbortSignal,
 ): Promise<ToolResult> {
-  toolPrint("web_fetch_json", href);
   const headers = new Headers();
   headers.append("User-Agent", userAgent);
   headers.append("Accept", "application/json");
@@ -340,13 +336,12 @@ export async function executeWebFetchJsonTool(
   };
 }
 
-const loadSkillToolSchema = z.object({
+export const loadSkillToolSchema = z.object({
   name: z.string().describe("The name of the skill to load"),
 });
 export type LoadSkillTool = z.infer<typeof loadSkillToolSchema>;
 
 export function loadSkillTool({ name }: LoadSkillTool): ToolResult {
-  toolPrint("load_skill", name);
   const foundSkill = getState().app.skills.find((skill) => skill.name === name);
   if (foundSkill === undefined) {
     return {
@@ -436,10 +431,6 @@ export async function createSubagentTool(
         .join("\n");
 
       const toolCallDiffer = createToolCallDiffer();
-
-      const message = `[${model}] ${subagentSchema.prompt}`;
-      const subagentIndent = "   ";
-      toolPrint(`${subagentIndent}create_subagent`, message);
 
       const userMessage: ModelMessage = {
         role: "user",

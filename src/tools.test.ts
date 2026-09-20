@@ -654,6 +654,8 @@ describe("tools", () => {
         const onFinish = options["onToolExecutionEnd"] as (
           arg: Record<string, unknown>,
         ) => Promise<void>;
+        assert.strictEqual(typeof onStart, "function");
+        assert.strictEqual(typeof onFinish, "function");
         onStart({
           toolCall: {
             toolName: "bash",
@@ -691,8 +693,7 @@ describe("tools", () => {
       ]);
       assert.strictEqual(
         stripAnsi(getCaptured()),
-        `   create_subagent: [main-model] edit
-
+        `
 ━━ File change: /test/file.txt ━━
 +modified content
 
