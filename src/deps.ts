@@ -11,6 +11,7 @@ import {
 } from "node:fs";
 import childProcess from "node:child_process";
 import { generateText, isLoopFinished } from "ai";
+import { createMCPClient } from "@ai-sdk/mcp";
 
 export const fsDeps = {
   readFileSync,
@@ -73,3 +74,5 @@ export const aiDeps = {
   generateText,
   isLoopFinished,
 };
+
+export const mcpDeps = { createMCPClient };

@@ -25,6 +25,8 @@ import {
   makeAbortError,
   setupTestContext,
   testProcessEnv,
+  drainTimerCallbacks,
+  makeErrnoError,
 } from "./test-helpers.ts";
 import { fsDeps, processDeps } from "./deps.ts";
 
@@ -483,9 +485,7 @@ describe("utils", () => {
           "writeFileSync",
           (path: string, content: string, options?: { flag?: string }) => {
             if (options?.flag === "wx" && testFs._files.has(path)) {
-              const err = new Error(`EEXIST: ${path}`) as NodeJS.ErrnoException;
-              err.code = "EEXIST";
-              throw err;
+              throw makeErrnoError("EEXIST", `EEXIST: ${path}`);
             }
             testFs.writeFileSync(path, content);
           },
@@ -505,12 +505,7 @@ describe("utils", () => {
 
         const lockUtils = createLockUtils("/lock");
         const promise = lockUtils.createLock();
-        while (timerCallbacks.length > 0) {
-          const callback = timerCallbacks.shift();
-          assert(callback !== undefined);
-          callback();
-          await Promise.resolve();
-        }
+        await drainTimerCallbacks(timerCallbacks);
 
         assert.equal(await promise, false);
         assert.equal(testFs._files.get("/lock"), "42");
@@ -536,12 +531,28 @@ describe("utils", () => {
         mock.restoreAll();
       });
 
+      it("reports success when the lock is acquired on the final retry", async () => {
+        testFs._files.set("/lock", "42");
+        mock.method(processDeps, "kill", () => undefined);
+        const timerCallbacks = mockSetTimeout();
+
+        const lockUtils = createLockUtils("/lock");
+        const promise = lockUtils.createLock();
+        await drainTimerCallbacks(timerCallbacks, { keep: 1 });
+        testFs._files.delete("/lock");
+        const finalCallback = timerCallbacks.shift();
+        assert(finalCallback !== undefined);
+        finalCallback();
+
+        assert.equal(await promise, true);
+        assert.equal(testFs._files.get("/lock"), String(process.pid));
+        mock.restoreAll();
+      });
+
       it("steals the lock from a dead process (ESRCH)", async () => {
         testFs._files.set("/lock", "42");
         mock.method(processDeps, "kill", () => {
-          const err = new Error("No such process") as NodeJS.ErrnoException;
-          err.code = "ESRCH";
-          throw err;
+          throw makeErrnoError("ESRCH", "No such process");
         });
 
         const lockUtils = createLockUtils("/lock");
@@ -553,22 +564,13 @@ describe("utils", () => {
       it("returns false when the holder is alive but not ours (EPERM)", async () => {
         testFs._files.set("/lock", "42");
         mock.method(processDeps, "kill", () => {
-          const err = new Error(
-            "Operation not permitted",
-          ) as NodeJS.ErrnoException;
-          err.code = "EPERM";
-          throw err;
+          throw makeErrnoError("EPERM", "Operation not permitted");
         });
         const timerCallbacks = mockSetTimeout();
 
         const lockUtils = createLockUtils("/lock");
         const promise = lockUtils.createLock();
-        while (timerCallbacks.length > 0) {
-          const callback = timerCallbacks.shift();
-          assert(callback !== undefined);
-          callback();
-          await Promise.resolve();
-        }
+        await drainTimerCallbacks(timerCallbacks);
 
         assert.equal(await promise, false);
         assert.equal(testFs._files.get("/lock"), "42");
@@ -586,9 +588,7 @@ describe("utils", () => {
       it("steals the lock when the lock file cannot be read", async () => {
         testFs._files.set("/lock", "42");
         mock.method(fsDeps, "readFileSync", () => {
-          const err = new Error("I/O error") as NodeJS.ErrnoException;
-          err.code = "EIO";
-          throw err;
+          throw makeErrnoError("EIO", "I/O error");
         });
 
         const lockUtils = createLockUtils("/lock");

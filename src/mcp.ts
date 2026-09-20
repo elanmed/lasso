@@ -1,6 +1,6 @@
-import { createMCPClient, type MCPClient } from "@ai-sdk/mcp";
 // eslint-disable-next-line import/no-unresolved
 import { Experimental_StdioMCPTransport as StdioClientTransport } from "@ai-sdk/mcp/mcp-stdio";
+import type { MCPClient } from "@ai-sdk/mcp";
 import {
   actions,
   createPerformanceLogger,
@@ -9,7 +9,8 @@ import {
 } from "./state.ts";
 import type { Mcp } from "./config-types.ts";
 import { print } from "./print.ts";
-import { tryCatchAsync } from "./utils.ts";
+import { getMessageFromError, tryCatchAsync } from "./utils.ts";
+import { mcpDeps } from "./deps.ts";
 
 async function createMcpClient(config: Mcp) {
   switch (config.type) {
@@ -20,7 +21,7 @@ async function createMcpClient(config: Mcp) {
         return { headers: config.headers };
       })();
 
-      return createMCPClient({
+      return mcpDeps.createMCPClient({
         transport: {
           type: config.type,
           url: config.url,
@@ -36,7 +37,7 @@ async function createMcpClient(config: Mcp) {
         return { args: config.args };
       })();
 
-      return createMCPClient({
+      return mcpDeps.createMCPClient({
         transport: new StdioClientTransport({
           command: config.command,
           ...args,
@@ -66,6 +67,10 @@ async function getMcpClients() {
       );
       if (createMcpResult.ok) {
         mcpClients[name] = createMcpResult.value;
+      } else {
+        print.error(
+          `Failed to start the ${name} mcp server: ${getMessageFromError(createMcpResult.error)}`,
+        );
       }
     }),
   );

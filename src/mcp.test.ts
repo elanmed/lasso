@@ -3,7 +3,13 @@ import assert from "node:assert";
 import type { MCPClient } from "@ai-sdk/mcp";
 import { actions, getState, type MCPToolSet } from "./state.ts";
 import { initMcpState } from "./mcp.ts";
-import { mockStdout, setupTestContext, stripAnsi } from "./test-helpers.ts";
+import {
+  makeFakeMcpClient,
+  mockStdout,
+  setupTestContext,
+  stripAnsi,
+} from "./test-helpers.ts";
+import { mcpDeps } from "./deps.ts";
 
 describe("mcp", () => {
   afterEach(() => {
@@ -42,6 +48,9 @@ describe("mcp", () => {
   });
 
   it("ignores MCP clients that fail during initialization", async () => {
+    mock.method(mcpDeps, "createMCPClient", () => {
+      return Promise.reject(new Error("connection refused"));
+    });
     actions.setMcps({
       first: { type: "http", url: "not-a-url" },
       second: { type: "sse", url: "also-not-a-url" },
@@ -53,7 +62,28 @@ describe("mcp", () => {
     assert.deepStrictEqual(getState().mcp.tools, {});
   });
 
+  it("prints an error when a client fails to start", async () => {
+    mock.method(mcpDeps, "createMCPClient", () => {
+      return Promise.reject(new Error("connection refused"));
+    });
+    mock.method(process.hrtime, "bigint", () => BigInt(0));
+    actions.setMcps({
+      first: { type: "http", url: "not-a-url" },
+    });
+
+    const getCaptured = mockStdout();
+    await initMcpState();
+
+    assert.strictEqual(
+      stripAnsi(getCaptured()),
+      "Starting first mcp server: 0.0ms\nFailed to start the first mcp server: connection refused\n",
+    );
+  });
+
   it("prints the mcp server start duration when hideStartupDurations is false", async () => {
+    mock.method(mcpDeps, "createMCPClient", () => {
+      return Promise.resolve(makeFakeMcpClient());
+    });
     mock.method(process.hrtime, "bigint", () => BigInt(0));
     actions.setMcps({
       first: { type: "http", url: "not-a-url" },
@@ -69,6 +99,9 @@ describe("mcp", () => {
   });
 
   it("hides the mcp server start duration when hideStartupDurations is true", async () => {
+    mock.method(mcpDeps, "createMCPClient", () => {
+      return Promise.resolve(makeFakeMcpClient());
+    });
     actions.setHideStartupDurations(true);
     actions.setMcps({
       first: { type: "http", url: "not-a-url" },

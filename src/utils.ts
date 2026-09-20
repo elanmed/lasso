@@ -245,7 +245,7 @@ export function createLockUtils(lockPath: string) {
         iter++;
       }
 
-      return iter < maxIter;
+      return !pendingWrite;
     },
     deleteLock() {
       tryCatch(() => fsDeps.unlinkSync(lockPath));

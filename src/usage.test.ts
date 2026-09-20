@@ -16,7 +16,7 @@ import {
 } from "./usage.ts";
 import { actions, getState, promptDeps } from "./state.ts";
 import { fsDeps } from "./deps.ts";
-import { setupTestContext, testFs } from "./test-helpers.ts";
+import { makeErrnoError, setupTestContext, testFs } from "./test-helpers.ts";
 import { getUsageLogLockPath, getUsageLogPath } from "./paths.ts";
 
 describe("usage", () => {
@@ -706,6 +706,20 @@ describe("usage", () => {
 
       assert.deepStrictEqual(getState().app.modelUsageForLimitWindow, {});
       assert.strictEqual(testFs._files.get(getUsageLogPath()), `{}`);
+      assert.strictEqual(testFs._files.has(getUsageLogLockPath()), false);
+    });
+
+    it("overwrites an unreadable usage log with an empty object and releases the lock", async () => {
+      testFs._dirs.add(dirname(getUsageLogPath()));
+      mock.method(fsDeps, "readFileSync", () => {
+        throw makeErrnoError("EIO");
+      });
+
+      await syncInitialModelUsageForLimitWindow();
+
+      assert.deepStrictEqual(getState().app.modelUsageForLimitWindow, {});
+      assert.strictEqual(testFs._files.get(getUsageLogPath()), `{}`);
+      assert.strictEqual(testFs._files.has(getUsageLogLockPath()), false);
     });
   });
 

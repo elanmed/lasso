@@ -7,6 +7,7 @@ import readline from "node:readline/promises";
 import { stdin } from "node:process";
 import { z } from "zod/v4";
 import type { ModelMessage, ToolSet } from "ai";
+import type { MCPClient } from "@ai-sdk/mcp";
 import { aiDeps, fsDeps, processDeps } from "./deps.ts";
 import { actions, promptDeps } from "./state.ts";
 import { initKeypress } from "./input.ts";
@@ -501,4 +502,31 @@ export function mockClearInterval(callbacks: (() => void)[]) {
   mock.method(globalThis, "clearInterval", () => {
     callbacks.length = 0;
   });
+}
+
+export function makeErrnoError(
+  code: string,
+  message = code,
+): NodeJS.ErrnoException {
+  const err = new Error(message) as NodeJS.ErrnoException;
+  err.code = code;
+  return err;
+}
+
+export async function drainTimerCallbacks(
+  callbacks: (() => void)[],
+  { keep = 0 }: { keep?: number } = {},
+) {
+  while (callbacks.length > keep) {
+    const callback = callbacks.shift();
+    assert(callback !== undefined);
+    callback();
+    await Promise.resolve();
+  }
+}
+
+export function makeFakeMcpClient() {
+  return {
+    tools: () => Promise.resolve({}),
+  } as unknown as MCPClient;
 }

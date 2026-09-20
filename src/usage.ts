@@ -116,6 +116,7 @@ export async function syncInitialModelUsageForLimitWindow() {
   const readResult = tryCatch(() => fsDeps.readFileSync(path).toString());
   if (!readResult.ok) {
     tryCatch(() => fsDeps.writeFileSync(path, JSON.stringify({})));
+    lockUtils.deleteLock();
     return;
   }
 
@@ -124,6 +125,7 @@ export async function syncInitialModelUsageForLimitWindow() {
   );
   if (!parseResult.ok) {
     tryCatch(() => fsDeps.writeFileSync(path, JSON.stringify({})));
+    lockUtils.deleteLock();
     return;
   }
   const filtered = filterExpiredModelUsage(parseResult.value, expiredTime);
