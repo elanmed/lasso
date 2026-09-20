@@ -718,7 +718,7 @@ function resolveCustomSlashCommand(commandStr: string): SlashCommandOutcome {
     return { handled: false, inputFromCommand: null };
   }
 
-  print.infoSubtle(`Executing slash command: ${command}`);
+  print.infoSubtle(`Executing custom slash command: ${command}`);
 
   if (commandContext === null || commandContext === "") {
     return { handled: true, inputFromCommand: matchedCommand.content };

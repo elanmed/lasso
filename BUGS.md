@@ -177,12 +177,6 @@ export function safeStringify(val: unknown) {
 
 ---
 
-### 15. `input.ts` — "Executing slash command" info line only fires for custom commands, not built-ins
-
-`resolveCustomSlashCommand` prints `print.infoSubtle(\`Executing slash command: ${command}\`)`before returning, but`resolveBuiltinSlashCommand` never prints anything equivalent for built-ins (`/edit`, `/clear`, etc.). This asymmetry in user-facing feedback looks unintentional rather than a deliberate design choice.
-
----
-
 ### 16. `api.ts` — `resolveApiCall`'s abort-path token bookkeeping is dead work
 
 ```ts

@@ -2478,6 +2478,10 @@ hello
       ]);
       const result = await resolveSlashCommand("/custom");
       assert.strictEqual(result, "custom command content");
+      assert.strictEqual(
+        stripAnsi(getCapturedStdout()),
+        "Executing custom slash command: custom\n",
+      );
     });
 
     it("appends context after custom slash command content", async () => {
