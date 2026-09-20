@@ -15,7 +15,6 @@ import {
   createLockUtils,
   listChatHistoryFiles,
   getStrFromAssistantContent,
-  createPerformanceLogger,
   getPrettyDuration,
   shouldDisableColor,
   decimalToPercent,
@@ -244,59 +243,6 @@ describe("utils", () => {
         getPrettyDuration(BigInt(0), BigInt(500_000_000)),
         "500ms",
       );
-    });
-  });
-
-  describe("createPerformanceLogger", () => {
-    it("prints the duration with microseconds precision", () => {
-      mock.method(process.hrtime, "bigint", () => BigInt(1_000_000_000));
-      const logger = createPerformanceLogger({ logDuration: true });
-      logger.start();
-      mock.method(process.hrtime, "bigint", () => BigInt(1_234_567_890));
-
-      const durations: string[] = [];
-      logger.end((durationStr) => durations.push(durationStr));
-
-      assert.deepStrictEqual(durations, ["234.567ms"]);
-    });
-
-    it("can start again after end", () => {
-      let callIdx = 0;
-      const values = [
-        1_000_000_000, 1_000_000_000, 2_000_000_000, 3_000_000_000,
-      ];
-      mock.method(process.hrtime, "bigint", () =>
-        BigInt(values[callIdx++] ?? 0),
-      );
-      const logger = createPerformanceLogger({ logDuration: true });
-
-      const durations: string[] = [];
-      logger.start();
-      logger.end((durationStr) => durations.push(durationStr));
-      logger.start();
-      logger.end((durationStr) => durations.push(durationStr));
-
-      assert.deepStrictEqual(durations, ["0.0ms", "1s 0.0ms"]);
-    });
-
-    it("does nothing when logDuration is false", () => {
-      mock.method(process.hrtime, "bigint", () => BigInt(1_000_000_000));
-      const logger = createPerformanceLogger();
-      let endCalls = 0;
-      logger.start();
-      logger.end(() => (endCalls += 1));
-      assert.strictEqual(endCalls, 0);
-    });
-
-    it("throws when started twice", () => {
-      const logger = createPerformanceLogger({ logDuration: true });
-      logger.start();
-      assert.throws(() => logger.start());
-    });
-
-    it("throws when ended without start", () => {
-      const logger = createPerformanceLogger({ logDuration: true });
-      assert.throws(() => logger.end(() => undefined));
     });
   });
 

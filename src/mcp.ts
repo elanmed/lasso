@@ -1,10 +1,15 @@
 import { createMCPClient, type MCPClient } from "@ai-sdk/mcp";
 // eslint-disable-next-line import/no-unresolved
 import { Experimental_StdioMCPTransport as StdioClientTransport } from "@ai-sdk/mcp/mcp-stdio";
-import { actions, getState, type MCPToolSet } from "./state.ts";
+import {
+  actions,
+  createPerformanceLogger,
+  getState,
+  type MCPToolSet,
+} from "./state.ts";
 import type { Mcp } from "./config-types.ts";
 import { print } from "./print.ts";
-import { createPerformanceLogger, tryCatchAsync } from "./utils.ts";
+import { tryCatchAsync } from "./utils.ts";
 
 async function createMcpClient(config: Mcp) {
   switch (config.type) {

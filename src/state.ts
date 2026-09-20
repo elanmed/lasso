@@ -15,7 +15,12 @@ import {
 } from "./config-types.ts";
 import { MISSING } from "./missing.ts";
 import { BASE_SYSTEM_PROMPT } from "./prompts.ts";
-import { getShortId, stringify } from "./utils.ts";
+import {
+  createPerformanceLogger,
+  getPrettyDuration,
+  getShortId,
+  stringify,
+} from "./utils.ts";
 import { debugLog } from "./debug-log.ts";
 import type { ModelUsage } from "./usage.ts";
 import type { ContextEntry, Skill } from "./context.ts";
@@ -156,6 +161,30 @@ const createInitialState = (): State => ({
 let state: State = createInitialState();
 
 export const getState = () => state;
+
+export function createPerformanceLogger({
+  logDuration = false,
+}: { logDuration?: boolean } = {}) {
+  let startTime: bigint | null = null;
+  function start() {
+    if (!logDuration) return;
+    assert(startTime === null);
+    startTime = process.hrtime.bigint();
+  }
+
+  function end(print: (durationStr: string) => void) {
+    if (!logDuration) return;
+    assert(startTime !== null);
+    const endTime = process.hrtime.bigint();
+    const duration = getPrettyDuration(startTime, endTime, {
+      includeMicroseconds: true,
+    });
+    startTime = null;
+    print(duration);
+  }
+
+  return { start, end };
+}
 
 export const promptDeps = {
   getSystemContent: () =>

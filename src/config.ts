@@ -1,7 +1,7 @@
+import { createPerformanceLogger } from "./state.ts";
 import { join } from "node:path";
 import * as YAML from "yaml";
 import {
-  createPerformanceLogger,
   getShortId,
   safeStringify,
   stringify,
