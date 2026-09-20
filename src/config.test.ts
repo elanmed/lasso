@@ -24,6 +24,7 @@ import {
   mockStdout,
   stripAnsi,
 } from "./test-helpers.ts";
+import { fsDeps } from "./deps.ts";
 
 const testConfig = {
   model: "claude-sonnet-4-6",
@@ -168,7 +169,8 @@ describe("config", () => {
         }),
       );
 
-      initStateFromConfig();
+      const { globalConfig, localConfig } = initStateFirst();
+      initStateFromConfig({ globalConfig, localConfig });
 
       assert.deepStrictEqual(getState().config.mcps, {
         global: { type: "stdio", command: "global-mcp" },
@@ -1625,10 +1627,35 @@ hello
 
       assert.strictEqual(getState().app.debugLog, true);
     });
+
     it("keeps debug flag off when DEBUG is not set", () => {
       initStateFirst();
 
       assert.strictEqual(getState().app.debugLog, false);
+    });
+
+    it("reads each config file once and reuses the same read for parsing", () => {
+      const globalConfigStr = JSON.stringify({ ...testConfig });
+      testFs._files.set(getGlobalConfigPath(), globalConfigStr);
+      const localConfigStr = JSON.stringify({ promptPrefix: ">>> " });
+      testFs._files.set(getLocalConfigPath(), localConfigStr);
+
+      let globalReads = 0;
+      let localReads = 0;
+      mock.method(fsDeps, "readFileSync", (path: string) => {
+        if (path === getGlobalConfigPath()) globalReads += 1;
+        if (path === getLocalConfigPath()) localReads += 1;
+        return testFs.readFileSync(path);
+      });
+
+      const { globalConfig, localConfig } = initStateFirst();
+
+      assert.strictEqual(globalReads, 1);
+      assert.strictEqual(localReads, 1);
+      assert.strictEqual(getState().app.globalConfigStr, globalConfigStr);
+      assert.strictEqual(getState().app.localConfigStr, localConfigStr);
+      assert.strictEqual(globalConfig.model, testConfig.model);
+      assert.strictEqual(localConfig.promptPrefix, ">>> ");
     });
   });
 

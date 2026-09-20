@@ -8,12 +8,6 @@ Each item includes the file(s) involved and the reasoning behind the finding.
 
 ---
 
-### 8. `config.ts` — global/local config files are read twice per startup
-
-`initStateFirst()` calls `readConfigFile(getGlobalConfigPath())` and `readConfigFile(getLocalConfigPath())` just to extract `hideStartupDurations`, and then `initStateFromConfig()` calls `readConfigFile()` on the exact same two paths again to extract everything else. This is redundant I/O on every startup and every `/reload`, and — however unlikely — opens a window where the two reads could observe different file contents if the config file changes between calls.
-
----
-
 ### 9. `context.ts` — root-level `AGENTS.md` can be double-surfaced as both context and a skill
 
 `getContextEntries()` always injects `<cwd>/AGENTS.md` (and the global one) directly into the system prompt. Separately, `getSkills()` walks `git ls-files **/AGENTS.md` and turns _every_ matched `AGENTS.md` (including one at the repo root) into a lazily-loadable "skill" named `__lasso-context-for-<dir>`. There's no exclusion of the root file already covered by `getContextEntries()`, so the same file's content can be both always-injected _and_ separately offered as a discoverable skill.

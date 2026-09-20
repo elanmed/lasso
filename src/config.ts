@@ -36,9 +36,10 @@ export function readConfigFileStr(path: string) {
   return readResult.value;
 }
 
-export function readConfigFile(path: string): Partial<Config> {
-  const configFileStr = readConfigFileStr(path);
-
+export function parseConfigFileStr(
+  configFileStr: string,
+  path: string,
+): Partial<Config> {
   const parseResult = tryCatch((): unknown => YAML.parse(configFileStr));
   if (!parseResult.ok) {
     throw new Error(`\`${path}\` is invalid YAML!`);
@@ -109,23 +110,12 @@ function filterNulls<T>(entries: Record<string, T | null>): Record<string, T> {
 }
 
 export function initStateFromConfig({
-  logDuration = false,
-}: { logDuration?: boolean } = {}) {
-  const shouldLogDuration =
-    logDuration && !getState().config.hideStartupDurations;
-  const performanceLogger = createPerformanceLogger({
-    logDuration: shouldLogDuration,
-  });
-
-  performanceLogger.start();
-  const globalConfig = readConfigFile(getGlobalConfigPath());
-  const localConfig = readConfigFile(getLocalConfigPath());
-  actions.setGlobalConfigStr(readConfigFileStr(getGlobalConfigPath()));
-  actions.setLocalConfigStr(readConfigFileStr(getLocalConfigPath()));
-  performanceLogger.end((duration) =>
-    print.doing(`Reading config files: ${duration}`),
-  );
-
+  localConfig,
+  globalConfig,
+}: {
+  localConfig: Partial<Config>;
+  globalConfig: Partial<Config>;
+}) {
   const defaultedModel =
     localConfig.model ?? globalConfig.model ?? defaultConfig.model;
 
@@ -294,30 +284,41 @@ export async function initStateFromFs({
 
 export function initStateFirst() {
   actions.setDebugLog(processDeps.env.get("DEBUG") === "1");
-  const globalConfig = readConfigFile(getGlobalConfigPath());
-  const localConfig = readConfigFile(getLocalConfigPath());
+
+  const globalConfigStr = readConfigFileStr(getGlobalConfigPath());
+  const globalConfig = parseConfigFileStr(
+    globalConfigStr,
+    getGlobalConfigPath(),
+  );
+  actions.setGlobalConfigStr(globalConfigStr);
+
+  const localConfigStr = readConfigFileStr(getLocalConfigPath());
+  const localConfig = parseConfigFileStr(localConfigStr, getLocalConfigPath());
+  actions.setLocalConfigStr(localConfigStr);
 
   actions.setHideStartupDurations(
     localConfig.hideStartupDurations ??
       globalConfig.hideStartupDurations ??
       defaultConfig.hideStartupDurations,
   );
+
+  return { globalConfig, localConfig };
 }
 
 export async function initStateRepeatable() {
-  initStateFirst();
-  initStateFromConfig();
+  const { globalConfig, localConfig } = initStateFirst();
+  initStateFromConfig({ globalConfig, localConfig });
   await initMcpState();
   actions.setToolsContentStr(safeStringify(getTools()));
   await initStateFromFs();
 }
 
 export async function initState() {
-  initStateFirst();
+  const { globalConfig, localConfig } = initStateFirst();
   const debugLogPath = join(getDebugLogDir(), `debug-${getShortId()}.log`);
   actions.setDebugLogPath(debugLogPath);
 
-  initStateFromConfig();
+  initStateFromConfig({ globalConfig, localConfig });
   await initMcpState();
   actions.setToolsContentStr(safeStringify(getTools()));
   await initStateFromFs({ logDuration: true });
