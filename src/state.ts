@@ -32,6 +32,11 @@ export interface ModelSummary {
   tokens: number;
 }
 
+export interface ToolEditDiff {
+  fileName: string;
+  diffStdout: string;
+}
+
 export type MCPToolSet = Awaited<ReturnType<MCPClient["tools"]>>;
 
 export interface McpState {
@@ -64,6 +69,7 @@ interface State {
     toolsContentStr: string;
     skills: Skill[];
     subagentModels: string[];
+    toolEditDiffs: ToolEditDiff[];
     rl: readline.Interface | null;
     loadingStateTimeout: NodeJS.Timeout | null;
     loadingStateFrameIdx: number;
@@ -107,6 +113,7 @@ const createInitialState = (): State => ({
     toolsContentStr: "",
     skills: [],
     subagentModels: [],
+    toolEditDiffs: [],
     rl: null,
     loadingStateTimeout: null,
     loadingStateFrameIdx: 0,
@@ -480,6 +487,12 @@ export const actions = {
       String(before),
       String(state.app.skills.length),
     );
+  },
+
+  setToolEditDiffs(diffs: ToolEditDiff[]) {
+    const before = state.app.toolEditDiffs;
+    state.app.toolEditDiffs = diffs;
+    logStateChange("set-tool-edit-diffs", stringify(before), stringify(diffs));
   },
 
   setModelUsageForLimitWindow(

@@ -51,6 +51,7 @@ describe("state", () => {
       toolsContentStr: "",
       skills: [],
       subagentModels: [],
+      toolEditDiffs: [],
       rl: null,
       loadingStateTimeout: null,
       loadingStateFrameIdx: 0,
@@ -126,6 +127,12 @@ describe("state", () => {
         description: "a demo skill",
         dir: "/skills/demo",
         content: "demo content",
+      },
+    ]);
+    actions.setToolEditDiffs([
+      {
+        fileName: "/test/file.ts",
+        diffStdout: "diff output",
       },
     ]);
     actions.setModel("claude-haiku-4-5");
@@ -446,6 +453,26 @@ hello`,
     assert.equal(getState().app.skillsStr, "");
     actions.setSkillsStr("- skill: desc");
     assert.equal(getState().app.skillsStr, "- skill: desc");
+  });
+
+  describe("set-tool-edit-diffs", () => {
+    it("sets the tool edit diffs array", () => {
+      assert.deepStrictEqual(getState().app.toolEditDiffs, []);
+      actions.setToolEditDiffs([
+        { fileName: "/test/file.ts", diffStdout: "diff output" },
+      ]);
+      assert.deepStrictEqual(getState().app.toolEditDiffs, [
+        { fileName: "/test/file.ts", diffStdout: "diff output" },
+      ]);
+    });
+
+    it("replaces existing tool edit diffs", () => {
+      actions.setToolEditDiffs([{ fileName: "/a.ts", diffStdout: "a diff" }]);
+      actions.setToolEditDiffs([{ fileName: "/b.ts", diffStdout: "b diff" }]);
+      assert.deepStrictEqual(getState().app.toolEditDiffs, [
+        { fileName: "/b.ts", diffStdout: "b diff" },
+      ]);
+    });
   });
 
   describe("set-context-entries", () => {
