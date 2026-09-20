@@ -84,7 +84,9 @@ export async function resolveApiCall(userInput: string) {
         if (toolCall.toolName !== "bash") return;
         const bashSchemaResult = bashToolInputSchema.parse(toolCall.input);
         if (bashSchemaResult.fileSystemAccessType === "create-update-delete") {
-          toolCallDiffer.setTempFileBefore(toolCall.toolCallId);
+          toolCallDiffer.setTempFileBefore(toolCall.toolCallId, {
+            initialContentPath: bashSchemaResult.filePath,
+          });
         }
       },
       onToolExecutionEnd: async ({ toolCall, toolOutput }) => {
