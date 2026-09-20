@@ -52,7 +52,7 @@ interface State {
     };
     editorInputValue: string | null;
     slashCommands: SlashCommand[];
-    stdout: string;
+    stdoutTail: string;
     debugLog: boolean;
     debugLogPath: string;
     chatHistoryPath: string;
@@ -95,7 +95,7 @@ const createInitialState = (): State => ({
     },
     editorInputValue: null,
     slashCommands: [],
-    stdout: "",
+    stdoutTail: "",
     debugLog: false,
     debugLogPath: "",
     chatHistoryPath: "",
@@ -382,19 +382,19 @@ export const actions = {
   },
 
   resetStdout() {
-    const before = state.app.stdout;
-    state.app.stdout = "";
-    logStateChange("reset-stdout", before, "");
+    const before = state.app.stdoutTail;
+    state.app.stdoutTail = "";
+    logStateChange("reset-stdout-tail", before, "");
   },
 
-  appendToStdout(line: string) {
-    const before = state.app.stdout;
-    state.app.stdout += line;
-    state.app.stdout = state.app.stdout.slice(-2);
+  appendStdoutTail(line: string) {
+    const before = state.app.stdoutTail;
+    state.app.stdoutTail += line;
+    state.app.stdoutTail = state.app.stdoutTail.slice(-2);
     logStateChange(
-      "append-to-stdout",
+      "append-stdout-tail",
       String(before.length),
-      String(state.app.stdout.length),
+      String(state.app.stdoutTail.length),
     );
   },
 

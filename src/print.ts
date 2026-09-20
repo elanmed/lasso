@@ -50,11 +50,11 @@ export function colorPrint(text: Uint8Array | string, color?: Color) {
   stopLoadingState();
   processDeps.stdout.write(out);
   if (wasSpinnerActive) startLoadingState();
-  actions.appendToStdout(out);
+  actions.appendStdoutTail(out);
 }
 
 export function printNewline() {
-  if (getState().app.stdout.endsWith("\n\n")) return;
+  if (getState().app.stdoutTail.endsWith("\n\n")) return;
   colorPrint("");
 }
 

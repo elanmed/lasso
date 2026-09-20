@@ -8,20 +8,6 @@ Each item includes the file(s) involved and the reasoning behind the finding.
 
 ---
 
-### 2. `state.ts` — `app.stdout` / `appendToStdout` only ever retains the last 2 characters
-
-```ts
-appendToStdout(line: string) {
-  state.app.stdout += line;
-  state.app.stdout = state.app.stdout.slice(-2);
-  ...
-}
-```
-
-This is exercised (and locked in) by the test `"reset-stdout"`, which expects `appendToStdout("line1\n"); appendToStdout("line2\n");` to leave `app.stdout === "2\n"`. Functionally this seems to be intentional (the only consumer, `printNewline()`, just checks `.endsWith("\n\n")`), but the field is named and typed as if it holds the accumulated stdout buffer, which is highly misleading to any future reader/maintainer who might reasonably assume `app.stdout` contains actual captured output.
-
----
-
 ### 3. `state.ts` — `resetState()`'s own debug-log entry can never be written
 
 ```ts

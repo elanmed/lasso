@@ -157,7 +157,7 @@ function abortRlQuestionForEditor(editorContent: string) {
 
     const truncatedFirstLine = truncate(editorContent);
     rl.write(truncatedFirstLine);
-    actions.appendToStdout(truncatedFirstLine);
+    actions.appendStdoutTail(truncatedFirstLine);
 
     abortController.abort();
   }
@@ -171,7 +171,7 @@ export function initKeypress() {
     assert(rl !== null);
     const output = `/${command}\n`;
     rl.write(output);
-    actions.appendToStdout(output);
+    actions.appendStdoutTail(output);
   }
 
   // Reprints the readline prompt line and any half-typed input after pager
@@ -452,7 +452,7 @@ export async function resolveUserInput({
     return null;
   }
 
-  actions.appendToStdout(
+  actions.appendStdoutTail(
     `${getState().config.promptPrefix}${inputResult.value}\n`,
   );
   prependToChatHistory(inputResult.value, "user");
@@ -513,7 +513,7 @@ async function resolveExitConfirmation() {
   }
 
   if (/^y(es)?$/i.exec(exitResult.value) !== null) {
-    actions.appendToStdout(
+    actions.appendStdoutTail(
       `${getState().config.promptPrefix}${exitResult.value}\n`,
     );
 

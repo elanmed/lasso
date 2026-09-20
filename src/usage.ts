@@ -16,7 +16,7 @@ import { getUsageLogLockPath, getUsageLogPath } from "./paths.ts";
 function printWarning(message: string) {
   const output = `${message}\n`;
   processDeps.stdout.write(output);
-  actions.appendToStdout(output);
+  actions.appendStdoutTail(output);
 }
 
 export const ModelUsageSchema = z.object({

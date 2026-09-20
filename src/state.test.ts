@@ -458,27 +458,27 @@ hello`,
     ]);
   });
 
-  it("reset-stdout", () => {
-    actions.appendToStdout("line1\n");
-    actions.appendToStdout("line2\n");
-    assert.equal(getState().app.stdout, "2\n");
+  it("reset-stdout-tail", () => {
+    actions.appendStdoutTail("line1\n");
+    actions.appendStdoutTail("line2\n");
+    assert.equal(getState().app.stdoutTail, "2\n");
     actions.resetStdout();
-    assert.equal(getState().app.stdout, "");
+    assert.equal(getState().app.stdoutTail, "");
   });
 
-  describe("append-to-stdout", () => {
+  describe("append-stdout-tail", () => {
     it("appends single line", () => {
-      assert.equal(getState().app.stdout, "");
-      actions.appendToStdout("line1\n");
-      assert.equal(getState().app.stdout, "1\n");
+      assert.equal(getState().app.stdoutTail, "");
+      actions.appendStdoutTail("line1\n");
+      assert.equal(getState().app.stdoutTail, "1\n");
     });
 
     it("appends multiple lines in order", () => {
-      assert.equal(getState().app.stdout, "");
-      actions.appendToStdout("line1\n");
-      actions.appendToStdout("line2\n");
-      actions.appendToStdout("line3\n");
-      assert.equal(getState().app.stdout, "3\n");
+      assert.equal(getState().app.stdoutTail, "");
+      actions.appendStdoutTail("line1\n");
+      actions.appendStdoutTail("line2\n");
+      actions.appendStdoutTail("line3\n");
+      assert.equal(getState().app.stdoutTail, "3\n");
     });
   });
 
