@@ -20,6 +20,11 @@ Note: \${START}, \${END}, \${LINE} are placeholders. Replace with actual line nu
 sed -n "\${START},\${END}p" target.txt
 \`\`\`
 
+### Read an image as base64
+\`\`\`bash
+base64 < target.png
+\`\`\`
+
 ### Get total line count
 \`\`\`bash
 wc -l < target.txt
