@@ -122,9 +122,6 @@ export async function resolveApiCall(userInput: string) {
       };
 
       actions.appendToConversation(interruptMessage);
-      actions.appendToPromptTokens(
-        strToApproxTokens(userInput) + strToApproxTokens(interruptContent),
-      );
       actions.setPromptTokensDirty(true);
 
       if (getState().app.editorInputValue !== null) {

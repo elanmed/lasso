@@ -54,29 +54,3 @@ export function safeStringify(val: unknown) {
 ```
 
 `JSON.stringify` doesn't throw for values like a bare function or `Symbol` at the top level — it returns `undefined` without an error. In that case `stringifyResult.ok` is `true` and `stringifyResult.value` is `undefined`, so `safeStringify` returns `undefined` rather than a string, silently breaking the implicit "this always returns a string" contract its callers (`safeStringify(toolCall.input)`, `safeStringify(getTools())`) rely on.
-
----
-
-### 5. `api.ts` — `resolveApiCall`'s abort-path token bookkeeping is dead work
-
-```ts
-actions.appendToConversation(interruptMessage);
-actions.appendToPromptTokens(
-  strToApproxTokens(userInput) + strToApproxTokens(interruptContent),
-);
-actions.setPromptTokensDirty(true);
-```
-
-`appendToPromptTokens` computes and stores an approximate delta into `promptTokens.value`, but the very next line marks `promptTokens.dirty = true`. Every actual consumer of prompt-token count (`getCurrentPromptTokens()`) ignores `promptTokens.value` entirely while `dirty` is `true`, falling back to a fresh `getApproxPromptTokens()` computation instead. So the `appendToPromptTokens` call's result is never actually used for anything — it's dead computation that exists only because a test happens to assert the exact (irrelevant) stored value.
-
----
-
-### 6. `text.ts` — `truncate()` always appends an ellipsis for multi-line input, even when the first line already fits
-
-```ts
-if (newlineIdx !== -1) {
-  return firstLine.substring(0, maxLen - 1).concat(ellipsis);
-}
-```
-
-For any string containing a newline, an ellipsis is unconditionally appended to the first line — even if that first line is far shorter than `maxLen` and wasn't actually truncated for width reasons. This conflates "there is more content after this line" with "this line was cut off," which may be intentional but isn't documented as such, and means e.g. `truncate("hi\nrest")` on a very wide terminal still yields `"hi…"` rather than `"hi"`.

@@ -153,7 +153,19 @@ response text
         ],
       });
       assert.deepStrictEqual(getState().app.promptTokens, {
-        value: 16,
+        value: 0,
+        dirty: true,
+      });
+    });
+
+    it("leaves the stored token value untouched when marking dirty on abort", async () => {
+      actions.setPromptTokens(50);
+      const err = makeAbortError();
+      mock.method(aiDeps, "generateText", () => Promise.reject(err));
+      const result = await resolveApiCall("hello");
+      assert.strictEqual(result, null);
+      assert.deepStrictEqual(getState().app.promptTokens, {
+        value: 50,
         dirty: true,
       });
     });
