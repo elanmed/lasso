@@ -15,6 +15,8 @@ import {
   createLockUtils,
   listChatHistoryFiles,
   getStrFromAssistantContent,
+  createPerformanceLogger,
+  getPrettyDuration,
   shouldDisableColor,
   decimalToPercent,
 } from "./utils.ts";
@@ -197,6 +199,95 @@ describe("utils", () => {
       const err = new Error("boom");
       const result = await tryCatchAsync(Promise.reject(err));
       assert.deepStrictEqual(result, { ok: false, error: err });
+    });
+  });
+
+  describe("getPrettyDuration", () => {
+    it("formats sub-second duration as milliseconds", () => {
+      assert.strictEqual(
+        getPrettyDuration(BigInt(0), BigInt(1_000_999)),
+        "1ms",
+      );
+      assert.strictEqual(
+        getPrettyDuration(BigInt(0), BigInt(1_500_000_000)),
+        "1s 500ms",
+      );
+    });
+
+    it("includes microseconds when requested", () => {
+      assert.strictEqual(
+        getPrettyDuration(BigInt(1_000_000_000), BigInt(1_234_567_890), {
+          includeMicroseconds: true,
+        }),
+        "234.567ms",
+      );
+    });
+
+    it("nevers truncates nanoseconds", () => {
+      assert.strictEqual(
+        getPrettyDuration(BigInt(1_000_000_000), BigInt(1_000_123_456), {
+          includeMicroseconds: true,
+        }),
+        "0.123ms",
+      );
+    });
+
+    it("formats minutes, seconds, and milliseconds", () => {
+      assert.strictEqual(
+        getPrettyDuration(BigInt(0), BigInt(125_500_000_000)),
+        "2m 5s 500ms",
+      );
+    });
+
+    it("clamps negative durations to zero", () => {
+      assert.strictEqual(
+        getPrettyDuration(BigInt(0), BigInt(500_000_000)),
+        "500ms",
+      );
+    });
+  });
+
+  describe("createPerformanceLogger", () => {
+    it("prints the duration with microseconds precision", () => {
+      mock.method(process.hrtime, "bigint", () => BigInt(1_000_000_000));
+      const logger = createPerformanceLogger();
+      logger.start();
+      mock.method(process.hrtime, "bigint", () => BigInt(1_234_567_890));
+
+      const durations: string[] = [];
+      logger.end((durationStr) => durations.push(durationStr));
+
+      assert.deepStrictEqual(durations, ["234.567ms"]);
+    });
+
+    it("can start again after end", () => {
+      let callIdx = 0;
+      const values = [
+        1_000_000_000, 1_000_000_000, 2_000_000_000, 3_000_000_000,
+      ];
+      mock.method(process.hrtime, "bigint", () =>
+        BigInt(values[callIdx++] ?? 0),
+      );
+      const logger = createPerformanceLogger();
+
+      const durations: string[] = [];
+      logger.start();
+      logger.end((durationStr) => durations.push(durationStr));
+      logger.start();
+      logger.end((durationStr) => durations.push(durationStr));
+
+      assert.deepStrictEqual(durations, ["0.0ms", "1s 0.0ms"]);
+    });
+
+    it("throws when started twice", () => {
+      const logger = createPerformanceLogger();
+      logger.start();
+      assert.throws(() => logger.start());
+    });
+
+    it("throws when ended without start", () => {
+      const logger = createPerformanceLogger();
+      assert.throws(() => logger.end(() => undefined));
     });
   });
 

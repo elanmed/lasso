@@ -66,8 +66,8 @@ interface State {
     rl: readline.Interface | null;
     loadingStateTimeout: NodeJS.Timeout | null;
     loadingStateFrameIdx: number;
-    apiStartTime: number | null;
-    apiEndTime: number | null;
+    apiStartTime: bigint | null;
+    apiEndTime: bigint | null;
     modelUsageForLimitWindow: Record<string, ModelUsage[]>;
     modelUsageForSession: Record<string, ModelUsage[]>;
     sessionStartDate: number;
@@ -511,14 +511,14 @@ export const actions = {
 
   setApiStartTime() {
     const before = state.app.apiStartTime;
-    const now = performance.now();
+    const now = process.hrtime.bigint();
     state.app.apiStartTime = now;
     logStateChange("set-api-start-time", String(before), String(now));
   },
 
   setApiEndTime() {
     const before = state.app.apiEndTime;
-    const now = performance.now();
+    const now = process.hrtime.bigint();
     state.app.apiEndTime = now;
     logStateChange("set-api-end-time", String(before), String(now));
   },

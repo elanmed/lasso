@@ -974,6 +974,7 @@ describe("config", () => {
       });
 
       it("warns when baseURL is provided with anthropic sdkProvider", async () => {
+        mock.method(process.hrtime, "bigint", () => BigInt(0));
         testFs._files.set(
           getGlobalConfigPath(),
           JSON.stringify({
@@ -987,7 +988,10 @@ describe("config", () => {
         await initState();
         assert.strictEqual(
           stripAnsi(getCaptured()),
-          "The `baseURL` option is not used when `sdkProvider=anthropic`\n",
+          "The `baseURL` option is not used when `sdkProvider=anthropic`\n" +
+            "Reading context files: 0.0ms\n" +
+            "Reading skills: 0.0ms\n" +
+            "Reading slash commands: 0.0ms\n",
         );
       });
 

@@ -133,9 +133,9 @@ describe("print", () => {
 
     it("prints duration and token usage when showSessionInfo is set", () => {
       const getCaptured = mockStdout();
-      mock.method(performance, "now", () => 1_000);
+      mock.method(process.hrtime, "bigint", () => BigInt(1_000_000_000));
       actions.setApiStartTime();
-      mock.method(performance, "now", () => 1_500);
+      mock.method(process.hrtime, "bigint", () => BigInt(1_500_000_000));
       actions.setApiEndTime();
 
       fencePrint("Output", { showSessionInfo: true });
@@ -148,9 +148,9 @@ describe("print", () => {
 
     it("includes context window usage when configured", () => {
       const getCaptured = mockStdout();
-      mock.method(performance, "now", () => 1_000);
+      mock.method(process.hrtime, "bigint", () => BigInt(1_000_000_000));
       actions.setApiStartTime();
-      mock.method(performance, "now", () => 1_500);
+      mock.method(process.hrtime, "bigint", () => BigInt(1_500_000_000));
       actions.setApiEndTime();
       actions.setModel("test-model");
       actions.setContextWindowPerModel({ "test-model": 10_000 });
@@ -168,9 +168,9 @@ describe("print", () => {
     it("drops usage when there is not enough room", () => {
       mock.method(processDeps.stdout, "getColumns", () => 20);
       const getCaptured = mockStdout();
-      mock.method(performance, "now", () => 1_000);
+      mock.method(process.hrtime, "bigint", () => BigInt(1_000_000_000));
       actions.setApiStartTime();
-      mock.method(performance, "now", () => 1_500);
+      mock.method(process.hrtime, "bigint", () => BigInt(1_500_000_000));
       actions.setApiEndTime();
       actions.setContextWindowPerModel({ "unknown-model": 10_000 });
 
@@ -185,9 +185,9 @@ describe("print", () => {
     it("drops duration and usage when there is not enough room", () => {
       mock.method(processDeps.stdout, "getColumns", () => 19);
       const getCaptured = mockStdout();
-      mock.method(performance, "now", () => 1_000);
+      mock.method(process.hrtime, "bigint", () => BigInt(1_000_000_000));
       actions.setApiStartTime();
-      mock.method(performance, "now", () => 1_500);
+      mock.method(process.hrtime, "bigint", () => BigInt(1_500_000_000));
       actions.setApiEndTime();
 
       fencePrint("Output", { showSessionInfo: true });
@@ -212,9 +212,9 @@ describe("print", () => {
     it("truncates the header instead of dropping when showSessionInfo is set", () => {
       const longHeader = "b".repeat(100);
       const getCaptured = mockStdout();
-      mock.method(performance, "now", () => 1_000);
+      mock.method(process.hrtime, "bigint", () => BigInt(1_000_000_000));
       actions.setApiStartTime();
-      mock.method(performance, "now", () => 1_500);
+      mock.method(process.hrtime, "bigint", () => BigInt(1_500_000_000));
       actions.setApiEndTime();
 
       fencePrint(longHeader, { showSessionInfo: true });
@@ -232,46 +232,71 @@ describe("print", () => {
     });
 
     it("formats sub-second duration as milliseconds", () => {
-      mock.method(performance, "now", () => 1_000);
+      mock.method(process.hrtime, "bigint", () => BigInt(1_000_000_000));
       actions.setApiStartTime();
-      mock.method(performance, "now", () => 1_500);
+      mock.method(process.hrtime, "bigint", () => BigInt(1_500_000_000));
       actions.setApiEndTime();
+
       const result = getPrettyApiDuration();
       assert.strictEqual(result, "500ms");
     });
 
-    it("formats seconds and milliseconds", () => {
-      mock.method(performance, "now", () => 1_000);
+    it("includes microseconds when requested", () => {
+      mock.method(process.hrtime, "bigint", () => BigInt(1_000_000_000));
       actions.setApiStartTime();
-      mock.method(performance, "now", () => 6_500);
+      mock.method(process.hrtime, "bigint", () => BigInt(1_234_567_890));
       actions.setApiEndTime();
+
+      const result = getPrettyApiDuration({ includeMicroseconds: true });
+      assert.strictEqual(result, "234.567ms");
+    });
+
+    it("truncates nanoseconds", () => {
+      mock.method(process.hrtime, "bigint", () => BigInt(1_000_000_000));
+      actions.setApiStartTime();
+      mock.method(process.hrtime, "bigint", () => BigInt(1_000_123_456));
+      actions.setApiEndTime();
+
+      const result = getPrettyApiDuration({ includeMicroseconds: true });
+      assert.strictEqual(result, "0.123ms");
+    });
+
+    it("formats seconds and milliseconds", () => {
+      mock.method(process.hrtime, "bigint", () => BigInt(1_000_000_000));
+      actions.setApiStartTime();
+      mock.method(process.hrtime, "bigint", () => BigInt(6_500_000_000));
+      actions.setApiEndTime();
+
       const result = getPrettyApiDuration();
       assert.strictEqual(result, "5s 500ms");
     });
 
     it("formats minutes, zero seconds, and milliseconds", () => {
-      mock.method(performance, "now", () => 1_000);
+      mock.method(process.hrtime, "bigint", () => BigInt(1_000_000_000));
       actions.setApiStartTime();
-      mock.method(performance, "now", () => 121_500);
+      mock.method(process.hrtime, "bigint", () => BigInt(121_500_000_000));
       actions.setApiEndTime();
+
       const result = getPrettyApiDuration();
       assert.strictEqual(result, "2m 0s 500ms");
     });
 
     it("formats minutes, seconds, and milliseconds", () => {
-      mock.method(performance, "now", () => 1_000);
+      mock.method(process.hrtime, "bigint", () => BigInt(1_000_000_000));
       actions.setApiStartTime();
-      mock.method(performance, "now", () => 126_500);
+      mock.method(process.hrtime, "bigint", () => BigInt(126_500_000_000));
       actions.setApiEndTime();
+
       const result = getPrettyApiDuration();
       assert.strictEqual(result, "2m 5s 500ms");
     });
 
     it("clamps negative durations from clock skew to zero", () => {
-      mock.method(performance, "now", () => 1_000);
+      mock.method(process.hrtime, "bigint", () => BigInt(1_000_000_000));
       actions.setApiStartTime();
-      mock.method(performance, "now", () => 500);
+      mock.method(process.hrtime, "bigint", () => BigInt(500_000_000));
       actions.setApiEndTime();
+
       const result = getPrettyApiDuration();
       assert.strictEqual(result, "0ms");
     });

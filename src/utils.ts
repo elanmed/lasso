@@ -6,7 +6,6 @@ import assert from "node:assert";
 import type { AssistantContent, ModelMessage } from "ai";
 import { fsDeps, processDeps } from "./deps.ts";
 import { getPromptHistoryDir } from "./paths.ts";
-import { getPrettyDuration } from "./print.ts";
 
 export type Result<T> = { ok: true; value: T } | { ok: false; error: unknown };
 
@@ -303,19 +302,58 @@ export function decimalToPercent(
 }
 
 export function createPerformanceLogger() {
-  let startTime: number | null = null;
+  let startTime: bigint | null = null;
   function start() {
     assert(startTime === null);
-    startTime = performance.now();
+    startTime = process.hrtime.bigint();
   }
 
   function end(print: (durationStr: string) => void) {
     assert(startTime !== null);
-    const endTime = performance.now();
-    const duration = getPrettyDuration(startTime, endTime);
+    const endTime = process.hrtime.bigint();
+    const duration = getPrettyDuration(startTime, endTime, {
+      includeMicroseconds: true,
+    });
     startTime = null;
     print(duration);
   }
 
   return { start, end };
+}
+
+export function getPrettyDuration(
+  startTime: bigint,
+  endTime: bigint,
+  { includeMicroseconds = false }: { includeMicroseconds?: boolean } = {},
+) {
+  const diffNs = (() => {
+    if (endTime > startTime) return endTime - startTime;
+    return 0n;
+  })();
+  const ms = Number((diffNs % 1_000_000_000n) / 1_000_000n);
+  const us = Number((diffNs % 1_000_000n) / 1_000n);
+  const sec = Number((diffNs / 1_000_000_000n) % 60n);
+  const min = Number(diffNs / 60_000_000_000n);
+
+  const prettyMs = includeMicroseconds
+    ? `${String(ms)}.${String(us)}ms`
+    : `${String(ms)}ms`;
+
+  const prettyMin = (() => {
+    if (min > 0) {
+      return `${String(min)}m `;
+    }
+
+    return "";
+  })();
+
+  const prettySec = (() => {
+    if (sec > 0 || min > 0) {
+      return `${String(sec)}s `;
+    }
+
+    return "";
+  })();
+
+  return `${prettyMin}${prettySec}${prettyMs}`;
 }

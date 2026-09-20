@@ -490,17 +490,17 @@ hello`,
   });
 
   it("set-api-start-time", () => {
-    mock.method(performance, "now", () => 42_000);
+    mock.method(process.hrtime, "bigint", () => BigInt(42_000_000_000));
     assert.equal(getState().app.apiStartTime, null);
     actions.setApiStartTime();
-    assert.strictEqual(getState().app.apiStartTime, 42_000);
+    assert.strictEqual(getState().app.apiStartTime, 42_000_000_000n);
   });
 
   it("set-api-end-time", () => {
-    mock.method(performance, "now", () => 99_000);
+    mock.method(process.hrtime, "bigint", () => BigInt(99_000_000_000));
     assert.equal(getState().app.apiEndTime, null);
     actions.setApiEndTime();
-    assert.strictEqual(getState().app.apiEndTime, 99_000);
+    assert.strictEqual(getState().app.apiEndTime, 99_000_000_000n);
   });
 
   it("set-loading-state-frames", () => {

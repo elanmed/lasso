@@ -2,7 +2,11 @@ import assert from "node:assert";
 import { actions, getState } from "./state.ts";
 import { processDeps } from "./deps.ts";
 import { getPrettyUsage } from "./usage-format.ts";
-import { getMaxColLength, shouldDisableColor } from "./utils.ts";
+import {
+  getMaxColLength,
+  shouldDisableColor,
+  getPrettyDuration,
+} from "./utils.ts";
 import { getUnicodeChar, truncate } from "./text.ts";
 
 const COLORS = {
@@ -137,41 +141,15 @@ export function stopLoadingState() {
   actions.resetLoadingStateFrameIdx();
 }
 
-export function getPrettyApiDuration() {
+export function getPrettyApiDuration({
+  includeMicroseconds = false,
+}: { includeMicroseconds?: boolean } = {}) {
   const startTime = getState().app.apiStartTime;
   assert(startTime !== null);
   const endTime = getState().app.apiEndTime;
   assert(endTime !== null);
 
-  return getPrettyDuration(startTime, endTime);
-}
-
-export function getPrettyDuration(startTime: number, endTime: number) {
-  const diff = Math.max(0, endTime - startTime);
-
-  const ms = Math.floor(diff % 1000);
-  const sec = Math.floor((diff / 1_000) % 60);
-  const min = Math.floor(diff / 60_000);
-
-  const prettyMs = `${String(ms)}ms`;
-
-  const prettyMin = (() => {
-    if (min > 0) {
-      return `${String(min)}m `;
-    }
-
-    return "";
-  })();
-
-  const prettySec = (() => {
-    if (sec > 0 || min > 0) {
-      return `${String(sec)}s `;
-    }
-
-    return "";
-  })();
-
-  return `${prettyMin}${prettySec}${prettyMs}`;
+  return getPrettyDuration(startTime, endTime, { includeMicroseconds });
 }
 
 export function printSessionStartDate() {
