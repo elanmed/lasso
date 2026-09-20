@@ -416,6 +416,19 @@ describe("usage-format", () => {
       assert.strictEqual(result, 1.7);
     });
 
+    it("clamps uncached input tokens to zero when cache tokens exceed input tokens", () => {
+      const result = getUsageMoneyForModel(
+        {
+          inputTokens: 100_000,
+          outputTokens: 0,
+          cacheReadTokens: 300_000,
+          cacheWriteTokens: 100_000,
+        },
+        "gpt-4",
+      );
+      assert.strictEqual(result, 0.2);
+    });
+
     it("falls back to the input price when cache pricing is omitted", () => {
       actions.setPricingPerModel({
         "gpt-4": {

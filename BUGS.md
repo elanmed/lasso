@@ -8,31 +8,6 @@ Each item includes the file(s) involved and the reasoning behind the finding.
 
 ---
 
-### 5. `usage-format.ts` — inconsistent token totals between the priced and unpriced branches of `getPrettyTokenUsage`
-
-```ts
-if (pricing === undefined) {
-  return `${(tokenUsageForSession.inputTokens + tokenUsageForSession.outputTokens).toLocaleString()} tokens in session`;
-}
-```
-
-When no pricing is configured for the model, the displayed total omits `cacheReadTokens` and `cacheWriteTokens` entirely. When pricing _is_ configured, the cost calculation (`getUsageMoneyForModel`) explicitly accounts for cache read/write tokens. So the same underlying usage produces a "tokens in session" figure that either does or doesn't include cache tokens depending purely on whether pricing happens to be configured — an inconsistency in what "total tokens" means.
-
----
-
-### 6. `usage-format.ts` — `getUsageMoneyForModel` doesn't clamp negative "uncached" token counts
-
-```ts
-const uncachedInputTokens =
-  usageTokens.inputTokens -
-  usageTokens.cacheReadTokens -
-  usageTokens.cacheWriteTokens;
-```
-
-If `cacheReadTokens + cacheWriteTokens` ever exceeds `inputTokens` (e.g. if the provider reports cache tokens as _additional_ to, rather than a subset of, `inputTokens` — a real possibility depending on SDK/provider semantics), `uncachedInputTokens` goes negative and silently reduces the computed cost. There's no `Math.max(0, ...)` guard anywhere in the pipeline.
-
----
-
 ### 7. `config.ts` — keymap duplicate detection doesn't use the same equality as `isSameKey`
 
 ```ts

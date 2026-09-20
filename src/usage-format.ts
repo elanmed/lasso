@@ -28,10 +28,12 @@ export function getUsageMoneyForModel(usageTokens: TokenUsage, model: string) {
   const cacheReadPerMillion = pricing.cacheReadPerMillion ?? inputPerMillion;
   const cacheWritePerMillion = pricing.cacheWritePerMillion ?? inputPerMillion;
 
-  const uncachedInputTokens =
+  const uncachedInputTokens = Math.max(
+    0,
     usageTokens.inputTokens -
-    usageTokens.cacheReadTokens -
-    usageTokens.cacheWriteTokens;
+      usageTokens.cacheReadTokens -
+      usageTokens.cacheWriteTokens,
+  );
   const inputCost =
     (uncachedInputTokens * inputPerMillion) / DOLLARS_PER_MILLION;
   const outputCost =
