@@ -157,22 +157,6 @@ export function clearCommand() {
 
 ---
 
-### 17. `api.ts` — stale/ambiguous scratch comments in `getMergedSummaries`
-
-```ts
-// [S1(@1), S2(@2), S3(@3), S4(@4), S5(@5)]
-
-// [S1(@1), S2(@2), S3(@3), S4(@4), S5(@5), S6(@6)]
-// [M2(@6), S3(@3), S4(@4), S5(@5), S6(@6)]
-
-// [M2(@6), S3(@3), S4(@4), S5(@5), S6(@6)]
-// [M2(@6), S3(@3), S4(@4), S5(@5), S6(@6), S7(@7)]
-```
-
-These look like leftover scratchpad notes from while the algorithm was being designed. They don't correspond 1:1 with what the function actually does (it merges once it's _at_ `maxNumberSummaries`, not after growing past it to 6/7), and they're not referenced or explained anywhere. As documentation they're confusing rather than clarifying and should either be rewritten to describe the real algorithm or removed.
-
----
-
 ### 18. `usage.ts` — `getSystemInstructionsTokensApprox` name doesn't reflect that it includes tool definitions
 
 ```ts
@@ -223,50 +207,6 @@ The "no args" branch is careful to always create an (empty) file at the returned
 
 ---
 
-### 21. `terminal.ts` — `checkDelta` is dead code; `differ.ts` duplicates its logic instead of reusing it
-
-`checkDelta()` (`execPromise("delta --version")`) is exported from `terminal.ts` but never called anywhere. `differ.ts`'s `execGitDiff` reimplements the exact same check inline (`await tryCatchAsync(execPromise("delta --version"))`) instead of importing and using `checkDelta`. Neither the duplication nor the dead export is caught by any test.
-
----
-
-### 22. `utils.ts` — `MIN_WIDTH_HARD` is exported but never used anywhere in the codebase.
-
----
-
-### 23. `tools.ts` — `HarnessToolName` type is exported but never used anywhere in the codebase.
-
----
-
-### 24. `state.ts` — `setSubagentModels` writes a second, unused copy of the data into `config.subagentModels`
-
-```ts
-setSubagentModels(subagentModels: string[]) {
-  state.app.subagentModels = subagentModels;
-  state.config.subagentModels = subagentModels;   // <-- never read anywhere
-  ...
-}
-```
-
-All actual reads (e.g. `createSubagentTaskSchema`'s model validation in `tools.ts`) use `getState().app.subagentModels`. `getState().config.subagentModels` is set but never read, making it dead/redundant state that just needs to be kept in sync for no benefit.
-
----
-
-### 25. `test-helpers.ts` imports `"zod/v4"` while every other file imports plain `"zod"`
-
-```ts
-// test-helpers.ts
-import { z } from "zod/v4";
-```
-
-```ts
-// api.ts, tools.ts, usage.ts, config-types.ts, ...
-import { z } from "zod";
-```
-
-This is the only place in the project using the `/v4` subpath import. Depending on the installed `zod` version, this could mean schema objects created in tests (`makeMcpTool`'s `z.object({})`) are instances of a different internal `zod` implementation than the rest of the app uses, which is at minimum an inconsistency worth resolving, and at worst a source of subtle type/behavior mismatches between test doubles and production code.
-
----
-
 ### 26. `utils.ts` — `safeStringify` can return `undefined` instead of a string
 
 ```ts
@@ -279,12 +219,6 @@ export function safeStringify(val: unknown) {
 ```
 
 `JSON.stringify` doesn't throw for values like a bare function or `Symbol` at the top level — it returns `undefined` without an error. In that case `stringifyResult.ok` is `true` and `stringifyResult.value` is `undefined`, so `safeStringify` returns `undefined` rather than a string, silently breaking the implicit "this always returns a string" contract its callers (`safeStringify(toolCall.input)`, `safeStringify(getTools())`) rely on.
-
----
-
-### 27. Missing direct test coverage for most of `paths.ts`
-
-`paths.test.ts` only directly tests `getGlobalConfigDir`, `getGlobalContextDir`, and `getGlobalConfigPath`. The remaining ~10 exported helpers (`getLocalConfigDir`, `getLocalConfigPath`, `getDebugLogDir`, `getGlobalSkillDir`, `getLocalSkillDir`, `getLocalSlashCommandDir`, `getGlobalSlashCommandDir`, `getPromptHistoryDir`, `getUsageLogPath`, `getUsageLogLockPath`) are only ever exercised indirectly through other modules' tests, meaning a regression in any of them (e.g. wrong join order, wrong filename) might not be caught at the source.
 
 ---
 

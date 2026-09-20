@@ -12,7 +12,7 @@ For a high-level overview of the main loop, the `null` vs `""` return convention
 
 ## Development
 
-After every change, run linting, types, tests, and formatting with `./agent-pnpm-run`. The agent runner can hide output from commands that exit nonzero; this wrapper captures both output streams, prints the real exit status, and keeps the diagnostics visible:
+After every change, run linting, types, tests, and formatting with `./agent-pnpm-run.sh`. The agent runner can hide output from commands that exit nonzero; this wrapper captures both output streams, prints the real exit status, and keeps the diagnostics visible:
 
 ```
 ./agent-pnpm-run lint
