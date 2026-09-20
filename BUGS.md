@@ -8,22 +8,6 @@ Each item includes the file(s) involved and the reasoning behind the finding.
 
 ---
 
-### 11. `usage.ts` — `getSystemInstructionsTokensApprox` name doesn't reflect that it includes tool definitions
-
-```ts
-export function getSystemInstructionsTokensApprox() {
-  const systemContentTokensApprox = strToApproxTokens(
-    promptDeps.getSystemContent(),
-  );
-  const toolsTokensApprox = strToApproxTokens(getState().app.toolsContentStr);
-  return systemContentTokensApprox + toolsTokensApprox;
-}
-```
-
-"System instructions" and "tools" are sent to the API as two conceptually distinct things (`instructions` vs `tools` parameters in `resolveApiCall`), but this function — and the user-facing warning text in `warnOnLargeSystemInstructions` ("the current set of context, skills, and tools is X% ... Lasso reserves ... for system instructions") — bundles both under the "system instructions" label, which is a naming/documentation inaccuracy.
-
----
-
 ### 12. `api.ts` — `getConversationSummary`'s `messages.slice(summaries.length)` relies on an undocumented invariant
 
 ```ts

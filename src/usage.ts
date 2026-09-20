@@ -177,7 +177,7 @@ export async function syncNewModelUsageForLimitWindow(
   actions.setModelUsageForLimitWindow(filtered);
 }
 
-export function getSystemInstructionsTokensApprox() {
+export function getPromptOverheadTokensApprox() {
   const systemContentTokensApprox = strToApproxTokens(
     promptDeps.getSystemContent(),
   );
@@ -188,7 +188,7 @@ export function getSystemInstructionsTokensApprox() {
 export function getApproxPromptTokens() {
   return (
     getApproxTokensFromMessages(getState().app.conversation.messages) +
-    getSystemInstructionsTokensApprox()
+    getPromptOverheadTokensApprox()
   );
 }
 

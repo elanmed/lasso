@@ -8,7 +8,7 @@ import {
   getApproxPromptTokens,
   getCurrentPromptTokens,
   getExpiredTime,
-  getSystemInstructionsTokensApprox,
+  getPromptOverheadTokensApprox,
   isUsageLimitDisabled,
   orApproxTokens,
   syncInitialModelUsageForLimitWindow,
@@ -859,7 +859,7 @@ describe("orApproxTokens", () => {
   });
 });
 
-describe("getSystemInstructionsTokensApprox", () => {
+describe("getPromptOverheadTokensApprox", () => {
   beforeEach(() => {
     setupTestContext();
     mock.method(promptDeps, "getSystemContent", () => "abc");
@@ -867,10 +867,10 @@ describe("getSystemInstructionsTokensApprox", () => {
   });
 
   it("sums the approx of system content and tools", () => {
-    assert.strictEqual(getSystemInstructionsTokensApprox(), 3);
+    assert.strictEqual(getPromptOverheadTokensApprox(), 3);
   });
 
-  it("takes tools into account when computing the system instructions approx", () => {
+  it("takes tools into account when computing the prompt overhead approx", () => {
     assert.strictEqual(getApproxPromptTokens(), 3);
   });
 });

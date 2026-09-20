@@ -19,7 +19,7 @@ import {
   appendModelUsage,
   getApproxPromptTokens,
   getCurrentPromptTokens,
-  getSystemInstructionsTokensApprox,
+  getPromptOverheadTokensApprox,
   orApproxTokens,
 } from "./usage.ts";
 import {
@@ -38,7 +38,7 @@ import { resolveInterruptWithEditor } from "./input.ts";
 const compactTriggerRatio = 0.8;
 const compactTargetRatio = 0.3;
 const dedicatedSummaryRatio = 0.5;
-const dedicatedSystemInstructionsRatio =
+const dedicatedPromptOverheadRatio =
   compactTriggerRatio - dedicatedSummaryRatio;
 const maxNumberSummaries = 5;
 const maxRatioPerSummary = dedicatedSummaryRatio / maxNumberSummaries;
@@ -345,7 +345,7 @@ export async function maybeCompact(userInput: string) {
   // count of userInput until after the API call. This can be problematic when the userInput
   // would large enough to trigger compaction, so we approximate for the userInput
   const userInputTokensApprox = strToApproxTokens(userInput);
-  const systemInstructionsTokensApprox = getSystemInstructionsTokensApprox();
+  const promptOverheadTokensApprox = getPromptOverheadTokensApprox();
 
   const nextApiTokens = getCurrentPromptTokens() + userInputTokensApprox;
 
@@ -373,23 +373,22 @@ export async function maybeCompact(userInput: string) {
   const summaryTokens = getState()
     .app.conversation.summaries.map(({ tokens }) => tokens)
     .reduce((accum, curr) => accum + curr, 0);
-  actions.setPromptTokens(summaryTokens + systemInstructionsTokensApprox);
+  actions.setPromptTokens(summaryTokens + promptOverheadTokensApprox);
 }
 
-export function warnOnLargeSystemInstructions() {
+export function warnOnLargePromptOverhead() {
   const { model } = getState().config;
   const contextWindow = getState().config.contextWindowPerModel[model];
   if (contextWindow === undefined) return;
 
-  const systemInstructionsTokensApprox = getSystemInstructionsTokensApprox();
+  const promptOverheadTokensApprox = getPromptOverheadTokensApprox();
 
-  const systemInstructionsRatio =
-    systemInstructionsTokensApprox / contextWindow;
-  if (systemInstructionsRatio >= dedicatedSystemInstructionsRatio) {
+  const promptOverheadRatio = promptOverheadTokensApprox / contextWindow;
+  if (promptOverheadRatio >= dedicatedPromptOverheadRatio) {
     print.warning(
-      `The current set of context, skills, and tools is ${decimalToPercent(systemInstructionsRatio)} of the ${contextWindow.toLocaleString()} token context window!
+      `The current set of context, skills, and tools is ${decimalToPercent(promptOverheadRatio)} of the ${contextWindow.toLocaleString()} token context window!
 
-Lasso reserves ${decimalToPercent(dedicatedSummaryRatio)} of the context window for compacted summaries and ${decimalToPercent(dedicatedSystemInstructionsRatio)} for system instructions. As is, the system instructions may breach the llm's context window and cause API calls to be rejected. Consider converting some of your context to skills and minimizing MCP servers.`,
+Lasso reserves ${decimalToPercent(dedicatedSummaryRatio)} of the context window for compacted summaries and ${decimalToPercent(dedicatedPromptOverheadRatio)} for prompt overhead. As is, the prompt overhead may breach the llm's context window and cause API calls to be rejected. Consider converting some of your context to skills and minimizing MCP servers.`,
     );
   }
 }
