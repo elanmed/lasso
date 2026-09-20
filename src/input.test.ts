@@ -11,7 +11,6 @@ import {
   shouldResolveSlashCommand,
   getModel,
   setModelCommand,
-  isSameKey,
   clearCommand,
   printSkills,
   printAvailableContextFiles,
@@ -1896,58 +1895,6 @@ custom command content\n`,
       harness.emitKey({ name: "k", ctrl: true });
       assert.strictEqual(getCapturedStdout(), "");
       assert.deepStrictEqual(harness.writes, []);
-    });
-  });
-
-  describe("isSameKey", () => {
-    it("returns true when all fields match", () => {
-      assert.equal(
-        isSameKey(
-          { name: "e", ctrl: true, meta: false, shift: false },
-          { name: "e", ctrl: true, meta: false, shift: false },
-        ),
-        true,
-      );
-    });
-
-    it("returns false when name differs", () => {
-      assert.equal(
-        isSameKey(
-          { name: "e", ctrl: true, meta: false, shift: false },
-          { name: "x", ctrl: true, meta: false, shift: false },
-        ),
-        false,
-      );
-    });
-
-    it("returns false when ctrl differs", () => {
-      assert.equal(
-        isSameKey(
-          { name: "e", ctrl: true, meta: false, shift: false },
-          { name: "e", ctrl: false, meta: false, shift: false },
-        ),
-        false,
-      );
-    });
-
-    it("returns false when meta differs", () => {
-      assert.equal(
-        isSameKey(
-          { name: "x", ctrl: false, meta: true, shift: false },
-          { name: "x", ctrl: false, meta: false, shift: false },
-        ),
-        false,
-      );
-    });
-
-    it("returns false when shift differs", () => {
-      assert.equal(
-        isSameKey(
-          { name: "x", ctrl: false, meta: false, shift: true },
-          { name: "x", ctrl: false, meta: false, shift: false },
-        ),
-        false,
-      );
     });
   });
 

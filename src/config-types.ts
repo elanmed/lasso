@@ -170,6 +170,15 @@ export type DefaultedConfig = z.infer<typeof DefaultedConfigSchema>;
 
 export type Key = z.infer<typeof KeySchema>;
 
+export function isSameKey(a: Key, b: Key) {
+  return (
+    a.name === b.name &&
+    (a.ctrl ?? false) === (b.ctrl ?? false) &&
+    (a.meta ?? false) === (b.meta ?? false) &&
+    (a.shift ?? false) === (b.shift ?? false)
+  );
+}
+
 export const defaultConfig: DefaultedConfig = {
   model: MISSING,
   sdkProvider: MISSING,

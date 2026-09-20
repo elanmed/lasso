@@ -9,6 +9,12 @@ import {
   getSkills,
 } from "./context.ts";
 import { actions, createPerformanceLogger, getState } from "./state.ts";
+import {
+  ConfigSchema,
+  defaultConfig,
+  isSameKey,
+  type Config,
+} from "./config-types.ts";
 import { MISSING } from "./missing.ts";
 import { fsDeps, processDeps } from "./deps.ts";
 import {
@@ -20,7 +26,6 @@ import { syncInitialModelUsageForLimitWindow } from "./usage.ts";
 import { print } from "./print.ts";
 import { initMcpState } from "./mcp.ts";
 import { getTools } from "./tools.ts";
-import { ConfigSchema, defaultConfig, type Config } from "./config-types.ts";
 
 export function readConfigFileStr(path: string) {
   if (!fsDeps.existsSync(path)) return "{}";
@@ -184,21 +189,14 @@ export function initStateFromConfig({
     ...globalConfig.keymaps,
     ...localConfig.keymaps,
   };
-  const hashableKeymaps = Object.entries(defaultedKeymaps).map(
-    ([command, keymap]) => ({
-      command,
-      keymapStr: stringify(keymap),
-    }),
-  );
-  const keymapCommandsByValue = new Map<string, string>();
-  for (const { command, keymapStr } of hashableKeymaps) {
-    const existingCommand = keymapCommandsByValue.get(keymapStr);
-    if (existingCommand !== undefined) {
+  const keyedCommands = Object.entries(defaultedKeymaps);
+  for (const [i, [commandA, keymapA]] of keyedCommands.entries()) {
+    for (const [commandB, keymapB] of keyedCommands.slice(i + 1)) {
+      if (!isSameKey(keymapA, keymapB)) continue;
       throw new Error(
-        `keymaps must be unique: \`${existingCommand}\` and \`${command}\` are both bound to \`${keymapStr}\``,
+        `keymaps must be unique: \`${commandA}\` and \`${commandB}\` are both bound to \`${stringify(keymapA)}\``,
       );
     }
-    keymapCommandsByValue.set(keymapStr, command);
   }
 
   actions.setKeymaps(defaultedKeymaps);

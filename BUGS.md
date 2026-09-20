@@ -8,18 +8,6 @@ Each item includes the file(s) involved and the reasoning behind the finding.
 
 ---
 
-### 7. `config.ts` — keymap duplicate detection doesn't use the same equality as `isSameKey`
-
-```ts
-const hashableKeymaps = Object.entries(defaultedKeymaps).map(
-  ([command, keymap]) => ({ command, keymapStr: stringify(keymap) }),
-);
-```
-
-Duplicate keymaps are detected purely via `JSON.stringify` equality of the raw `Key` object. But the actual runtime equality used everywhere else (`isSameKey` in `input.ts`) treats missing `ctrl`/`meta`/`shift` as `false`. Two configs that are semantically identical per `isSameKey` — e.g. `{name:"g", ctrl:true}` vs. `{name:"g", ctrl:true, meta:false, shift:false}` — produce different `keymapStr` values and will _not_ be flagged as a duplicate, silently allowing two commands to be bound to what `initKeypress` will treat as "the same" key combination.
-
----
-
 ### 8. `config.ts` — global/local config files are read twice per startup
 
 `initStateFirst()` calls `readConfigFile(getGlobalConfigPath())` and `readConfigFile(getLocalConfigPath())` just to extract `hideStartupDurations`, and then `initStateFromConfig()` calls `readConfigFile()` on the exact same two paths again to extract everything else. This is redundant I/O on every startup and every `/reload`, and — however unlikely — opens a window where the two reads could observe different file contents if the config file changes between calls.

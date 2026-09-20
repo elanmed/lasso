@@ -30,7 +30,7 @@ import { getPrettyTokenUsage, getPrettyUsage } from "./usage-format.ts";
 import { getApproxPromptTokens } from "./usage.ts";
 import { actions, getState } from "./state.ts";
 import { initStateRepeatable } from "./config.ts";
-import type { Key } from "./config-types.ts";
+import { isSameKey, type Key } from "./config-types.ts";
 import { prependToChatHistory } from "./log.ts";
 import { fsDeps, processDeps } from "./deps.ts";
 import { getGlobalConfigPath, getLocalConfigPath } from "./paths.ts";
@@ -997,15 +997,6 @@ ${readResult.value}
     `No conversation found with session start date: ${sessionStartDate}`,
   );
   return null;
-}
-
-export function isSameKey(a: Key, b: Key) {
-  return (
-    a.name === b.name &&
-    (a.ctrl ?? false) === (b.ctrl ?? false) &&
-    (a.meta ?? false) === (b.meta ?? false) &&
-    (a.shift ?? false) === (b.shift ?? false)
-  );
 }
 
 export function printKeymaps() {
