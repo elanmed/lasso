@@ -7,7 +7,6 @@ import {
   getMessageFromError,
   isAbortError,
   stringify,
-  tryCatch,
   tryCatchAsync,
   execPromise,
   getMaxColLength,
@@ -19,7 +18,7 @@ import { print, bold } from "./print.ts";
 import { getState, promptDeps } from "./state.ts";
 import { BASE_SYSTEM_PROMPT } from "./prompts.ts";
 import { getLanguageModel } from "./model.ts";
-import { aiDeps, fsDeps } from "./deps.ts";
+import { aiDeps } from "./deps.ts";
 import { appendModelUsage } from "./usage.ts";
 
 const userAgent =
@@ -91,15 +90,27 @@ export interface ToolResult {
 export const bashToolInputSchema = z.discriminatedUnion(
   "fileSystemAccessType",
   [
-    z.object({
-      fileSystemAccessType: z.literal("read"),
-      command: z.string(),
-    }),
-    z.object({
-      fileSystemAccessType: z.literal("create-update-delete"),
-      filePath: z.string(),
-      command: z.string(),
-    }),
+    z
+      .object({
+        fileSystemAccessType: z.literal("read"),
+        command: z.string().describe("The bash command to run"),
+      })
+      .describe(
+        "Run a bash command that only reads from the file system. Temp files are intermediates: commands writing only to temp files (like from mktemp) also count as read",
+      ),
+    z
+      .object({
+        fileSystemAccessType: z.literal("create-update-delete"),
+        filePath: z
+          .string()
+          .describe(
+            "The file path created, updated, or deleted by the command",
+          ),
+        command: z.string().describe("The bash command to run"),
+      })
+      .describe(
+        "Run a bash command that creates, updates, or deletes files at filePath. Temp files are intermediates: commands writing only to temp files (like from mktemp) count as read, never create-update-delete",
+      ),
   ],
 );
 export type BashToolInput = z.infer<typeof bashToolInputSchema>;
@@ -134,7 +145,7 @@ export async function executeBashTool(
 }
 
 const webFetchToolSchema = z.object({
-  href: z.string(),
+  href: z.string().describe("The URL of the web page or JSON API to fetch"),
 });
 export type WebFetchTool = z.infer<typeof webFetchToolSchema>;
 
@@ -331,7 +342,7 @@ export async function executeWebFetchJsonTool(
 }
 
 const loadSkillToolSchema = z.object({
-  name: z.string(),
+  name: z.string().describe("The name of the skill to load"),
 });
 export type LoadSkillTool = z.infer<typeof loadSkillToolSchema>;
 
@@ -351,11 +362,18 @@ export function loadSkillTool({ name }: LoadSkillTool): ToolResult {
 }
 
 export const createSubagentTaskSchema = z.object({
-  prompt: z.string(),
-  access: z.enum(["read-only", "read-write"]),
+  prompt: z
+    .string()
+    .describe("The prompt describing the task for the subagent"),
+  access: z
+    .enum(["read-only", "read-write"])
+    .describe(
+      "Whether the subagent may make changes (read-write) or only investigate (read-only)",
+    ),
   model: z
     .string()
     .min(1)
+    .describe("The model the subagent runs on")
     .superRefine((value, ctx) => {
       const configuredModels = getState().app.subagentModels;
       const allowedModels = (() => {
@@ -370,10 +388,15 @@ export const createSubagentTaskSchema = z.object({
         });
       }
     }),
-  timeout: z.number().optional(),
+  timeout: z
+    .number()
+    .optional()
+    .describe("Maximum milliseconds the subagent may run before timing out"),
 });
 export const createSubagentToolSchema = z.object({
-  tasks: z.array(createSubagentTaskSchema),
+  tasks: z
+    .array(createSubagentTaskSchema)
+    .describe("The independent subagent tasks to run in parallel"),
 });
 export type CreateSubagentTool = z.infer<typeof createSubagentToolSchema>;
 export type CreateSubagentTask = z.infer<typeof createSubagentTaskSchema>;
