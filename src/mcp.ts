@@ -84,13 +84,21 @@ export async function initMcpState() {
   await state.mcp.close();
   const clients = await getMcpClients();
   const toolSetsPromise = Promise.all(
-    Object.values(clients).map((client) => client.tools()),
+    Object.entries(clients).map(async ([name, client]) => {
+      const toolsPromise = await tryCatchAsync(client.tools());
+      if (toolsPromise.ok) {
+        return toolsPromise.value;
+      } else {
+        print.error(
+          `Failed to import the tools the ${name} mcp server: ${getMessageFromError(toolsPromise.error)}`,
+        );
+        return null;
+      }
+    }),
   );
-  const toolSetsResult = await tryCatchAsync(toolSetsPromise);
-  if (toolSetsResult.ok) {
-    const tools = Object.assign({}, ...toolSetsResult.value) as MCPToolSet;
-    actions.setMcp(clients, tools);
-  } else {
-    actions.setMcp({}, {});
-  }
+  const toolSetsResult = (await toolSetsPromise).filter(
+    (toolSet) => toolSet !== null,
+  );
+  const tools = Object.assign({}, ...toolSetsResult) as MCPToolSet;
+  actions.setMcp(clients, tools);
 }

@@ -8,7 +8,7 @@ import { stdin } from "node:process";
 import { z } from "zod";
 import type { ModelMessage, ToolSet } from "ai";
 import type { MCPClient } from "@ai-sdk/mcp";
-import { aiDeps, fsDeps, processDeps } from "./deps.ts";
+import { aiDeps, fsDeps, mcpDeps, processDeps } from "./deps.ts";
 import { actions, promptDeps } from "./state.ts";
 import { initKeypress } from "./input.ts";
 import type { Key, SdkProvider } from "./config-types.ts";
@@ -253,6 +253,7 @@ export function setupTestContext({
       }) as Buffer,
   );
   mock.method(Date, "now", () => now);
+  mock.method(process.hrtime, "bigint", () => BigInt(0));
   actions.resetState();
   if (apiKey !== null) {
     testProcessEnv._set("LASSO_API_KEY", apiKey);
@@ -528,8 +529,26 @@ export async function drainTimerCallbacks(
   }
 }
 
-export function makeFakeMcpClient() {
+export function makeFakeMcpClient({
+  tools,
+  close,
+}: { tools?: () => Promise<unknown>; close?: () => void } = {}) {
   return {
-    tools: () => Promise.resolve({}),
+    tools: tools ?? (() => Promise.resolve({})),
+    close: close ?? (() => undefined),
   } as unknown as MCPClient;
+}
+
+export function mockMcpClients(...clients: (MCPClient | Error)[]) {
+  let index = 0;
+  return mock.method(mcpDeps, "createMCPClient", () => {
+    const client = clients[index];
+    index += 1;
+    if (client === undefined || client instanceof Error) {
+      return Promise.reject(
+        client ?? new Error("unexpected createMCPClient call"),
+      );
+    }
+    return Promise.resolve(client);
+  });
 }
