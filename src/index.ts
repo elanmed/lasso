@@ -1,11 +1,7 @@
 import { fileURLToPath } from "node:url";
 import { getMessageFromError } from "./utils.ts";
-import {
-  print,
-  fencePrint,
-  printNewline,
-  printSessionStartDate,
-} from "./print.ts";
+import { print, printNewline, printSessionStartDate } from "./print.ts";
+import { fencePrint } from "./fence.ts";
 import { executeBat, warnOnMissingBat } from "./terminal.ts";
 import { initState, blockOnMissingConfig } from "./config.ts";
 import {

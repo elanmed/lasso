@@ -2,7 +2,8 @@ import assert from "node:assert";
 import os from "node:os";
 import childProcess from "node:child_process";
 import { fsDeps } from "./deps.ts";
-import { fencePrint, print, printNewline } from "./print.ts";
+import { fencePrint } from "./fence.ts";
+import { print, printNewline } from "./print.ts";
 import {
   execPromise,
   getMessageFromError,

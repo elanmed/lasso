@@ -20,12 +20,8 @@ import {
   getStrFromAssistantContent,
 } from "./utils.ts";
 import { truncate } from "./text.ts";
-import {
-  print,
-  printNewline,
-  fencePrint,
-  printSessionStartDate,
-} from "./print.ts";
+import { print, printNewline, printSessionStartDate } from "./print.ts";
+import { fencePrint } from "./fence.ts";
 import { getPrettyTokenUsage, getPrettyUsage } from "./usage-format.ts";
 import { getApproxPromptTokens } from "./usage.ts";
 import { actions, getState } from "./state.ts";
