@@ -186,7 +186,10 @@ describe("tools", () => {
   describe("executeBashTool", () => {
     it("returns a successful tool_result with stdout/stderr JSON", async () => {
       const result = await executeBashTool(
-        { command: "echo hello" },
+        {
+          fileSystemAccessType: "read",
+          command: "echo hello",
+        },
         undefined,
       );
       assert.deepStrictEqual(result, {
@@ -196,7 +199,10 @@ describe("tools", () => {
 
     it("captures stderr in the JSON payload", async () => {
       const result = await executeBashTool(
-        { command: "echo error >&2" },
+        {
+          fileSystemAccessType: "read",
+          command: "echo error >&2",
+        },
         undefined,
       );
       assert.deepStrictEqual(result, {
@@ -205,7 +211,10 @@ describe("tools", () => {
     });
 
     it("returns isError when command exits with non-zero code", async () => {
-      const result = await executeBashTool({ command: "exit 1" }, undefined);
+      const result = await executeBashTool(
+        { fileSystemAccessType: "read", command: "exit 1" },
+        undefined,
+      );
       assert.strictEqual(result.isError, true);
       assert.match(result.content, /Command failed: exit 1/);
     });
@@ -431,11 +440,7 @@ describe("tools", () => {
       assert.deepStrictEqual(Object.keys(harnessTools), [
         "web_fetch_html",
         "web_fetch_json",
-        "view_file",
         "load_skill",
-        "create_file",
-        "str_replace",
-        "insert_lines",
         "bash",
         "create_subagent",
       ]);
@@ -622,8 +627,8 @@ describe("tools", () => {
       assert.deepStrictEqual(Object.keys(firstTools), [
         "web_fetch_html",
         "web_fetch_json",
-        "view_file",
         "load_skill",
+        "bash",
       ]);
       assert.strictEqual(firstMessage.role, "user");
     });
@@ -639,11 +644,7 @@ describe("tools", () => {
         assert.deepStrictEqual(Object.keys(writeTools), [
           "web_fetch_html",
           "web_fetch_json",
-          "view_file",
           "load_skill",
-          "create_file",
-          "str_replace",
-          "insert_lines",
           "bash",
           "mcp_tool",
         ]);
@@ -655,18 +656,26 @@ describe("tools", () => {
         ) => Promise<void>;
         onStart({
           toolCall: {
-            toolName: "str_replace",
+            toolName: "bash",
             toolCallId: "call-1",
-            input: { path: "/test/file.txt" },
+            input: {
+              fileSystemAccessType: "create-update-delete",
+              filePath: "/test/file.txt",
+              command: "write",
+            },
           },
         });
         testFs._files.set("/test/file.txt", "modified content");
         mockExec({ stdout: "+modified content" });
         await onFinish({
           toolCall: {
-            toolName: "str_replace",
+            toolName: "bash",
             toolCallId: "call-1",
-            input: { path: "/test/file.txt" },
+            input: {
+              fileSystemAccessType: "create-update-delete",
+              filePath: "/test/file.txt",
+              command: "write",
+            },
           },
           toolOutput: { type: "tool-result" },
         });

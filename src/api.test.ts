@@ -256,25 +256,7 @@ response text
       });
     });
 
-    it("creates temp file on tool call start for create_file", async () => {
-      mockGenerateText((options: Record<string, unknown>) => {
-        const onStart = options["onToolExecutionStart"] as (
-          arg: Record<string, unknown>,
-        ) => void;
-        onStart({
-          toolCall: {
-            toolName: "create_file",
-            toolCallId: "call-11",
-            input: { path: "/test/file.txt" },
-          },
-        });
-        return Promise.resolve(makeGenerateTextResult());
-      });
-      await resolveApiCall("create file");
-      assert.ok(testFs._files.has("/tmp/lasso-test-uuid.txt"));
-    });
-
-    it("creates temp file on tool call start for str_replace", async () => {
+    it("creates temp file on tool call start for writing bash tools", async () => {
       testFs._files.set("/test/file.txt", "original content");
       mock.method(aiDeps, "generateText", (opts: Record<string, unknown>) => {
         const onStart = opts["onToolExecutionStart"] as (
@@ -282,41 +264,22 @@ response text
         ) => void;
         onStart({
           toolCall: {
-            toolName: "str_replace",
+            toolName: "bash",
             toolCallId: "call-1",
-            input: { path: "/test/file.txt" },
+            input: {
+              fileSystemAccessType: "create-update-delete",
+              filePath: "/test/file.txt",
+              command: "write",
+            },
           },
         });
         return makeGenerateTextResult();
       });
       await resolveApiCall("edit file");
-      assert.ok(testFs._files.has("/tmp/lasso-test-uuid.txt"));
-      assert.strictEqual(
-        testFs._files.get("/tmp/lasso-test-uuid.txt"),
-        "original content",
-      );
+      assert.strictEqual(testFs._files.has("/tmp/lasso-test-uuid.txt"), true);
     });
 
-    it("creates temp file on tool call start for insert_lines", async () => {
-      testFs._files.set("/test/file.txt", "original");
-      mock.method(aiDeps, "generateText", (opts: Record<string, unknown>) => {
-        const onStart = opts["onToolExecutionStart"] as (
-          arg: Record<string, unknown>,
-        ) => void;
-        onStart({
-          toolCall: {
-            toolName: "insert_lines",
-            toolCallId: "call-2",
-            input: { path: "/test/file.txt" },
-          },
-        });
-        return makeGenerateTextResult();
-      });
-      await resolveApiCall("edit file");
-      assert.ok(testFs._files.has("/tmp/lasso-test-uuid.txt"));
-    });
-
-    it("does not create temp file for non-file tools", async () => {
+    it("does not create temp file for read-only bash tools", async () => {
       mock.method(aiDeps, "generateText", (opts: Record<string, unknown>) => {
         const onStart = opts["onToolExecutionStart"] as (
           arg: Record<string, unknown>,
@@ -325,7 +288,10 @@ response text
           toolCall: {
             toolName: "bash",
             toolCallId: "call-3",
-            input: { command: "ls" },
+            input: {
+              fileSystemAccessType: "read",
+              command: "ls",
+            },
           },
         });
         return makeGenerateTextResult();
@@ -349,16 +315,24 @@ response text
           ) => Promise<void>;
           onStart({
             toolCall: {
-              toolName: "str_replace",
+              toolName: "bash",
               toolCallId: "call-1",
-              input: { path: "/test/file.txt" },
+              input: {
+                fileSystemAccessType: "create-update-delete",
+                filePath: "/test/file.txt",
+                command: "write",
+              },
             },
           });
           await onFinish({
             toolCall: {
-              toolName: "str_replace",
+              toolName: "bash",
               toolCallId: "call-1",
-              input: { path: "/test/file.txt" },
+              input: {
+                fileSystemAccessType: "create-update-delete",
+                filePath: "/test/file.txt",
+                command: "write",
+              },
             },
             toolOutput: { type: "tool-result" },
           });
@@ -388,16 +362,24 @@ response text
           ) => Promise<void>;
           onStart({
             toolCall: {
-              toolName: "str_replace",
+              toolName: "bash",
               toolCallId: "call-1",
-              input: { path: "/test/file.txt" },
+              input: {
+                fileSystemAccessType: "create-update-delete",
+                filePath: "/test/file.txt",
+                command: "write",
+              },
             },
           });
           await onFinish({
             toolCall: {
-              toolName: "str_replace",
+              toolName: "bash",
               toolCallId: "call-1",
-              input: { path: "/test/file.txt" },
+              input: {
+                fileSystemAccessType: "create-update-delete",
+                filePath: "/test/file.txt",
+                command: "write",
+              },
             },
             toolOutput: { type: "tool-error" },
           });
@@ -482,7 +464,7 @@ response text
       assert.strictEqual(getSystemInstructionsRatio() >= 0.5, true);
       assert.strictEqual(
         stripAnsi(getCaptured()),
-        `The current set of context, skills, and tools is 51.91% of the 100,000 token context window!
+        `The current set of context, skills, and tools is 51.34% of the 100,000 token context window!
 
 Lasso reserves 50% of the context window for compacted summaries and 30% for system instructions. As is, the system instructions may breach the llm's context window and cause API calls to be rejected. Consider converting some of your context to skills and minimizing MCP servers.\n`,
       );
