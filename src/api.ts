@@ -273,9 +273,13 @@ export async function getConversationSummary() {
   const targetTokens = Math.floor(compactTargetRatio * contextWindow);
   const targetCharLen = approxTokensToCharLen(targetTokens);
 
+  // messages[0..summaries.length) are re-appended summaries, one per entry,
+  // so everything from summaries.length on is not yet summarized
   const compactPrompt = `Compact the following conversation. Output a maximum of ${String(targetCharLen)} characters:
 ${JSON.stringify(getState().app.conversation.messages.slice(getState().app.conversation.summaries.length))}
 `;
+  // messages[0..summaries.length) are re-appended summaries, one per entry,
+  // so everything from summaries.length on is not yet summarized
 
   const structuredOutputOpts = (() => {
     if (getState().config.compactWithStructuredOutput) {
@@ -331,6 +335,17 @@ ${JSON.stringify(getState().app.conversation.messages.slice(getState().app.conve
   return summary;
 }
 
+function applyCompactedConversation(summaries: ModelSummary[]) {
+  actions.resetConversation();
+  actions.setSummaries(summaries);
+  for (const summary of summaries) {
+    actions.appendToConversation({
+      content: summary.compacted,
+      role: "assistant",
+    });
+  }
+}
+
 export async function maybeCompact(userInput: string) {
   const { model } = getState().config;
   if (model === MISSING) return;
@@ -358,14 +373,7 @@ export async function maybeCompact(userInput: string) {
   // If merging the existing summaries failed, use existing summaries
   const mergedSummaries = await getMergedSummaries();
 
-  actions.resetConversation();
-  actions.setSummaries([...mergedSummaries, conversationSummary]);
-  for (const summary of getState().app.conversation.summaries) {
-    actions.appendToConversation({
-      content: summary.compacted,
-      role: "assistant",
-    });
-  }
+  applyCompactedConversation([...mergedSummaries, conversationSummary]);
 
   const summaryTokens = getState()
     .app.conversation.summaries.map(({ tokens }) => tokens)

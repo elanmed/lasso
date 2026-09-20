@@ -873,6 +873,10 @@ Lasso reserves 50% of the context window for compacted summaries and 30% for pro
           ...getState().app.conversation.summaries,
           { compacted: `summary ${String(i)}`, compactedAt: i, tokens: 100 },
         ]);
+        actions.appendToConversation({
+          role: "assistant",
+          content: `summary ${String(i)}`,
+        });
       }
       actions.appendToConversation({ role: "user", content: "hi" });
       actions.setPromptTokens(85_000);
@@ -916,6 +920,10 @@ Lasso reserves 50% of the context window for compacted summaries and 30% for pro
           ...getState().app.conversation.summaries,
           { compacted: `summary ${String(i)}`, compactedAt: i, tokens: 100 },
         ]);
+        actions.appendToConversation({
+          role: "assistant",
+          content: `summary ${String(i)}`,
+        });
       }
       actions.appendToConversation({ role: "user", content: "hi" });
       actions.setPromptTokens(85_000);
@@ -965,7 +973,10 @@ Lasso reserves 50% of the context window for compacted summaries and 30% for pro
       actions.setSummaries([
         { compacted: "prior summary", compactedAt: 1, tokens: 10 },
       ]);
-      actions.appendToConversation({ role: "user", content: "hi" });
+      actions.appendToConversation({
+        role: "assistant",
+        content: "prior summary",
+      });
       actions.appendToConversation({
         role: "user",
         content: "not yet summarized",
@@ -1090,7 +1101,7 @@ Lasso reserves 50% of the context window for compacted summaries and 30% for pro
       assert.deepStrictEqual(getState().app.conversation, {
         summaries: [{ compacted: "prior summary", compactedAt: 1, tokens: 10 }],
         messages: [
-          { role: "user", content: "hi" },
+          { role: "assistant", content: "prior summary" },
           { role: "user", content: "not yet summarized" },
         ],
       });
@@ -1111,7 +1122,7 @@ Lasso reserves 50% of the context window for compacted summaries and 30% for pro
       assert.deepStrictEqual(getState().app.conversation, {
         summaries: [{ compacted: "prior summary", compactedAt: 1, tokens: 10 }],
         messages: [
-          { role: "user", content: "hi" },
+          { role: "assistant", content: "prior summary" },
           { role: "user", content: "not yet summarized" },
         ],
       });
@@ -1154,6 +1165,10 @@ Lasso reserves 50% of the context window for compacted summaries and 30% for pro
           ...getState().app.conversation.summaries,
           { compacted: `summary ${String(i)}`, compactedAt: i, tokens: 100 },
         ]);
+        actions.appendToConversation({
+          role: "assistant",
+          content: `summary ${String(i)}`,
+        });
       }
     };
 
