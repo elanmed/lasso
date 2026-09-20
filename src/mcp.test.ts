@@ -3,7 +3,7 @@ import assert from "node:assert";
 import type { MCPClient } from "@ai-sdk/mcp";
 import { actions, getState, type MCPToolSet } from "./state.ts";
 import { initMcpState } from "./mcp.ts";
-import { setupTestContext } from "./test-helpers.ts";
+import { mockStdout, setupTestContext, stripAnsi } from "./test-helpers.ts";
 
 describe("mcp", () => {
   afterEach(() => {
@@ -51,5 +51,32 @@ describe("mcp", () => {
 
     assert.deepStrictEqual(getState().mcp.clients, {});
     assert.deepStrictEqual(getState().mcp.tools, {});
+  });
+
+  it("prints the mcp server start duration when hideStartupDurations is false", async () => {
+    mock.method(process.hrtime, "bigint", () => BigInt(0));
+    actions.setMcps({
+      first: { type: "http", url: "not-a-url" },
+    });
+
+    const getCaptured = mockStdout();
+    await initMcpState();
+
+    assert.strictEqual(
+      stripAnsi(getCaptured()),
+      "Starting first mcp server: 0.0ms\n",
+    );
+  });
+
+  it("hides the mcp server start duration when hideStartupDurations is true", async () => {
+    actions.setHideStartupDurations(true);
+    actions.setMcps({
+      first: { type: "http", url: "not-a-url" },
+    });
+
+    const getCaptured = mockStdout();
+    await initMcpState();
+
+    assert.strictEqual(stripAnsi(getCaptured()), "");
   });
 });

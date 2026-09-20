@@ -15,12 +15,7 @@ import {
 } from "./config-types.ts";
 import { MISSING } from "./missing.ts";
 import { BASE_SYSTEM_PROMPT } from "./prompts.ts";
-import {
-  createPerformanceLogger,
-  getPrettyDuration,
-  getShortId,
-  stringify,
-} from "./utils.ts";
+import { getPrettyDuration, getShortId, stringify } from "./utils.ts";
 import { debugLog } from "./debug-log.ts";
 import type { ModelUsage } from "./usage.ts";
 import type { ContextEntry, Skill } from "./context.ts";

@@ -1,12 +1,6 @@
-import { createPerformanceLogger } from "./state.ts";
 import { join } from "node:path";
 import * as YAML from "yaml";
-import {
-  getShortId,
-  safeStringify,
-  stringify,
-  tryCatch,
-} from "./utils.ts";
+import { getShortId, safeStringify, stringify, tryCatch } from "./utils.ts";
 import { getAvailableSlashCommands } from "./slash-commands.ts";
 import {
   getContextEntries,
@@ -14,7 +8,7 @@ import {
   getSkillsStr,
   getSkills,
 } from "./context.ts";
-import { actions, getState } from "./state.ts";
+import { actions, createPerformanceLogger, getState } from "./state.ts";
 import { MISSING } from "./missing.ts";
 import { fsDeps, processDeps } from "./deps.ts";
 import {
