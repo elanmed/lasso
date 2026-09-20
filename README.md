@@ -10,8 +10,9 @@ _A minimal agent harness to rein in your llm_
   - Responses are piped through `bat` to render markdown
   - Multi-line input is supported by spawning an editor of your choice
   - Messages can be queued by typing a custom delimiter (default `l---`) in the spawned editor
-- **Tools**: 9 tools to execute bash, fetch from the web, edit files, and launch subagents
-  - A `git diff` with `delta` is output whenever a tool changes a file
+- **Tools**: 9 tools to execute bash, fetch from the web, and launch subagents
+  - The agent is instructed to perform crud operations via the bash tool
+  - A `git diff` with `delta` is output whenever the bash tool changes a file
 - **Multiple providers**: Anthropic, OpenAI, Google, or OpenAI-compatible APIs
 - **MCP support**: Connect HTTP, SSE, and stdio servers
 - **AGENTS.md support**: The root file is included in context, nested files are internally represented as skills
@@ -540,10 +541,6 @@ vim.g.clipboard = {
 ## TODO (soon)
 
 - [ ] Use native ai sdk v7 timeouts
-- [ ] Update tools to support reading, writing base64 for images
 - [ ] Move all config validation into blockOnMissingConfig, don't throw at start
   - [ ] Separate error message for no config (`initlocal` and `initglobal`)
-- [ ] Support code-mode
 - [ ] Reference history file for compacted summaries
-- [ ] Remove unnecessary tools
-- [ ] Print MCP, fs read startup times
