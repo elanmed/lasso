@@ -1,5 +1,24 @@
 # Changelog
 
+## v0.7.1 - 2026-09-20
+
+- Serialize same-process usage log updates with a queue per lock path so parallel tool calls no longer drop usage records
+- Tie the compaction reset and summary re-append together to ensure summaries mirror the first messages before slicing unsummarized messages
+- Return null from temp file creation on failure, tolerating missing temp files when diffing tool call changes, cleaning up diffs, and reloading editor content
+- Guard `safeStringify` against an undefined stringify result for function symbols and top-level bigint values
+- Drop dead prompt token bookkeeping on the abort path
+- Check directory existence before creating it, and warn when directory creation fails in debug logging, chat history, prompt history, and the usage log
+- Skip the root `AGENTS.md` when turning git-tracked files into context skills, so it is not listed twice
+- Read global and local config files once per init instead of once per parse
+- Use `isSameKey` for duplicate keymap detection so values missing modifier fields no longer collide
+- Clamp uncached input tokens to zero in usage cost calculation when cached input tokens exceed the reported total
+- Stop suppressing the `/usage` context window line on narrow terminals
+- Write the reset state debug log entry before restoring state so it reflects the reset
+- Clarify the info line shown while executing a custom slash command
+- Keep mcp clients connected when one client's `tools()` call fails, and print an error instead of dropping the client
+- Reject plain git diff errors with a dedicated message for the usage diff, treating missing git and fatal exit codes distinctly
+- Make structured output for compaction conditional on the `compactWithStructuredOutput` config option, falling back to plain text
+
 ## v0.7.0 - 2026-09-20
 
 - Add structured output for compaction, enforcing summary length via the output schema
