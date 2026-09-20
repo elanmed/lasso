@@ -4,6 +4,7 @@ import { listChatHistoryFiles, normalizeLine, tryCatch } from "./utils.ts";
 import { fsDeps } from "./deps.ts";
 import { getPromptHistoryDir } from "./paths.ts";
 import { debugLog as writeDebugLog } from "./debug-log.ts";
+import { print } from "./print.ts";
 
 export function debugLog(content: string) {
   writeDebugLog(getState().app.debugLog, getState().app.debugLogPath, content);
@@ -14,11 +15,15 @@ export function prependToChatHistory(
   role: "user" | "assistant",
 ) {
   const path = getState().app.chatHistoryPath;
-  if (!fsDeps.existsSync(path)) {
+  const dir = dirname(path);
+  if (!fsDeps.existsSync(dir)) {
     const mkdirResult = tryCatch(() =>
-      fsDeps.mkdirSync(dirname(path), { recursive: true }),
+      fsDeps.mkdirSync(dir, { recursive: true }),
     );
-    if (!mkdirResult.ok) return;
+    if (!mkdirResult.ok) {
+      print.warning(`Failed to create the directory: ${dir}`);
+      return;
+    }
   }
 
   const readResult = tryCatch(() => fsDeps.readFileSync(path).toString());
@@ -39,7 +44,10 @@ export function initPromptHistory() {
     const mkDirResult = tryCatch(() =>
       fsDeps.mkdirSync(chatHistoryDir, { recursive: true }),
     );
-    if (!mkDirResult.ok) return;
+    if (!mkDirResult.ok) {
+      print.warning(`Failed to create the directory: ${chatHistoryDir}`);
+      return;
+    }
   }
 
   const chatHistorySessionPath = join(

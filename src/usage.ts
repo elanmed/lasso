@@ -10,14 +10,9 @@ import {
   getApproxTokensFromMessages,
   strToApproxTokens,
 } from "./utils.ts";
-import { fsDeps, processDeps } from "./deps.ts";
+import { fsDeps } from "./deps.ts";
 import { getUsageLogLockPath, getUsageLogPath } from "./paths.ts";
-
-function printWarning(message: string) {
-  const output = `${message}\n`;
-  processDeps.stdout.write(output);
-  actions.appendStdoutTail(output);
-}
+import { print } from "./print.ts";
 
 export const ModelUsageSchema = z.object({
   inputTokens: z.number(),
@@ -108,7 +103,7 @@ export async function syncInitialModelUsageForLimitWindow() {
   const lockUtils = createLockUtils(getUsageLogLockPath());
   const created = await lockUtils.createLock();
   if (!created) {
-    return printWarning(
+    return print.warning(
       `Failed to acquire a lock for ${getUsageLogLockPath()}`,
     );
   }
@@ -147,13 +142,19 @@ export async function syncNewModelUsageForLimitWindow(
   const path = getUsageLogPath();
   const dir = dirname(path);
   if (!fsDeps.existsSync(dir)) {
-    tryCatch(() => fsDeps.mkdirSync(dir, { recursive: true }));
+    const mkDirResult = tryCatch(() =>
+      fsDeps.mkdirSync(dir, { recursive: true }),
+    );
+    if (!mkDirResult.ok) {
+      print.warning(`Failed to create the directory: ${dir}`);
+      return;
+    }
   }
 
   const lockUtils = createLockUtils(getUsageLogLockPath());
   const created = await lockUtils.createLock();
   if (!created) {
-    return printWarning(
+    return print.warning(
       `Failed to acquire a lock for ${getUsageLogLockPath()}`,
     );
   }

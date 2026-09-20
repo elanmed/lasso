@@ -7,7 +7,12 @@ import {
   deleteExpiredPromptHistory,
 } from "./log.ts";
 import { actions, getState } from "./state.ts";
-import { testFs, setupTestContext } from "./test-helpers.ts";
+import {
+  mockStdout,
+  setupTestContext,
+  stripAnsi,
+  testFs,
+} from "./test-helpers.ts";
 import { fsDeps } from "./deps.ts";
 
 describe("log", () => {
@@ -29,6 +34,22 @@ describe("log", () => {
       actions.setChatHistoryPath("/test/editor.log");
       prependToChatHistory("test message", "user");
       assert.equal(testFs._dirs.has("/test"), true);
+    });
+
+    it("warns and skips writing when mkdir fails", () => {
+      actions.setChatHistoryPath("/test/editor.log");
+      mock.method(fsDeps, "mkdirSync", () => {
+        throw new Error("Permission denied");
+      });
+      const getCaptured = mockStdout();
+
+      prependToChatHistory("test message", "user");
+
+      assert.equal(
+        stripAnsi(getCaptured()),
+        "Failed to create the directory: /test\n",
+      );
+      assert.equal(testFs._files.has("/test/editor.log"), false);
     });
 
     it("appends content with timestamp and role", () => {
@@ -89,12 +110,19 @@ hello
       );
     });
 
-    it("disables history when mkdir fails", () => {
+    it("warns and disables history when mkdir fails", () => {
       mock.method(fsDeps, "existsSync", () => false);
       mock.method(fsDeps, "mkdirSync", () => {
         throw new Error("Permission denied");
       });
+      const getCaptured = mockStdout();
+
       initPromptHistory();
+
+      assert.equal(
+        stripAnsi(getCaptured()),
+        "Failed to create the directory: /fake-home/.config/lasso/history\n",
+      );
       assert.equal(getState().app.chatHistoryPath, "");
     });
 

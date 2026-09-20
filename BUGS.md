@@ -8,7 +8,7 @@ Each item includes the file(s) involved and the reasoning behind the finding.
 
 ---
 
-### 12. `api.ts` — `getConversationSummary`'s `messages.slice(summaries.length)` relies on an undocumented invariant
+### 2. `api.ts` — `getConversationSummary`'s `messages.slice(summaries.length)` relies on an undocumented invariant
 
 ```ts
 const compactPrompt = `Compact the following conversation:
@@ -20,7 +20,7 @@ This only produces the correct "messages not yet summarized" slice because, afte
 
 ---
 
-### 13. `utils.ts` — `getTempFileName` silently produces a non-existent file when `initialContentPath` can't be read
+### 3. `utils.ts` — `getTempFileName` silently produces a non-existent file when `initialContentPath` can't be read
 
 ```ts
 if (initialContentPath !== undefined) {
@@ -42,7 +42,7 @@ The "no args" branch is careful to always create an (empty) file at the returned
 
 ---
 
-### 14. `utils.ts` — `safeStringify` can return `undefined` instead of a string
+### 4. `utils.ts` — `safeStringify` can return `undefined` instead of a string
 
 ```ts
 export function safeStringify(val: unknown) {
@@ -57,7 +57,7 @@ export function safeStringify(val: unknown) {
 
 ---
 
-### 16. `api.ts` — `resolveApiCall`'s abort-path token bookkeeping is dead work
+### 5. `api.ts` — `resolveApiCall`'s abort-path token bookkeeping is dead work
 
 ```ts
 actions.appendToConversation(interruptMessage);
@@ -71,7 +71,7 @@ actions.setPromptTokensDirty(true);
 
 ---
 
-### 17. `text.ts` — `truncate()` always appends an ellipsis for multi-line input, even when the first line already fits
+### 6. `text.ts` — `truncate()` always appends an ellipsis for multi-line input, even when the first line already fits
 
 ```ts
 if (newlineIdx !== -1) {
@@ -80,17 +80,3 @@ if (newlineIdx !== -1) {
 ```
 
 For any string containing a newline, an ellipsis is unconditionally appended to the first line — even if that first line is far shorter than `maxLen` and wasn't actually truncated for width reasons. This conflates "there is more content after this line" with "this line was cut off," which may be intentional but isn't documented as such, and means e.g. `truncate("hi\nrest")` on a very wide terminal still yields `"hi…"` rather than `"hi"`.
-
----
-
-### 18. `log.ts` — `prependToChatHistory` checks file existence to decide whether to create the _directory_
-
-```ts
-export function prependToChatHistory(content: string, role: "user" | "assistant") {
-  const path = getState().app.chatHistoryPath;
-  if (!fsDeps.existsSync(path)) {
-    const mkdirResult = tryCatch(() => fsDeps.mkdirSync(dirname(path), { recursive: true }));
-    ...
-```
-
-The condition tests whether the _file_ (`path`) exists, then (if not) creates the _directory_ (`dirname(path)`). This only works because, in practice, the file never exists without its directory also existing. The check reads as though it's testing directory existence and is easy to misread; it would be clearer (and more robust to being called with a fresh/unusual path) to check `existsSync(dirname(path))` directly.

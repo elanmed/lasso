@@ -16,7 +16,13 @@ import {
 } from "./usage.ts";
 import { actions, getState, promptDeps } from "./state.ts";
 import { fsDeps } from "./deps.ts";
-import { makeErrnoError, setupTestContext, testFs } from "./test-helpers.ts";
+import {
+  makeErrnoError,
+  mockStdout,
+  setupTestContext,
+  stripAnsi,
+  testFs,
+} from "./test-helpers.ts";
 import { getUsageLogLockPath, getUsageLogPath } from "./paths.ts";
 
 describe("usage", () => {
@@ -281,6 +287,30 @@ describe("usage", () => {
         testFs._files.get(getUsageLogPath()),
         JSON.stringify({ "gpt-4": [usage] }),
       );
+    });
+
+    it("warns and preserves state when the usage log directory cannot be created", async () => {
+      mock.method(fsDeps, "existsSync", () => false);
+      mock.method(fsDeps, "mkdirSync", () => {
+        throw new Error("Permission denied");
+      });
+      const getCaptured = mockStdout();
+      const usage = {
+        inputTokens: 10,
+        outputTokens: 5,
+        cacheReadTokens: 1,
+        cacheWriteTokens: 0,
+        date: 500_000,
+      };
+
+      await syncNewModelUsageForLimitWindow("gpt-4", usage);
+
+      assert.strictEqual(
+        stripAnsi(getCaptured()),
+        `Failed to create the directory: ${dirname(getUsageLogPath())}\n`,
+      );
+      assert.deepStrictEqual(getState().app.modelUsageForLimitWindow, {});
+      assert.strictEqual(testFs._files.has(getUsageLogPath()), false);
     });
 
     it("appends to an existing usage log", async () => {
