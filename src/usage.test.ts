@@ -367,6 +367,35 @@ describe("usage", () => {
       );
     });
 
+    it("serializes concurrent same-process calls and keeps every usage", async () => {
+      const firstUsage = {
+        inputTokens: 10,
+        outputTokens: 5,
+        cacheReadTokens: 1,
+        cacheWriteTokens: 0,
+        date: 1_000_000,
+      };
+      const secondUsage = {
+        inputTokens: 20,
+        outputTokens: 8,
+        cacheReadTokens: 2,
+        cacheWriteTokens: 0,
+        date: 2_000_000,
+      };
+      await Promise.all([
+        syncNewModelUsageForLimitWindow("gpt-4", firstUsage),
+        syncNewModelUsageForLimitWindow("gpt-4", secondUsage),
+      ]);
+
+      assert.deepStrictEqual(getState().app.modelUsageForLimitWindow, {
+        "gpt-4": [firstUsage, secondUsage],
+      });
+      assert.strictEqual(
+        testFs._files.get(getUsageLogPath()),
+        JSON.stringify({ "gpt-4": [firstUsage, secondUsage] }),
+      );
+    });
+
     it("overwrites a malformed usage log with the new entry", async () => {
       testFs._files.set(getUsageLogPath(), "not-json");
       const usage = {

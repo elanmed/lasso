@@ -6,6 +6,7 @@ import { actions, getState, promptDeps } from "./state.ts";
 
 import {
   createLockUtils,
+  createQueue,
   tryCatch,
   getApproxTokensFromMessages,
   strToApproxTokens,
@@ -24,6 +25,17 @@ export const ModelUsageSchema = z.object({
 export type ModelUsage = z.infer<typeof ModelUsageSchema>;
 
 const ModelUsageMapSchema = z.record(z.string(), z.array(ModelUsageSchema));
+
+const lockQueues = new Map<string, ReturnType<typeof createQueue>>();
+
+function getLockQueue(lockPath: string) {
+  let queue = lockQueues.get(lockPath);
+  if (queue === undefined) {
+    queue = createQueue();
+    lockQueues.set(lockPath, queue);
+  }
+  return queue;
+}
 
 export interface TokenUsage {
   inputTokens: number;
@@ -100,35 +112,37 @@ export async function syncInitialModelUsageForLimitWindow() {
   const dir = dirname(path);
   if (!fsDeps.existsSync(dir)) return;
 
-  const lockUtils = createLockUtils(getUsageLogLockPath());
-  const created = await lockUtils.createLock();
-  if (!created) {
-    return print.warning(
-      `Failed to acquire a lock for ${getUsageLogLockPath()}`,
+  await getLockQueue(getUsageLogLockPath()).enqueue(async () => {
+    const lockUtils = createLockUtils(getUsageLogLockPath());
+    const created = await lockUtils.createLock();
+    if (!created) {
+      return print.warning(
+        `Failed to acquire a lock for ${getUsageLogLockPath()}`,
+      );
+    }
+
+    const readResult = tryCatch(() => fsDeps.readFileSync(path).toString());
+    if (!readResult.ok) {
+      tryCatch(() => fsDeps.writeFileSync(path, JSON.stringify({})));
+      lockUtils.deleteLock();
+      return;
+    }
+
+    const parseResult = tryCatch(() =>
+      ModelUsageMapSchema.parse(JSON.parse(readResult.value)),
     );
-  }
+    if (!parseResult.ok) {
+      tryCatch(() => fsDeps.writeFileSync(path, JSON.stringify({})));
+      lockUtils.deleteLock();
+      return;
+    }
+    const filtered = filterExpiredModelUsage(parseResult.value, expiredTime);
 
-  const readResult = tryCatch(() => fsDeps.readFileSync(path).toString());
-  if (!readResult.ok) {
-    tryCatch(() => fsDeps.writeFileSync(path, JSON.stringify({})));
+    tryCatch(() => fsDeps.writeFileSync(path, JSON.stringify(filtered)));
+
     lockUtils.deleteLock();
-    return;
-  }
-
-  const parseResult = tryCatch(() =>
-    ModelUsageMapSchema.parse(JSON.parse(readResult.value)),
-  );
-  if (!parseResult.ok) {
-    tryCatch(() => fsDeps.writeFileSync(path, JSON.stringify({})));
-    lockUtils.deleteLock();
-    return;
-  }
-  const filtered = filterExpiredModelUsage(parseResult.value, expiredTime);
-
-  tryCatch(() => fsDeps.writeFileSync(path, JSON.stringify(filtered)));
-
-  lockUtils.deleteLock();
-  actions.setModelUsageForLimitWindow(filtered);
+    actions.setModelUsageForLimitWindow(filtered);
+  });
 }
 
 export async function syncNewModelUsageForLimitWindow(
@@ -151,31 +165,33 @@ export async function syncNewModelUsageForLimitWindow(
     }
   }
 
-  const lockUtils = createLockUtils(getUsageLogLockPath());
-  const created = await lockUtils.createLock();
-  if (!created) {
-    return print.warning(
-      `Failed to acquire a lock for ${getUsageLogLockPath()}`,
-    );
-  }
+  await getLockQueue(getUsageLogLockPath()).enqueue(async () => {
+    const lockUtils = createLockUtils(getUsageLogLockPath());
+    const created = await lockUtils.createLock();
+    if (!created) {
+      return print.warning(
+        `Failed to acquire a lock for ${getUsageLogLockPath()}`,
+      );
+    }
 
-  const readResult = tryCatch(() => fsDeps.readFileSync(path).toString());
-  const loggedModelUsage = (() => {
-    if (!readResult.ok) return {};
-    const parseResult = tryCatch(() =>
-      ModelUsageMapSchema.parse(JSON.parse(readResult.value)),
-    );
-    if (parseResult.ok) return parseResult.value;
-    return {};
-  })();
-  (loggedModelUsage[model] ??= []).push(usage);
+    const readResult = tryCatch(() => fsDeps.readFileSync(path).toString());
+    const loggedModelUsage = (() => {
+      if (!readResult.ok) return {};
+      const parseResult = tryCatch(() =>
+        ModelUsageMapSchema.parse(JSON.parse(readResult.value)),
+      );
+      if (parseResult.ok) return parseResult.value;
+      return {};
+    })();
+    (loggedModelUsage[model] ??= []).push(usage);
 
-  const filtered = filterExpiredModelUsage(loggedModelUsage, expiredTime);
+    const filtered = filterExpiredModelUsage(loggedModelUsage, expiredTime);
 
-  tryCatch(() => fsDeps.writeFileSync(path, JSON.stringify(filtered)));
-  lockUtils.deleteLock();
+    tryCatch(() => fsDeps.writeFileSync(path, JSON.stringify(filtered)));
+    lockUtils.deleteLock();
 
-  actions.setModelUsageForLimitWindow(filtered);
+    actions.setModelUsageForLimitWindow(filtered);
+  });
 }
 
 export function getPromptOverheadTokensApprox() {
