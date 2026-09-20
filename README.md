@@ -10,8 +10,8 @@ _A minimal agent harness to rein in your llm_
   - Responses are piped through `bat` to render markdown
   - Multi-line input is supported by spawning an editor of your choice
   - Messages can be queued by typing a custom delimiter (default `l---`) in the spawned editor
-- **Tools**: 9 tools to execute bash, fetch from the web, and launch subagents
-  - The agent is instructed to perform crud operations via the bash tool
+- **Tools**: 5 tools to execute bash, fetch from the web, and launch subagents
+  - The agent is given instructions on how to perform crud operations via the bash tool
   - A `git diff` with `delta` is output whenever the bash tool changes a file
 - **Multiple providers**: Anthropic, OpenAI, Google, or OpenAI-compatible APIs
 - **MCP support**: Connect HTTP, SSE, and stdio servers
@@ -441,11 +441,7 @@ Available skills are listed in the system prompt, the LLM can use the `load_skil
 
 ## Tools
 
-- `bash` — run bash commands
-- `create_file` — create new files
-- `view_file` — view files or list directories
-- `str_replace` — replace strings in files
-- `insert_lines` — insert text at a line
+- `bash` — run bash commands. All CRUD operations are performed via this tool
 - `web_fetch_html` — fetch a URL and return extracted article content
 - `web_fetch_json` — fetch a JSON API endpoint and return parsed data
 - `load_skill` — load a skill to get specialized instructions
