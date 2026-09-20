@@ -6,6 +6,7 @@ import assert from "node:assert";
 import type { AssistantContent, ModelMessage } from "ai";
 import { fsDeps, processDeps } from "./deps.ts";
 import { getPromptHistoryDir } from "./paths.ts";
+import { getPrettyDuration } from "./print.ts";
 
 export type Result<T> = { ok: true; value: T } | { ok: false; error: unknown };
 
@@ -299,4 +300,22 @@ export function decimalToPercent(
   { precision = 2 }: { precision?: number } = {},
 ) {
   return `${String(Number((decimal * 100).toFixed(precision)))}%`;
+}
+
+export function createPerformanceLogger() {
+  let startTime: number | null = null;
+  function start() {
+    assert(startTime === null);
+    startTime = performance.now();
+  }
+
+  function end(print: (durationStr: string) => void) {
+    assert(startTime !== null);
+    const endTime = performance.now();
+    const duration = getPrettyDuration(startTime, endTime);
+    startTime = null;
+    print(duration);
+  }
+
+  return { start, end };
 }

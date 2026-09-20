@@ -1,6 +1,11 @@
 import { join } from "node:path";
 import * as YAML from "yaml";
-import { getShortId, stringify, tryCatch } from "./utils.ts";
+import {
+  createPerformanceLogger,
+  getShortId,
+  stringify,
+  tryCatch,
+} from "./utils.ts";
 import { getAvailableSlashCommands } from "./slash-commands.ts";
 import {
   getContextEntries,
@@ -103,11 +108,20 @@ function filterNulls<T>(entries: Record<string, T | null>): Record<string, T> {
   return filtered;
 }
 
-export function initStateFromConfig() {
+export function initStateFromConfig({
+  logDuration = false,
+}: { logDuration?: boolean } = {}) {
+  const performanceLogger = createPerformanceLogger();
+
+  performanceLogger.start();
   const globalConfig = readConfigFile(getGlobalConfigPath());
   const localConfig = readConfigFile(getLocalConfigPath());
   actions.setGlobalConfigStr(readConfigFileStr(getGlobalConfigPath()));
   actions.setLocalConfigStr(readConfigFileStr(getLocalConfigPath()));
+  performanceLogger.end(
+    (duration) =>
+      logDuration && print.doing(`Reading config files: ${duration}`),
+  );
 
   const defaultedModel =
     localConfig.model ?? globalConfig.model ?? defaultConfig.model;
@@ -242,19 +256,36 @@ export function initStateFromConfig() {
   actions.setUsageLimit(defaultedUsageLimit);
 }
 
-export async function initStateFromFs() {
+export async function initStateFromFs({
+  logDuration = false,
+}: { logDuration?: boolean } = {}) {
+  const performanceLogger = createPerformanceLogger();
   await syncInitialModelUsageForLimitWindow();
 
+  performanceLogger.start();
   const contextEntries = getContextEntries();
   actions.setContextEntries(contextEntries);
   actions.setContextStr(getContextFilesStr(contextEntries));
+  performanceLogger.end(
+    (duration) =>
+      logDuration && print.doing(`Reading context files: ${duration}`),
+  );
 
+  performanceLogger.start();
   const skills = getSkills();
   actions.setSkills(skills);
   actions.setSkillsStr(getSkillsStr(skills));
+  performanceLogger.end(
+    (duration) => logDuration && print.doing(`Reading skills: ${duration}`),
+  );
 
+  performanceLogger.start();
   const slashCommands = getAvailableSlashCommands();
   actions.setSlashCommands(slashCommands);
+  performanceLogger.end(
+    (duration) =>
+      logDuration && print.doing(`Reading slash commands: ${duration}`),
+  );
 }
 
 export function initStateForDebug() {
@@ -277,5 +308,5 @@ export async function initState() {
   registerToolsContent();
   initStateFromConfig();
   await initMcpState();
-  await initStateFromFs();
+  await initStateFromFs({ logDuration: true });
 }

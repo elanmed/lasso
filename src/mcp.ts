@@ -4,7 +4,7 @@ import { Experimental_StdioMCPTransport as StdioClientTransport } from "@ai-sdk/
 import { actions, getState, type MCPToolSet } from "./state.ts";
 import type { Mcp } from "./config-types.ts";
 import { print } from "./print.ts";
-import { tryCatchAsync } from "./utils.ts";
+import { createPerformanceLogger, tryCatchAsync } from "./utils.ts";
 
 async function createMcpClient(config: Mcp) {
   switch (config.type) {
@@ -51,8 +51,12 @@ async function getMcpClients() {
 
   await Promise.all(
     Object.entries(getState().config.mcps).map(async ([name, config]) => {
-      print.doing(`Starting mcp server: ${name}`);
+      const performanceLogger = createPerformanceLogger();
+      performanceLogger.start();
       const createMcpResult = await tryCatchAsync(createMcpClient(config));
+      performanceLogger.end((duration) =>
+        print.doing(`Starting ${name} mcp server: ${duration}`),
+      );
       if (createMcpResult.ok) {
         mcpClients[name] = createMcpResult.value;
       }
