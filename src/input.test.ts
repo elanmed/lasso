@@ -2223,6 +2223,100 @@ transcript content
       );
     });
 
+    it("skips the before-and-after diff when a before temp file cannot be created", async () => {
+      testProcessEnv._set("LASSO_PAGER_RELOAD", "cat __FILE__");
+      mockPagerSpawn();
+      mock.method(fsDeps, "writeFileSync", (path: string, content: string) => {
+        if (path === "/tmp/lasso-global-before-test-uuid.txt") {
+          throw new Error("write failed");
+        }
+        testFs.writeFileSync(path, content);
+      });
+      mockExecCalls([
+        { stdout: "delta 0.18.2" },
+        { stdout: "local diff\n" },
+        { stdout: "delta 0.18.2" },
+        { stdout: "applied diff\n" },
+        { stdout: "delta 0.18.2" },
+        { stdout: "context diff\n" },
+        { stdout: "delta 0.18.2" },
+        { stdout: "skills diff\n" },
+        { stdout: "delta 0.18.2" },
+        { stdout: "commands diff\n" },
+      ]);
+      const result = await resolveSlashCommand("/reload");
+      assert.strictEqual(result, null);
+      assert.strictEqual(
+        testFs._files.get("/tmp/lasso-test-uuid.txt"),
+        `Local config from path: /test-cwd/.lasso/settings.yaml
+local diff
+
+Applied config:
+applied diff
+
+Agent context:
+context diff
+
+Agent skills:
+skills diff
+
+Custom slash commands:
+commands diff
+`,
+      );
+      assert.strictEqual(
+        testFs._files.has("/tmp/lasso-global-after-test-uuid.txt"),
+        false,
+      );
+    });
+
+    it("unlinks the before temp file when the after temp file cannot be created", async () => {
+      testProcessEnv._set("LASSO_PAGER_RELOAD", "cat __FILE__");
+      mockPagerSpawn();
+      mock.method(fsDeps, "writeFileSync", (path: string, content: string) => {
+        if (path === "/tmp/lasso-global-after-test-uuid.txt") {
+          throw new Error("write failed");
+        }
+        testFs.writeFileSync(path, content);
+      });
+      mockExecCalls([
+        { stdout: "delta 0.18.2" },
+        { stdout: "local diff\n" },
+        { stdout: "delta 0.18.2" },
+        { stdout: "applied diff\n" },
+        { stdout: "delta 0.18.2" },
+        { stdout: "context diff\n" },
+        { stdout: "delta 0.18.2" },
+        { stdout: "skills diff\n" },
+        { stdout: "delta 0.18.2" },
+        { stdout: "commands diff\n" },
+      ]);
+      const result = await resolveSlashCommand("/reload");
+      assert.strictEqual(result, null);
+      assert.strictEqual(
+        testFs._files.has("/tmp/lasso-global-before-test-uuid.txt"),
+        false,
+      );
+      assert.strictEqual(
+        testFs._files.get("/tmp/lasso-test-uuid.txt"),
+        `Local config from path: /test-cwd/.lasso/settings.yaml
+local diff
+
+Applied config:
+applied diff
+
+Agent context:
+context diff
+
+Agent skills:
+skills diff
+
+Custom slash commands:
+commands diff
+`,
+      );
+    });
+
     it("handles /reload command by opening the config diff in a pager", async () => {
       testFs._files.set(
         getGlobalConfigPath(),

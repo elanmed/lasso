@@ -304,15 +304,15 @@ describe("utils", () => {
       );
     });
 
-    it("skips writing when read fails", () => {
+    it("returns null when read fails", () => {
       const result = getTempFileName({
         initialContentPath: "/missing/file.txt",
       });
-      assert.equal(result, "/tmp/lasso-test-uuid.txt");
+      assert.equal(result, null);
       assert.equal(testFs._files.has("/tmp/lasso-test-uuid.txt"), false);
     });
 
-    it("skips writing when write fails", () => {
+    it("returns null when write fails", () => {
       testFs._files.set("/source.txt", "content");
       mock.method(fsDeps, "writeFileSync", () => {
         throw new Error("EIO");
@@ -320,7 +320,13 @@ describe("utils", () => {
       const result = getTempFileName({
         initialContentPath: "/source.txt",
       });
-      assert.equal(result, "/tmp/lasso-test-uuid.txt");
+      assert.equal(result, null);
+
+      const strResult = getTempFileName({ initialContentStr: "content" });
+      assert.equal(strResult, null);
+
+      const noArgsResult = getTempFileName();
+      assert.equal(noArgsResult, null);
     });
 
     it("writes initialContentStr into the temp file", () => {

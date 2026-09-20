@@ -2,6 +2,8 @@ import { describe, it, beforeEach, afterEach, mock } from "node:test";
 import assert from "node:assert";
 import childProcess from "node:child_process";
 
+import { fsDeps } from "./deps.ts";
+
 import { actions } from "./state.ts";
 import {
   executeBat,
@@ -123,6 +125,18 @@ describe("terminal", () => {
         contentType: "markdown",
       });
       assert.strictEqual(spawned[0], `less "/tmp/lasso-test-uuid.txt"`);
+    });
+
+    it("does not spawn a pager when the temp file cannot be created", async () => {
+      mock.method(fsDeps, "writeFileSync", () => {
+        throw new Error("write failed");
+      });
+      await openWithPager({
+        pagerEnvKey: "LASSO_PAGER_HISTORY",
+        initialContentStr: "content",
+        contentType: "markdown",
+      });
+      assert.deepStrictEqual(spawned, []);
     });
   });
 

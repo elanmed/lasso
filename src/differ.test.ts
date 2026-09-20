@@ -44,13 +44,16 @@ describe("differ", () => {
       );
     });
 
-    it("uses an empty snapshot when the source file does not exist", () => {
+    it("skips registration when the source file cannot be read", () => {
       const differ = createToolCallDiffer();
 
       differ.setTempFileBefore("call-1", "/missing/file.txt");
 
       assert.strictEqual(testFs._files.has("/tmp/lasso-test-uuid.txt"), false);
-      differ.cleanupTempFileBefore("call-1");
+      assert.strictEqual(
+        differ.toolCallIdToTempFileBefore.has("call-1"),
+        false,
+      );
     });
 
     it("cleans up a snapshot whose temp file was never written", () => {
@@ -77,7 +80,7 @@ describe("differ", () => {
       assert.deepStrictEqual([...differ.toolCallIdToTempFileBefore.keys()], []);
     });
 
-    it("diffs and cleans up a newly-created file that did not exist before", async () => {
+    it("skipped the diff for a newly-created file with no before snapshot", async () => {
       const commands: string[] = [];
       const differ = createToolCallDiffer();
       mockExecCalls(
@@ -89,10 +92,27 @@ describe("differ", () => {
       testFs._files.set("/test/new-file.txt", "created content");
       await differ.diffAndCleanup("call-1", "/test/new-file.txt");
 
+      assert.deepStrictEqual(commands, []);
+      assert.strictEqual(testFs._files.has("/tmp/lasso-test-uuid.txt"), false);
       assert.strictEqual(
-        commands[1],
-        "git diff --no-index --color=always -U3 /tmp/lasso-test-uuid.txt /tmp/lasso-test-uuid.txt | delta --paging=never --line-numbers --hunk-header-style=omit --file-style=omit",
+        differ.toolCallIdToTempFileBefore.has("call-1"),
+        false,
       );
+    });
+
+    it("cleans up before snapshot and skips the diff when after snapshot cannot be created", async () => {
+      testFs._files.set("/source/file.txt", "original content");
+      const commands: string[] = [];
+      const differ = createToolCallDiffer();
+      mockExecCalls(
+        [{ stdout: "delta 0.18.2" }, { stdout: "diff output" }],
+        commands,
+      );
+
+      differ.setTempFileBefore("call-1", "/source/file.txt");
+      await differ.diffAndCleanup("call-1", "/missing/after.txt");
+
+      assert.deepStrictEqual(commands, []);
       assert.strictEqual(testFs._files.has("/tmp/lasso-test-uuid.txt"), false);
       assert.strictEqual(
         differ.toolCallIdToTempFileBefore.has("call-1"),

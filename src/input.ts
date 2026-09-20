@@ -782,6 +782,7 @@ export async function spawnAndReadEditorContent(opts?: {
   });
 
   const tempFile = getTempFileName();
+  if (tempFile === null) return null;
 
   const editCommand = (() => {
     const lassoEditEnvValue = processDeps.env.get("LASSO_EDIT");
@@ -1076,10 +1077,13 @@ async function reload() {
   const diffResults = [];
   for (let i = 0; i < reloadTempFilePrefixes.length; i++) {
     const beforeFile = beforeFiles[i];
-    assert(beforeFile !== undefined);
+    if (beforeFile === null || beforeFile === undefined) continue;
 
     const afterFile = afterFiles[i];
-    assert(afterFile !== undefined);
+    if (afterFile === null || afterFile === undefined) {
+      tryCatch(() => fsDeps.unlinkSync(beforeFile));
+      continue;
+    }
 
     const diffResult = await tryCatchAsync(
       execGitDiff({
@@ -1089,7 +1093,9 @@ async function reload() {
     );
 
     if (!diffResult.ok) {
-      for (const path of beforeFiles.concat(afterFiles)) {
+      for (const path of beforeFiles
+        .concat(afterFiles)
+        .filter((p) => p !== null)) {
         tryCatch(() => fsDeps.unlinkSync(path));
       }
       print.error(
@@ -1108,7 +1114,7 @@ ${diffResult.value.stdout}
       );
     }
   }
-  for (const path of beforeFiles.concat(afterFiles)) {
+  for (const path of beforeFiles.concat(afterFiles).filter((p) => p !== null)) {
     tryCatch(() => fsDeps.unlinkSync(path));
   }
 

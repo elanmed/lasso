@@ -17,25 +17,3 @@ ${JSON.stringify(getState().app.conversation.messages.slice(getState().app.conve
 ```
 
 This only produces the correct "messages not yet summarized" slice because, after a compaction, `resetConversation()` + `setSummaries()` + re-appending one assistant message per summary guarantees that the first `summaries.length` messages exactly mirror the summaries. That invariant is never stated in a comment, and nothing enforces it — any future code path that appends to `conversation.summaries` without also appending a matching message (or vice versa) would silently corrupt what gets fed into the next compaction prompt.
-
----
-
-### 3. `utils.ts` — `getTempFileName` silently produces a non-existent file when `initialContentPath` can't be read
-
-```ts
-if (initialContentPath !== undefined) {
-  const readResult = tryCatch(() =>
-    fsDeps.readFileSync(initialContentPath).toString(),
-  );
-  if (readResult.ok) {
-    tryCatch(() => fsDeps.writeFileSync(tempFile, readResult.value));
-  }
-  // else: nothing is written — tempFile is returned but doesn't exist on disk
-} else if (initialContentStr !== undefined) {
-  tryCatch(() => fsDeps.writeFileSync(tempFile, initialContentStr));
-} else {
-  tryCatch(() => fsDeps.writeFileSync(tempFile, "")); // <-- the "no args" case DOES write a placeholder
-}
-```
-
-The "no args" branch is careful to always create an (empty) file at the returned path, but the "`initialContentPath` given but unreadable" branch is not — it leaves the returned path pointing at nothing. This inconsistency is the root cause of the new-file crash.

@@ -106,6 +106,7 @@ export async function openWithPager({
   contentType: "diff" | "markdown";
 }) {
   const tempFile = getTempFileName({ initialContentStr });
+  if (tempFile === null) return;
 
   const pagerCommand = await (async () => {
     const pagerEnvValue = processDeps.env.get(pagerEnvKey);

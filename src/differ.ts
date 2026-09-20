@@ -86,6 +86,7 @@ export function createToolCallDiffer() {
 
   function setTempFileBefore(toolCallId: string, path: string) {
     const tempFileBefore = getTempFileName({ initialContentPath: path });
+    if (tempFileBefore === null) return;
     toolCallIdToTempFileBefore.set(toolCallId, tempFileBefore);
   }
 
@@ -97,6 +98,18 @@ export function createToolCallDiffer() {
 
   async function diffAndCleanup(toolCallId: string, path: string) {
     const tempFileAfter = getTempFileName({ initialContentPath: path });
+    if (tempFileAfter === null) {
+      if (toolCallIdToTempFileBefore.has(toolCallId)) {
+        cleanupTempFileBefore(toolCallId);
+      }
+      return;
+    }
+
+    if (!toolCallIdToTempFileBefore.has(toolCallId)) {
+      tryCatch(() => fsDeps.unlinkSync(tempFileAfter));
+      return;
+    }
+
     const tempFileBefore = getTempFileBefore(toolCallId);
     await printGitDiff({
       tempFileBeforePath: tempFileBefore,
@@ -108,7 +121,8 @@ export function createToolCallDiffer() {
   }
 
   function cleanupTempFileBefore(toolCallId: string) {
-    const tempFile = getTempFileBefore(toolCallId);
+    const tempFile = toolCallIdToTempFileBefore.get(toolCallId);
+    if (tempFile === undefined) return;
     tryCatch(() => fsDeps.unlinkSync(tempFile));
     toolCallIdToTempFileBefore.delete(toolCallId);
   }

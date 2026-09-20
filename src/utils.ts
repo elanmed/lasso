@@ -93,15 +93,26 @@ export function getTempFileName(args?: GetTempFileNameArgs) {
     const readResult = tryCatch(() =>
       fsDeps.readFileSync(initialContentPath).toString(),
     );
-    if (readResult.ok) {
-      tryCatch(() => fsDeps.writeFileSync(tempFile, readResult.value));
-    }
-  } else if (initialContentStr !== undefined) {
-    tryCatch(() => fsDeps.writeFileSync(tempFile, initialContentStr));
-  } else {
-    tryCatch(() => fsDeps.writeFileSync(tempFile, ""));
+    if (!readResult.ok) return null;
+
+    const writeResult = tryCatch(() =>
+      fsDeps.writeFileSync(tempFile, readResult.value),
+    );
+    if (!writeResult.ok) return null;
+
+    return tempFile;
   }
 
+  if (initialContentStr !== undefined) {
+    const writeResult = tryCatch(() =>
+      fsDeps.writeFileSync(tempFile, initialContentStr),
+    );
+    if (!writeResult.ok) return null;
+    return tempFile;
+  }
+
+  const writeResult = tryCatch(() => fsDeps.writeFileSync(tempFile, ""));
+  if (!writeResult.ok) return null;
   return tempFile;
 }
 
