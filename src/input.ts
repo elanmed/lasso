@@ -1103,7 +1103,7 @@ async function reload() {
 
     if (!diffResult.ok) {
       for (const path of beforeFiles.concat(afterFiles)) {
-        fsDeps.unlinkSync(path);
+        tryCatch(() => fsDeps.unlinkSync(path));
       }
       print.error(
         `An error occurred when getting the diff: ${getMessageFromError(diffResult.error)}`,
@@ -1122,7 +1122,7 @@ ${diffResult.value.stdout}
     }
   }
   for (const path of beforeFiles.concat(afterFiles)) {
-    fsDeps.unlinkSync(path);
+    tryCatch(() => fsDeps.unlinkSync(path));
   }
 
   const diff = diffResults.join("");

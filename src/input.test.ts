@@ -45,6 +45,7 @@ import {
   stripAnsi,
   mockStdout,
   makeAbortError,
+  makeErrnoError,
 } from "./test-helpers.ts";
 import { fsDeps } from "./deps.ts";
 import { getGlobalConfigPath, getGlobalContextDir } from "./paths.ts";
@@ -2322,6 +2323,28 @@ skills diff
 Custom slash commands:
 commands diff
 `,
+      );
+    });
+
+    it("cleans up reload temp files when a diff fails and temp files are missing", async () => {
+      mock.method(fsDeps, "unlinkSync", (path: string) => {
+        if (!testFs._files.has(path)) {
+          throw makeErrnoError("ENOENT", `ENOENT: no such file: ${path}`);
+        }
+        testFs.unlinkSync(path);
+      });
+      const err = new Error("fatal") as Error & { code: number };
+      err.code = 128;
+      mockExecCalls([{ stdout: "delta 0.18.2" }, { stdout: "", error: err }]);
+      const result = await resolveSlashCommand("/reload");
+      assert.strictEqual(result, null);
+      assert.strictEqual(
+        stripAnsi(getCapturedStdout()),
+        "An error occurred when getting the diff: fatal\n",
+      );
+      assert.strictEqual(
+        testFs._files.has("/tmp/lasso-global-before-test-uuid.txt"),
+        false,
       );
     });
 

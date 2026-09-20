@@ -9,6 +9,7 @@ import {
   getTempFileName,
   normalizeLine,
   shouldDisableColor,
+  tryCatch,
   tryCatchAsync,
 } from "./utils.ts";
 
@@ -97,19 +98,19 @@ export function createToolCallDiffer() {
       tempFileAfterPath: tempFileAfter,
       path,
     });
-    fsDeps.unlinkSync(tempFileAfter);
+    tryCatch(() => fsDeps.unlinkSync(tempFileAfter));
     cleanupTempFileBefore(toolCallId);
   }
 
   function cleanupTempFileBefore(toolCallId: string) {
     const tempFile = getTempFileBefore(toolCallId);
-    fsDeps.unlinkSync(tempFile);
+    tryCatch(() => fsDeps.unlinkSync(tempFile));
     toolCallIdToTempFileBefore.delete(toolCallId);
   }
 
   function cleanupAllTempFileBefore() {
     for (const tempFile of toolCallIdToTempFileBefore.values()) {
-      fsDeps.unlinkSync(tempFile);
+      tryCatch(() => fsDeps.unlinkSync(tempFile));
     }
     toolCallIdToTempFileBefore.clear();
   }

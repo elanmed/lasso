@@ -2,6 +2,7 @@ import { describe, it, beforeEach, afterEach, mock } from "node:test";
 import assert from "node:assert";
 import { createToolCallDiffer, execGitDiff, printGitDiff } from "./differ.ts";
 import {
+  makeErrnoError,
   mockExec,
   mockExecCalls,
   mockStdout,
@@ -9,6 +10,7 @@ import {
   stripAnsi,
   testFs,
 } from "./test-helpers.ts";
+import { fsDeps } from "./deps.ts";
 
 describe("differ", () => {
   afterEach(() => {
@@ -51,6 +53,71 @@ describe("differ", () => {
 
       assert.strictEqual(testFs._files.has("/tmp/lasso-test-uuid.txt"), false);
       differ.cleanupTempFileBefore("call-1");
+    });
+
+    it("cleans up a snapshot whose temp file was never written", () => {
+      const differ = createToolCallDiffer();
+
+      mock.method(fsDeps, "unlinkSync", (path: string) => {
+        if (!testFs._files.has(path)) {
+          throw makeErrnoError("ENOENT", `ENOENT: no such file: ${path}`);
+        }
+        testFs.unlinkSync(path);
+      });
+      differ.setTempFileBefore("call-1", "/missing/file.txt");
+
+      differ.cleanupTempFileBefore("call-1");
+
+      assert.strictEqual(
+        differ.toolCallIdToTempFileBefore.has("call-1"),
+        false,
+      );
+    });
+
+    it("cleans up all snapshots whose temp files were never written", () => {
+      const differ = createToolCallDiffer();
+
+      mock.method(fsDeps, "unlinkSync", (path: string) => {
+        if (!testFs._files.has(path)) {
+          throw makeErrnoError("ENOENT", `ENOENT: no such file: ${path}`);
+        }
+        testFs.unlinkSync(path);
+      });
+      differ.setTempFileBefore("call-1", "/missing/a.txt");
+      differ.setTempFileBefore("call-2", "/missing/b.txt");
+
+      differ.cleanupAllTempFileBefore();
+
+      assert.deepStrictEqual([...differ.toolCallIdToTempFileBefore.keys()], []);
+    });
+
+    it("diffs and cleans up a newly-created file that did not exist before", async () => {
+      mock.method(fsDeps, "unlinkSync", (path: string) => {
+        if (!testFs._files.has(path)) {
+          throw makeErrnoError("ENOENT", `ENOENT: no such file: ${path}`);
+        }
+        testFs.unlinkSync(path);
+      });
+      const commands: string[] = [];
+      const differ = createToolCallDiffer();
+      mockExecCalls(
+        [{ stdout: "delta 0.18.2" }, { stdout: "diff output" }],
+        commands,
+      );
+
+      differ.setTempFileBefore("call-1", "/test/new-file.txt");
+      testFs._files.set("/test/new-file.txt", "created content");
+      await differ.diffAndCleanup("call-1", "/test/new-file.txt");
+
+      assert.strictEqual(
+        commands[1],
+        "git diff --no-index --color=always -U3 /tmp/lasso-test-uuid.txt /tmp/lasso-test-uuid.txt | delta --paging=never --line-numbers --hunk-header-style=omit --file-style=omit",
+      );
+      assert.strictEqual(testFs._files.has("/tmp/lasso-test-uuid.txt"), false);
+      assert.strictEqual(
+        differ.toolCallIdToTempFileBefore.has("call-1"),
+        false,
+      );
     });
 
     it("diffs and cleans up a successful tool call", async () => {
