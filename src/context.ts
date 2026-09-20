@@ -108,6 +108,8 @@ export function getSkills() {
   if (!agentFileGlobResult.ok) return skills;
 
   for (const agentFilePath of agentFileGlobResult.value) {
+    const isRootAgentsMd = agentFilePath === "AGENTS.md";
+    if (isRootAgentsMd) continue;
     const readResult = tryCatch(() =>
       fsDeps.readFileSync(agentFilePath).toString(),
     );

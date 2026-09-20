@@ -8,27 +8,6 @@ Each item includes the file(s) involved and the reasoning behind the finding.
 
 ---
 
-### 9. `context.ts` — root-level `AGENTS.md` can be double-surfaced as both context and a skill
-
-`getContextEntries()` always injects `<cwd>/AGENTS.md` (and the global one) directly into the system prompt. Separately, `getSkills()` walks `git ls-files **/AGENTS.md` and turns _every_ matched `AGENTS.md` (including one at the repo root) into a lazily-loadable "skill" named `__lasso-context-for-<dir>`. There's no exclusion of the root file already covered by `getContextEntries()`, so the same file's content can be both always-injected _and_ separately offered as a discoverable skill.
-
----
-
-### 10. `input.ts` — `/clear` silently wipes session cost tracking as a side effect
-
-```ts
-export function clearCommand() {
-  print.infoSubtle(`Context cleared (${getPrettyTokenUsage()})`);
-  actions.resetConversation();
-  actions.setPromptTokens(getApproxPromptTokens());
-  actions.setModelUsageForSession({}); // <-- resets the session $ / token counter to zero
-}
-```
-
-`/clear` is documented (and named) as clearing the _conversation_, but it also resets `app.modelUsageForSession` to `{}`, permanently zeroing the "$ in session" figure shown elsewhere (e.g. in the fence status line). `modelUsageForLimitWindow` (which drives the actual dollar usage-limit enforcement) is left untouched, so the two usage trackers now diverge for no clearly-stated reason — a user could `/clear` several times and have the displayed session cost keep resetting to near-zero even though real spend continues to accumulate against their limit. Not covered by a test with nonzero prior usage (see also its sibling observation about /clear's side effects on usage tracking).
-
----
-
 ### 11. `usage.ts` — `getSystemInstructionsTokensApprox` name doesn't reflect that it includes tool definitions
 
 ```ts

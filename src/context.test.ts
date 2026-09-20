@@ -420,6 +420,28 @@ would benefit from specialized instructions.
       );
     });
 
+    it("excludes the root AGENTS.md from context skills", () => {
+      testFs._gitLsFilesResults.set("**/AGENTS.md", [
+        "AGENTS.md",
+        "/test-cwd/src/AGENTS.md",
+      ]);
+      testFs._files.set("/test-cwd/AGENTS.md", "root content");
+      testFs._files.set("/test-cwd/src/AGENTS.md", "nested content");
+      const result = getSkillsStr(getSkills());
+      assert.equal(
+        result,
+        `# [lasso] Skills
+
+Use the \`load_skill\` tool to load a skill when the user's request
+would benefit from specialized instructions.
+
+## Available skills:
+
+- __lasso-context-for-/test-cwd/src: Context relevant for /test-cwd/src
+`,
+      );
+    });
+
     it("nested AGENTS.md skills do not collide with regular skills", () => {
       testFs._globResults.set("/fake-home/.config/lasso/skills/**/SKILL.md", [
         "/fake-home/.config/lasso/skills/my-skill/SKILL.md",
