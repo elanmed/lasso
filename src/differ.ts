@@ -33,7 +33,11 @@ export async function execGitDiff(opts: {
       { cwd: os.tmpdir() },
       (error, stdout, stderr) => {
         if (error?.code !== undefined) {
-          const isError = isDeltaAvailable ? error.code > 1 : error.code >= 128;
+          const isError = (() => {
+            if (isDeltaAvailable) return error.code > 1;
+            return [2, 127, 128].includes(error.code) || error.code > 128;
+          })();
+
           if (isError) {
             reject(error);
             return;

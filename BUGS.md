@@ -4,34 +4,6 @@ Each item includes the file(s) involved and the reasoning behind the finding.
 
 ---
 
-### 1. `differ.ts` — `createToolCallDiffer` crashes on brand-new files (unguarded `unlinkSync`)
-
-`cleanupTempFileBefore` and `cleanupAllTempFileBefore` call `fsDeps.unlinkSync(tempFile)` with **no try/catch**:
-
-```ts
-function cleanupTempFileBefore(toolCallId: string) {
-  const tempFile = getTempFileBefore(toolCallId);
-  fsDeps.unlinkSync(tempFile);           // <-- unguarded
-  ...
-}
-```
-
-`setTempFileBefore` snapshots the "before" state via `getTempFileName({ initialContentPath: path })`. If `path` doesn't exist yet (the extremely common case of the bash tool **creating a brand-new file**), `getTempFileName` never writes anything to the returned temp path (see #20). The temp "before" file therefore never exists on disk, and the later unguarded `unlinkSync` throws `ENOENT`, which is never caught. This exception happens inside `onToolExecutionEnd`/`onToolExecutionStart` callbacks passed to `generateText`, so it will surface as an unexpected rejection of an otherwise-successful model turn (e.g. "create a new file for me" would appear to fail with a cryptic `ENOENT`).
-
-No test exercises "diffing a newly-created file that didn't exist before" (see #29), which is how this went unnoticed.
-
----
-
-### 2. `differ.ts` — `execGitDiff` treats real errors as success for exit codes < 128
-
-```ts
-const isError = isDeltaAvailable ? error.code > 1 : error.code >= 128;
-```
-
-For the non-delta (plain `git diff`) path, any exit code below 128 is treated as "just a normal diff, not an error" — including exit code `2` (git usage error) and `127` ("command not found", e.g. `git` isn't installed). The test `"resolves on plain git diff error with code below 128"` explicitly asserts that exit code `127` resolves silently instead of surfacing an error. This means a missing/broken `git` binary is silently swallowed and presented to the user as "no diff," rather than reporting the actual problem.
-
----
-
 ### 3. `mcp.ts` — one failing MCP client's `.tools()` call wipes out and leaks _all_ MCP clients
 
 ```ts

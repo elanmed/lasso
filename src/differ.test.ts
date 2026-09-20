@@ -218,11 +218,11 @@ describe("differ", () => {
       assert.deepStrictEqual(result, { stdout: "", stderr: "" });
     });
 
-    it("resolves on plain git diff error with code below 128", async () => {
-      const err = new Error("git: command not found") as Error & {
+    it("resolves on plain git diff error with an unexpected low exit code", async () => {
+      const err = new Error("unexpected failure") as Error & {
         code: number;
       };
-      err.code = 127;
+      err.code = 3;
       mockExecCalls([
         { stdout: "", error: new Error("not found") },
         { stdout: "", error: err },
@@ -232,6 +232,47 @@ describe("differ", () => {
         tempFileAfterPath: "b",
       });
       assert.deepStrictEqual(result, { stdout: "", stderr: "" });
+    });
+
+    it("rejects when plain git diff exits with code 2 (usage error)", async () => {
+      const err = new Error("usage error") as Error & { code: number };
+      err.code = 2;
+      mockExecCalls([
+        { stdout: "", error: new Error("not found") },
+        { stdout: "", error: err },
+      ]);
+      await assert.rejects(
+        execGitDiff({ tempFileBeforePath: "a", tempFileAfterPath: "b" }),
+        /usage error/,
+      );
+    });
+
+    it("rejects when git is not installed (plain git diff exit code 127)", async () => {
+      const err = new Error("git: command not found") as Error & {
+        code: number;
+      };
+      err.code = 127;
+      mockExecCalls([
+        { stdout: "", error: new Error("not found") },
+        { stdout: "", error: err },
+      ]);
+      await assert.rejects(
+        execGitDiff({ tempFileBeforePath: "a", tempFileAfterPath: "b" }),
+        /command not found/,
+      );
+    });
+
+    it("rejects when plain git diff is killed by a signal (141)", async () => {
+      const err = new Error("killed") as Error & { code: number };
+      err.code = 141;
+      mockExecCalls([
+        { stdout: "", error: new Error("not found") },
+        { stdout: "", error: err },
+      ]);
+      await assert.rejects(
+        execGitDiff({ tempFileBeforePath: "a", tempFileAfterPath: "b" }),
+        /killed/,
+      );
     });
 
     it("rejects on fatal plain git diff error", async () => {
