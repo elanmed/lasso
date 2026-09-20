@@ -2,7 +2,6 @@ import { describe, it, beforeEach, afterEach, mock } from "node:test";
 import assert from "node:assert";
 import { createToolCallDiffer, execGitDiff, printGitDiff } from "./differ.ts";
 import {
-  makeErrnoError,
   mockExec,
   mockExecCalls,
   mockStdout,
@@ -10,7 +9,6 @@ import {
   stripAnsi,
   testFs,
 } from "./test-helpers.ts";
-import { fsDeps } from "./deps.ts";
 
 describe("differ", () => {
   afterEach(() => {
@@ -58,12 +56,6 @@ describe("differ", () => {
     it("cleans up a snapshot whose temp file was never written", () => {
       const differ = createToolCallDiffer();
 
-      mock.method(fsDeps, "unlinkSync", (path: string) => {
-        if (!testFs._files.has(path)) {
-          throw makeErrnoError("ENOENT", `ENOENT: no such file: ${path}`);
-        }
-        testFs.unlinkSync(path);
-      });
       differ.setTempFileBefore("call-1", "/missing/file.txt");
 
       differ.cleanupTempFileBefore("call-1");
@@ -77,12 +69,6 @@ describe("differ", () => {
     it("cleans up all snapshots whose temp files were never written", () => {
       const differ = createToolCallDiffer();
 
-      mock.method(fsDeps, "unlinkSync", (path: string) => {
-        if (!testFs._files.has(path)) {
-          throw makeErrnoError("ENOENT", `ENOENT: no such file: ${path}`);
-        }
-        testFs.unlinkSync(path);
-      });
       differ.setTempFileBefore("call-1", "/missing/a.txt");
       differ.setTempFileBefore("call-2", "/missing/b.txt");
 
@@ -92,12 +78,6 @@ describe("differ", () => {
     });
 
     it("diffs and cleans up a newly-created file that did not exist before", async () => {
-      mock.method(fsDeps, "unlinkSync", (path: string) => {
-        if (!testFs._files.has(path)) {
-          throw makeErrnoError("ENOENT", `ENOENT: no such file: ${path}`);
-        }
-        testFs.unlinkSync(path);
-      });
       const commands: string[] = [];
       const differ = createToolCallDiffer();
       mockExecCalls(

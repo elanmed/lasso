@@ -103,6 +103,9 @@ export function makeFakeFsDeps(
     },
     mkdirSync: (path: string) => _dirs.add(path),
     unlinkSync: (path: string) => {
+      if (!_files.has(path)) {
+        throw makeErrnoError("ENOENT", `ENOENT: no such file: ${path}`);
+      }
       _files.delete(path);
       _mtimes.delete(path);
     },

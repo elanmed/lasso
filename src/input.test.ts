@@ -45,7 +45,6 @@ import {
   stripAnsi,
   mockStdout,
   makeAbortError,
-  makeErrnoError,
 } from "./test-helpers.ts";
 import { fsDeps } from "./deps.ts";
 import { getGlobalConfigPath, getGlobalContextDir } from "./paths.ts";
@@ -2327,12 +2326,6 @@ commands diff
     });
 
     it("cleans up reload temp files when a diff fails and temp files are missing", async () => {
-      mock.method(fsDeps, "unlinkSync", (path: string) => {
-        if (!testFs._files.has(path)) {
-          throw makeErrnoError("ENOENT", `ENOENT: no such file: ${path}`);
-        }
-        testFs.unlinkSync(path);
-      });
       const err = new Error("fatal") as Error & { code: number };
       err.code = 128;
       mockExecCalls([{ stdout: "delta 0.18.2" }, { stdout: "", error: err }]);
