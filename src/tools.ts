@@ -463,9 +463,10 @@ export async function createSubagentTool(
             if (
               bashSchemaResult.fileSystemAccessType === "create-update-delete"
             ) {
-              toolCallDiffer.setTempFileBefore(toolCall.toolCallId, {
-                initialContentPath: bashSchemaResult.filePath,
-              });
+              toolCallDiffer.setTempFileBefore(
+                toolCall.toolCallId,
+                bashSchemaResult.filePath,
+              );
             }
           },
           onToolExecutionEnd: async ({ toolCall, toolOutput }) => {

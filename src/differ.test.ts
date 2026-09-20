@@ -24,9 +24,7 @@ describe("differ", () => {
       testFs._files.set("/source/file.txt", "original content");
       const differ = createToolCallDiffer();
 
-      differ.setTempFileBefore("call-1", {
-        initialContentPath: "/source/file.txt",
-      });
+      differ.setTempFileBefore("call-1", "/source/file.txt");
 
       assert.strictEqual(
         testFs._files.get("/tmp/lasso-test-uuid.txt"),
@@ -46,6 +44,15 @@ describe("differ", () => {
       );
     });
 
+    it("uses an empty snapshot when the source file does not exist", () => {
+      const differ = createToolCallDiffer();
+
+      differ.setTempFileBefore("call-1", "/missing/file.txt");
+
+      assert.strictEqual(testFs._files.has("/tmp/lasso-test-uuid.txt"), false);
+      differ.cleanupTempFileBefore("call-1");
+    });
+
     it("diffs and cleans up a successful tool call", async () => {
       testFs._files.set("/test/file.txt", "original content");
       const commands: string[] = [];
@@ -55,9 +62,7 @@ describe("differ", () => {
         commands,
       );
 
-      differ.setTempFileBefore("call-1", {
-        initialContentPath: "/test/file.txt",
-      });
+      differ.setTempFileBefore("call-1", "/test/file.txt");
       await differ.diffAndCleanup("call-1", "/test/file.txt");
 
       assert.strictEqual(
@@ -73,8 +78,8 @@ describe("differ", () => {
 
     it("cleans up all outstanding tool call snapshots", () => {
       const differ = createToolCallDiffer();
-      differ.setTempFileBefore("call-1");
-      differ.setTempFileBefore("call-2");
+      differ.setTempFileBefore("call-1", "/a");
+      differ.setTempFileBefore("call-2", "/b");
 
       differ.cleanupAllTempFileBefore();
 

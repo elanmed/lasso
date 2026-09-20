@@ -7,7 +7,6 @@ import {
   execPromise,
   getMessageFromError,
   getTempFileName,
-  type GetTempFileNameArgs,
   normalizeLine,
   shouldDisableColor,
   tryCatchAsync,
@@ -79,8 +78,8 @@ export async function printGitDiff({
 export function createToolCallDiffer() {
   const toolCallIdToTempFileBefore = new Map<string, string>();
 
-  function setTempFileBefore(toolCallId: string, args?: GetTempFileNameArgs) {
-    const tempFileBefore = getTempFileName(args);
+  function setTempFileBefore(toolCallId: string, path: string) {
+    const tempFileBefore = getTempFileName({ initialContentPath: path });
     toolCallIdToTempFileBefore.set(toolCallId, tempFileBefore);
   }
 
