@@ -225,6 +225,11 @@ export function initStateFromConfig({
   actions.setAsciiOnly(
     localConfig.asciiOnly ?? globalConfig.asciiOnly ?? defaultConfig.asciiOnly,
   );
+  actions.setCompactWithStructuredOutput(
+    localConfig.compactWithStructuredOutput ??
+      globalConfig.compactWithStructuredOutput ??
+      defaultConfig.compactWithStructuredOutput,
+  );
   actions.setMessageQueueDelimiter(
     localConfig.messageQueueDelimiter ??
       globalConfig.messageQueueDelimiter ??

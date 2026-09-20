@@ -136,6 +136,7 @@ const createInitialState = (): State => ({
     suppressBatUnavailableWarning: defaultConfig.suppressBatUnavailableWarning,
     asciiOnly: defaultConfig.asciiOnly,
     hideStartupDurations: defaultConfig.hideStartupDurations,
+    compactWithStructuredOutput: defaultConfig.compactWithStructuredOutput,
     messageQueueDelimiter: defaultConfig.messageQueueDelimiter,
     reasoning: defaultConfig.reasoning,
     mcps: structuredClone(defaultConfig.mcps),
@@ -634,6 +635,16 @@ export const actions = {
       "set-hide-startup-durations",
       String(before),
       String(hideStartupDurations),
+    );
+  },
+
+  setCompactWithStructuredOutput(compactWithStructuredOutput: boolean) {
+    const before = state.config.compactWithStructuredOutput;
+    state.config.compactWithStructuredOutput = compactWithStructuredOutput;
+    logStateChange(
+      "set-compact-with-structured-output",
+      String(before),
+      String(compactWithStructuredOutput),
     );
   },
 

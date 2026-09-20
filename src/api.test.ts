@@ -686,7 +686,7 @@ Lasso reserves 50% of the context window for compacted summaries and 30% for sys
       assert(capturedMessage !== undefined);
       assert.strictEqual(
         capturedMessage.content,
-        `Compact the following conversation:\n[{"role":"user","content":"hi"}]\n`,
+        `Compact the following conversation. Output a maximum of 90000 characters:\n[{"role":"user","content":"hi"}]\n`,
       );
       assert.deepStrictEqual(getState().app.conversation, {
         summaries: [
@@ -843,7 +843,7 @@ Lasso reserves 50% of the context window for compacted summaries and 30% for sys
       assert.deepStrictEqual(compactionCall, [
         {
           role: "user",
-          content: `Compact the following conversation:\n[{"role":"user","content":"old"}]\n`,
+          content: `Compact the following conversation. Output a maximum of 90000 characters:\n[{"role":"user","content":"old"}]\n`,
         },
       ]);
       assert.strictEqual(calls.length, 2);
@@ -980,7 +980,7 @@ Lasso reserves 50% of the context window for compacted summaries and 30% for sys
       assert(capturedMessage !== undefined);
       assert.strictEqual(
         capturedMessage.content,
-        `Compact the following conversation:\n[{"role":"user","content":"not yet summarized"}]\n`,
+        `Compact the following conversation. Output a maximum of 90000 characters:\n[{"role":"user","content":"not yet summarized"}]\n`,
       );
     });
 
@@ -1142,7 +1142,7 @@ Lasso reserves 50% of the context window for compacted summaries and 30% for sys
       assert(capturedMessage !== undefined);
       assert.strictEqual(
         capturedMessage.content,
-        `Merge the following two summaries into one:\n["summary 1","summary 2"]\n`,
+        `Merge the following two summaries into one. Output a maximum of 30000 characters:\n["summary 1","summary 2"]\n`,
       );
       assert.deepStrictEqual(result, [
         { compacted: "merged summary", compactedAt: 42, tokens: 25_000 },

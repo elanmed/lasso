@@ -549,6 +549,12 @@ hello`,
     assert.strictEqual(getState().config.asciiOnly, true);
   });
 
+  it("set-compact-with-structured-output", () => {
+    assert.strictEqual(getState().config.compactWithStructuredOutput, true);
+    actions.setCompactWithStructuredOutput(false);
+    assert.strictEqual(getState().config.compactWithStructuredOutput, false);
+  });
+
   it("set-reasoning", () => {
     assert.strictEqual(getState().config.reasoning, "provider-default");
     actions.setReasoning("high");

@@ -204,7 +204,7 @@ export async function getMergedSummaries() {
   const targetTokens = Math.floor(maxRatioPerSummary * contextWindow);
   const targetCharLen = approxTokensToCharLen(targetTokens);
 
-  const compactPrompt = `Merge the following two summaries into one:
+  const compactPrompt = `Merge the following two summaries into one. Output a maximum of ${String(targetCharLen)} characters:
 ${JSON.stringify([firstSummary, secondSummary].map(({ compacted }) => compacted))}
 `;
 
@@ -265,7 +265,7 @@ export async function getConversationSummary() {
   const targetTokens = Math.floor(compactTargetRatio * contextWindow);
   const targetCharLen = approxTokensToCharLen(targetTokens);
 
-  const compactPrompt = `Compact the following conversation:
+  const compactPrompt = `Compact the following conversation. Output a maximum of ${String(targetCharLen)} characters:
 ${JSON.stringify(getState().app.conversation.messages.slice(getState().app.conversation.summaries.length))}
 `;
 

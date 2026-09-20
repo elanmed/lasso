@@ -6,7 +6,7 @@ _A minimal agent harness to rein in your llm_
 
 ## Features
 
-- **Minimal**: ~5,100 lines of source code, ~10,300 lines of tests
+- **Minimal**: ~5,200 lines of source code, ~10,300 lines of tests
   - Responses are piped through `bat` to render markdown
   - Multi-line input is supported by spawning an editor of your choice
   - Messages can be queued by typing a custom delimiter (default `l---`) in the spawned editor
@@ -77,6 +77,7 @@ If `model`, `baseURL`, or `LASSO_API_KEY` are missing at startup, lasso warns an
 | `suppressBatUnavailableWarning` | `boolean`                                                                            | `false`                  | Suppress the startup warning when `bat` is missing                         |
 | `hideStartupDurations`          | `boolean`                                                                            | `false`                  | Hide durations of startup operations from the screen                       |
 | `asciiOnly`                     | `boolean`                                                                            | `false`                  | Replace unicode characters with ASCII equivalents                          |
+| `compactWithStructuredOutput`   | `boolean`                                                                            | `true`                   | Compact conversations with structured output when possible                 |
 | `messageQueueDelimiter`         | `string`                                                                             | `l---\\n`                | Delimiter line separating multiple messages in the editor input            |
 | `reasoning`                     | `"provider-default" \| "none" \| "minimal" \| "low" \|"medium" \| "high" \| "xhigh"` | `provider-default`       | Reasoning effort (`provider-default` uses the provider's default behavior) |
 | `mcps`                          | `object`                                                                             | `{}`                     | Named MCP servers                                                          |
@@ -86,7 +87,7 @@ If `model`, `baseURL`, or `LASSO_API_KEY` are missing at startup, lasso warns an
 
 The local config either overwrites or extends the global config per option:
 
-- **Overwrite**: scalar options (`model`, `sdkProvider`, `gateway`, `baseURL`, `loadingStateFrameDuration`, `promptPrefix`, `suppressBatUnavailableWarning`, `asciiOnly`, `hideStartupDurations`, `messageQueueDelimiter`, `reasoning`, `usageLimit`) and arrays (`customSlashCommandDirs`, `customSkillDirs`, `subagentModels`, `loadingStateFrames`) replace the global value wholesale — arrays are not merged.
+- **Overwrite**: scalar options (`model`, `sdkProvider`, `gateway`, `baseURL`, `loadingStateFrameDuration`, `promptPrefix`, `suppressBatUnavailableWarning`, `asciiOnly`, `hideStartupDurations`, `messageQueueDelimiter`, `reasoning`, `usageLimit`, `compactWithStructuredOutput`) and arrays (`customSlashCommandDirs`, `customSkillDirs`, `subagentModels`, `loadingStateFrames`) replace the global value wholesale — arrays are not merged.
 - **Extend**: `keymaps`, `mcps`, `pricingPerModel`, and `contextWindowPerModel` merge entry-by-entry with the default and global entries, the local entry winning on conflicts. `pricingPerModel` and `contextWindowPerModel` entries set to `null` cancel the global or default entry (see the relevant sections below).
 
 ### MCP Servers
