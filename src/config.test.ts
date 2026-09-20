@@ -1039,7 +1039,6 @@ describe("config", () => {
       });
 
       it("warns when baseURL is provided with anthropic sdkProvider", async () => {
-        mock.method(process.hrtime, "bigint", () => BigInt(0));
         testFs._files.set(
           getGlobalConfigPath(),
           JSON.stringify({
@@ -1061,7 +1060,6 @@ describe("config", () => {
       });
 
       it("hides startup durations when hideStartupDurations is true", async () => {
-        mock.method(process.hrtime, "bigint", () => BigInt(0));
         testFs._files.set(
           getGlobalConfigPath(),
           JSON.stringify({
