@@ -161,9 +161,9 @@ describe("state", () => {
   });
 
   it("set-subagent-models", () => {
-    assert.deepStrictEqual(getState().app.subagentModels, []);
+    assert.deepStrictEqual(getState().config.subagentModels, []);
     actions.setSubagentModels(["fast-model", "strong-model"]);
-    assert.deepStrictEqual(getState().app.subagentModels, [
+    assert.deepStrictEqual(getState().config.subagentModels, [
       "fast-model",
       "strong-model",
     ]);

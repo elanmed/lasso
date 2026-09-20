@@ -374,7 +374,7 @@ export const createSubagentTaskSchema = z.object({
     .min(1)
     .describe("The model the subagent runs on")
     .superRefine((value, ctx) => {
-      const configuredModels = getState().app.subagentModels;
+      const configuredModels = getState().config.subagentModels;
       const allowedModels = (() => {
         if (configuredModels.length > 0) return configuredModels;
         return [getState().config.model];
@@ -596,5 +596,3 @@ export const harnessTools = {
 export function getTools() {
   return { ...harnessTools, ...getState().mcp.tools };
 }
-
-export type HarnessToolName = keyof typeof harnessTools;

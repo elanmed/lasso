@@ -13,7 +13,6 @@ import {
   decimalToPercent,
 } from "./utils.ts";
 import { createToolCallDiffer } from "./differ.ts";
-
 import { getUnicodeChar } from "./text.ts";
 import { print, startLoadingState, stopLoadingState } from "./print.ts";
 import {
@@ -161,14 +160,6 @@ export async function getMergedSummaries() {
   if (summaries.length < maxNumberSummaries) {
     return getState().app.conversation.summaries;
   }
-
-  // [S1(@1), S2(@2), S3(@3), S4(@4), S5(@5)]
-
-  // [S1(@1), S2(@2), S3(@3), S4(@4), S5(@5), S6(@6)]
-  // [M2(@6), S3(@3), S4(@4), S5(@5), S6(@6)]
-
-  // [M2(@6), S3(@3), S4(@4), S5(@5), S6(@6)]
-  // [M2(@6), S3(@3), S4(@4), S5(@5), S6(@6), S7(@7)]
 
   let smallestSecondSummaryIdx = -1;
   let smallestFirstSummaryIdx = -1;

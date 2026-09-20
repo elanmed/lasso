@@ -155,8 +155,6 @@ export function createQueue() {
   return { enqueue, flush };
 }
 
-export const MIN_WIDTH_HARD = 10;
-
 export function getMaxColLength() {
   return Math.max(processDeps.stdout.getColumns() ?? 80, 1);
 }

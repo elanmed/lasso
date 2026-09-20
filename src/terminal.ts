@@ -31,10 +31,6 @@ export async function warnOnMissingBat() {
   }
 }
 
-export async function checkDelta(): Promise<boolean> {
-  return (await tryCatchAsync(execPromise("delta --version"))).ok;
-}
-
 export function baseBatFlags() {
   return shouldDisableColor()
     ? ["--style=plain", "--color=never"]

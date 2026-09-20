@@ -5,7 +5,7 @@ import { mock } from "node:test";
 import assert from "node:assert";
 import readline from "node:readline/promises";
 import { stdin } from "node:process";
-import { z } from "zod/v4";
+import { z } from "zod";
 import type { ModelMessage, ToolSet } from "ai";
 import type { MCPClient } from "@ai-sdk/mcp";
 import { aiDeps, fsDeps, processDeps } from "./deps.ts";

@@ -245,8 +245,7 @@ export const actions = {
   },
 
   setSubagentModels(subagentModels: string[]) {
-    const before = state.app.subagentModels;
-    state.app.subagentModels = subagentModels;
+    const before = state.config.subagentModels;
     state.config.subagentModels = subagentModels;
     logStateChange(
       "set-subagent-models",

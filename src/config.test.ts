@@ -87,7 +87,6 @@ describe("config", () => {
       await initState();
 
       assert.deepStrictEqual(getState().config.subagentModels, ["local-model"]);
-      assert.deepStrictEqual(getState().app.subagentModels, ["local-model"]);
     });
 
     it("uses its sdkProvider over the global config, default config", async () => {
