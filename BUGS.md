@@ -2,30 +2,13 @@
 
 Each item includes the file(s) involved and the reasoning behind the finding.
 
----
-
-### 3. `mcp.ts` — one failing MCP client's `.tools()` call wipes out and leaks _all_ MCP clients
-
-```ts
-const toolSetsResult = await tryCatchAsync(toolSetsPromise); // Promise.all over every client
-if (toolSetsResult.ok) {
-  actions.setMcp(clients, tools);
-} else {
-  actions.setMcp({}, {}); // <-- discards every client, including ones that started fine
-}
-```
-
-`getMcpClients()` already individually catches client-creation errors, but `Promise.all(...tools())` rejects entirely if _any single_ client's `.tools()` call fails. On that rejection, `actions.setMcp({}, {})` throws away every successfully-created client — and since those clients are no longer referenced from state, `state.mcp.close()` (which iterates `state.mcp.clients`) can never close them: **the underlying connections leak**. No error is printed either (contrast with the client-creation failure path, which does `print.error`). No test covers a `.tools()` failure after successful client creation (see #28).
-
----
-
-### 4. `usage.ts` — usage-log lock is keyed by PID, so parallel subagents in the _same process_ self-block
+### 1. `usage.ts` — usage-log lock is keyed by PID, so parallel subagents in the _same process_ self-block
 
 `createLockUtils`'s `writeLock()` steals the lock from dead processes by checking `process.kill(pid, 0)`. But if two async calls to `syncNewModelUsageForLimitWindow` race **within the same Node process** (e.g. `createSubagentTool` runs tasks in parallel via `Promise.all`, each calling `appendModelUsage`), the second call sees a lock file written by its _own_ process. `process.kill(currentPid, 0)` trivially succeeds (the process is obviously alive), so `writeLock()` returns `false` — the second call believes the lock is legitimately held and gives up after ~250ms, printing "Failed to acquire a lock" and **silently dropping that subagent's usage from `modelUsageForLimitWindow`**, undermining the `usageLimit` dollar-cap feature exactly in the scenario (parallel subagents) the codebase explicitly supports.
 
 ---
 
-### 7. `state.ts` — `app.stdout` / `appendToStdout` only ever retains the last 2 characters
+### 2. `state.ts` — `app.stdout` / `appendToStdout` only ever retains the last 2 characters
 
 ```ts
 appendToStdout(line: string) {
@@ -39,7 +22,7 @@ This is exercised (and locked in) by the test `"reset-stdout"`, which expects `a
 
 ---
 
-### 8. `state.ts` — `resetState()`'s own debug-log entry can never be written
+### 3. `state.ts` — `resetState()`'s own debug-log entry can never be written
 
 ```ts
 resetState() {
@@ -52,7 +35,7 @@ resetState() {
 
 ---
 
-### 9. `usage-format.ts` — `/usage` command silently drops context-window info on narrow terminals
+### 4. `usage-format.ts` — `/usage` command silently drops context-window info on narrow terminals
 
 ```ts
 export function getPrettyContextWindowUsage() {
@@ -65,7 +48,7 @@ This width-based suppression makes sense for the compact fenced status line (`ge
 
 ---
 
-### 10. `usage-format.ts` — inconsistent token totals between the priced and unpriced branches of `getPrettyTokenUsage`
+### 5. `usage-format.ts` — inconsistent token totals between the priced and unpriced branches of `getPrettyTokenUsage`
 
 ```ts
 if (pricing === undefined) {
@@ -77,7 +60,7 @@ When no pricing is configured for the model, the displayed total omits `cacheRea
 
 ---
 
-### 11. `usage-format.ts` — `getUsageMoneyForModel` doesn't clamp negative "uncached" token counts
+### 6. `usage-format.ts` — `getUsageMoneyForModel` doesn't clamp negative "uncached" token counts
 
 ```ts
 const uncachedInputTokens =
@@ -90,7 +73,7 @@ If `cacheReadTokens + cacheWriteTokens` ever exceeds `inputTokens` (e.g. if the 
 
 ---
 
-### 12. `config.ts` — keymap duplicate detection doesn't use the same equality as `isSameKey`
+### 7. `config.ts` — keymap duplicate detection doesn't use the same equality as `isSameKey`
 
 ```ts
 const hashableKeymaps = Object.entries(defaultedKeymaps).map(
@@ -102,19 +85,19 @@ Duplicate keymaps are detected purely via `JSON.stringify` equality of the raw `
 
 ---
 
-### 13. `config.ts` — global/local config files are read twice per startup
+### 8. `config.ts` — global/local config files are read twice per startup
 
 `initStateFirst()` calls `readConfigFile(getGlobalConfigPath())` and `readConfigFile(getLocalConfigPath())` just to extract `hideStartupDurations`, and then `initStateFromConfig()` calls `readConfigFile()` on the exact same two paths again to extract everything else. This is redundant I/O on every startup and every `/reload`, and — however unlikely — opens a window where the two reads could observe different file contents if the config file changes between calls.
 
 ---
 
-### 14. `context.ts` — root-level `AGENTS.md` can be double-surfaced as both context and a skill
+### 9. `context.ts` — root-level `AGENTS.md` can be double-surfaced as both context and a skill
 
 `getContextEntries()` always injects `<cwd>/AGENTS.md` (and the global one) directly into the system prompt. Separately, `getSkills()` walks `git ls-files **/AGENTS.md` and turns _every_ matched `AGENTS.md` (including one at the repo root) into a lazily-loadable "skill" named `__lasso-context-for-<dir>`. There's no exclusion of the root file already covered by `getContextEntries()`, so the same file's content can be both always-injected _and_ separately offered as a discoverable skill.
 
 ---
 
-### 16. `input.ts` — `/clear` silently wipes session cost tracking as a side effect
+### 10. `input.ts` — `/clear` silently wipes session cost tracking as a side effect
 
 ```ts
 export function clearCommand() {
@@ -125,11 +108,11 @@ export function clearCommand() {
 }
 ```
 
-`/clear` is documented (and named) as clearing the _conversation_, but it also resets `app.modelUsageForSession` to `{}`, permanently zeroing the "$ in session" figure shown elsewhere (e.g. in the fence status line). `modelUsageForLimitWindow` (which drives the actual dollar usage-limit enforcement) is left untouched, so the two usage trackers now diverge for no clearly-stated reason — a user could `/clear` several times and have the displayed session cost keep resetting to near-zero even though real spend continues to accumulate against their limit. Not covered by a test with nonzero prior usage (see also #33's sibling observation).
+`/clear` is documented (and named) as clearing the _conversation_, but it also resets `app.modelUsageForSession` to `{}`, permanently zeroing the "$ in session" figure shown elsewhere (e.g. in the fence status line). `modelUsageForLimitWindow` (which drives the actual dollar usage-limit enforcement) is left untouched, so the two usage trackers now diverge for no clearly-stated reason — a user could `/clear` several times and have the displayed session cost keep resetting to near-zero even though real spend continues to accumulate against their limit. Not covered by a test with nonzero prior usage (see also its sibling observation about /clear's side effects on usage tracking).
 
 ---
 
-### 18. `usage.ts` — `getSystemInstructionsTokensApprox` name doesn't reflect that it includes tool definitions
+### 11. `usage.ts` — `getSystemInstructionsTokensApprox` name doesn't reflect that it includes tool definitions
 
 ```ts
 export function getSystemInstructionsTokensApprox() {
@@ -145,7 +128,7 @@ export function getSystemInstructionsTokensApprox() {
 
 ---
 
-### 19. `api.ts` — `getConversationSummary`'s `messages.slice(summaries.length)` relies on an undocumented invariant
+### 12. `api.ts` — `getConversationSummary`'s `messages.slice(summaries.length)` relies on an undocumented invariant
 
 ```ts
 const compactPrompt = `Compact the following conversation:
@@ -157,7 +140,7 @@ This only produces the correct "messages not yet summarized" slice because, afte
 
 ---
 
-### 20. `utils.ts` — `getTempFileName` silently produces a non-existent file when `initialContentPath` can't be read
+### 13. `utils.ts` — `getTempFileName` silently produces a non-existent file when `initialContentPath` can't be read
 
 ```ts
 if (initialContentPath !== undefined) {
@@ -175,11 +158,11 @@ if (initialContentPath !== undefined) {
 }
 ```
 
-The "no args" branch is careful to always create an (empty) file at the returned path, but the "`initialContentPath` given but unreadable" branch is not — it leaves the returned path pointing at nothing. This inconsistency is the root cause of bug #1.
+The "no args" branch is careful to always create an (empty) file at the returned path, but the "`initialContentPath` given but unreadable" branch is not — it leaves the returned path pointing at nothing. This inconsistency is the root cause of the new-file crash.
 
 ---
 
-### 26. `utils.ts` — `safeStringify` can return `undefined` instead of a string
+### 14. `utils.ts` — `safeStringify` can return `undefined` instead of a string
 
 ```ts
 export function safeStringify(val: unknown) {
@@ -194,25 +177,13 @@ export function safeStringify(val: unknown) {
 
 ---
 
-### 28. Missing test coverage: MCP `.tools()` failing after successful client creation (see bug #3)
-
-`mcp.test.ts` only tests `createMCPClient` itself rejecting. There is no test where clients are created successfully but the subsequent `client.tools()` call fails, which is exactly the scenario that triggers the leak/wipe-all-clients bug described in #3.
-
----
-
-### 29. Missing test coverage: diffing a bash-tool-created _new_ file (see bug #1)
-
-Every `api.test.ts` / `tools.test.ts` test that exercises `create-update-delete` bash tool tracking pre-populates the "before" file in `testFs` (e.g. `testFs._files.set("/test/file.txt", "original content")`). There is no test where the target file does not exist before the tool call (the "creating a brand-new file" case), which is precisely the path that crashes per bug #1.
-
----
-
-### 31. `input.ts` — "Executing slash command" info line only fires for custom commands, not built-ins
+### 15. `input.ts` — "Executing slash command" info line only fires for custom commands, not built-ins
 
 `resolveCustomSlashCommand` prints `print.infoSubtle(\`Executing slash command: ${command}\`)`before returning, but`resolveBuiltinSlashCommand` never prints anything equivalent for built-ins (`/edit`, `/clear`, etc.). This asymmetry in user-facing feedback looks unintentional rather than a deliberate design choice.
 
 ---
 
-### 33. `api.ts` — `resolveApiCall`'s abort-path token bookkeeping is dead work
+### 16. `api.ts` — `resolveApiCall`'s abort-path token bookkeeping is dead work
 
 ```ts
 actions.appendToConversation(interruptMessage);
@@ -226,7 +197,7 @@ actions.setPromptTokensDirty(true);
 
 ---
 
-### 34. `text.ts` — `truncate()` always appends an ellipsis for multi-line input, even when the first line already fits
+### 17. `text.ts` — `truncate()` always appends an ellipsis for multi-line input, even when the first line already fits
 
 ```ts
 if (newlineIdx !== -1) {
@@ -238,7 +209,7 @@ For any string containing a newline, an ellipsis is unconditionally appended to 
 
 ---
 
-### 35. `log.ts` — `prependToChatHistory` checks file existence to decide whether to create the _directory_
+### 18. `log.ts` — `prependToChatHistory` checks file existence to decide whether to create the _directory_
 
 ```ts
 export function prependToChatHistory(content: string, role: "user" | "assistant") {
@@ -249,9 +220,3 @@ export function prependToChatHistory(content: string, role: "user" | "assistant"
 ```
 
 The condition tests whether the _file_ (`path`) exists, then (if not) creates the _directory_ (`dirname(path)`). This only works because, in practice, the file never exists without its directory also existing. The check reads as though it's testing directory existence and is easy to misread; it would be clearer (and more robust to being called with a fresh/unusual path) to check `existsSync(dirname(path))` directly.
-
----
-
-## Summary of most impactful items
-
-The most actionable/impactful bugs to fix first are **#1** (crash on new-file creation via bash tool), **#3** (MCP client leak + total tool loss on one server hiccup), **#4** (usage-limit tracking silently dropped for parallel subagents), **#5** (wrong `/commands` output), and **#6** (misleading "read-only" subagent capability claim).
