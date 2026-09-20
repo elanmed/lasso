@@ -1,5 +1,20 @@
 # Changelog
 
+## v0.7.0 - 2026-09-20
+
+- Add structured output for compaction, enforcing summary length via the output schema
+- Count harness and mcp tools tokens in compaction token accounting
+- Preserve older compact summaries, merging the two oldest when the summary list exceeds five entries
+- Add the `/summaries` command to view conversation summaries in a pager via `LASSO_PAGER_SUMMARIES`
+- Update the system prompt to bash based tool instructions, including reading images as base64 and temp files counting as reads
+- Replace file write tools with the native `bash` tool using discriminated read and create-update-delete inputs, snapshotting files per tool call for diffs
+- Add the `hideStartupDurations` config option, defaulting to false, and log startup durations in nanoseconds
+- Warn when system instructions exceed their dedicated context window share, and remove the `compactTriggerRatio` and `compactTargetRatio` config options in favor of fixed constants
+- Release the usage log lock on early exits, report `createLock` success on the final retry, and print an error when an MCP client fails to start
+- Remove windows build targets from `compile.sh`
+- Remove the compaction over-target warning since structured output guarantees compaction succeeds
+- Fix temp file initialization for tool call diffing
+
 ## v0.6.0 - 2026-09-16
 
 - Add the Google SDK provider via `@ai-sdk/google`
