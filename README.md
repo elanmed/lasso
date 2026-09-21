@@ -541,4 +541,3 @@ vim.g.clipboard = {
 - [ ] Move all config validation into blockOnMissingConfig, don't throw at start
   - [ ] Separate error message for no config (`initlocal` and `initglobal`)
 - [ ] Reference history file for compacted summaries
-- [ ] Refactor to an option type
