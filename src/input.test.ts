@@ -2015,13 +2015,11 @@ log content
       assert.strictEqual(spawned[0], "nano /tmp/lasso-test-uuid.txt");
       assert.strictEqual(
         testFs._files.get("/tmp/lasso-test-uuid.txt"),
-        `/a.ts
-
+        `━━ /a.ts ━━
 +a
 
 
-/b.ts
-
+━━ /b.ts ━━
 +b
 `,
       );

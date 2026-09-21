@@ -1725,7 +1725,7 @@ hello
 - Set \`sdkProvider\` in your config file (\`openai-compatible\` or \`anthropic\`)
 - Set \`model\` in your config file
 
-Run /initlocal or /initglobal to generate a sample config in \`./.lasso\` or \`~/.local/config/lasso\` respectively.
+Run /initlocal or /initglobal to generate a sample config in \`./.lasso\` or \`~/.config/lasso\` respectively.
 `,
       );
     });

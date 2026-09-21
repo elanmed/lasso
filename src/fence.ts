@@ -10,7 +10,7 @@ interface FencePrintOpts {
   color?: Color;
 }
 
-function wrapInFence(text: string) {
+export function wrapInFence(text: string) {
   const fence = getUnicodeChar("━").repeat(2);
   return `${fence} ${text} ${fence}`;
 }

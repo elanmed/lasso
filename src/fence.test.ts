@@ -13,6 +13,7 @@ describe("fence", () => {
   beforeEach(() => {
     setupTestContext();
   });
+
   describe("fencePrint", () => {
     beforeEach(() => {
       setupTestContext();

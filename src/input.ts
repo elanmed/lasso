@@ -21,7 +21,7 @@ import {
 } from "./utils.ts";
 import { truncate } from "./text.ts";
 import { print, printNewline, printSessionStartDate } from "./print.ts";
-import { fencePrint } from "./fence.ts";
+import { fencePrint, wrapInFence } from "./fence.ts";
 import { getPrettyTokenUsage, getPrettyUsage } from "./usage-format.ts";
 import { getApproxPromptTokens } from "./usage.ts";
 import { actions, getState } from "./state.ts";
@@ -1317,8 +1317,7 @@ export async function pageLastDiff() {
   }
   const initialContentStr = toolEditDiffs
     .map(
-      ({ diffStdout, fileName }) => `${fileName}
-
+      ({ diffStdout, fileName }) => `${wrapInFence(fileName)}
 ${diffStdout}
 `,
     )
