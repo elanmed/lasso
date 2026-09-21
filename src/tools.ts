@@ -29,10 +29,11 @@ export function toolPrint(label: string, detail: string) {
   const labelLen = label.length + colonSpaceLen;
   const indent = " ".repeat(7).concat(getUnicodeChar("┊"));
   const lines = [];
+  const maxLines = 4;
 
   let detailIdx = 0;
   let strIdx = 0;
-  while (lines.length <= 3 && detailIdx < detailArr.length) {
+  while (lines.length < maxLines && detailIdx < detailArr.length) {
     const detailLine = detailArr[detailIdx];
     assert(detailLine !== undefined);
 
@@ -57,7 +58,7 @@ export function toolPrint(label: string, detail: string) {
     lines.push(prefix.concat(splitStr));
   }
 
-  const overflow = lines.length === 4 && detailIdx < detailArr.length;
+  const overflow = lines.length === maxLines && detailIdx < detailArr.length;
 
   if (overflow) {
     const lastLine = lines.pop();
