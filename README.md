@@ -27,7 +27,7 @@ _A minimal agent harness to rein in your llm_
 Install the latest release on macOS or Linux:
 
 ```sh
-curl --proto '=https' --tlsv1.2 -fsSL https://raw.githubusercontent.com/elanmed/lasso/master/scripts/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/elanmed/lasso/master/scripts/install.sh | bash
 ```
 
 > You should always read a script before curling and executing it!
