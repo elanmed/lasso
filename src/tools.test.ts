@@ -69,16 +69,17 @@ describe("tools", () => {
       );
     });
 
-    it("caps the total output at four lines", () => {
+    it("caps the total output at five lines", () => {
       mock.method(processDeps.stdout, "getColumns", () => 30);
       const getCaptured = mockStdout();
-      toolPrint("bash", "a\nb\nc\nd\ne");
+      toolPrint("bash", "a\nb\nc\nd\ne\nf");
       assert.strictEqual(
         stripAnsi(getCaptured()),
         `bash: a
        ┊b
        ┊c
-       ┊d…
+       ┊d
+       ┊e…
 `,
       );
     });
@@ -117,27 +118,29 @@ describe("tools", () => {
       );
     });
 
-    it("stops mid-wrap once the four line cap is reached, ending with an ellipsis", () => {
+    it("stops mid-wrap once the five line cap is reached, ending with an ellipsis", () => {
       mock.method(processDeps.stdout, "getColumns", () => 30);
       const getCaptured = mockStdout();
-      toolPrint("bash", "abcdefghij\nkl\nm\nn\no");
+      toolPrint("bash", "abcdefghij\nkl\nm\nn\no\np");
       assert.strictEqual(
         stripAnsi(getCaptured()),
         `bash: abcdefghij
        ┊kl
        ┊m
-       ┊n…
+       ┊n
+       ┊o…
 `,
       );
     });
 
-    it("replaces the last char of a full fourth line with an ellipsis", () => {
+    it("replaces the last char of a full fifth line with an ellipsis", () => {
       mock.method(processDeps.stdout, "getColumns", () => 30);
       const getCaptured = mockStdout();
-      toolPrint("bash", "a".repeat(91));
+      toolPrint("bash", "a".repeat(113));
       assert.strictEqual(
         stripAnsi(getCaptured()),
         `bash: ${"a".repeat(24)}
+       ┊${"a".repeat(22)}
        ┊${"a".repeat(22)}
        ┊${"a".repeat(22)}
        ┊${"a".repeat(21)}…
@@ -177,6 +180,7 @@ describe("tools", () => {
         `bash: a
        ┊b
        ┊c
+       ┊d
        ┊…
 `,
       );

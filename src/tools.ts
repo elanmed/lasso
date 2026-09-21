@@ -29,7 +29,7 @@ export function toolPrint(label: string, detail: string) {
   const labelLen = label.length + colonSpaceLen;
   const indent = " ".repeat(7).concat(getUnicodeChar("┊"));
   const lines = [];
-  const maxLines = 4;
+  const maxLines = 5;
 
   let detailIdx = 0;
   let strIdx = 0;
