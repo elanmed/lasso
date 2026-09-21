@@ -157,7 +157,8 @@ describe("differ", () => {
 
       assert.strictEqual(
         stripAnsi(getCaptured()),
-        `━━ File change: /test/file.txt ━━
+        `
+━━ File change: /test/file.txt ━━
 +added line
 
 `,

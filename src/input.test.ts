@@ -2016,6 +2016,7 @@ log content
       assert.strictEqual(
         testFs._files.get("/tmp/lasso-test-uuid.txt"),
         `/a.ts
+
 +a
 
 
