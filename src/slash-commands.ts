@@ -25,6 +25,7 @@ export const builtinSlashCommands = [
   "initglobal",
   "lastresponse",
   "lastmessage",
+  "lastdiff",
   "messages",
   "summaries",
 ] as const;

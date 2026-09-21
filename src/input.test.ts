@@ -1554,6 +1554,7 @@ Available commands:
 - /initglobal
 - /lastresponse
 - /lastmessage
+- /lastdiff
 - /messages
 - /summaries
 - /test/.lasso/commands/custom.md
@@ -1699,6 +1700,21 @@ log content
         content: [{ type: "text", text: "first" }],
       });
       harness.emitKey({ name: "u", ctrl: true });
+      await harness.flush();
+      assert.deepStrictEqual(spawned, ["nano /tmp/lasso-test-uuid.txt"]);
+      assert.deepStrictEqual(prompts, [true]);
+    });
+
+    it("opens diffs from the last turn in a pager when lastdiff keymap matches and redraws the pending question prompt", async () => {
+      const prompts: boolean[] = [];
+      mock.method(harness.rl, "prompt", (arg: boolean) => {
+        prompts.push(arg);
+      });
+      const { spawned } = mockPagerSpawn();
+      testProcessEnv._set("LASSO_PAGER_LAST_DIFF", "nano __FILE__");
+      actions.setKeymap("lastdiff", { name: "d", ctrl: true });
+      actions.appendToolEditDiff({ fileName: "/a.ts", diffStdout: "+a\n" });
+      harness.emitKey({ name: "d", ctrl: true });
       await harness.flush();
       assert.deepStrictEqual(spawned, ["nano /tmp/lasso-test-uuid.txt"]);
       assert.deepStrictEqual(prompts, [true]);
@@ -1989,6 +2005,39 @@ log content
       assert.strictEqual(spawned[0], "nano /tmp/lasso-test-uuid.txt");
     });
 
+    it("handles /lastdiff command by opening the last turn diffs in a pager", async () => {
+      const { spawned } = mockPagerSpawn();
+      testProcessEnv._set("LASSO_PAGER_LAST_DIFF", "nano __FILE__");
+      actions.appendToolEditDiff({ fileName: "/a.ts", diffStdout: "+a\n" });
+      actions.appendToolEditDiff({ fileName: "/b.ts", diffStdout: "+b\n" });
+      const result = await resolveSlashCommand("/lastdiff");
+      assert.strictEqual(result, null);
+      assert.strictEqual(spawned[0], "nano /tmp/lasso-test-uuid.txt");
+      assert.strictEqual(
+        testFs._files.get("/tmp/lasso-test-uuid.txt"),
+        `/a.ts
++a
+
+
+/b.ts
+
++b
+`,
+      );
+    });
+
+    it("prints no diffs message when a /lastdiff command has no diffs", async () => {
+      actions.resetStdout();
+      const { spawned } = mockPagerSpawn();
+      const result = await resolveSlashCommand("/lastdiff");
+      assert.strictEqual(result, null);
+      assert.strictEqual(
+        stripAnsi(getCapturedStdout()),
+        "No diffs from the last turn\n",
+      );
+      assert.deepStrictEqual(spawned, []);
+    });
+
     it("handles /messages command by opening the message list in a pager", async () => {
       const { spawned } = mockPagerSpawn();
       testProcessEnv._set("LASSO_PAGER_MESSAGES", "nano __FILE__");
@@ -2070,6 +2119,7 @@ Available commands:
 - /initglobal
 - /lastresponse
 - /lastmessage
+- /lastdiff
 - /messages
 - /summaries
 `,
@@ -2614,6 +2664,7 @@ Invalid command: /unknown, valid commands:
 - /initglobal
 - /lastresponse
 - /lastmessage
+- /lastdiff
 - /messages
 - /summaries
 - /test-cwd/.lasso/commands/known.md

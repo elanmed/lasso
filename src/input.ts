@@ -251,6 +251,11 @@ export function initKeypress() {
             redrawPendingQuestion();
             return;
           }
+          case "lastdiff": {
+            await pageLastDiff();
+            redrawPendingQuestion();
+            return;
+          }
           case "messages": {
             await pageMessages();
             redrawPendingQuestion();
@@ -647,6 +652,10 @@ async function resolveBuiltinSlashCommand(
     }
     case "lastmessage": {
       await pageLastMessage();
+      return { handled: true, inputFromCommand: null };
+    }
+    case "lastdiff": {
+      await pageLastDiff();
       return { handled: true, inputFromCommand: null };
     }
     case "messages": {
@@ -1296,6 +1305,29 @@ ${stringify(getState().app.conversation.summaries.toReversed())}`;
     initialContentStr: normalizeLine(initialContentStr),
     pagerEnvKey: "LASSO_PAGER_SUMMARIES",
     contentType: "markdown",
+  });
+}
+
+export async function pageLastDiff() {
+  const { toolEditDiffs } = getState().app;
+
+  if (toolEditDiffs.length === 0) {
+    print.doing("No diffs from the last turn");
+    return;
+  }
+  const initialContentStr = toolEditDiffs
+    .map(
+      ({ diffStdout, fileName }) => `${fileName}
+
+${diffStdout}
+`,
+    )
+    .join("\n");
+
+  await openWithPager({
+    initialContentStr: normalizeLine(initialContentStr),
+    pagerEnvKey: "LASSO_PAGER_LAST_DIFF",
+    contentType: "diff",
   });
 }
 
