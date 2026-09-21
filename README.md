@@ -299,6 +299,7 @@ usageLimit:
 | `LASSO_PAGER_HISTORY`      | Pager command with `__FILE__` placeholder for viewing chat history (fallback: `$LASSO_PAGER`)                          |
 | `LASSO_PAGER_MESSAGES`     | Pager command with `__FILE__` placeholder for viewing the message list (fallback: `$LASSO_PAGER`)                      |
 | `LASSO_PAGER_LAST_MESSAGE` | Pager command with `__FILE__` placeholder for viewing the last user message (fallback: `$LASSO_PAGER`)                 |
+| `LASSO_PAGER_LAST_DIFF`   | Pager command with `__FILE__` placeholder for viewing the last turn's tool edit diffs (fallback: `$LASSO_PAGER`)        |
 | `LASSO_PAGER_CONFIG`       | Pager command with `__FILE__` placeholder for viewing config (fallback: `$LASSO_PAGER`)                                |
 | `LASSO_PAGER_CONTEXT`      | Pager command with `__FILE__` placeholder for viewing context (fallback: `$LASSO_PAGER`)                               |
 | `LASSO_PAGER_COMMANDS`     | Pager command with `__FILE__` placeholder for viewing custom commands (fallback: `$LASSO_PAGER`)                       |
@@ -320,6 +321,7 @@ Slash commands are triggered with `/command` at the prompt.
 | `/history`      | View chat history in a pager                                               |
 | `/lastresponse` | View the latest assistant response in a pager                              |
 | `/lastmessage`  | View the last user message in a pager                                      |
+| `/lastdiff`     | View the last turn's tool edit diffs in a pager                         |
 | `/messages`     | View the full message list in a pager                                      |
 | `/paste`        | Call the `paste` keymap                                                    |
 | `/model`        | Switch the model at runtime (e.g. `/model kimi-k2.6`)                      |
