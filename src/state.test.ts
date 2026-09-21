@@ -129,12 +129,10 @@ describe("state", () => {
         content: "demo content",
       },
     ]);
-    actions.setToolEditDiffs([
-      {
-        fileName: "/test/file.ts",
-        diffStdout: "diff output",
-      },
-    ]);
+    actions.appendToolEditDiff({
+      fileName: "/test/file.ts",
+      diffStdout: "diff output",
+    });
     actions.setModel("claude-haiku-4-5");
     actions.setSubagentModels(["fast-model"]);
     actions.setSdkProvider("anthropic");
@@ -455,24 +453,34 @@ hello`,
     assert.equal(getState().app.skillsStr, "- skill: desc");
   });
 
-  describe("set-tool-edit-diffs", () => {
-    it("sets the tool edit diffs array", () => {
+  describe("append-tool-edit-diff", () => {
+    it("appends a single diff", () => {
       assert.deepStrictEqual(getState().app.toolEditDiffs, []);
-      actions.setToolEditDiffs([
-        { fileName: "/test/file.ts", diffStdout: "diff output" },
-      ]);
+      actions.appendToolEditDiff({
+        fileName: "/test/file.ts",
+        diffStdout: "diff output",
+      });
       assert.deepStrictEqual(getState().app.toolEditDiffs, [
-        { fileName: "/test/file.ts", diffStdout: "diff output" },
+        {
+          fileName: "/test/file.ts",
+          diffStdout: "diff output",
+        },
       ]);
     });
 
-    it("replaces existing tool edit diffs", () => {
-      actions.setToolEditDiffs([{ fileName: "/a.ts", diffStdout: "a diff" }]);
-      actions.setToolEditDiffs([{ fileName: "/b.ts", diffStdout: "b diff" }]);
+    it("appends multiple diffs in order", () => {
+      actions.appendToolEditDiff({ fileName: "/a.ts", diffStdout: "a diff" });
+      actions.appendToolEditDiff({ fileName: "/b.ts", diffStdout: "b diff" });
       assert.deepStrictEqual(getState().app.toolEditDiffs, [
+        { fileName: "/a.ts", diffStdout: "a diff" },
         { fileName: "/b.ts", diffStdout: "b diff" },
       ]);
     });
+  });
+
+  it("reset-tool-edit-diffs", () => {
+    actions.resetToolEditDiffs();
+    assert.deepStrictEqual(getState().app.toolEditDiffs, []);
   });
 
   describe("set-context-entries", () => {

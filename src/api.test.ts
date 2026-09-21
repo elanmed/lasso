@@ -101,6 +101,16 @@ response text
       assert.strictEqual(captured[1]?.["reasoning"], "high");
     });
 
+    it("resets the tool edit diffs at the start of the api call", async () => {
+      actions.appendToolEditDiff({
+        fileName: "/old.ts",
+        diffStdout: "old diff",
+      });
+      mockGenerateText(() => Promise.resolve(makeGenerateTextResult()));
+      await resolveApiCall("hello");
+      assert.deepStrictEqual(getState().app.toolEditDiffs, []);
+    });
+
     it("prints the [mcp] prefix on mcp tool call start", async () => {
       const getCaptured = mockStdout();
       actions.setMcp({}, { mcp_tool: makeMcpTool() });

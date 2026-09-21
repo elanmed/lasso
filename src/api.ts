@@ -63,6 +63,7 @@ export async function resolveApiCall(userInput: string) {
 
   actions.appendToConversation(userMessage);
 
+  actions.resetToolEditDiffs();
   actions.setApiStartTime();
   actions.setApiStreamAbortController(new AbortController());
   startLoadingState();

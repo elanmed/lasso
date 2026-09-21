@@ -13,6 +13,7 @@ import {
   tryCatch,
   tryCatchAsync,
 } from "./utils.ts";
+import { actions } from "./state.ts";
 
 export async function execGitDiff(opts: {
   tempFileBeforePath: string;
@@ -50,37 +51,6 @@ export async function execGitDiff(opts: {
   });
 }
 
-export async function printGitDiff({
-  path,
-  tempFileAfterPath,
-  tempFileBeforePath,
-}: {
-  tempFileBeforePath: string;
-  tempFileAfterPath: string;
-  path: string;
-}) {
-  const diffResult = await tryCatchAsync(
-    execGitDiff({
-      tempFileBeforePath,
-      tempFileAfterPath,
-    }),
-  );
-
-  if (!diffResult.ok) {
-    print.error(
-      `An error occurred when getting the diff for ${path}: ${getMessageFromError(diffResult.error)}`,
-    );
-    return;
-  }
-
-  if (diffResult.value.stdout.length > 0) {
-    printNewline();
-    fencePrint(`File change: ${path}`);
-    print(normalizeLine(diffResult.value.stdout));
-    printNewline();
-  }
-}
-
 export function createToolCallDiffer() {
   const toolCallIdToTempFileBefore = new Map<string, string>();
 
@@ -97,8 +67,8 @@ export function createToolCallDiffer() {
   }
 
   async function diffAndCleanup(toolCallId: string, path: string) {
-    const tempFileAfter = getTempFileName({ initialContentPath: path });
-    if (tempFileAfter === null) {
+    const tempFileAfterPath = getTempFileName({ initialContentPath: path });
+    if (tempFileAfterPath === null) {
       if (toolCallIdToTempFileBefore.has(toolCallId)) {
         cleanupTempFileBefore(toolCallId);
       }
@@ -106,17 +76,38 @@ export function createToolCallDiffer() {
     }
 
     if (!toolCallIdToTempFileBefore.has(toolCallId)) {
-      tryCatch(() => fsDeps.unlinkSync(tempFileAfter));
+      tryCatch(() => fsDeps.unlinkSync(tempFileAfterPath));
       return;
     }
 
-    const tempFileBefore = getTempFileBefore(toolCallId);
-    await printGitDiff({
-      tempFileBeforePath: tempFileBefore,
-      tempFileAfterPath: tempFileAfter,
-      path,
-    });
-    tryCatch(() => fsDeps.unlinkSync(tempFileAfter));
+    const tempFileBeforePath = getTempFileBefore(toolCallId);
+
+    const diffResult = await tryCatchAsync(
+      execGitDiff({
+        tempFileBeforePath,
+        tempFileAfterPath,
+      }),
+    );
+
+    if (!diffResult.ok) {
+      print.error(
+        `An error occurred when getting the diff for ${path}: ${getMessageFromError(diffResult.error)}`,
+      );
+      return;
+    }
+
+    if (diffResult.value.stdout.length > 0) {
+      actions.appendToolEditDiff({
+        fileName: path,
+        diffStdout: diffResult.value.stdout,
+      });
+      printNewline();
+      fencePrint(`File change: ${path}`);
+      print(normalizeLine(diffResult.value.stdout));
+      printNewline();
+    }
+
+    tryCatch(() => fsDeps.unlinkSync(tempFileAfterPath));
     cleanupTempFileBefore(toolCallId);
   }
 

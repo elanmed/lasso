@@ -489,10 +489,18 @@ export const actions = {
     );
   },
 
-  setToolEditDiffs(diffs: ToolEditDiff[]) {
-    const before = state.app.toolEditDiffs;
-    state.app.toolEditDiffs = diffs;
-    logStateChange("set-tool-edit-diffs", stringify(before), stringify(diffs));
+  appendToolEditDiff(diff: ToolEditDiff) {
+    state.app.toolEditDiffs.push(diff);
+    logStateChange(
+      "append-tool-edit-diff",
+      String(state.app.toolEditDiffs.length - 1),
+      String(state.app.toolEditDiffs.length),
+    );
+  },
+
+  resetToolEditDiffs() {
+    state.app.toolEditDiffs = [];
+    logStateChange("reset-tool-edit-diffs", "", "");
   },
 
   setModelUsageForLimitWindow(
