@@ -1,5 +1,18 @@
 # Changelog
 
+## v0.8.0 - 2026-09-24
+
+- Add the `/lastdiff` command and keymap to page tool-edit diffs from the last turn
+- Track tool-edit diffs across tool calls, and include file names and execution details in the output
+- Raise the tool print limit to five lines and improve truncation
+- Use `LASSO_PAGER` for all pager views, and rename `hideStartupDurations` to `suppressStartupDurations`
+- Recheck prompt overhead after config changes
+- Improve resumed transcript and command context trimming
+- Include newly created files in diffs
+- Format conversation summaries for paging
+- Use a regular object schema for bash tool input
+- Cache `bat` availability and streamline pager calls
+
 ## v0.7.1 - 2026-09-20
 
 - Serialize same-process usage log updates with a queue per lock path so parallel tool calls no longer drop usage records
