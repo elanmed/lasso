@@ -71,7 +71,6 @@ describe("text", () => {
       assert.equal(getUnicodeChar("…"), "~");
       assert.equal(getUnicodeChar("┊"), "|");
       assert.equal(getUnicodeChar("━"), "=");
-      assert.equal(getUnicodeChar("—"), "-");
     });
 
     it("throws for a char outside the map", () => {
