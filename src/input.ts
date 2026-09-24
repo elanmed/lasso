@@ -1286,9 +1286,26 @@ ${stringify(getState().app.conversation.messages.toReversed())}`;
 }
 
 export async function pageSummaries() {
+  if (getState().app.conversation.summaries.length === 0) {
+    print.doing("No conversation summaries");
+    return;
+  }
+
+  const summariesStr = getState()
+    .app.conversation.summaries.map(
+      (
+        summary,
+        idx,
+      ) => `## Summary ${String(idx + 1)} (${summary.tokens.toLocaleString()} tokens, compacted at ${String(summary.compactedAt)})
+
+${summary.compacted}`,
+    )
+    .toReversed()
+    .join("\n\n---\n\n");
+
   const initialContentStr = `# [lasso] Conversation summaries
 
-${stringify(getState().app.conversation.summaries.toReversed())}`;
+${summariesStr}`;
 
   await openWithPager({
     initialContentStr: normalizeLine(initialContentStr),

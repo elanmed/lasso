@@ -1316,20 +1316,27 @@ latest question
         stripAnsi(testFs._files.get("/tmp/lasso-test-uuid.txt") ?? ""),
         `# [lasso] Conversation summaries
 
-[
-  {
-    "compacted": "latest summary",
-    "compactedAt": 200,
-    "tokens": 20
-  },
-  {
-    "compacted": "older summary",
-    "compactedAt": 100,
-    "tokens": 10
-  }
-]
+## Summary 2 (20 tokens, compacted at 200)
+
+latest summary
+
+---
+
+## Summary 1 (10 tokens, compacted at 100)
+
+older summary
 `,
       );
+    });
+
+    it("prints a message when there are no conversation summaries", async () => {
+      await pageSummaries();
+
+      assert.strictEqual(
+        stripAnsi(getCapturedStdout()),
+        "No conversation summaries\n",
+      );
+      assert.strictEqual(testFs._files.has("/tmp/lasso-test-uuid.txt"), false);
     });
   });
 
