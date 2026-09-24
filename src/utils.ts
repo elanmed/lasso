@@ -90,6 +90,14 @@ export function getTempFileName(args?: GetTempFileNameArgs) {
   );
 
   if (initialContentPath !== undefined) {
+    const existsResult = tryCatch(() => fsDeps.existsSync(initialContentPath));
+    if (!existsResult.ok) return null;
+    if (!existsResult.value) {
+      const writeResult = tryCatch(() => fsDeps.writeFileSync(tempFile, ""));
+      if (!writeResult.ok) return null;
+      return tempFile;
+    }
+
     const readResult = tryCatch(() =>
       fsDeps.readFileSync(initialContentPath).toString(),
     );

@@ -304,9 +304,21 @@ describe("utils", () => {
       );
     });
 
-    it("returns null when read fails", () => {
+    it("creates an empty temp file when the initial content path does not exist", () => {
       const result = getTempFileName({
         initialContentPath: "/missing/file.txt",
+      });
+      assert.equal(result, "/tmp/lasso-test-uuid.txt");
+      assert.equal(testFs._files.get("/tmp/lasso-test-uuid.txt"), "");
+    });
+
+    it("returns null when reading an existing path fails", () => {
+      testFs._files.set("/source/file.txt", "initial content");
+      mock.method(fsDeps, "readFileSync", () => {
+        throw new Error("EIO");
+      });
+      const result = getTempFileName({
+        initialContentPath: "/source/file.txt",
       });
       assert.equal(result, null);
       assert.equal(testFs._files.has("/tmp/lasso-test-uuid.txt"), false);
