@@ -537,25 +537,25 @@ describe("config", () => {
       assert.strictEqual(getState().config.promptPrefix, "🤖 ");
     });
 
-    it("uses its hideStartupDurations over the global config, default config", async () => {
+    it("uses its suppressStartupDurations over the global config, default config", async () => {
       testFs._files.set(
         getGlobalConfigPath(),
         JSON.stringify({
           ...testConfig,
-          hideStartupDurations: true,
+          suppressStartupDurations: true,
         }),
       );
       testFs._files.set(
         getLocalConfigPath(),
         JSON.stringify({
           ...testConfig,
-          hideStartupDurations: false,
+          suppressStartupDurations: false,
         }),
       );
 
       await initState();
 
-      assert.strictEqual(getState().config.hideStartupDurations, false);
+      assert.strictEqual(getState().config.suppressStartupDurations, false);
     });
 
     it("uses its suppressBatUnavailableWarning over the global config, default config", async () => {
@@ -917,12 +917,12 @@ describe("config", () => {
       await assert.rejects(initState(), /Invalid input: expected boolean/);
     });
 
-    it("rejects non-boolean hideStartupDurations", async () => {
+    it("rejects non-boolean suppressStartupDurations", async () => {
       testFs._files.set(
         getGlobalConfigPath(),
         JSON.stringify({
           ...testConfig,
-          hideStartupDurations: "yes",
+          suppressStartupDurations: "yes",
         }),
       );
 
@@ -1061,13 +1061,13 @@ describe("config", () => {
         );
       });
 
-      it("hides startup durations when hideStartupDurations is true", async () => {
+      it("hides startup durations when suppressStartupDurations is true", async () => {
         testFs._files.set(
           getGlobalConfigPath(),
           JSON.stringify({
             model: testConfig.model,
             sdkProvider: "anthropic",
-            hideStartupDurations: true,
+            suppressStartupDurations: true,
             baseURL: "https://api.example.com",
           }),
         );
@@ -1190,18 +1190,18 @@ describe("config", () => {
         assert.strictEqual(getState().config.promptPrefix, "❯ ");
       });
 
-      it("uses its hideStartupDurations over the default config", async () => {
+      it("uses its suppressStartupDurations over the default config", async () => {
         testFs._files.set(
           getGlobalConfigPath(),
           JSON.stringify({
             ...testConfig,
-            hideStartupDurations: true,
+            suppressStartupDurations: true,
           }),
         );
 
         await initState();
 
-        assert.strictEqual(getState().config.hideStartupDurations, true);
+        assert.strictEqual(getState().config.suppressStartupDurations, true);
       });
 
       it("uses its suppressBatUnavailableWarning over the default config", async () => {

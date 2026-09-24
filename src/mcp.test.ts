@@ -75,7 +75,7 @@ describe("mcp", () => {
     );
   });
 
-  it("prints the mcp server start duration when hideStartupDurations is false", async () => {
+  it("prints the mcp server start duration when suppressStartupDurations is false", async () => {
     mockMcpClients(makeFakeMcpClient());
     actions.setMcps({
       first: { type: "http", url: "not-a-url" },
@@ -90,9 +90,9 @@ describe("mcp", () => {
     );
   });
 
-  it("hides the mcp server start duration when hideStartupDurations is true", async () => {
+  it("hides the mcp server start duration when suppressStartupDurations is true", async () => {
     mockMcpClients(makeFakeMcpClient());
-    actions.setHideStartupDurations(true);
+    actions.setSuppressStartupDurations(true);
     actions.setMcps({
       first: { type: "http", url: "not-a-url" },
     });

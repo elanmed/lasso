@@ -251,7 +251,7 @@ export async function initStateFromFs({
   logDuration = false,
 }: { logDuration?: boolean } = {}) {
   const shouldLogDuration =
-    logDuration && !getState().config.hideStartupDurations;
+    logDuration && !getState().config.suppressStartupDurations;
   const performanceLogger = createPerformanceLogger({
     logDuration: shouldLogDuration,
   });
@@ -296,10 +296,10 @@ export function initStateFirst() {
   const localConfig = parseConfigFileStr(localConfigStr, getLocalConfigPath());
   actions.setLocalConfigStr(localConfigStr);
 
-  actions.setHideStartupDurations(
-    localConfig.hideStartupDurations ??
-      globalConfig.hideStartupDurations ??
-      defaultConfig.hideStartupDurations,
+  actions.setSuppressStartupDurations(
+    localConfig.suppressStartupDurations ??
+      globalConfig.suppressStartupDurations ??
+      defaultConfig.suppressStartupDurations,
   );
 
   return { globalConfig, localConfig };

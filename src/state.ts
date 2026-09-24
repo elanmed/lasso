@@ -142,7 +142,7 @@ const createInitialState = (): State => ({
     promptPrefix: defaultConfig.promptPrefix,
     suppressBatUnavailableWarning: defaultConfig.suppressBatUnavailableWarning,
     asciiOnly: defaultConfig.asciiOnly,
-    hideStartupDurations: defaultConfig.hideStartupDurations,
+    suppressStartupDurations: defaultConfig.suppressStartupDurations,
     compactWithStructuredOutput: defaultConfig.compactWithStructuredOutput,
     messageQueueDelimiter: defaultConfig.messageQueueDelimiter,
     reasoning: defaultConfig.reasoning,
@@ -654,13 +654,13 @@ export const actions = {
     logStateChange("set-ascii-only", String(before), String(asciiOnly));
   },
 
-  setHideStartupDurations(hideStartupDurations: boolean) {
-    const before = state.config.hideStartupDurations;
-    state.config.hideStartupDurations = hideStartupDurations;
+  setSuppressStartupDurations(suppressStartupDurations: boolean) {
+    const before = state.config.suppressStartupDurations;
+    state.config.suppressStartupDurations = suppressStartupDurations;
     logStateChange(
       "set-hide-startup-durations",
       String(before),
-      String(hideStartupDurations),
+      String(suppressStartupDurations),
     );
   },
 

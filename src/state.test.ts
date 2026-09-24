@@ -83,7 +83,7 @@ describe("state", () => {
       suppressBatUnavailableWarning:
         defaultConfig.suppressBatUnavailableWarning,
       asciiOnly: defaultConfig.asciiOnly,
-      hideStartupDurations: defaultConfig.hideStartupDurations,
+      suppressStartupDurations: defaultConfig.suppressStartupDurations,
       compactWithStructuredOutput: defaultConfig.compactWithStructuredOutput,
       messageQueueDelimiter: defaultConfig.messageQueueDelimiter,
       reasoning: defaultConfig.reasoning,

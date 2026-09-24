@@ -75,7 +75,7 @@ If `model`, `baseURL`, or `LASSO_API_KEY` are missing at startup, lasso warns an
 | `loadingStateFrameDuration`     | `number`                                                                             | `80`                     | Spinner frame interval in ms                                               |
 | `promptPrefix`                  | `string`                                                                             | `"> "`                   | Prompt prefix string                                                       |
 | `suppressBatUnavailableWarning` | `boolean`                                                                            | `false`                  | Suppress the startup warning when `bat` is missing                         |
-| `hideStartupDurations`          | `boolean`                                                                            | `false`                  | Hide durations of startup operations from the screen                       |
+| `suppressStartupDurations`      | `boolean`                                                                            | `false`                  | Hide durations of startup operations from the screen                       |
 | `asciiOnly`                     | `boolean`                                                                            | `false`                  | Replace unicode characters with ASCII equivalents                          |
 | `compactWithStructuredOutput`   | `boolean`                                                                            | `true`                   | Compact conversations with structured output when possible                 |
 | `messageQueueDelimiter`         | `string`                                                                             | `l---\\n`                | Delimiter line separating multiple messages in the editor input            |
@@ -87,7 +87,7 @@ If `model`, `baseURL`, or `LASSO_API_KEY` are missing at startup, lasso warns an
 
 The local config either overwrites or extends the global config per option:
 
-- **Overwrite**: scalar options (`model`, `sdkProvider`, `gateway`, `baseURL`, `loadingStateFrameDuration`, `promptPrefix`, `suppressBatUnavailableWarning`, `asciiOnly`, `hideStartupDurations`, `messageQueueDelimiter`, `reasoning`, `usageLimit`, `compactWithStructuredOutput`) and arrays (`customSlashCommandDirs`, `customSkillDirs`, `subagentModels`, `loadingStateFrames`) replace the global value wholesale — arrays are not merged.
+- **Overwrite**: scalar options (`model`, `sdkProvider`, `gateway`, `baseURL`, `loadingStateFrameDuration`, `promptPrefix`, `suppressBatUnavailableWarning`, `asciiOnly`, `suppressStartupDurations`, `messageQueueDelimiter`, `reasoning`, `usageLimit`, `compactWithStructuredOutput`) and arrays (`customSlashCommandDirs`, `customSkillDirs`, `subagentModels`, `loadingStateFrames`) replace the global value wholesale — arrays are not merged.
 - **Extend**: `keymaps`, `mcps`, `pricingPerModel`, and `contextWindowPerModel` merge entry-by-entry with the default and global entries, the local entry winning on conflicts. `pricingPerModel` and `contextWindowPerModel` entries set to `null` cancel the global or default entry (see the relevant sections below).
 
 ### MCP Servers
@@ -291,14 +291,14 @@ usageLimit:
 
 ## Environment Variables
 
-| Variable                   | Description                                                                                                            |
-| -------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| `LASSO_API_KEY`            | API key for the configured provider (required)                                                                         |
-| `LASSO_EDIT`               | Editor command with `__FILE__` placeholder for multi-line input (fallback: `$EDITOR __FILE__`)                         |
-| `LASSO_PAGER`              | Pager command for all pager views with a `__FILE__` placeholder (fallback: `$PAGER`, then `bat`, then `less`)           |
-| `LASSO_CLIPBOARD_PASTE`    | Command used by `/paste` to read the clipboard (default: `pbpaste` on macOS, `xclip -selection clipboard -o` on Linux) |
-| `NO_COLOR`                 | Disables all ansi color output (color is also disabled automatically when stdout is not a tty)                         |
-| `DEBUG`                    | Set to `1` to enable debug logging                                                                                     |
+| Variable                | Description                                                                                                            |
+| ----------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `LASSO_API_KEY`         | API key for the configured provider (required)                                                                         |
+| `LASSO_EDIT`            | Editor command with `__FILE__` placeholder for multi-line input (fallback: `$EDITOR __FILE__`)                         |
+| `LASSO_PAGER`           | Pager command for all pager views with a `__FILE__` placeholder (fallback: `$PAGER`, then `bat`, then `less`)          |
+| `LASSO_CLIPBOARD_PASTE` | Command used by `/paste` to read the clipboard (default: `pbpaste` on macOS, `xclip -selection clipboard -o` on Linux) |
+| `NO_COLOR`              | Disables all ansi color output (color is also disabled automatically when stdout is not a tty)                         |
+| `DEBUG`                 | Set to `1` to enable debug logging                                                                                     |
 
 ## Builtin Slash Commands
 
@@ -312,7 +312,7 @@ Slash commands are triggered with `/command` at the prompt.
 | `/history`      | View chat history in a pager                                               |
 | `/lastresponse` | View the latest assistant response in a pager                              |
 | `/lastmessage`  | View the last user message in a pager                                      |
-| `/lastdiff`     | View the last turn's tool edit diffs in a pager                         |
+| `/lastdiff`     | View the last turn's tool edit diffs in a pager                            |
 | `/messages`     | View the full message list in a pager                                      |
 | `/paste`        | Call the `paste` keymap                                                    |
 | `/model`        | Switch the model at runtime (e.g. `/model kimi-k2.6`)                      |
