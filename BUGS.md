@@ -1,24 +1,3 @@
-### 1. New file creation never produces a diff, but the system prompt tells the model the CLI always shows one (severity: high)
-
-`src/differ.ts`, `setTempFileBefore`:
-
-```ts
-function setTempFileBefore(toolCallId: string, path: string) {
-  const tempFileBefore = getTempFileName({ initialContentPath: path });
-  if (tempFileBefore === null) return;   // silently no-ops if file doesn't exist yet
-  ...
-```
-
-When a bash command creates a brand-new file, `getTempFileName({initialContentPath: path})` fails to read the (not-yet-existing) file and returns `null`, so no "before" snapshot is ever registered. Later, `diffAndCleanup` sees `!toolCallIdToTempFileBefore.has(toolCallId)` and just deletes the "after" snapshot without printing anything (confirmed by `differ.test.ts`, "skipped the diff for a newly-created file with no before snapshot").
-
-Meanwhile `src/prompts.ts` (`BASE_SYSTEM_PROMPT`) tells the model:
-
-> "After a successful file-modifying tool ... the CLI auto-outputs a diff. Do NOT repeat the code, file contents, or a diff of the change in your response"
-
-So for the extremely common case of the agent creating a new file, the model is instructed not to show its work, and the CLI shows nothing either — the user has no way to see what was written without manually opening the file.
-
----
-
 ### 2. Unquoted temp-file paths in generated shell command strings (severity: medium, platform-dependent)
 
 Several places build a shell command as a plain string and interpolate a temp-file path **without quoting**, then execute it via a shell (`childProcess.exec`/`spawnSync(..., {shell:true})`):
@@ -44,34 +23,6 @@ return pagerEnvValue.replace("__FILE__", tempFile);
 ```
 
 All temp files come from `os.tmpdir()` + `getTempFileName`, so if the OS temp directory (or, on Windows, a username) contains a space or shell-special character, these commands will word-split incorrectly and fail. Some sibling code paths in the same files (the `PAGER` fallback, the default `bat`/`less` invocations) **do** quote the path — the inconsistency itself is also worth noting, since it suggests the omission elsewhere wasn't intentional.
-
----
-
-### 3. Usage-limit tracking can silently drop data under filesystem/lock contention (severity: low-medium)
-
-`src/usage.ts`, `syncNewModelUsageForLimitWindow` / `syncInitialModelUsageForLimitWindow`:
-
-```ts
-const created = await lockUtils.createLock();
-if (!created) {
-  return print.warning(`Failed to acquire a lock for ${getUsageLogLockPath()}`);
-}
-```
-
-and similarly, if `mkdirSync` for the usage-log directory fails, the function warns and returns without updating in-memory state. In both cases the current API call's token usage is simply **not counted** toward the configured `usageLimit`. Since the entire point of `usageLimit` is to stop the user from overspending, silently dropping usage records on transient FS/lock issues (however rare) undermines the guarantee with no retry and no persistent record that anything was missed.
-
----
-
-### 5. `resume()` and custom-slash-command context both bake unintended trailing whitespace into model input
-
-- `src/input.ts`, `resume`:
-
-```ts
-return `Continue the conversation recorded in the transcript below. Respond to this message with "Ready to continue chatting."
-  Transcript:
-  ${readResult.value}
-      `;
-```
 
 ---
 
