@@ -974,10 +974,11 @@ l---
 
       setModelCommand("/model new-model");
 
-      assert.ok(
+      assert.strictEqual(
         stripAnsi(getCapturedStdout()).includes(
           "The current set of context, skills, and tools is 50% of the 100,000 token context window!",
         ),
+        true,
       );
     });
   });
@@ -2411,10 +2412,11 @@ commands diff
       const result = await resolveSlashCommand("/reload");
 
       assert.strictEqual(result, null);
-      assert.ok(
+      assert.strictEqual(
         stripAnsi(getCapturedStdout()).startsWith(
-          "No diff from reload\nThe current set of context, skills, and tools is 50% of the 100,000 token context window!",
+          "No diff from reload\nThe current set of context, skills, and tools is 51.09% of the 100,000 token context window!",
         ),
+        true,
       );
     });
 
@@ -2467,10 +2469,11 @@ Custom slash commands:
 commands diff
 `,
       );
-      assert.ok(
+      assert.strictEqual(
         stripAnsi(getCapturedStdout()).includes(
-          "The current set of context, skills, and tools is 50% of the 100,000 token context window!",
+          "The current set of context, skills, and tools is 51.09% of the 100,000 token context window!",
         ),
+        true,
       );
     });
 

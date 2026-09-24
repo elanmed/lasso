@@ -10,10 +10,7 @@ import {
   initSigInt,
   resolveUserInput,
 } from "./input.ts";
-import {
-  resolveApiCall,
-  maybeCompact,
-} from "./api.ts";
+import { resolveApiCall, maybeCompact } from "./api.ts";
 import { initLogs } from "./log.ts";
 import { getState } from "./state.ts";
 import { warnOnLargePromptOverhead } from "./usage.ts";
