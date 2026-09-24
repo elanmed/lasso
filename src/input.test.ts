@@ -967,6 +967,19 @@ l---
       setModelCommand("/model\tnew-model");
       assert.strictEqual(getState().config.model, "new-model");
     });
+
+    it("warns when the new model has large prompt overhead", () => {
+      actions.setContextWindowPerModel({ "new-model": 100_000 });
+      mock.method(promptDeps, "getSystemContent", () => "s".repeat(150_000));
+
+      setModelCommand("/model new-model");
+
+      assert.ok(
+        stripAnsi(getCapturedStdout()).includes(
+          "The current set of context, skills, and tools is 50% of the 100,000 token context window!",
+        ),
+      );
+    });
   });
 
   describe("getModel", () => {
@@ -2370,14 +2383,51 @@ commands diff
       );
     });
 
-    it("handles /reload command by opening the config diff in a pager", async () => {
+    it("warns on large prompt overhead when reload produces no diff", async () => {
       testFs._files.set(
         getGlobalConfigPath(),
         JSON.stringify({
           model: "gpt-4",
           baseURL: "https://api.example.com",
+          contextWindowPerModel: { "gpt-4": 100_000 },
         }),
       );
+      mock.method(promptDeps, "getSystemContent", () => "s".repeat(150_000));
+      mockExecCalls([
+        { stdout: "delta 0.18.2" },
+        { stdout: "" },
+        { stdout: "delta 0.18.2" },
+        { stdout: "" },
+        { stdout: "delta 0.18.2" },
+        { stdout: "" },
+        { stdout: "delta 0.18.2" },
+        { stdout: "" },
+        { stdout: "delta 0.18.2" },
+        { stdout: "" },
+        { stdout: "delta 0.18.2" },
+        { stdout: "" },
+      ]);
+
+      const result = await resolveSlashCommand("/reload");
+
+      assert.strictEqual(result, null);
+      assert.ok(
+        stripAnsi(getCapturedStdout()).startsWith(
+          "No diff from reload\nThe current set of context, skills, and tools is 50% of the 100,000 token context window!",
+        ),
+      );
+    });
+
+    it("warns when a reloaded config leaves little room for prompt overhead", async () => {
+      testFs._files.set(
+        getGlobalConfigPath(),
+        JSON.stringify({
+          model: "gpt-4",
+          baseURL: "https://api.example.com",
+          contextWindowPerModel: { "gpt-4": 100_000 },
+        }),
+      );
+      mock.method(promptDeps, "getSystemContent", () => "s".repeat(150_000));
       testProcessEnv._set("LASSO_PAGER", "cat __FILE__");
       mockPagerSpawn();
       mockExecCalls([
@@ -2416,6 +2466,11 @@ skills diff
 Custom slash commands:
 commands diff
 `,
+      );
+      assert.ok(
+        stripAnsi(getCapturedStdout()).includes(
+          "The current set of context, skills, and tools is 50% of the 100,000 token context window!",
+        ),
       );
     });
 

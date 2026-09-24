@@ -23,7 +23,7 @@ import { truncate } from "./text.ts";
 import { print, printNewline, printSessionStartDate } from "./print.ts";
 import { fencePrint, wrapInFence } from "./fence.ts";
 import { getPrettyTokenUsage, getPrettyUsage } from "./usage-format.ts";
-import { getApproxPromptTokens } from "./usage.ts";
+import { getApproxPromptTokens, warnOnLargePromptOverhead } from "./usage.ts";
 import { actions, getState } from "./state.ts";
 import { initStateRepeatable } from "./config.ts";
 import { isSameKey, type Key } from "./config-types.ts";
@@ -863,6 +863,8 @@ export function setModelCommand(rawInput: string) {
   actions.setModel(model);
   print.doing(`Model updated from \`${prevModel}\` to \`${model}\``);
   actions.setPromptTokensDirty(true);
+
+  warnOnLargePromptOverhead();
 }
 
 export function pageContextStr() {
@@ -1124,13 +1126,13 @@ ${diffResult.value.stdout}
   const diff = diffResults.join("");
   if (diff.length === 0) {
     print.info("No diff from reload");
-    return;
+  } else {
+    openWithPager({
+      initialContentStr: normalizeLine(diff),
+      contentType: "diff",
+    });
   }
-
-  openWithPager({
-    initialContentStr: normalizeLine(diff),
-    contentType: "diff",
-  });
+  warnOnLargePromptOverhead();
 }
 
 const getDefaultConfig = (

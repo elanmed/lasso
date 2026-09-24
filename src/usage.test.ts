@@ -9,6 +9,7 @@ import {
   getCurrentPromptTokens,
   getExpiredTime,
   getPromptOverheadTokensApprox,
+  warnOnLargePromptOverhead,
   isUsageLimitDisabled,
   orApproxTokens,
   syncInitialModelUsageForLimitWindow,
@@ -963,5 +964,37 @@ describe("getCurrentPromptTokens", () => {
     actions.setPromptTokens(50);
     actions.setPromptTokensDirty(true);
     assert.strictEqual(getCurrentPromptTokens(), 3);
+  });
+});
+
+describe("warnOnLargePromptOverhead", () => {
+  beforeEach(() => {
+    setupTestContext({ model: "gpt-4" });
+    actions.setContextWindowPerModel({ "gpt-4": 100_000 });
+    actions.setToolsContentStr("");
+  });
+
+  it("returns early without a warning when the model has no context window", () => {
+    actions.setContextWindowPerModel({});
+    const getCaptured = mockStdout();
+    warnOnLargePromptOverhead();
+    assert.strictEqual(stripAnsi(getCaptured()), "");
+  });
+
+  it("does not warn when prompt overhead is below the dedicated share", () => {
+    mock.method(promptDeps, "getSystemContent", () => "s".repeat(30_000));
+    const getCaptured = mockStdout();
+    warnOnLargePromptOverhead();
+    assert.strictEqual(stripAnsi(getCaptured()), "");
+  });
+
+  it("warns when prompt overhead reaches the dedicated share", () => {
+    mock.method(promptDeps, "getSystemContent", () => "s".repeat(150_000));
+    const getCaptured = mockStdout();
+    warnOnLargePromptOverhead();
+    assert.strictEqual(
+      stripAnsi(getCaptured()),
+      `The current set of context, skills, and tools is 50% of the 100,000 token context window!\n\nLasso reserves 50% of the context window for compacted summaries and 30% for prompt overhead. As is, the prompt overhead may breach the llm's context window and cause API calls to be rejected. Consider converting some of your context to skills and minimizing MCP servers.\n`,
+    );
   });
 });

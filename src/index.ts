@@ -13,10 +13,10 @@ import {
 import {
   resolveApiCall,
   maybeCompact,
-  warnOnLargePromptOverhead,
 } from "./api.ts";
 import { initLogs } from "./log.ts";
 import { getState } from "./state.ts";
+import { warnOnLargePromptOverhead } from "./usage.ts";
 
 async function main() {
   await initState();

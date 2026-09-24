@@ -10,7 +10,6 @@ import {
   safeStringify,
   strToApproxTokens,
   approxTokensToCharLen,
-  decimalToPercent,
 } from "./utils.ts";
 import { createToolCallDiffer } from "./differ.ts";
 import { getUnicodeChar } from "./text.ts";
@@ -20,6 +19,8 @@ import {
   getApproxPromptTokens,
   getCurrentPromptTokens,
   getPromptOverheadTokensApprox,
+  compactTriggerRatio,
+  dedicatedSummaryRatio,
   orApproxTokens,
 } from "./usage.ts";
 import {
@@ -37,11 +38,7 @@ import { prependToChatHistory } from "./log.ts";
 import { getLanguageModel } from "./model.ts";
 import { resolveInterruptWithEditor } from "./input.ts";
 
-const compactTriggerRatio = 0.8;
 const compactTargetRatio = 0.3;
-const dedicatedSummaryRatio = 0.5;
-const dedicatedPromptOverheadRatio =
-  compactTriggerRatio - dedicatedSummaryRatio;
 const maxNumberSummaries = 5;
 const maxRatioPerSummary = dedicatedSummaryRatio / maxNumberSummaries;
 
@@ -408,21 +405,4 @@ export async function maybeCompact(userInput: string) {
     .app.conversation.summaries.map(({ tokens }) => tokens)
     .reduce((accum, curr) => accum + curr, 0);
   actions.setPromptTokens(summaryTokens + promptOverheadTokensApprox);
-}
-
-export function warnOnLargePromptOverhead() {
-  const { model } = getState().config;
-  const contextWindow = getState().config.contextWindowPerModel[model];
-  if (contextWindow === undefined) return;
-
-  const promptOverheadTokensApprox = getPromptOverheadTokensApprox();
-
-  const promptOverheadRatio = promptOverheadTokensApprox / contextWindow;
-  if (promptOverheadRatio >= dedicatedPromptOverheadRatio) {
-    print.warning(
-      `The current set of context, skills, and tools is ${decimalToPercent(promptOverheadRatio)} of the ${contextWindow.toLocaleString()} token context window!
-
-Lasso reserves ${decimalToPercent(dedicatedSummaryRatio)} of the context window for compacted summaries and ${decimalToPercent(dedicatedPromptOverheadRatio)} for prompt overhead. As is, the prompt overhead may breach the llm's context window and cause API calls to be rejected. Consider converting some of your context to skills and minimizing MCP servers.`,
-    );
-  }
 }

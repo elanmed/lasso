@@ -10,10 +10,16 @@ import {
   tryCatch,
   getApproxTokensFromMessages,
   strToApproxTokens,
+  decimalToPercent,
 } from "./utils.ts";
 import { fsDeps } from "./deps.ts";
 import { getUsageLogLockPath, getUsageLogPath } from "./paths.ts";
 import { print } from "./print.ts";
+
+export const compactTriggerRatio = 0.8;
+export const dedicatedSummaryRatio = 0.5;
+export const dedicatedPromptOverheadRatio =
+  compactTriggerRatio - dedicatedSummaryRatio;
 
 export const ModelUsageSchema = z.object({
   inputTokens: z.number(),
@@ -200,6 +206,21 @@ export function getPromptOverheadTokensApprox() {
   );
   const toolsTokensApprox = strToApproxTokens(getState().app.toolsContentStr);
   return systemContentTokensApprox + toolsTokensApprox;
+}
+
+export function warnOnLargePromptOverhead() {
+  const { model } = getState().config;
+  const contextWindow = getState().config.contextWindowPerModel[model];
+  if (contextWindow === undefined) return;
+
+  const promptOverheadTokensApprox = getPromptOverheadTokensApprox();
+
+  const promptOverheadRatio = promptOverheadTokensApprox / contextWindow;
+  if (promptOverheadRatio >= dedicatedPromptOverheadRatio) {
+    print.warning(
+      `The current set of context, skills, and tools is ${decimalToPercent(promptOverheadRatio)} of the ${contextWindow.toLocaleString()} token context window!\n\nLasso reserves ${decimalToPercent(dedicatedSummaryRatio)} of the context window for compacted summaries and ${decimalToPercent(dedicatedPromptOverheadRatio)} for prompt overhead. As is, the prompt overhead may breach the llm's context window and cause API calls to be rejected. Consider converting some of your context to skills and minimizing MCP servers.`,
+    );
+  }
 }
 
 export function getApproxPromptTokens() {
