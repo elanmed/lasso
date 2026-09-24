@@ -1,7 +1,9 @@
 import { describe, it, beforeEach, afterEach, mock } from "node:test";
 import assert from "node:assert";
 import { getEventListeners } from "node:events";
+import { z } from "zod";
 import {
+  bashToolInputSchema,
   executeBashTool,
   executeWebFetchHtmlTool,
   executeWebFetchJsonTool,
@@ -31,6 +33,48 @@ describe("tools", () => {
 
   afterEach(() => {
     mock.restoreAll();
+  });
+
+  describe("bashToolInputSchema", () => {
+    it("produces a regular object schema", () => {
+      const jsonSchema = z.toJSONSchema(bashToolInputSchema);
+      assert.strictEqual(jsonSchema.type, "object");
+    });
+
+    it("accepts read commands without a file path", () => {
+      const result = bashToolInputSchema.parse({
+        fileSystemAccessType: "read",
+        command: "cat file.txt",
+      });
+      assert.deepStrictEqual(result, {
+        fileSystemAccessType: "read",
+        command: "cat file.txt",
+      });
+    });
+
+    it("requires a file path for create-update-delete commands", () => {
+      assert.throws(
+        () =>
+          bashToolInputSchema.parse({
+            fileSystemAccessType: "create-update-delete",
+            command: "write file.txt",
+          }),
+        /filePath is required when fileSystemAccessType is create-update-delete/,
+      );
+    });
+
+    it("accepts create-update-delete commands with a file path", () => {
+      const result = bashToolInputSchema.parse({
+        fileSystemAccessType: "create-update-delete",
+        filePath: "file.txt",
+        command: "write file.txt",
+      });
+      assert.deepStrictEqual(result, {
+        fileSystemAccessType: "create-update-delete",
+        filePath: "file.txt",
+        command: "write file.txt",
+      });
+    });
   });
 
   describe("toolPrint", () => {

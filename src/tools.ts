@@ -87,33 +87,48 @@ export interface ToolResult {
   isError?: boolean;
 }
 
-export const bashToolInputSchema = z.discriminatedUnion(
-  "fileSystemAccessType",
-  [
-    z
-      .object({
-        fileSystemAccessType: z.literal("read"),
-        command: z.string().describe("The bash command to run"),
-      })
+export type BashToolInput =
+  | {
+      fileSystemAccessType: "read";
+      command: string;
+    }
+  | {
+      fileSystemAccessType: "create-update-delete";
+      filePath: string;
+      command: string;
+    };
+
+export const bashToolInputSchema = z
+  .object({
+    fileSystemAccessType: z
+      .enum(["read", "create-update-delete"])
       .describe(
-        "Run a bash command that only reads from the file system. Temp files are intermediates: commands writing only to temp files (like from mktemp) also count as read",
+        "Use read for commands that only read project files. Use create-update-delete when the command creates, updates, or deletes a project file.",
       ),
-    z
-      .object({
-        fileSystemAccessType: z.literal("create-update-delete"),
-        filePath: z
-          .string()
-          .describe(
-            "The file path created, updated, or deleted by the command",
-          ),
-        command: z.string().describe("The bash command to run"),
-      })
+    filePath: z
+      .string()
+      .optional()
       .describe(
-        "Run a bash command that creates, updates, or deletes files at filePath. Temp files are intermediates: commands writing only to temp files (like from mktemp) count as read, never create-update-delete",
+        "Target file path; required when fileSystemAccessType is create-update-delete. Temporary files used only as intermediates do not count.",
       ),
-  ],
-);
-export type BashToolInput = z.infer<typeof bashToolInputSchema>;
+    command: z.string().describe("The bash command to run"),
+  })
+  .describe(
+    "Run a bash command. Commands writing only to temporary files count as read; otherwise specify the target file path and use create-update-delete.",
+  )
+  .refine(
+    (input): input is BashToolInput => {
+      if (input.fileSystemAccessType === "create-update-delete") {
+        return input.filePath !== undefined;
+      } else {
+        return true;
+      }
+    },
+    {
+      message:
+        "filePath is required when fileSystemAccessType is create-update-delete",
+    },
+  );
 
 export async function executeBashTool(
   { command: bashCommand }: BashToolInput,
