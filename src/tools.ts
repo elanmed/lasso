@@ -15,10 +15,10 @@ import { getUnicodeChar } from "./text.ts";
 import { createToolCallDiffer } from "./differ.ts";
 import { print, bold } from "./print.ts";
 import { getState } from "./state.ts";
-import { BASE_SYSTEM_PROMPT } from "./prompts.ts";
 import { getLanguageModel } from "./model.ts";
 import { aiDeps } from "./deps.ts";
 import { appendModelUsage } from "./usage.ts";
+import { getSubagentPrompt } from "./prompts.ts";
 
 const userAgent =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
@@ -423,7 +423,7 @@ export async function createSubagentTool(
       })();
 
       const systemContent = [
-        BASE_SYSTEM_PROMPT,
+        getSubagentPrompt(subagentSchema.access),
         getState().app.contextStr,
         getState().app.skillsStr,
         accessSystemContent,

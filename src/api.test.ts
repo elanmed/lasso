@@ -583,7 +583,7 @@ response text
       assert.strictEqual(getPromptOverheadRatio() >= 0.5, true);
       assert.strictEqual(
         stripAnsi(getCaptured()),
-        `The current set of context, skills, and tools is 51.34% of the 100,000 token context window!
+        `The current set of context, skills, and tools is 51.09% of the 100,000 token context window!
 
 Lasso reserves 50% of the context window for compacted summaries and 30% for prompt overhead. As is, the prompt overhead may breach the llm's context window and cause API calls to be rejected. Consider converting some of your context to skills and minimizing MCP servers.\n`,
       );

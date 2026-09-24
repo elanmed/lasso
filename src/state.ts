@@ -14,7 +14,7 @@ import {
   type Reasoning,
 } from "./config-types.ts";
 import { MISSING } from "./missing.ts";
-import { BASE_SYSTEM_PROMPT } from "./prompts.ts";
+import { baseAgentPrompt } from "./prompts.ts";
 import { getPrettyDuration, getShortId, stringify } from "./utils.ts";
 import { debugLog } from "./debug-log.ts";
 import type { ModelUsage } from "./usage.ts";
@@ -191,11 +191,9 @@ export function createPerformanceLogger({
 
 export const promptDeps = {
   getSystemContent: () =>
-    [
-      BASE_SYSTEM_PROMPT,
-      getState().app.contextStr,
-      getState().app.skillsStr,
-    ].join("\n"),
+    [baseAgentPrompt, getState().app.contextStr, getState().app.skillsStr].join(
+      "\n",
+    ),
 };
 
 const logStateChange = (actionType: string, before: string, after: string) => {
