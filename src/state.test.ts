@@ -40,6 +40,7 @@ describe("state", () => {
       editorInputValue: null,
       slashCommands: [],
       stdoutTail: "",
+      batAvailable: false,
       debugLog: false,
       debugLogPath: "",
       chatHistoryPath: "",

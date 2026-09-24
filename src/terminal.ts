@@ -1,7 +1,7 @@
 import childProcess from "node:child_process";
 import { format } from "prettier";
 import { processDeps } from "./deps.ts";
-import { getState } from "./state.ts";
+import { actions, getState } from "./state.ts";
 import {
   execPromise,
   getMessageFromError,
@@ -21,10 +21,11 @@ export async function checkBat(): Promise<boolean> {
 }
 
 export async function warnOnMissingBat() {
+  const batAvailable = await checkBat();
+  actions.setBatAvailable(batAvailable);
   if (getState().config.suppressBatUnavailableWarning) return;
 
-  const isBatAvailable = await checkBat();
-  if (!isBatAvailable) {
+  if (!batAvailable) {
     print.warning(
       `\`bat\` is not available, consider installing it to properly render markdown responses in the terminal. Suppress this warning with \`suppressBatUnavailableWarning: true\` in ${getGlobalConfigPath()} or ${getLocalConfigPath()}`,
     );
@@ -65,9 +66,7 @@ export async function formatMarkdown(content: string): Promise<string> {
 export async function executeBat(content: string) {
   content = await formatMarkdown(content);
   content = normalizeLine(content);
-  const isBatAvailable = await checkBat();
-
-  if (!isBatAvailable) {
+  if (!getState().app.batAvailable) {
     return print(content);
   }
 
@@ -96,17 +95,17 @@ export async function executeBat(content: string) {
   print(batResult.value.stdout);
 }
 
-export async function openWithPager({
+export function openWithPager({
   initialContentStr,
   contentType,
 }: {
   initialContentStr?: string;
   contentType: "diff" | "markdown";
-}) {
+}): void {
   const tempFile = getTempFileName({ initialContentStr });
   if (tempFile === null) return;
 
-  const pagerCommand = await (async () => {
+  const pagerCommand = (() => {
     const lassoDefaultPagerEnvValue = processDeps.env.get("LASSO_PAGER");
     if (isExisty(lassoDefaultPagerEnvValue)) {
       return lassoDefaultPagerEnvValue.replace("__FILE__", tempFile);
@@ -117,8 +116,7 @@ export async function openWithPager({
       return `${defaultPagerEnvValue} "${tempFile}"`;
     }
 
-    const isBatAvailable = await checkBat();
-    if (isBatAvailable) {
+    if (getState().app.batAvailable) {
       const batFlags =
         contentType === "diff"
           ? baseBatFlags()

@@ -58,6 +58,7 @@ interface State {
     editorInputValue: string | null;
     slashCommands: SlashCommand[];
     stdoutTail: string;
+    batAvailable: boolean;
     debugLog: boolean;
     debugLogPath: string;
     chatHistoryPath: string;
@@ -102,6 +103,7 @@ const createInitialState = (): State => ({
     editorInputValue: null,
     slashCommands: [],
     stdoutTail: "",
+    batAvailable: false,
     debugLog: false,
     debugLogPath: "",
     chatHistoryPath: "",
@@ -401,6 +403,12 @@ export const actions = {
       String(before.length),
       String(state.app.stdoutTail.length),
     );
+  },
+
+  setBatAvailable(batAvailable: boolean) {
+    const before = state.app.batAvailable;
+    state.app.batAvailable = batAvailable;
+    logStateChange("set-bat-available", String(before), String(batAvailable));
   },
 
   setDebugLog(debugLog: boolean) {

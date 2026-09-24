@@ -448,14 +448,6 @@ export function mockPagerSpawn() {
   return { spawned };
 }
 
-export function mockBatAvailable(available: boolean) {
-  if (available) {
-    mockExec({ stdout: "" });
-  } else {
-    mockExec({ stdout: "", error: new Error("bat not found") });
-  }
-}
-
 export function batPagerCmd(
   tempFile: string,
   contentType: "diff" | "markdown" = "markdown",

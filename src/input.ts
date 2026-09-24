@@ -199,7 +199,7 @@ export function initKeypress() {
             return;
           }
           case "editpage": {
-            await pageEditStr();
+            pageEditStr();
             redrawPendingQuestion();
             return;
           }
@@ -215,14 +215,14 @@ export function initKeypress() {
             return;
           }
           case "history": {
-            await pageHistory();
+            pageHistory();
             redrawPendingQuestion();
             return;
           }
           case "config": {
             const initialContentStr = getAllPrettyConfig();
 
-            await openWithPager({
+            openWithPager({
               initialContentStr: normalizeLine(initialContentStr),
               contentType: "markdown",
             });
@@ -231,12 +231,12 @@ export function initKeypress() {
             return;
           }
           case "contextpage": {
-            await pageContextStr();
+            pageContextStr();
             redrawPendingQuestion();
             return;
           }
           case "commandspage": {
-            await pageCustomSlashCommandsStr();
+            pageCustomSlashCommandsStr();
             redrawPendingQuestion();
             return;
           }
@@ -246,22 +246,22 @@ export function initKeypress() {
             return;
           }
           case "lastmessage": {
-            await pageLastMessage();
+            pageLastMessage();
             redrawPendingQuestion();
             return;
           }
           case "lastdiff": {
-            await pageLastDiff();
+            pageLastDiff();
             redrawPendingQuestion();
             return;
           }
           case "messages": {
-            await pageMessages();
+            pageMessages();
             redrawPendingQuestion();
             return;
           }
           case "summaries": {
-            await pageSummaries();
+            pageSummaries();
             redrawPendingQuestion();
             return;
           }
@@ -567,7 +567,7 @@ async function resolveBuiltinSlashCommand(
       return { handled: true, inputFromCommand: content };
     }
     case "editpage": {
-      await pageEditStr();
+      pageEditStr();
       return { handled: true, inputFromCommand: null };
     }
     case "paste": {
@@ -582,7 +582,7 @@ async function resolveBuiltinSlashCommand(
       return { handled: true, inputFromCommand: null };
     }
     case "history": {
-      await pageHistory();
+      pageHistory();
       return { handled: true, inputFromCommand: null };
     }
     case "model": {
@@ -598,7 +598,7 @@ async function resolveBuiltinSlashCommand(
       return { handled: true, inputFromCommand: null };
     }
     case "contextpage": {
-      await pageContextStr();
+      pageContextStr();
       return { handled: true, inputFromCommand: null };
     }
     case "commands": {
@@ -606,7 +606,7 @@ async function resolveBuiltinSlashCommand(
       return { handled: true, inputFromCommand: null };
     }
     case "commandspage": {
-      await pageCustomSlashCommandsStr();
+      pageCustomSlashCommandsStr();
 
       return { handled: true, inputFromCommand: null };
     }
@@ -621,7 +621,7 @@ async function resolveBuiltinSlashCommand(
     case "config": {
       const initialContentStr = getAllPrettyConfig();
 
-      await openWithPager({
+      openWithPager({
         initialContentStr: normalizeLine(initialContentStr),
         contentType: "markdown",
       });
@@ -649,19 +649,19 @@ async function resolveBuiltinSlashCommand(
       return { handled: true, inputFromCommand: null };
     }
     case "lastmessage": {
-      await pageLastMessage();
+      pageLastMessage();
       return { handled: true, inputFromCommand: null };
     }
     case "lastdiff": {
-      await pageLastDiff();
+      pageLastDiff();
       return { handled: true, inputFromCommand: null };
     }
     case "messages": {
-      await pageMessages();
+      pageMessages();
       return { handled: true, inputFromCommand: null };
     }
     case "summaries": {
-      await pageSummaries();
+      pageSummaries();
       return { handled: true, inputFromCommand: null };
     }
     default: {
@@ -865,7 +865,7 @@ export function setModelCommand(rawInput: string) {
   actions.setPromptTokensDirty(true);
 }
 
-export async function pageContextStr() {
+export function pageContextStr() {
   if (getState().app.contextEntries.length === 0) {
     print.doing("No available context files");
     return;
@@ -873,13 +873,13 @@ export async function pageContextStr() {
 
   const initialContentStr = getState().app.contextStr;
 
-  await openWithPager({
+  openWithPager({
     initialContentStr: normalizeLine(initialContentStr),
     contentType: "markdown",
   });
 }
 
-export async function pageEditStr() {
+export function pageEditStr() {
   const { editorInputValue } = getState().app;
   if (editorInputValue === null) {
     print.doing("Editor is empty");
@@ -890,7 +890,7 @@ export async function pageEditStr() {
 
 ${editorInputValue}`;
 
-  await openWithPager({
+  openWithPager({
     initialContentStr: normalizeLine(initialContentStr),
     contentType: "markdown",
   });
@@ -902,7 +902,7 @@ export function printAvailableCommandsStr() {
   print(getAvailableCommandsStr());
 }
 
-export async function pageCustomSlashCommandsStr() {
+export function pageCustomSlashCommandsStr() {
   if (getState().app.slashCommands.length === 0) {
     print.doing("No available custom slash commands");
     return;
@@ -910,7 +910,7 @@ export async function pageCustomSlashCommandsStr() {
 
   const initialContentStr = getCustomSlashCommandsStr();
 
-  await openWithPager({
+  openWithPager({
     initialContentStr: normalizeLine(initialContentStr),
     contentType: "markdown",
   });
@@ -1127,7 +1127,7 @@ ${diffResult.value.stdout}
     return;
   }
 
-  await openWithPager({
+  openWithPager({
     initialContentStr: normalizeLine(diff),
     contentType: "diff",
   });
@@ -1198,7 +1198,7 @@ export function initGlobalConfig() {
   print.info(`Created the global config at ${path}`);
 }
 
-export async function pageHistory() {
+export function pageHistory() {
   const path = getState().app.chatHistoryPath;
   const readResult = tryCatch(() => fsDeps.readFileSync(path).toString());
   const historyStr = readResult.ok ? readResult.value : "";
@@ -1212,7 +1212,7 @@ export async function pageHistory() {
 
 ${historyStr}`;
 
-  await openWithPager({
+  openWithPager({
     initialContentStr: normalizeLine(initialContentStr),
     contentType: "markdown",
   });
@@ -1241,13 +1241,13 @@ export async function pageLastResponse() {
 
 ${formattedContentStr}`;
 
-  await openWithPager({
+  openWithPager({
     initialContentStr: normalizeLine(initialContentStr),
     contentType: "markdown",
   });
 }
 
-export async function pageLastMessage() {
+export function pageLastMessage() {
   const { messages } = getState().app.conversation;
   const lastMessage = messages.findLast((message) => message.role === "user");
 
@@ -1268,24 +1268,24 @@ export async function pageLastMessage() {
 
 ${contentStr}`;
 
-  await openWithPager({
+  openWithPager({
     initialContentStr: normalizeLine(initialContentStr),
     contentType: "markdown",
   });
 }
 
-export async function pageMessages() {
+export function pageMessages() {
   const initialContentStr = `# [lasso] Messages
 
 ${stringify(getState().app.conversation.messages.toReversed())}`;
 
-  await openWithPager({
+  openWithPager({
     initialContentStr: normalizeLine(initialContentStr),
     contentType: "markdown",
   });
 }
 
-export async function pageSummaries() {
+export function pageSummaries() {
   if (getState().app.conversation.summaries.length === 0) {
     print.doing("No conversation summaries");
     return;
@@ -1307,13 +1307,13 @@ ${summary.compacted}`,
 
 ${summariesStr}`;
 
-  await openWithPager({
+  openWithPager({
     initialContentStr: normalizeLine(initialContentStr),
     contentType: "markdown",
   });
 }
 
-export async function pageLastDiff() {
+export function pageLastDiff() {
   const { toolEditDiffs } = getState().app;
 
   if (toolEditDiffs.length === 0) {
@@ -1328,7 +1328,7 @@ ${diffStdout}
     )
     .join("\n");
 
-  await openWithPager({
+  openWithPager({
     initialContentStr: normalizeLine(initialContentStr),
     contentType: "diff",
   });

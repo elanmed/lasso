@@ -29,9 +29,3 @@ All temp files come from `os.tmpdir()` + `getTempFileName`, so if the OS temp di
 ### 6. `warnOnLargePromptOverhead()` is never re-run after config changes that affect it
 
 `src/index.ts` calls `warnOnLargePromptOverhead()` exactly once at startup. Neither `/reload` (`initStateRepeatable`) nor `/model` (`setModelCommand`) re-invoke it, even though both can change the effective context window or overhead (`/reload` can add/remove skills and MCP servers; `/model` switches to a model with a different `contextWindowPerModel` entry). A user who reloads into an over-budget configuration gets no warning until they hit the actual compaction ratio.
-
----
-
-### 7. `checkBat()` (`bat --version`) is invoked repeatedly per turn instead of being cached
-
-`src/terminal.ts` — `warnOnMissingBat()` at startup, then `executeBat()` calls it again on _every_ agent response, and `openWithPager()` calls it again _every time_ a pager opens without an explicit `PAGER`/`LASSO_PAGER*` env var. Each call spawns a subprocess. Purely a performance nit, not correctness, but easily cached for the life of the process.

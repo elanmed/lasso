@@ -39,7 +39,6 @@ import {
   mockExecCalls,
   mockSpawnSync,
   mockPagerSpawn,
-  mockBatAvailable,
   batPagerCmd,
   stripAnsi,
   mockStdout,
@@ -1109,31 +1108,31 @@ transcript content`,
       actions.resetStdout();
     });
 
-    it("prints no available context files when entries list is empty", async () => {
-      await pageContextStr();
+    it("prints no available context files when entries list is empty", () => {
+      pageContextStr();
       assert.strictEqual(
         stripAnsi(getCapturedStdout()),
         "No available context files\n",
       );
     });
 
-    it("opens context string in a pager via LASSO_PAGER", async () => {
+    it("opens context string in a pager via LASSO_PAGER", () => {
       const { spawned } = mockPagerSpawn();
       testProcessEnv._set("LASSO_PAGER", "nano __FILE__");
       actions.setContextStr("context string content");
       actions.setContextEntries([
         { filePath: "/project/AGENTS.md", content: "context" },
       ]);
-      await pageContextStr();
+      pageContextStr();
       assert.strictEqual(spawned[0], "nano /tmp/lasso-test-uuid.txt");
     });
 
-    it("copies context string into the temp file", async () => {
+    it("copies context string into the temp file", () => {
       actions.setContextStr("context string content");
       actions.setContextEntries([
         { filePath: "/project/AGENTS.md", content: "context" },
       ]);
-      await pageContextStr();
+      pageContextStr();
       assert.strictEqual(
         testFs._files.get("/tmp/lasso-test-uuid.txt"),
         `context string content\n`,
@@ -1149,22 +1148,22 @@ transcript content`,
       actions.setChatHistoryPath("/tmp/test-history.log");
     });
 
-    it("prints that history is empty when the chat history file does not exist", async () => {
-      await pageHistory();
+    it("prints that history is empty when the chat history file does not exist", () => {
+      pageHistory();
       assert.strictEqual(stripAnsi(getCapturedStdout()), "No chat history\n");
     });
 
-    it("prints that history is empty when the chat history file is empty", async () => {
+    it("prints that history is empty when the chat history file is empty", () => {
       testFs._files.set("/tmp/test-history.log", "");
-      await pageHistory();
+      pageHistory();
       assert.strictEqual(stripAnsi(getCapturedStdout()), "No chat history\n");
     });
 
-    it("opens the chat history in a pager with a heading prepended", async () => {
+    it("opens the chat history in a pager with a heading prepended", () => {
       const { spawned } = mockPagerSpawn();
       testProcessEnv._set("LASSO_PAGER", "nano __FILE__");
       testFs._files.set("/tmp/test-history.log", "log content");
-      await pageHistory();
+      pageHistory();
       assert.strictEqual(spawned[0], "nano /tmp/lasso-test-uuid.txt");
       assert.strictEqual(
         testFs._files.get("/tmp/lasso-test-uuid.txt"),
@@ -1219,12 +1218,12 @@ second
       actions.resetStdout();
     });
 
-    it("prints no messages when there is no user message", async () => {
-      await pageLastMessage();
+    it("prints no messages when there is no user message", () => {
+      pageLastMessage();
       assert.strictEqual(stripAnsi(getCapturedStdout()), "No user messages\n");
     });
 
-    it("opens the latest user message in a pager", async () => {
+    it("opens the latest user message in a pager", () => {
       const { spawned } = mockPagerSpawn();
       testProcessEnv._set("LASSO_PAGER", "nano __FILE__");
       actions.appendToConversation({ role: "user", content: "older" });
@@ -1237,7 +1236,7 @@ second
         content: "latest question",
       });
 
-      await pageLastMessage();
+      pageLastMessage();
 
       assert.strictEqual(spawned[0], "nano /tmp/lasso-test-uuid.txt");
       assert.strictEqual(
@@ -1256,7 +1255,7 @@ latest question
       actions.resetStdout();
     });
 
-    it("opens the message list newest first in a pager", async () => {
+    it("opens the message list newest first in a pager", () => {
       const { spawned } = mockPagerSpawn();
       testProcessEnv._set("LASSO_PAGER", "nano __FILE__");
       actions.appendToConversation({
@@ -1268,7 +1267,7 @@ latest question
         content: [{ type: "text", text: "answer" }],
       });
 
-      await pageMessages();
+      pageMessages();
 
       assert.strictEqual(spawned[0], "nano /tmp/lasso-test-uuid.txt");
       assert.deepStrictEqual(
@@ -1301,7 +1300,7 @@ latest question
       actions.resetStdout();
     });
 
-    it("opens the summaries list newest first in a pager", async () => {
+    it("opens the summaries list newest first in a pager", () => {
       const { spawned } = mockPagerSpawn();
       testProcessEnv._set("LASSO_PAGER", "nano __FILE__");
       actions.setSummaries([
@@ -1309,7 +1308,7 @@ latest question
         { compacted: "latest summary", compactedAt: 200, tokens: 20 },
       ]);
 
-      await pageSummaries();
+      pageSummaries();
 
       assert.strictEqual(spawned[0], "nano /tmp/lasso-test-uuid.txt");
       assert.deepStrictEqual(
@@ -1329,8 +1328,8 @@ older summary
       );
     });
 
-    it("prints a message when there are no conversation summaries", async () => {
-      await pageSummaries();
+    it("prints a message when there are no conversation summaries", () => {
+      pageSummaries();
 
       assert.strictEqual(
         stripAnsi(getCapturedStdout()),
@@ -1346,17 +1345,17 @@ older summary
       actions.resetStdout();
     });
 
-    it("prints that the editor is empty when editor input is null", async () => {
-      await pageEditStr();
+    it("prints that the editor is empty when editor input is null", () => {
+      pageEditStr();
       assert.strictEqual(stripAnsi(getCapturedStdout()), "Editor is empty\n");
     });
 
-    it("opens the editor input in a pager with a header", async () => {
+    it("opens the editor input in a pager with a header", () => {
       const { spawned } = mockPagerSpawn();
       testProcessEnv._set("LASSO_PAGER", "nano __FILE__");
       actions.setEditorInputValue("editor input");
 
-      await pageEditStr();
+      pageEditStr();
 
       assert.strictEqual(spawned[0], "nano /tmp/lasso-test-uuid.txt");
       assert.strictEqual(
@@ -1375,15 +1374,15 @@ editor input
       actions.resetStdout();
     });
 
-    it("prints no available custom slash commands when list is empty", async () => {
-      await pageCustomSlashCommandsStr();
+    it("prints no available custom slash commands when list is empty", () => {
+      pageCustomSlashCommandsStr();
       assert.strictEqual(
         stripAnsi(getCapturedStdout()),
         "No available custom slash commands\n",
       );
     });
 
-    it("opens custom commands in a pager via LASSO_PAGER", async () => {
+    it("opens custom commands in a pager via LASSO_PAGER", () => {
       const { spawned } = mockPagerSpawn();
       testProcessEnv._set("LASSO_PAGER", "nano __FILE__");
       actions.setSlashCommands([
@@ -1393,7 +1392,7 @@ editor input
           content: "custom command content",
         },
       ]);
-      await pageCustomSlashCommandsStr();
+      pageCustomSlashCommandsStr();
       assert.strictEqual(spawned[0], "nano /tmp/lasso-test-uuid.txt");
     });
   });
@@ -1657,7 +1656,7 @@ Available commands:
         prompts.push(arg);
       });
       const { spawned } = mockPagerSpawn();
-      mockBatAvailable(true);
+      actions.setBatAvailable(true);
       actions.setKeymap("history", { name: "h", ctrl: true });
       actions.setChatHistoryPath("/tmp/editor.log");
       testFs._files.set("/tmp/editor.log", "log content");
@@ -1681,7 +1680,7 @@ log content
         prompts.push(arg);
       });
       const { spawned } = mockPagerSpawn();
-      mockBatAvailable(true);
+      actions.setBatAvailable(true);
       actions.setQuestionAbortController(null);
       actions.setKeymap("history", { name: "h", ctrl: true });
       actions.setChatHistoryPath("/tmp/editor.log");
