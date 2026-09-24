@@ -990,8 +990,7 @@ export function resume(rawInput: string) {
     actions.resetConversation();
     return `Continue the conversation recorded in the transcript below. Respond to this message with "Ready to continue chatting."
 Transcript:
-${readResult.value}
-    `;
+${readResult.value}`;
   }
 
   print.error(

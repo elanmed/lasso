@@ -1062,8 +1062,7 @@ l---
         result,
         `Continue the conversation recorded in the transcript below. Respond to this message with "Ready to continue chatting."
 Transcript:
-transcript content
-    `,
+transcript content`,
       );
       assert.deepStrictEqual(getState().app.conversation, {
         summaries: [],
@@ -2267,8 +2266,7 @@ Keymaps:
         result,
         `Continue the conversation recorded in the transcript below. Respond to this message with "Ready to continue chatting."
 Transcript:
-transcript content
-    `,
+transcript content`,
       );
     });
 
@@ -2591,7 +2589,7 @@ custom command content
 
 ## [lasso] Context
 some task
-  `,
+`,
       );
     });
 
@@ -2612,7 +2610,7 @@ custom command content
 
 ## [lasso] Context
 some   task
-  `,
+`,
       );
     });
 
