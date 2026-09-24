@@ -62,20 +62,6 @@ and similarly, if `mkdirSync` for the usage-log directory fails, the function wa
 
 ---
 
-### 4. `bashToolInputSchema`'s "read" and "create-update-delete" descriptions are near-duplicated boilerplate
-
-`src/tools.ts`:
-
-```ts
-.describe("Run a bash command that only reads from the file system. Temp files are intermediates: commands writing only to temp files (like from mktemp) also count as read")
-...
-.describe("Run a bash command that creates, updates, or deletes files at filePath. Temp files are intermediates: commands writing only to temp files (like from mktemp) count as read, never create-update-delete")
-```
-
-The temp-file caveat is copy-pasted into _both_ branches of the discriminated union, including the branch it isn't really relevant to (the "create-update-delete" describe text re-explains when something counts as "read" instead of describing this branch). This reads as an editing artifact and is confusing guidance for the model consuming the schema.
-
----
-
 ### 5. `resume()` and custom-slash-command context both bake unintended trailing whitespace into model input
 
 - `src/input.ts`, `resume`:
@@ -86,20 +72,6 @@ return `Continue the conversation recorded in the transcript below. Respond to t
   ${readResult.value}
       `;
 ```
-
-- `src/input.ts`, `resolveCustomSlashCommand`:
-
-```ts
-const contentWithCommandContext = `Follow the instructions below along with the provided context:
-  ## [lasso] Instructions
-  ${matchedCommand.content}
- 
-  ## [lasso] Context
-  ${commandContext}
-    `;
-```
-
-Both template literals have several spaces of trailing whitespace baked in before the closing backtick purely as a byproduct of source indentation, not intentional formatting. It gets sent verbatim to the model as part of the prompt (and is locked in by matching test expectations, so it will persist unless someone notices). Minor, but it's exactly the kind of thing `.trim()` should clean up.
 
 ---
 
@@ -112,20 +84,3 @@ Both template literals have several spaces of trailing whitespace baked in befor
 ### 7. `checkBat()` (`bat --version`) is invoked repeatedly per turn instead of being cached
 
 `src/terminal.ts` — `warnOnMissingBat()` at startup, then `executeBat()` calls it again on _every_ agent response, and `openWithPager()` calls it again _every time_ a pager opens without an explicit `PAGER`/`LASSO_PAGER*` env var. Each call spawns a subprocess. Purely a performance nit, not correctness, but easily cached for the life of the process.
-
----
-
-### 8. `getUnicodeChar`'s `"—"` (em dash) mapping is dead code
-
-`src/text.ts`:
-
-```ts
-const map = {
-  ["┊"]: "|",
-  ["…"]: "~",
-  ["━"]: "=",
-  ["—"]: "-",
-};
-```
-
-Nothing in the codebase calls `getUnicodeChar("—")`; only `"┊"`, `"…"`, and `"━"` are actually used (in `toolPrint`, `truncate`, and `fencePrint`/`wrapInFence` respectively).

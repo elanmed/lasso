@@ -733,7 +733,7 @@ ${matchedCommand.content}
 
 ## [lasso] Context
 ${commandContext}
-  `;
+`;
 
   return { handled: true, inputFromCommand: contentWithCommandContext };
 }

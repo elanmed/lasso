@@ -7,7 +7,6 @@ export function getUnicodeChar(char: string) {
     ["┊"]: "|",
     ["…"]: "~",
     ["━"]: "=",
-    ["—"]: "-",
   };
   assert(char in map);
   const replacement = map[char as keyof typeof map];
