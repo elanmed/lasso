@@ -223,7 +223,6 @@ export function initKeypress() {
             const initialContentStr = getAllPrettyConfig();
 
             await openWithPager({
-              pagerEnvKey: "LASSO_PAGER_CONFIG",
               initialContentStr: normalizeLine(initialContentStr),
               contentType: "markdown",
             });
@@ -623,7 +622,6 @@ async function resolveBuiltinSlashCommand(
       const initialContentStr = getAllPrettyConfig();
 
       await openWithPager({
-        pagerEnvKey: "LASSO_PAGER_CONFIG",
         initialContentStr: normalizeLine(initialContentStr),
         contentType: "markdown",
       });
@@ -876,7 +874,6 @@ export async function pageContextStr() {
   const initialContentStr = getState().app.contextStr;
 
   await openWithPager({
-    pagerEnvKey: "LASSO_PAGER_CONTEXT",
     initialContentStr: normalizeLine(initialContentStr),
     contentType: "markdown",
   });
@@ -895,7 +892,6 @@ ${editorInputValue}`;
 
   await openWithPager({
     initialContentStr: normalizeLine(initialContentStr),
-    pagerEnvKey: "LASSO_PAGER_EDIT",
     contentType: "markdown",
   });
 }
@@ -915,7 +911,6 @@ export async function pageCustomSlashCommandsStr() {
   const initialContentStr = getCustomSlashCommandsStr();
 
   await openWithPager({
-    pagerEnvKey: "LASSO_PAGER_COMMANDS",
     initialContentStr: normalizeLine(initialContentStr),
     contentType: "markdown",
   });
@@ -1134,7 +1129,6 @@ ${diffResult.value.stdout}
   }
 
   await openWithPager({
-    pagerEnvKey: "LASSO_PAGER_RELOAD",
     initialContentStr: normalizeLine(diff),
     contentType: "diff",
   });
@@ -1221,7 +1215,6 @@ ${historyStr}`;
 
   await openWithPager({
     initialContentStr: normalizeLine(initialContentStr),
-    pagerEnvKey: "LASSO_PAGER_HISTORY",
     contentType: "markdown",
   });
 }
@@ -1251,7 +1244,6 @@ ${formattedContentStr}`;
 
   await openWithPager({
     initialContentStr: normalizeLine(initialContentStr),
-    pagerEnvKey: "LASSO_PAGER_LAST_RESPONSE",
     contentType: "markdown",
   });
 }
@@ -1279,7 +1271,6 @@ ${contentStr}`;
 
   await openWithPager({
     initialContentStr: normalizeLine(initialContentStr),
-    pagerEnvKey: "LASSO_PAGER_LAST_MESSAGE",
     contentType: "markdown",
   });
 }
@@ -1291,7 +1282,6 @@ ${stringify(getState().app.conversation.messages.toReversed())}`;
 
   await openWithPager({
     initialContentStr: normalizeLine(initialContentStr),
-    pagerEnvKey: "LASSO_PAGER_MESSAGES",
     contentType: "markdown",
   });
 }
@@ -1303,7 +1293,6 @@ ${stringify(getState().app.conversation.summaries.toReversed())}`;
 
   await openWithPager({
     initialContentStr: normalizeLine(initialContentStr),
-    pagerEnvKey: "LASSO_PAGER_SUMMARIES",
     contentType: "markdown",
   });
 }
@@ -1325,7 +1314,6 @@ ${diffStdout}
 
   await openWithPager({
     initialContentStr: normalizeLine(initialContentStr),
-    pagerEnvKey: "LASSO_PAGER_LAST_DIFF",
     contentType: "diff",
   });
 }

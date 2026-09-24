@@ -1118,9 +1118,9 @@ transcript content
       );
     });
 
-    it("opens context string in a pager via LASSO_PAGER_CONTEXT", async () => {
+    it("opens context string in a pager via LASSO_PAGER", async () => {
       const { spawned } = mockPagerSpawn();
-      testProcessEnv._set("LASSO_PAGER_CONTEXT", "nano __FILE__");
+      testProcessEnv._set("LASSO_PAGER", "nano __FILE__");
       actions.setContextStr("context string content");
       actions.setContextEntries([
         { filePath: "/project/AGENTS.md", content: "context" },
@@ -1163,7 +1163,7 @@ transcript content
 
     it("opens the chat history in a pager with a heading prepended", async () => {
       const { spawned } = mockPagerSpawn();
-      testProcessEnv._set("LASSO_PAGER_HISTORY", "nano __FILE__");
+      testProcessEnv._set("LASSO_PAGER", "nano __FILE__");
       testFs._files.set("/tmp/test-history.log", "log content");
       await pageHistory();
       assert.strictEqual(spawned[0], "nano /tmp/lasso-test-uuid.txt");
@@ -1190,7 +1190,7 @@ log content
 
     it("opens the latest assistant response in a pager", async () => {
       const { spawned } = mockPagerSpawn();
-      testProcessEnv._set("LASSO_PAGER_LAST_RESPONSE", "nano __FILE__");
+      testProcessEnv._set("LASSO_PAGER", "nano __FILE__");
       actions.appendToConversation({ role: "user", content: "question" });
       actions.appendToConversation({
         role: "assistant",
@@ -1227,7 +1227,7 @@ second
 
     it("opens the latest user message in a pager", async () => {
       const { spawned } = mockPagerSpawn();
-      testProcessEnv._set("LASSO_PAGER_LAST_MESSAGE", "nano __FILE__");
+      testProcessEnv._set("LASSO_PAGER", "nano __FILE__");
       actions.appendToConversation({ role: "user", content: "older" });
       actions.appendToConversation({
         role: "assistant",
@@ -1259,7 +1259,7 @@ latest question
 
     it("opens the message list newest first in a pager", async () => {
       const { spawned } = mockPagerSpawn();
-      testProcessEnv._set("LASSO_PAGER_MESSAGES", "nano __FILE__");
+      testProcessEnv._set("LASSO_PAGER", "nano __FILE__");
       actions.appendToConversation({
         role: "user",
         content: "question",
@@ -1304,7 +1304,7 @@ latest question
 
     it("opens the summaries list newest first in a pager", async () => {
       const { spawned } = mockPagerSpawn();
-      testProcessEnv._set("LASSO_PAGER_SUMMARIES", "nano __FILE__");
+      testProcessEnv._set("LASSO_PAGER", "nano __FILE__");
       actions.setSummaries([
         { compacted: "older summary", compactedAt: 100, tokens: 10 },
         { compacted: "latest summary", compactedAt: 200, tokens: 20 },
@@ -1347,7 +1347,7 @@ latest question
 
     it("opens the editor input in a pager with a header", async () => {
       const { spawned } = mockPagerSpawn();
-      testProcessEnv._set("LASSO_PAGER_EDIT", "nano __FILE__");
+      testProcessEnv._set("LASSO_PAGER", "nano __FILE__");
       actions.setEditorInputValue("editor input");
 
       await pageEditStr();
@@ -1377,9 +1377,9 @@ editor input
       );
     });
 
-    it("opens custom commands in a pager via LASSO_PAGER_COMMANDS", async () => {
+    it("opens custom commands in a pager via LASSO_PAGER", async () => {
       const { spawned } = mockPagerSpawn();
-      testProcessEnv._set("LASSO_PAGER_COMMANDS", "nano __FILE__");
+      testProcessEnv._set("LASSO_PAGER", "nano __FILE__");
       actions.setSlashCommands([
         {
           name: "custom",
@@ -1692,7 +1692,7 @@ log content
         prompts.push(arg);
       });
       const { spawned } = mockPagerSpawn();
-      testProcessEnv._set("LASSO_PAGER_LAST_RESPONSE", "nano __FILE__");
+      testProcessEnv._set("LASSO_PAGER", "nano __FILE__");
       actions.setKeymap("lastresponse", { name: "u", ctrl: true });
       actions.appendToConversation({ role: "user", content: "question" });
       actions.appendToConversation({
@@ -1711,7 +1711,7 @@ log content
         prompts.push(arg);
       });
       const { spawned } = mockPagerSpawn();
-      testProcessEnv._set("LASSO_PAGER_LAST_DIFF", "nano __FILE__");
+      testProcessEnv._set("LASSO_PAGER", "nano __FILE__");
       actions.setKeymap("lastdiff", { name: "d", ctrl: true });
       actions.appendToolEditDiff({ fileName: "/a.ts", diffStdout: "+a\n" });
       harness.emitKey({ name: "d", ctrl: true });
@@ -1732,7 +1732,7 @@ log content
           baseURL: "https://api.example.com",
         }),
       );
-      testProcessEnv._set("LASSO_PAGER_RELOAD", "cat __FILE__");
+      testProcessEnv._set("LASSO_PAGER", "cat __FILE__");
       const { spawned } = mockPagerSpawn();
       mockExecCalls([
         { stdout: "delta 0.18.2" },
@@ -1926,7 +1926,7 @@ custom command content\n`,
     });
 
     it("handles /editpage command by opening the current editor input in a pager", async () => {
-      testProcessEnv._set("LASSO_PAGER_EDIT", "nano __FILE__");
+      testProcessEnv._set("LASSO_PAGER", "nano __FILE__");
       actions.setEditorInputValue("editor input");
       const result = await resolveSlashCommand("/editpage");
       assert.strictEqual(result, null);
@@ -1982,7 +1982,7 @@ pasted content
     });
 
     it("handles /history command by opening chat history in a pager", async () => {
-      testProcessEnv._set("LASSO_PAGER_HISTORY", "nano __FILE__");
+      testProcessEnv._set("LASSO_PAGER", "nano __FILE__");
       actions.setChatHistoryPath("/tmp/test-history.log");
       testFs._files.set("/tmp/test-history.log", "log content");
       const result = await resolveSlashCommand("/history");
@@ -1998,7 +1998,7 @@ log content
 
     it("handles /lastmessage command by opening the last user message in a pager", async () => {
       const { spawned } = mockPagerSpawn();
-      testProcessEnv._set("LASSO_PAGER_LAST_MESSAGE", "nano __FILE__");
+      testProcessEnv._set("LASSO_PAGER", "nano __FILE__");
       actions.appendToConversation({ role: "user", content: "question" });
       const result = await resolveSlashCommand("/lastmessage");
       assert.strictEqual(result, null);
@@ -2007,7 +2007,7 @@ log content
 
     it("handles /lastdiff command by opening the last turn diffs in a pager", async () => {
       const { spawned } = mockPagerSpawn();
-      testProcessEnv._set("LASSO_PAGER_LAST_DIFF", "nano __FILE__");
+      testProcessEnv._set("LASSO_PAGER", "nano __FILE__");
       actions.appendToolEditDiff({ fileName: "/a.ts", diffStdout: "+a\n" });
       actions.appendToolEditDiff({ fileName: "/b.ts", diffStdout: "+b\n" });
       const result = await resolveSlashCommand("/lastdiff");
@@ -2039,7 +2039,7 @@ log content
 
     it("handles /messages command by opening the message list in a pager", async () => {
       const { spawned } = mockPagerSpawn();
-      testProcessEnv._set("LASSO_PAGER_MESSAGES", "nano __FILE__");
+      testProcessEnv._set("LASSO_PAGER", "nano __FILE__");
       actions.appendToConversation({ role: "user", content: "question" });
       const result = await resolveSlashCommand("/messages");
       assert.strictEqual(result, null);
@@ -2126,7 +2126,7 @@ Available commands:
     });
 
     it("handles /commandspage command by opening custom commands in a pager", async () => {
-      testProcessEnv._set("LASSO_PAGER_COMMANDS", "nano __FILE__");
+      testProcessEnv._set("LASSO_PAGER", "nano __FILE__");
       actions.setSlashCommands([
         {
           name: "custom",
@@ -2146,9 +2146,9 @@ custom command content\n`,
       );
     });
 
-    it("uses LASSO_PAGER_COMMANDS for the commandspage pager", async () => {
+    it("uses LASSO_PAGER for the commandspage pager", async () => {
       const { spawned } = mockPagerSpawn();
-      testProcessEnv._set("LASSO_PAGER_COMMANDS", "nano __FILE__");
+      testProcessEnv._set("LASSO_PAGER", "nano __FILE__");
       actions.setSlashCommands([
         {
           name: "custom",
@@ -2182,7 +2182,7 @@ custom command content\n`,
     });
 
     it("handles /contextpage command by opening context in a pager", async () => {
-      testProcessEnv._set("LASSO_PAGER_CONTEXT", "nano __FILE__");
+      testProcessEnv._set("LASSO_PAGER", "nano __FILE__");
       actions.setContextStr("context string content");
       actions.setContextEntries([
         { filePath: "/project/AGENTS.md", content: "context" },
@@ -2196,7 +2196,7 @@ custom command content\n`,
     });
 
     it("handles /config command by opening combined config in a pager", async () => {
-      testProcessEnv._set("LASSO_PAGER_CONFIG", "nano __FILE__");
+      testProcessEnv._set("LASSO_PAGER", "nano __FILE__");
       actions.resetStdout();
       const result = await resolveSlashCommand("/config");
       assert.strictEqual(result, null);
@@ -2273,7 +2273,7 @@ transcript content
     });
 
     it("skips the before-and-after diff when a before temp file cannot be created", async () => {
-      testProcessEnv._set("LASSO_PAGER_RELOAD", "cat __FILE__");
+      testProcessEnv._set("LASSO_PAGER", "cat __FILE__");
       mockPagerSpawn();
       mock.method(fsDeps, "writeFileSync", (path: string, content: string) => {
         if (path === "/tmp/lasso-global-before-test-uuid.txt") {
@@ -2320,7 +2320,7 @@ commands diff
     });
 
     it("unlinks the before temp file when the after temp file cannot be created", async () => {
-      testProcessEnv._set("LASSO_PAGER_RELOAD", "cat __FILE__");
+      testProcessEnv._set("LASSO_PAGER", "cat __FILE__");
       mockPagerSpawn();
       mock.method(fsDeps, "writeFileSync", (path: string, content: string) => {
         if (path === "/tmp/lasso-global-after-test-uuid.txt") {
@@ -2374,7 +2374,7 @@ commands diff
           baseURL: "https://api.example.com",
         }),
       );
-      testProcessEnv._set("LASSO_PAGER_RELOAD", "cat __FILE__");
+      testProcessEnv._set("LASSO_PAGER", "cat __FILE__");
       mockPagerSpawn();
       mockExecCalls([
         { stdout: "delta 0.18.2" },
@@ -2432,7 +2432,7 @@ commands diff
     });
 
     it("only includes nonempty config diffs", async () => {
-      testProcessEnv._set("LASSO_PAGER_RELOAD", "cat __FILE__");
+      testProcessEnv._set("LASSO_PAGER", "cat __FILE__");
       mockPagerSpawn();
       mockExecCalls([
         { stdout: "delta 0.18.2" },
@@ -2520,7 +2520,7 @@ description: A test skill
         },
       );
 
-      testProcessEnv._set("LASSO_PAGER_RELOAD", "cat __FILE__");
+      testProcessEnv._set("LASSO_PAGER", "cat __FILE__");
 
       const getSnapshot = (name: string) => {
         const snapshot = snapshots.get(name);

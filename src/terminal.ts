@@ -97,23 +97,16 @@ export async function executeBat(content: string) {
 }
 
 export async function openWithPager({
-  pagerEnvKey,
   initialContentStr,
   contentType,
 }: {
   initialContentStr?: string;
-  pagerEnvKey: string;
   contentType: "diff" | "markdown";
 }) {
   const tempFile = getTempFileName({ initialContentStr });
   if (tempFile === null) return;
 
   const pagerCommand = await (async () => {
-    const pagerEnvValue = processDeps.env.get(pagerEnvKey);
-    if (isExisty(pagerEnvValue)) {
-      return pagerEnvValue.replace("__FILE__", tempFile);
-    }
-
     const lassoDefaultPagerEnvValue = processDeps.env.get("LASSO_PAGER");
     if (isExisty(lassoDefaultPagerEnvValue)) {
       return lassoDefaultPagerEnvValue.replace("__FILE__", tempFile);

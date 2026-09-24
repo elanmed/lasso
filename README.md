@@ -295,16 +295,7 @@ usageLimit:
 | -------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
 | `LASSO_API_KEY`            | API key for the configured provider (required)                                                                         |
 | `LASSO_EDIT`               | Editor command with `__FILE__` placeholder for multi-line input (fallback: `$EDITOR __FILE__`)                         |
-| `LASSO_PAGER_EDIT`         | Pager command with `__FILE__` placeholder for viewing the current editor input (fallback: `$LASSO_PAGER`)              |
-| `LASSO_PAGER_HISTORY`      | Pager command with `__FILE__` placeholder for viewing chat history (fallback: `$LASSO_PAGER`)                          |
-| `LASSO_PAGER_MESSAGES`     | Pager command with `__FILE__` placeholder for viewing the message list (fallback: `$LASSO_PAGER`)                      |
-| `LASSO_PAGER_LAST_MESSAGE` | Pager command with `__FILE__` placeholder for viewing the last user message (fallback: `$LASSO_PAGER`)                 |
-| `LASSO_PAGER_LAST_DIFF`   | Pager command with `__FILE__` placeholder for viewing the last turn's tool edit diffs (fallback: `$LASSO_PAGER`)        |
-| `LASSO_PAGER_CONFIG`       | Pager command with `__FILE__` placeholder for viewing config (fallback: `$LASSO_PAGER`)                                |
-| `LASSO_PAGER_CONTEXT`      | Pager command with `__FILE__` placeholder for viewing context (fallback: `$LASSO_PAGER`)                               |
-| `LASSO_PAGER_COMMANDS`     | Pager command with `__FILE__` placeholder for viewing custom commands (fallback: `$LASSO_PAGER`)                       |
-| `LASSO_PAGER_RELOAD`       | Pager command with `__FILE__` placeholder for viewing the reload config diff (fallback: `$LASSO_PAGER`)                |
-| `LASSO_PAGER`              | Default pager command with `__FILE__` placeholder (fallback: `$PAGER`, then `bat`, then `less`)                        |
+| `LASSO_PAGER`              | Pager command for all pager views with a `__FILE__` placeholder (fallback: `$PAGER`, then `bat`, then `less`)           |
 | `LASSO_CLIPBOARD_PASTE`    | Command used by `/paste` to read the clipboard (default: `pbpaste` on macOS, `xclip -selection clipboard -o` on Linux) |
 | `NO_COLOR`                 | Disables all ansi color output (color is also disabled automatically when stdout is not a tty)                         |
 | `DEBUG`                    | Set to `1` to enable debug logging                                                                                     |
@@ -512,7 +503,7 @@ agent() {
 
   local podman_args=(
     --env LASSO_EDIT='nvim -c "normal! G$" -c startinsert! __FILE__'
-    --env LASSO_PAGER_HISTORY='nvim -c "normal! G$" __FILE__'
+    --env LASSO_PAGER='nvim -c "normal! G$" __FILE__'
     --env LASSO_CLIPBOARD_PASTE="nc --recv-only host.docker.internal $PASTE_PORT"
     --env COPY_PORT="$COPY_PORT"
     --env PASTE_PORT="$PASTE_PORT"
