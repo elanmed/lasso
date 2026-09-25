@@ -2,7 +2,7 @@ import { createAnthropic } from "@ai-sdk/anthropic";
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 import { createOpenAI } from "@ai-sdk/openai";
 import { createGoogle } from "@ai-sdk/google";
-import { assertAtBuildtime, assertAtRuntime } from "./assert.ts";
+import { assertAtBuildtime } from "./assert.ts";
 import { getState } from "./state.ts";
 import { MISSING } from "./missing.ts";
 import { processDeps } from "./deps.ts";

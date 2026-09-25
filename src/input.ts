@@ -5,7 +5,7 @@ import { Writable } from "node:stream";
 import { dirname, join } from "node:path";
 import childProcess from "node:child_process";
 import os from "node:os";
-import { assertAtBuildtime, assertAtRuntime } from "./assert.ts";
+import { assertAtBuildtime } from "./assert.ts";
 import {
   isAbortError,
   tryCatch,

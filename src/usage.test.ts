@@ -994,7 +994,7 @@ describe("warnOnLargePromptOverhead", () => {
     warnOnLargePromptOverhead();
     assert.strictEqual(
       stripAnsi(getCaptured()),
-      `The current set of context, skills, and tools is 50% of the 100,000 token context window!\n\nLasso reserves 50% of the context window for compacted summaries and 45% for prompt overhead. As is, the prompt overhead may breach the llm's context window and cause API calls to be rejected. Consider converting some of your context to skills and minimizing MCP servers.\n`,
+      `The current set of context, skills, and tools is 50% of the 100,000 token context window!\n\nLasso reserves 50% of the context window for compacted summaries with the assumption that at most 45% of the context window will be used for prompt overhead. As is, the prompt overhead is large enough to break this assumption and, along with any user messages, may breach the llm's context window and cause API calls to be rejected. Consider converting some of your context to skills and minimizing MCP servers.\n`,
     );
   });
 });
