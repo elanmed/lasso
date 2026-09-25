@@ -964,8 +964,44 @@ export function printAvailableContextFiles() {
   print(formatted);
 }
 
+function resumeFromTranscript(transcript: string) {
+  actions.resetConversation();
+  return `Continue the conversation recorded in the transcript below. Respond to this message with "Ready to continue chatting."
+Transcript:
+${transcript}`;
+}
+
 export function resume(rawInput: string) {
   const parts = rawInput.split(/\s+/);
+
+  if (parts.length === 1) {
+    const chatHistoryFileEntries = listChatHistoryFiles();
+    if (chatHistoryFileEntries.length === 0) {
+      print.error("No sessions to resume");
+      return null;
+    }
+
+    const sortedEntries = chatHistoryFileEntries.toSorted(
+      (a, b) => b.timestampMs - a.timestampMs,
+    );
+    const historyEntry = sortedEntries[0];
+    assert(
+      historyEntry !== undefined,
+      "Asserted in `chatHistoryFileEntries.length !== 0`",
+    );
+
+    const { absolutePath, timestampMs } = historyEntry;
+    const readResult = tryCatch(() =>
+      fsDeps.readFileSync(absolutePath).toString(),
+    );
+    if (!readResult.ok) {
+      print.error(
+        `Unable to read the transcript from session ${String(timestampMs)} located at ${absolutePath}`,
+      );
+      return null;
+    }
+    return resumeFromTranscript(readResult.value);
+  }
 
   if (parts.length !== 2) {
     print.error("Usage: /resume [session start date]");
@@ -980,7 +1016,6 @@ export function resume(rawInput: string) {
   }
 
   const chatHistoryFileEntries = listChatHistoryFiles();
-
   for (const { absolutePath, timestampMs } of chatHistoryFileEntries) {
     if (timestampMs !== Number(sessionStartDate)) continue;
 
@@ -988,11 +1023,7 @@ export function resume(rawInput: string) {
       fsDeps.readFileSync(absolutePath).toString(),
     );
     if (!readResult.ok) continue;
-
-    actions.resetConversation();
-    return `Continue the conversation recorded in the transcript below. Respond to this message with "Ready to continue chatting."
-Transcript:
-${readResult.value}`;
+    return resumeFromTranscript(readResult.value);
   }
 
   print.error(

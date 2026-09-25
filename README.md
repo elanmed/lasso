@@ -6,7 +6,7 @@ _A minimal agent harness to rein in your llm_
 
 ## Features
 
-- **Minimal**: ~5,300 lines of source code, ~11,300 lines of tests
+- **Minimal**: ~5,400 lines of source code, ~11,300 lines of tests
   - Responses are piped through `bat` to render markdown
   - Multi-line input is supported by spawning an editor of your choice
   - Messages can be queued by typing a custom delimiter (default `l---`) in the spawned editor
@@ -304,30 +304,30 @@ usageLimit:
 
 Slash commands are triggered with `/command` at the prompt.
 
-| Command         | Description                                                                |
-| --------------- | -------------------------------------------------------------------------- |
-| `/edit`         | Call the `edit` keymap                                                     |
-| `/editpage`     | View the current editor input in a pager                                   |
-| `/clear`        | Clear conversation context                                                 |
-| `/history`      | View chat history in a pager                                               |
-| `/lastresponse` | View the latest assistant response in a pager                              |
-| `/lastmessage`  | View the last user message in a pager                                      |
-| `/lastdiff`     | View the last turn's tool edit diffs in a pager                            |
-| `/messages`     | View the full message list in a pager                                      |
-| `/paste`        | Call the `paste` keymap                                                    |
-| `/model`        | Switch the model at runtime (e.g. `/model kimi-k2.6`)                      |
-| `/skills`       | List available skills                                                      |
-| `/context`      | List available context files                                               |
-| `/contextpage`  | View the raw context string in a pager                                     |
-| `/commands`     | List available slash commands (builtin and custom)                         |
-| `/commandspage` | View custom slash command contents in a pager                              |
-| `/keymaps`      | List configured keybindings                                                |
-| `/usage`        | Show current session usage                                                 |
-| `/config`       | View global, local, and applied config in a pager                          |
-| `/reload`       | Reload config and context, diff the result in a pager                      |
-| `/initlocal`    | Create `./.lasso/settings.yaml` if it doesn't exist                        |
-| `/initglobal`   | Create `~/.config/lasso/settings.yaml` if it doesn't exist                 |
-| `/resume`       | Continue a past session from its start date (e.g. `/resume 1754000000000`) |
+| Command         | Description                                                                                  |
+| --------------- | -------------------------------------------------------------------------------------------- |
+| `/edit`         | Call the `edit` keymap                                                                       |
+| `/editpage`     | View the current editor input in a pager                                                     |
+| `/clear`        | Clear conversation context                                                                   |
+| `/history`      | View chat history in a pager                                                                 |
+| `/lastresponse` | View the latest assistant response in a pager                                                |
+| `/lastmessage`  | View the last user message in a pager                                                        |
+| `/lastdiff`     | View the last turn's tool edit diffs in a pager                                              |
+| `/messages`     | View the full message list in a pager                                                        |
+| `/paste`        | Call the `paste` keymap                                                                      |
+| `/model`        | Switch the model at runtime (e.g. `/model kimi-k2.6`)                                        |
+| `/skills`       | List available skills                                                                        |
+| `/context`      | List available context files                                                                 |
+| `/contextpage`  | View the raw context string in a pager                                                       |
+| `/commands`     | List available slash commands (builtin and custom)                                           |
+| `/commandspage` | View custom slash command contents in a pager                                                |
+| `/keymaps`      | List configured keybindings                                                                  |
+| `/usage`        | Show current session usage                                                                   |
+| `/config`       | View global, local, and applied config in a pager                                            |
+| `/reload`       | Reload config and context, diff the result in a pager                                        |
+| `/initlocal`    | Create `./.lasso/settings.yaml` if it doesn't exist                                          |
+| `/initglobal`   | Create `~/.config/lasso/settings.yaml` if it doesn't exist                                   |
+| `/resume`       | Resume the latest session or select one by start date (`/resume <timestamp>`) |
 
 ### Custom Slash Commands
 

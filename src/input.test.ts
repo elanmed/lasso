@@ -1027,12 +1027,12 @@ l---
       actions.resetStdout();
     });
 
-    it("prints usage error when no session start date is provided", () => {
+    it("prints an error when there are no sessions to resume", () => {
       const result = resume("/resume");
       assert.strictEqual(result, null);
       assert.strictEqual(
         stripAnsi(getCapturedStdout()),
-        "Usage: /resume [session start date]\n",
+        "No sessions to resume\n",
       );
     });
 
@@ -1061,6 +1061,30 @@ l---
         stripAnsi(getCapturedStdout()),
         "No conversation found with session start date: 1234567890000\n",
       );
+    });
+
+    it("resumes the most recent session when no date is provided", () => {
+      actions.appendToConversation({ role: "user", content: "hello" });
+      testFs._dirs.add("/fake-home/.config/lasso/history");
+      testFs._files.set(
+        "/fake-home/.config/lasso/history/chat-history-1234567890000.md",
+        "older transcript",
+      );
+      testFs._files.set(
+        "/fake-home/.config/lasso/history/chat-history-1234567899999.md",
+        "newer transcript",
+      );
+
+      const result = resume("/resume");
+
+      assert.strictEqual(
+        result,
+        `Continue the conversation recorded in the transcript below. Respond to this message with "Ready to continue chatting."\nTranscript:\nnewer transcript`,
+      );
+      assert.deepStrictEqual(getState().app.conversation, {
+        summaries: [],
+        messages: [],
+      });
     });
 
     it("returns transcript and resets message params when conversation is found", () => {
