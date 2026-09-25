@@ -1,7 +1,7 @@
-import assert from "node:assert";
 import { dirname } from "node:path";
 import { z } from "zod";
 import type { LanguageModelUsage } from "ai";
+import { assertAtBuildtime } from "./assert.ts";
 import { actions, getState, promptDeps } from "./state.ts";
 
 import {
@@ -89,7 +89,7 @@ export function filterExpiredModelUsage(
 
 export function getExpiredTime() {
   const { usageLimit } = getState().config;
-  assert(usageLimit !== undefined);
+  assertAtBuildtime(usageLimit !== undefined);
 
   const now = Date.now();
   const msPerDuration = {
@@ -111,7 +111,7 @@ export async function syncInitialModelUsageForLimitWindow() {
   if (isUsageLimitDisabled()) return;
 
   const { usageLimit } = getState().config;
-  assert(usageLimit !== undefined);
+  assertAtBuildtime(usageLimit !== undefined);
   const expiredTime = getExpiredTime();
 
   const path = getUsageLogPath();

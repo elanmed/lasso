@@ -1,5 +1,5 @@
-import assert from "node:assert";
 import { getState } from "./state.ts";
+import { assertAtRuntime } from "./assert.ts";
 import { getMaxColLength } from "./utils.ts";
 
 export function getUnicodeChar(char: string) {
@@ -8,7 +8,7 @@ export function getUnicodeChar(char: string) {
     ["…"]: "~",
     ["━"]: "=",
   };
-  assert(char in map);
+  assertAtRuntime(char in map);
   const replacement = map[char as keyof typeof map];
   if (getState().config.asciiOnly) return replacement;
   return char;

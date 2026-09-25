@@ -1,5 +1,5 @@
-import assert from "node:assert";
 import { getState } from "./state.ts";
+import { assertAtRuntime } from "./assert.ts";
 import { getPrettyUsage } from "./usage-format.ts";
 import { getMaxColLength, getPrettyDuration } from "./utils.ts";
 import { getUnicodeChar, truncate } from "./text.ts";
@@ -62,9 +62,9 @@ export function getPrettyApiDuration({
   includeMicroseconds = false,
 }: { includeMicroseconds?: boolean } = {}) {
   const startTime = getState().app.apiStartTime;
-  assert(startTime !== null);
+  assertAtRuntime(startTime !== null);
   const endTime = getState().app.apiEndTime;
-  assert(endTime !== null);
+  assertAtRuntime(endTime !== null);
 
   return getPrettyDuration(startTime, endTime, { includeMicroseconds });
 }

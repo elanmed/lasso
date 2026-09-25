@@ -1,6 +1,6 @@
-import assert from "node:assert";
 import { Output, type ModelMessage } from "ai";
 import { z } from "zod";
+import { assertAtBuildtime } from "./assert.ts";
 import { actions, getState, promptDeps } from "./state.ts";
 
 import {
@@ -44,7 +44,7 @@ const maxRatioPerSummary = dedicatedSummaryRatio / maxNumberSummaries;
 
 function getApiStreamAbortSignal() {
   const controller = getState().abortControllers.apiStream;
-  assert(controller !== null);
+  assertAtBuildtime(controller !== null);
   return controller.signal;
 }
 
@@ -190,16 +190,10 @@ export async function getMergedSummaries() {
   let smallestSummaryCompactedAt = Infinity;
   for (let idx = 0; idx < summaries.length - 1; idx++) {
     const firstSummary = summaries[idx];
-    assert(
-      firstSummary !== undefined,
-      "Guaranteed by `idx < summaries.length - 1`",
-    );
+    assertAtBuildtime(firstSummary !== undefined);
 
     const secondSummary = summaries[idx + 1];
-    assert(
-      secondSummary !== undefined,
-      "Guaranteed by `idx < summaries.length - 1`",
-    );
+    assertAtBuildtime(secondSummary !== undefined);
 
     const largerCompactedAt = Math.max(
       firstSummary.compactedAt,
@@ -213,16 +207,16 @@ export async function getMergedSummaries() {
   }
 
   const firstSummary = summaries[smallestFirstSummaryIdx];
-  assert(firstSummary !== undefined, "Guaranteed by loop");
+  assertAtBuildtime(firstSummary !== undefined);
 
   const secondSummary = summaries[smallestSecondSummaryIdx];
-  assert(secondSummary !== undefined, "Guaranteed by loop");
+  assertAtBuildtime(secondSummary !== undefined);
 
   const { model } = getState().config;
-  assert(model !== MISSING, "Early return in `maybeCompact`");
+  assertAtBuildtime(model !== MISSING);
 
   const contextWindow = getState().config.contextWindowPerModel[model];
-  assert(contextWindow !== undefined, "Early return in `maybeCompact`");
+  assertAtBuildtime(contextWindow !== undefined);
 
   const targetTokens = Math.floor(maxRatioPerSummary * contextWindow);
   const targetCharLen = approxTokensToCharLen(targetTokens);
@@ -291,10 +285,10 @@ ${JSON.stringify([firstSummary, secondSummary].map(({ compacted }) => compacted)
 
 export async function getConversationSummary() {
   const { model } = getState().config;
-  assert(model !== MISSING);
+  assertAtBuildtime(model !== MISSING);
 
   const contextWindow = getState().config.contextWindowPerModel[model];
-  assert(contextWindow !== undefined);
+  assertAtBuildtime(contextWindow !== undefined);
 
   const targetTokens = Math.floor(compactTargetRatio * contextWindow);
   const targetCharLen = approxTokensToCharLen(targetTokens);

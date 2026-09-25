@@ -1,6 +1,6 @@
-import assert from "node:assert";
 import os from "node:os";
 import childProcess from "node:child_process";
+import { assertAtRuntime } from "./assert.ts";
 import { fsDeps } from "./deps.ts";
 import { fencePrint } from "./fence.ts";
 import { print, printNewline } from "./print.ts";
@@ -62,7 +62,7 @@ export function createToolCallDiffer() {
 
   function getTempFileBefore(toolCallId: string) {
     const tempFileBefore = toolCallIdToTempFileBefore.get(toolCallId);
-    assert(tempFileBefore !== undefined);
+    assertAtRuntime(tempFileBefore !== undefined);
     return tempFileBefore;
   }
 

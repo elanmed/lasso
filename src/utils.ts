@@ -2,8 +2,8 @@ import { basename, extname, join } from "node:path";
 import os from "node:os";
 import crypto from "node:crypto";
 import childProcess from "node:child_process";
-import assert from "node:assert";
 import type { AssistantContent, ModelMessage } from "ai";
+import { assertAtRuntime } from "./assert.ts";
 import { fsDeps, processDeps } from "./deps.ts";
 import { getPromptHistoryDir } from "./paths.ts";
 
@@ -82,7 +82,9 @@ export interface GetTempFileNameArgs {
 
 export function getTempFileName(args?: GetTempFileNameArgs) {
   const { pathPrefix, initialContentPath, initialContentStr } = args ?? {};
-  assert(initialContentPath === undefined || initialContentStr === undefined);
+  assertAtRuntime(
+    initialContentPath === undefined || initialContentStr === undefined,
+  );
 
   const tempFile = join(
     os.tmpdir(),

@@ -1,8 +1,8 @@
 /* eslint-disable @typescript-eslint/no-base-to-string */
-import assert from "node:assert";
 import type readline from "node:readline/promises";
 import type { ModelMessage } from "ai";
 import type { MCPClient } from "@ai-sdk/mcp";
+import { assertAtRuntime } from "./assert.ts";
 import {
   defaultConfig,
   type DefaultedConfig,
@@ -173,13 +173,13 @@ export function createPerformanceLogger({
   let startTime: bigint | null = null;
   function start() {
     if (!logDuration) return;
-    assert(startTime === null);
+    assertAtRuntime(startTime === null);
     startTime = process.hrtime.bigint();
   }
 
   function end(print: (durationStr: string) => void) {
     if (!logDuration) return;
-    assert(startTime !== null);
+    assertAtRuntime(startTime !== null);
     const endTime = process.hrtime.bigint();
     const duration = getPrettyDuration(startTime, endTime, {
       includeMicroseconds: true,
@@ -360,7 +360,7 @@ export const actions = {
   },
 
   setEditorInputValue(value: string | null) {
-    assert(value !== "");
+    assertAtRuntime(value !== "");
     const before = state.app.editorInputValue;
     state.app.editorInputValue = value;
     logStateChange("set-editor-input-value", String(before), String(value));

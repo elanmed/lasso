@@ -1,8 +1,8 @@
-import assert from "node:assert";
 import { createAnthropic } from "@ai-sdk/anthropic";
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 import { createOpenAI } from "@ai-sdk/openai";
 import { createGoogle } from "@ai-sdk/google";
+import { assertAtBuildtime, assertAtRuntime } from "./assert.ts";
 import { getState } from "./state.ts";
 import { MISSING } from "./missing.ts";
 import { processDeps } from "./deps.ts";
@@ -20,15 +20,15 @@ export function getLanguageModel(model = getState().config.model) {
   const apiKey = processDeps.env.get("LASSO_API_KEY");
   const sdkProvider = getState().config.sdkProvider;
 
-  assert(apiKey !== undefined);
-  assert(sdkProvider !== MISSING);
+  assertAtBuildtime(apiKey !== undefined);
+  assertAtBuildtime(sdkProvider !== MISSING);
 
   const baseURL = getState().config.baseURL;
   const headers = getHeaders();
 
   switch (sdkProvider) {
     case "openai-compatible": {
-      assert(baseURL !== undefined);
+      assertAtBuildtime(baseURL !== undefined);
       return createOpenAICompatible({
         apiKey,
         baseURL,

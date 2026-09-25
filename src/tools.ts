@@ -1,8 +1,8 @@
-import assert from "node:assert";
 import { tool, type ModelMessage } from "ai";
 import { z } from "zod";
 import { Window } from "happy-dom";
 import { Readability } from "@mozilla/readability";
+import { assertAtBuildtime } from "./assert.ts";
 import {
   getMessageFromError,
   isAbortError,
@@ -35,7 +35,7 @@ export function toolPrint(label: string, detail: string) {
   let strIdx = 0;
   while (lines.length < maxLines && detailIdx < detailArr.length) {
     const detailLine = detailArr[detailIdx];
-    assert(detailLine !== undefined);
+    assertAtBuildtime(detailLine !== undefined);
 
     let maxLen = (() => {
       if (lines.length === 0) return getMaxColLength() - labelLen;
@@ -62,7 +62,7 @@ export function toolPrint(label: string, detail: string) {
 
   if (overflow) {
     const lastLine = lines.pop();
-    assert(lastLine !== undefined);
+    assertAtBuildtime(lastLine !== undefined);
 
     const ellipsis = getUnicodeChar("…");
     const newLastLine = (() => {

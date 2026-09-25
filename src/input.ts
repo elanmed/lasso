@@ -1,11 +1,11 @@
 import readline from "node:readline/promises";
 import { emitKeypressEvents } from "node:readline";
 import { stdin, stdout } from "node:process";
-import assert from "node:assert";
 import { Writable } from "node:stream";
 import { dirname, join } from "node:path";
 import childProcess from "node:child_process";
 import os from "node:os";
+import { assertAtBuildtime, assertAtRuntime } from "./assert.ts";
 import {
   isAbortError,
   tryCatch,
@@ -99,7 +99,7 @@ async function getEditorInitialContent(opts: {
   includeClipboardSuffix: boolean;
 }) {
   const rl = getState().app.rl;
-  assert(rl !== null);
+  assertAtBuildtime(rl !== null);
 
   const prefilledEditorContent = (() => {
     const editorInputValue = getState().app.editorInputValue;
@@ -149,7 +149,7 @@ function abortRlQuestionForEditor(editorContent: string) {
   const abortController = getState().abortControllers.question;
   if (abortController !== null) {
     const rl = clearRlLine();
-    assert(rl !== null);
+    assertAtBuildtime(rl !== null);
 
     const truncatedFirstLine = truncate(editorContent);
     rl.write(truncatedFirstLine);
@@ -161,10 +161,10 @@ function abortRlQuestionForEditor(editorContent: string) {
 
 export function initKeypress() {
   const rl = getState().app.rl;
-  assert(rl !== null);
+  assertAtBuildtime(rl !== null);
 
   function typeCommand(command: string) {
-    assert(rl !== null);
+    assertAtBuildtime(rl !== null);
     const output = `/${command}\n`;
     rl.write(output);
     actions.appendStdoutTail(output);
@@ -174,7 +174,7 @@ export function initKeypress() {
   // commands so the pending question and its input stay visible and editable
   function redrawPendingQuestion() {
     if (getState().abortControllers.question === null) return;
-    assert(rl !== null);
+    assertAtBuildtime(rl !== null);
     rl.prompt(true);
   }
 
@@ -311,14 +311,14 @@ export function initKeypress() {
 
 export function initSigInt() {
   const rl = getState().app.rl;
-  assert(rl !== null);
+  assertAtBuildtime(rl !== null);
   rl.on("SIGINT", () => {
     const apiStream = getState().abortControllers.apiStream;
     const interruptWithEditorContent =
       getState().abortControllers.interruptWithEditorContent;
     const question = getState().abortControllers.question;
     const controllers = [apiStream, interruptWithEditorContent, question];
-    assert(controllers.filter((c) => c !== null).length <= 1);
+    assertAtBuildtime(controllers.filter((c) => c !== null).length <= 1);
 
     if (apiStream !== null) {
       apiStream.abort();
@@ -345,7 +345,7 @@ function filterIfLength(str: string) {
 
 export function parseInputFromEditor() {
   const editorInputValue = getState().app.editorInputValue;
-  assert(editorInputValue !== null);
+  assertAtBuildtime(editorInputValue !== null);
   const splitByDelimiterEditorInputValue = editorInputValue
     .split(getState().config.messageQueueDelimiter)
     .filter(filterIfLength);
@@ -401,7 +401,7 @@ export async function resolveUserInput({
   isFirstInput: boolean;
 }) {
   const rl = getState().app.rl;
-  assert(rl !== null);
+  assertAtBuildtime(rl !== null);
 
   if (getState().app.editorInputValue !== null) {
     const editorInput = parseInputFromEditor();
@@ -422,7 +422,7 @@ export async function resolveUserInput({
 
   actions.setQuestionAbortController(new AbortController());
   const abortController = getState().abortControllers.question;
-  assert(abortController !== null);
+  assertAtBuildtime(abortController !== null);
   const inputResult = await tryCatchAsync(
     rl.question(getState().config.promptPrefix, {
       signal: abortController.signal,
@@ -488,11 +488,11 @@ export function shouldResolveSlashCommand(
 
 async function resolveExitConfirmation() {
   const rl = getState().app.rl;
-  assert(rl !== null);
+  assertAtBuildtime(rl !== null);
 
   actions.setQuestionAbortController(new AbortController());
   const abortController = getState().abortControllers.question;
-  assert(abortController !== null);
+  assertAtBuildtime(abortController !== null);
   const exitResult = await tryCatchAsync(
     rl.question("y(es) or <C-c> to exit: ", {
       signal: abortController.signal,
@@ -528,12 +528,12 @@ async function resolveExitConfirmation() {
 
 export async function resolveInterruptWithEditor() {
   const rl = getState().app.rl;
-  assert(rl !== null);
+  assertAtBuildtime(rl !== null);
 
   actions.setInterruptWithEditorAbortController(new AbortController());
   const abortController =
     getState().abortControllers.interruptWithEditorContent;
-  assert(abortController !== null);
+  assertAtBuildtime(abortController !== null);
   print.warning(
     `You have queued messages! Edit them with ${JSON.stringify(getState().config.keymaps.edit)} or press enter to continue`,
   );
@@ -857,7 +857,7 @@ export function setModelCommand(rawInput: string) {
     return;
   }
   const model = parts[1];
-  assert(model !== undefined);
+  assertAtBuildtime(model !== undefined);
 
   const prevModel = getState().config.model;
   actions.setModel(model);
@@ -985,10 +985,7 @@ export function resume(rawInput: string) {
       (a, b) => b.timestampMs - a.timestampMs,
     );
     const historyEntry = sortedEntries[0];
-    assert(
-      historyEntry !== undefined,
-      "Asserted in `chatHistoryFileEntries.length !== 0`",
-    );
+    assertAtBuildtime(historyEntry !== undefined);
 
     const { absolutePath, timestampMs } = historyEntry;
     const readResult = tryCatch(() =>
@@ -1008,7 +1005,7 @@ export function resume(rawInput: string) {
     return null;
   }
   const sessionStartDate = parts[1];
-  assert(sessionStartDate !== undefined);
+  assertAtBuildtime(sessionStartDate !== undefined);
 
   if (Number.isNaN(Number(sessionStartDate))) {
     print.error("Usage: /resume [session start date]");
@@ -1142,7 +1139,7 @@ async function reload() {
 
     if (diffResult.value.stdout.length > 0) {
       const prefix = reloadTempFilePrefixes[i];
-      assert(prefix !== undefined);
+      assertAtBuildtime(prefix !== undefined);
       diffResults.push(
         `${getReloadTempFileDiffTitle()[prefix]}
 ${diffResult.value.stdout}
@@ -1290,7 +1287,7 @@ export function pageLastMessage() {
   }
 
   const contentStr = lastMessage.content;
-  assert(typeof contentStr === "string");
+  assertAtBuildtime(typeof contentStr === "string");
 
   if (contentStr.length === 0) {
     print.doing("No user messages");
@@ -1369,7 +1366,7 @@ ${diffStdout}
 
 export function clearRlLine(): readline.Interface | null {
   const rl = getState().app.rl;
-  assert(rl !== null);
+  assertAtBuildtime(rl !== null);
   rl.write(null, { ctrl: true, name: "e" });
   rl.write(null, { ctrl: true, name: "u" });
   return rl;

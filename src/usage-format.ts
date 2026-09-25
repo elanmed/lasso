@@ -1,5 +1,5 @@
-import assert from "node:assert";
 import { getState } from "./state.ts";
+import { assertAtBuildtime } from "./assert.ts";
 import { decimalToPercent } from "./utils.ts";
 import { getCurrentPromptTokens } from "./usage.ts";
 import {
@@ -21,7 +21,7 @@ export function getPrettyUsage() {
 
 export function getUsageMoneyForModel(usageTokens: TokenUsage, model: string) {
   const pricing = getState().config.pricingPerModel[model];
-  assert(pricing !== undefined);
+  assertAtBuildtime(pricing !== undefined);
 
   const inputPerMillion = pricing.inputPerMillion;
   const outputPerMillion = pricing.outputPerMillion;
@@ -95,7 +95,7 @@ export function getPrettyTokenUsage() {
   if (isUsageLimitDisabled())
     return `$${getPrettyMoney(costForSession)} in session`;
 
-  assert(usageLimit !== undefined);
+  assertAtBuildtime(usageLimit !== undefined);
   const costForLimitWindow = getUsageMoneyForModel(
     tokenUsageForLimitWindow,
     model,
