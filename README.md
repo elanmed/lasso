@@ -18,7 +18,7 @@ _A minimal agent harness to rein in your llm_
 - **AGENTS.md support**: The root file is included in context, nested files are internally represented as skills
 - **Slash commands**: Change agent settings or execute reusable prompts
 - **Token usage tracking**: Track spending per model within a configurable time window
-- **Context compaction**: The conversation is automatically compacted at 80% context usage, compacted down to 30%
+- **Context compaction**: Conversations are automatically compacted near 80% context usage
 - **Session history**: Transcripts are persisted per session and past sessions can be resumed with `/resume`
 - **Keymaps**: Customizable shortcuts for executing built-in slash commands
 
@@ -304,29 +304,29 @@ usageLimit:
 
 Slash commands are triggered with `/command` at the prompt.
 
-| Command         | Description                                                                                  |
-| --------------- | -------------------------------------------------------------------------------------------- |
-| `/edit`         | Call the `edit` keymap                                                                       |
-| `/editpage`     | View the current editor input in a pager                                                     |
-| `/clear`        | Clear conversation context                                                                   |
-| `/history`      | View chat history in a pager                                                                 |
-| `/lastresponse` | View the latest assistant response in a pager                                                |
-| `/lastmessage`  | View the last user message in a pager                                                        |
-| `/lastdiff`     | View the last turn's tool edit diffs in a pager                                              |
-| `/messages`     | View the full message list in a pager                                                        |
-| `/paste`        | Call the `paste` keymap                                                                      |
-| `/model`        | Switch the model at runtime (e.g. `/model kimi-k2.6`)                                        |
-| `/skills`       | List available skills                                                                        |
-| `/context`      | List available context files                                                                 |
-| `/contextpage`  | View the raw context string in a pager                                                       |
-| `/commands`     | List available slash commands (builtin and custom)                                           |
-| `/commandspage` | View custom slash command contents in a pager                                                |
-| `/keymaps`      | List configured keybindings                                                                  |
-| `/usage`        | Show current session usage                                                                   |
-| `/config`       | View global, local, and applied config in a pager                                            |
-| `/reload`       | Reload config and context, diff the result in a pager                                        |
-| `/initlocal`    | Create `./.lasso/settings.yaml` if it doesn't exist                                          |
-| `/initglobal`   | Create `~/.config/lasso/settings.yaml` if it doesn't exist                                   |
+| Command         | Description                                                                   |
+| --------------- | ----------------------------------------------------------------------------- |
+| `/edit`         | Call the `edit` keymap                                                        |
+| `/editpage`     | View the current editor input in a pager                                      |
+| `/clear`        | Clear conversation context                                                    |
+| `/history`      | View chat history in a pager                                                  |
+| `/lastresponse` | View the latest assistant response in a pager                                 |
+| `/lastmessage`  | View the last user message in a pager                                         |
+| `/lastdiff`     | View the last turn's tool edit diffs in a pager                               |
+| `/messages`     | View the full message list in a pager                                         |
+| `/paste`        | Call the `paste` keymap                                                       |
+| `/model`        | Switch the model at runtime (e.g. `/model kimi-k2.6`)                         |
+| `/skills`       | List available skills                                                         |
+| `/context`      | List available context files                                                  |
+| `/contextpage`  | View the raw context string in a pager                                        |
+| `/commands`     | List available slash commands (builtin and custom)                            |
+| `/commandspage` | View custom slash command contents in a pager                                 |
+| `/keymaps`      | List configured keybindings                                                   |
+| `/usage`        | Show current session usage                                                    |
+| `/config`       | View global, local, and applied config in a pager                             |
+| `/reload`       | Reload config and context, diff the result in a pager                         |
+| `/initlocal`    | Create `./.lasso/settings.yaml` if it doesn't exist                           |
+| `/initglobal`   | Create `~/.config/lasso/settings.yaml` if it doesn't exist                    |
 | `/resume`       | Resume the latest session or select one by start date (`/resume <timestamp>`) |
 
 ### Custom Slash Commands
@@ -440,6 +440,19 @@ Available skills are listed in the system prompt, the LLM can use the `load_skil
 - `web_fetch_json` — fetch a JSON API endpoint and return parsed data
 - `load_skill` — load a skill to get specialized instructions
 - `create_subagent` — launch parallel subagents for independent investigation or implementation
+
+## Conversation compaction
+
+Before each API call, lasso estimates the next prompt size from the conversation so far, the new user input, and prompt overhead such as context and tools. Compaction runs when this estimate exceeds 80% of the active model's context window. Compaction is skipped unless that model has a context window configured:
+
+```yaml
+contextWindowPerModel:
+  your-model: 200000
+```
+
+The new conversation summary targets 30% of the context window. Lasso reserves up to 50% for summary history and keeps at most five summaries. When five already exist, it first merges the adjacent pair which was updated (added or merged) longest ago.
+
+By default, lasso uses structured output to enforce the summary's maximum length. Set `compactWithStructuredOutput: false` to use plain-text output for models that do not support structured output. In that case, the requested lengths are targets rather than enforced limits.
 
 ## Dependencies
 
