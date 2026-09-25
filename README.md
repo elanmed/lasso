@@ -18,7 +18,7 @@ _A minimal agent harness to rein in your llm_
 - **AGENTS.md support**: The root file is included in context, nested files are internally represented as skills
 - **Slash commands**: Change agent settings or execute reusable prompts
 - **Token usage tracking**: Track spending per model within a configurable time window
-- **Context compaction**: Conversations are automatically compacted near 80% context usage
+- **Context compaction**: Conversations are automatically compacted near 95% context usage
 - **Session history**: Transcripts are persisted per session and past sessions can be resumed with `/resume`
 - **Keymaps**: Customizable shortcuts for executing built-in slash commands
 
@@ -443,7 +443,7 @@ Available skills are listed in the system prompt, the LLM can use the `load_skil
 
 ## Conversation compaction
 
-Before each API call, lasso estimates the next prompt size from the conversation so far, the new user input, and prompt overhead such as context and tools. Compaction runs when this estimate exceeds 80% of the active model's context window. Compaction is skipped unless that model has a context window configured:
+Before each API call, lasso estimates the next prompt size from the conversation so far, the new user input, and prompt overhead such as context and tools. Compaction runs when this estimate exceeds 95% of the active model's context window. Compaction is skipped unless that model has a context window configured:
 
 ```yaml
 contextWindowPerModel:

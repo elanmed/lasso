@@ -16,7 +16,7 @@ import { fsDeps } from "./deps.ts";
 import { getUsageLogLockPath, getUsageLogPath } from "./paths.ts";
 import { print } from "./print.ts";
 
-export const compactTriggerRatio = 0.8;
+export const compactTriggerRatio = 0.95;
 export const dedicatedSummaryRatio = 0.5;
 export const dedicatedPromptOverheadRatio =
   compactTriggerRatio - dedicatedSummaryRatio;

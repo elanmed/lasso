@@ -577,7 +577,7 @@ response text
     });
 
     it("uses approximated tokens when stale to decide compaction", async () => {
-      const longUserContent = "a".repeat(240_000);
+      const longUserContent = "a".repeat(300_000);
       actions.appendToConversation({
         role: "user",
         content: longUserContent,
@@ -637,7 +637,7 @@ response text
     it("includes the system prompt in the stale approximation when deciding compaction", async () => {
       const systemContent = "s".repeat(100_000);
       mock.method(promptDeps, "getSystemContent", () => systemContent);
-      const longUserContent = "a".repeat(150_000);
+      const longUserContent = "a".repeat(190_000);
       actions.appendToConversation({
         role: "user",
         content: longUserContent,
@@ -653,17 +653,17 @@ response text
       });
       await maybeCompact("hi");
       const systemContentTokensApprox = strToApproxTokens(systemContent);
-      assert.strictEqual(strToApproxTokens(longUserContent) < 70_000, true);
+      assert.strictEqual(strToApproxTokens(longUserContent) < 95_000, true);
       assert.strictEqual(
         strToApproxTokens(longUserContent) + systemContentTokensApprox >=
-          70_000,
+          95_000,
         true,
       );
       assert.strictEqual(called, true);
     });
 
     it("includes the tools in the stale approximation when deciding compaction", async () => {
-      const longUserContent = "a".repeat(237_000);
+      const longUserContent = "a".repeat(282_000);
       actions.appendToConversation({
         role: "user",
         content: longUserContent,
@@ -679,9 +679,9 @@ response text
       });
       await maybeCompact("hi");
       const toolsTokensApprox = strToApproxTokens(safeStringify(harnessTools));
-      assert.strictEqual(strToApproxTokens(longUserContent) < 80_000, true);
+      assert.strictEqual(strToApproxTokens(longUserContent) < 95_000, true);
       assert.strictEqual(
-        strToApproxTokens(longUserContent) + toolsTokensApprox >= 80_000,
+        strToApproxTokens(longUserContent) + toolsTokensApprox >= 95_000,
         true,
       );
       assert.strictEqual(called, true);
@@ -691,7 +691,7 @@ response text
       actions.setMcp({}, { mcp_tool: makeMcpTool() });
       actions.setToolsContentStr(safeStringify(getTools()));
       actions.appendToConversation({ role: "user", content: "hi" });
-      actions.setPromptTokens(85_000);
+      actions.setPromptTokens(96_000);
       mock.method(aiDeps, "generateText", () =>
         Promise.resolve(
           makeGenerateTextResult({
@@ -743,7 +743,7 @@ response text
 
     it("compacts the conversation when above the threshold", async () => {
       actions.appendToConversation({ role: "user", content: "hi" });
-      actions.setPromptTokens(85_000);
+      actions.setPromptTokens(96_000);
       let capturedOpts: Record<string, unknown> | undefined;
       mock.method(aiDeps, "generateText", (opts: Record<string, unknown>) => {
         capturedOpts = opts;
@@ -788,7 +788,7 @@ response text
 
     it("compacts when the user input pushes tokens over the threshold", async () => {
       actions.appendToConversation({ role: "user", content: "hi" });
-      actions.setPromptTokens(80_000);
+      actions.setPromptTokens(95_000);
       let capturedOpts: Record<string, unknown> | undefined;
       mock.method(aiDeps, "generateText", (opts: Record<string, unknown>) => {
         capturedOpts = opts;
@@ -800,7 +800,7 @@ response text
         );
       });
 
-      // 300 chars ≈ 100 tokens, pushing 80_000 over the 0.8 trigger (80_000 tokens).
+      // 300 chars ≈ 100 tokens, pushing 95_000 over the 0.95 trigger (95_000 tokens).
       const getMessages = () => getCapturedMessages(capturedOpts);
       await maybeCompact("x".repeat(300));
 
@@ -819,7 +819,7 @@ response text
 
     it("keeps messages when generateText fails", async () => {
       actions.appendToConversation({ role: "user", content: "hi" });
-      actions.setPromptTokens(85_000);
+      actions.setPromptTokens(96_000);
       mock.method(aiDeps, "generateText", () =>
         Promise.reject(new Error("network error")),
       );
@@ -829,7 +829,7 @@ response text
         messages: [{ role: "user", content: "hi" }],
       });
       assert.deepStrictEqual(getState().app.promptTokens, {
-        value: 85_000,
+        value: 96_000,
         dirty: false,
       });
     });
@@ -837,7 +837,7 @@ response text
     it("resolves the queued editor input when compaction is aborted", async () => {
       const getCaptured = mockStdout();
       actions.appendToConversation({ role: "user", content: "hi" });
-      actions.setPromptTokens(85_000);
+      actions.setPromptTokens(96_000);
       actions.setRl(makeFakeRl());
       actions.setEditorInputValue("queued input");
       const err = makeAbortError();
@@ -854,7 +854,7 @@ response text
     it("keeps messages on abort error during compaction", async () => {
       const getCaptured = mockStdout();
       actions.appendToConversation({ role: "user", content: "hi" });
-      actions.setPromptTokens(85_000);
+      actions.setPromptTokens(96_000);
       const err = makeAbortError();
       mock.method(aiDeps, "generateText", () => Promise.reject(err));
       await maybeCompact("hi");
@@ -864,7 +864,7 @@ response text
         messages: [{ role: "user", content: "hi" }],
       });
       assert.deepStrictEqual(getState().app.promptTokens, {
-        value: 85_000,
+        value: 96_000,
         dirty: false,
       });
       assert.strictEqual(
@@ -876,7 +876,7 @@ response text
 
     it("resets messages before the api call so the summary and new user input are both sent", async () => {
       actions.appendToConversation({ role: "user", content: "old" });
-      actions.setPromptTokens(85_000);
+      actions.setPromptTokens(96_000);
       const calls: ModelMessage[][] = [];
       let callCount = 0;
       mock.method(aiDeps, "generateText", (opts: Record<string, unknown>) => {
@@ -942,7 +942,7 @@ response text
         });
       }
       actions.appendToConversation({ role: "user", content: "hi" });
-      actions.setPromptTokens(85_000);
+      actions.setPromptTokens(96_000);
       const generate = mockGenerateTextResults([
         {
           output: { compacted: "compacted summary" },
@@ -989,7 +989,7 @@ response text
         });
       }
       actions.appendToConversation({ role: "user", content: "hi" });
-      actions.setPromptTokens(85_000);
+      actions.setPromptTokens(96_000);
       const generate = mockGenerateTextResults([
         {
           output: { compacted: "compacted summary" },
