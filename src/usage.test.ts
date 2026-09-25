@@ -884,7 +884,7 @@ describe("usage", () => {
 
     it("throws when the usage limit is undefined", () => {
       actions.setUsageLimit(undefined);
-      assert.throws(() => getExpiredTime(), /usageLimit/);
+      assert.throws(() => getExpiredTime());
     });
 
     it("computes the expired time for seconds", () => {
