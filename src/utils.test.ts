@@ -7,7 +7,7 @@ import {
   strToApproxTokens,
   approxTokensToCharLen,
   tryCatchAsync,
-  normalizeLine,
+  normalizeNewline,
   execPromise,
   getMessageFromError,
   getTempFileName,
@@ -300,22 +300,22 @@ describe("utils", () => {
     });
   });
 
-  describe("normalizeLine", () => {
+  describe("normalizeNewline", () => {
     it("preserves leading whitespace and appends newline", () => {
-      assert.equal(normalizeLine("  hello  "), "  hello\n");
-      assert.equal(normalizeLine("\t\tcontent"), "\t\tcontent\n");
+      assert.equal(normalizeNewline("  hello  "), "  hello\n");
+      assert.equal(normalizeNewline("\t\tcontent"), "\t\tcontent\n");
     });
 
     it("trims trailing whitespace", () => {
-      assert.equal(normalizeLine("content\n\n"), "content\n");
+      assert.equal(normalizeNewline("content\n\n"), "content\n");
     });
 
     it("handles empty string", () => {
-      assert.equal(normalizeLine(""), "\n");
+      assert.equal(normalizeNewline(""), "\n");
     });
 
     it("handles already normalized string", () => {
-      assert.equal(normalizeLine("already\n"), "already\n");
+      assert.equal(normalizeNewline("already\n"), "already\n");
     });
   });
 

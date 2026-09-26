@@ -8,7 +8,7 @@ import {
   execPromise,
   getMessageFromError,
   getTempFileName,
-  normalizeLine,
+  normalizeNewline,
   shouldDisableColor,
   tryCatch,
   tryCatchAsync,
@@ -105,7 +105,7 @@ export function createToolCallDiffer() {
       if (!getState().config.suppressToolEditDiffs) {
         printNewline();
         fencePrint(`File change: ${path}`);
-        print.plain(normalizeLine(diffResult.value.stdout));
+        print.plain(normalizeNewline(diffResult.value.stdout));
         printNewline();
       }
     }

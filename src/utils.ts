@@ -67,7 +67,7 @@ export async function tryCatchAsync<T>(
   }
 }
 
-export function normalizeLine(content: string): string {
+export function normalizeNewline(content: string): string {
   return content.trimEnd().concat("\n");
 }
 

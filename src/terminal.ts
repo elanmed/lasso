@@ -7,7 +7,7 @@ import {
   getMessageFromError,
   getTempFileName,
   isExisty,
-  normalizeLine,
+  normalizeNewline,
   tryCatch,
   tryCatchAsync,
   shouldDisableColor,
@@ -65,7 +65,7 @@ export async function formatMarkdown(content: string): Promise<string> {
 
 export async function executeBat(content: string) {
   content = await formatMarkdown(content);
-  content = normalizeLine(content);
+  content = normalizeNewline(content);
   if (!getState().app.batAvailable) {
     return print.plain(content);
   }

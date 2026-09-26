@@ -1,6 +1,6 @@
 import { dirname, join } from "node:path";
 import { actions, getState } from "./state.ts";
-import { listChatHistoryFiles, normalizeLine, tryCatch } from "./utils.ts";
+import { listChatHistoryFiles, normalizeNewline, tryCatch } from "./utils.ts";
 import { fsDeps } from "./deps.ts";
 import { getPromptHistoryDir } from "./paths.ts";
 import { debugLog as writeDebugLog } from "./debug-log.ts";
@@ -31,7 +31,7 @@ export function prependToChatHistory(
 
   const newChatHistory = `
 ${new Date(Date.now()).toISOString()}  *${role}*
-${normalizeLine(content)}
+${normalizeNewline(content)}
 ---
 ${existingContent}`;
 
