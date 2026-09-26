@@ -584,7 +584,7 @@ async function resolveBuiltinSlashCommand(
       return { handled: true, inputFromCommand: content };
     }
     case "editpage": {
-      pageEditStr({ isKeypress: false });
+      pageEditStr();
       return { handled: true, inputFromCommand: null };
     }
     case "paste": {
@@ -900,27 +900,31 @@ export function pageContextStr() {
   });
 }
 
-function withSpacingUnlessStreaming(cb: (...args: unknown[]) => void) {
+function isStreaming() {
+  return getState().abortControllers.apiStream !== null;
+}
+
+function withSpacingUnless(unless: boolean, cb: (...args: unknown[]) => void) {
   const rl = getState().app.rl;
   assertAtBuildtime(rl !== null);
 
-  if (getState().abortControllers.apiStream === null) {
-    printNewline();
+  if (unless) {
     cb();
-    printNewline();
   } else {
+    printNewline();
     cb();
+    printNewline();
   }
 }
 
-export function pageEditStr({ isKeypress }: { isKeypress: boolean }) {
+export function pageEditStr({
+  isKeypress = false,
+}: { isKeypress?: boolean } = {}) {
   const { editorInputValue } = getState().app;
   if (editorInputValue === null) {
-    if (isKeypress) {
-      withSpacingUnlessStreaming(() => print.doing("Editor is empty"));
-    } else {
-      print.doing("Editor is empty");
-    }
+    withSpacingUnless(isStreaming() || isKeypress, () =>
+      print.doing("Editor is empty"),
+    );
     return;
   }
 
