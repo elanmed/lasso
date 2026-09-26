@@ -99,9 +99,10 @@ export function openWithPager({
   initialContentStr,
   contentType,
 }: {
-  initialContentStr?: string;
+  initialContentStr: string;
   contentType: "diff" | "markdown";
 }): void {
+  initialContentStr = normalizeNewline(initialContentStr, { count: 2 });
   const tempFile = getTempFileName({ initialContentStr });
   if (tempFile === null) return;
 

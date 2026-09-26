@@ -317,6 +317,17 @@ describe("utils", () => {
     it("handles already normalized string", () => {
       assert.equal(normalizeNewline("already\n"), "already\n");
     });
+
+    it("appends two newlines when count is 2", () => {
+      assert.equal(
+        normalizeNewline("content\n\n\n", { count: 2 }),
+        "content\n\n",
+      );
+    });
+
+    it("defaults to one newline when no options are given", () => {
+      assert.equal(normalizeNewline("content\n\n\n"), "content\n");
+    });
   });
 
   describe("execPromise", () => {

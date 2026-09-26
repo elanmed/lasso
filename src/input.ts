@@ -223,7 +223,7 @@ export function initKeypress() {
             const initialContentStr = getAllPrettyConfig();
 
             openWithPager({
-              initialContentStr: normalizeNewline(initialContentStr),
+              initialContentStr,
               contentType: "markdown",
             });
             redrawPendingQuestion();
@@ -626,7 +626,7 @@ async function resolveBuiltinSlashCommand(
       const initialContentStr = getAllPrettyConfig();
 
       openWithPager({
-        initialContentStr: normalizeNewline(initialContentStr),
+        initialContentStr,
         contentType: "markdown",
       });
 
@@ -880,7 +880,7 @@ export function pageContextStr() {
   const initialContentStr = getState().app.contextStr;
 
   openWithPager({
-    initialContentStr: normalizeNewline(initialContentStr),
+    initialContentStr,
     contentType: "markdown",
   });
 }
@@ -897,7 +897,7 @@ export function pageEditStr() {
 ${editorInputValue}`;
 
   openWithPager({
-    initialContentStr: normalizeNewline(initialContentStr),
+    initialContentStr,
     contentType: "markdown",
   });
 }
@@ -908,7 +908,7 @@ export function pageCommands() {
 ${getAvailableCommandsStr()}`;
 
   openWithPager({
-    initialContentStr: normalizeNewline(initialContentStr),
+    initialContentStr,
     contentType: "markdown",
   });
 }
@@ -922,7 +922,7 @@ export function pageCustomSlashCommandsStr() {
   const initialContentStr = getCustomSlashCommandsStr();
 
   openWithPager({
-    initialContentStr: normalizeNewline(initialContentStr),
+    initialContentStr,
     contentType: "markdown",
   });
 }
@@ -1165,7 +1165,7 @@ ${diffResult.value.stdout}
     print.info("No diff from reload");
   } else {
     openWithPager({
-      initialContentStr: normalizeNewline(diff),
+      initialContentStr: diff,
       contentType: "diff",
     });
   }
@@ -1252,7 +1252,7 @@ export function pageHistory() {
 ${historyStr}`;
 
   openWithPager({
-    initialContentStr: normalizeNewline(initialContentStr),
+    initialContentStr,
     contentType: "markdown",
   });
 }
@@ -1281,7 +1281,7 @@ export async function pageLastResponse() {
 ${formattedContentStr}`;
 
   openWithPager({
-    initialContentStr: normalizeNewline(initialContentStr),
+    initialContentStr,
     contentType: "markdown",
   });
 }
@@ -1319,7 +1319,7 @@ export function pageMessages() {
 ${stringify(getState().app.conversation.messages.toReversed())}`;
 
   openWithPager({
-    initialContentStr: normalizeNewline(initialContentStr),
+    initialContentStr,
     contentType: "markdown",
   });
 }
@@ -1347,7 +1347,7 @@ ${summary.compacted}`,
 ${summariesStr}`;
 
   openWithPager({
-    initialContentStr: normalizeNewline(initialContentStr),
+    initialContentStr,
     contentType: "markdown",
   });
 }
@@ -1368,7 +1368,7 @@ ${diffStdout}
     .join("\n");
 
   openWithPager({
-    initialContentStr: normalizeNewline(initialContentStr),
+    initialContentStr,
     contentType: "diff",
   });
 }

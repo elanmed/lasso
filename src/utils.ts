@@ -67,8 +67,11 @@ export async function tryCatchAsync<T>(
   }
 }
 
-export function normalizeNewline(content: string): string {
-  return content.trimEnd().concat("\n");
+export function normalizeNewline(
+  content: string,
+  { count = 1 }: { count?: number } = {},
+): string {
+  return content.trimEnd().concat("\n".repeat(count));
 }
 
 export function getShortId(): string {

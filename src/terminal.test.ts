@@ -46,6 +46,7 @@ describe("terminal", () => {
       testProcessEnv._set("LASSO_PAGER_HISTORY", "nano __FILE__");
       testProcessEnv._set("LASSO_PAGER", "bat __FILE__");
       openWithPager({
+        initialContentStr: "",
         contentType: "markdown",
       });
       assert.strictEqual(spawned[0], "bat /tmp/lasso-test-uuid.txt");
@@ -54,6 +55,7 @@ describe("terminal", () => {
     it("falls back to LASSO_PAGER env var", () => {
       testProcessEnv._set("LASSO_PAGER", "bat __FILE__");
       openWithPager({
+        initialContentStr: "",
         contentType: "markdown",
       });
       assert.strictEqual(spawned[0], "bat /tmp/lasso-test-uuid.txt");
@@ -62,6 +64,7 @@ describe("terminal", () => {
     it("falls back to PAGER env var with quoted temp file", () => {
       testProcessEnv._set("PAGER", "more");
       openWithPager({
+        initialContentStr: "",
         contentType: "markdown",
       });
       assert.strictEqual(spawned[0], `more "/tmp/lasso-test-uuid.txt"`);
@@ -69,6 +72,7 @@ describe("terminal", () => {
 
     it("falls back to bat", () => {
       openWithPager({
+        initialContentStr: "",
         contentType: "markdown",
       });
       assert.strictEqual(spawned[0], batPagerCmd("/tmp/lasso-test-uuid.txt"));
@@ -76,6 +80,7 @@ describe("terminal", () => {
 
     it("uses base bat flags without markdown flags for diff contentType", () => {
       openWithPager({
+        initialContentStr: "",
         contentType: "diff",
       });
       assert.strictEqual(
@@ -90,6 +95,7 @@ describe("terminal", () => {
         spawnArgs = args;
       });
       openWithPager({
+        initialContentStr: "",
         contentType: "markdown",
       });
       assert.deepStrictEqual(spawnArgs, [
@@ -105,13 +111,25 @@ describe("terminal", () => {
       });
       assert.strictEqual(
         testFs._files.get("/tmp/lasso-test-uuid.txt"),
-        "string content",
+        "string content\n\n",
+      );
+    });
+
+    it("trims trailing newlines before appending exactly two", () => {
+      openWithPager({
+        initialContentStr: "content\n\n\n\n",
+        contentType: "markdown",
+      });
+      assert.strictEqual(
+        testFs._files.get("/tmp/lasso-test-uuid.txt"),
+        "content\n\n",
       );
     });
 
     it("falls back to less when bat is unavailable", () => {
       actions.setBatAvailable(false);
       openWithPager({
+        initialContentStr: "",
         contentType: "markdown",
       });
       assert.strictEqual(spawned[0], `less "/tmp/lasso-test-uuid.txt"`);

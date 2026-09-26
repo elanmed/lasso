@@ -1174,7 +1174,7 @@ transcript content`,
       pageContextStr();
       assert.strictEqual(
         testFs._files.get("/tmp/lasso-test-uuid.txt"),
-        `context string content\n`,
+        `context string content\n\n`,
       );
       assert.strictEqual(getCapturedStdout(), "");
     });
@@ -1209,6 +1209,7 @@ transcript content`,
         `# [lasso] Chat history
 
 log content
+
 `,
       );
     });
@@ -1246,6 +1247,7 @@ log content
 
 first
 second
+
 `,
       );
     });
@@ -1283,6 +1285,7 @@ second
         `# [lasso] Last message
 
 latest question
+
 `,
       );
     });
@@ -1328,6 +1331,7 @@ latest question
     "content": "question"
   }
 ]
+
 `,
       );
     });
@@ -1363,6 +1367,7 @@ latest summary
 ## Summary 1 (10 tokens, compacted at 100)
 
 older summary
+
 `,
       );
     });
@@ -1402,6 +1407,7 @@ older summary
         `# [lasso] Editor content
 
 editor input
+
 `,
       );
     });
@@ -1602,6 +1608,7 @@ Available context files:
 - /messages
 - /summaries
 - /test/.lasso/commands/custom.md
+
 `,
       );
       assert.strictEqual(getCapturedStdout(), "");
@@ -1715,6 +1722,7 @@ Available context files:
         `# [lasso] Chat history
 
 log content
+
 `,
       );
       assert.strictEqual(getCapturedStdout(), "");
@@ -1823,6 +1831,7 @@ log content
         `# [lasso] Editor content
 
 editor input
+
 `,
       );
       assert.strictEqual(getCapturedStdout(), "");
@@ -1865,7 +1874,7 @@ editor input
       await harness.flush();
       assert.strictEqual(
         testFs._files.get("/tmp/lasso-test-uuid.txt"),
-        `context string content\n`,
+        `context string content\n\n`,
       );
       assert.strictEqual(getCapturedStdout(), "");
       assert.deepStrictEqual(prompts, [true]);
@@ -1888,7 +1897,7 @@ editor input
 
 ## /test/.lasso/commands/custom.md
 
-custom command content\n`,
+custom command content\n\n`,
       );
       assert.strictEqual(getCapturedStdout(), "");
       assert.deepStrictEqual(prompts, [true]);
@@ -1933,6 +1942,7 @@ custom command content\n`,
 - /messages
 - /summaries
 - /test/.lasso/commands/custom.md
+
 `,
       );
       assert.strictEqual(getCapturedStdout(), "");
@@ -2031,6 +2041,7 @@ custom command content\n`,
         `# [lasso] Editor content
 
 editor input
+
 `,
       );
     });
@@ -2088,6 +2099,7 @@ pasted content
         `# [lasso] Chat history
 
 log content
+
 `,
       );
     });
@@ -2117,6 +2129,7 @@ log content
 
 ━━ /b.ts ━━
 +b
+
 `,
       );
     });
@@ -2217,6 +2230,7 @@ No available context files
 - /lastdiff
 - /messages
 - /summaries
+
 `,
       );
     });
@@ -2238,7 +2252,7 @@ No available context files
 
 ## /test/.lasso/commands/custom.md
 
-custom command content\n`,
+custom command content\n\n`,
       );
     });
 
@@ -2287,7 +2301,7 @@ custom command content\n`,
       assert.strictEqual(result, null);
       assert.strictEqual(
         testFs._files.get("/tmp/lasso-test-uuid.txt"),
-        `context string content\n`,
+        `context string content\n\n`,
       );
     });
 
@@ -2406,6 +2420,7 @@ skills diff
 
 Custom slash commands:
 commands diff
+
 `,
       );
       assert.strictEqual(
@@ -2457,6 +2472,7 @@ skills diff
 
 Custom slash commands:
 commands diff
+
 `,
       );
     });
@@ -2544,6 +2560,7 @@ skills diff
 
 Custom slash commands:
 commands diff
+
 `,
       );
       assert.strictEqual(
@@ -2593,6 +2610,7 @@ commands diff
         testFs._files.get("/tmp/lasso-test-uuid.txt"),
         `Local config from path: /test-cwd/.lasso/settings.yaml
 local diff
+
 `,
       );
     });
