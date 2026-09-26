@@ -313,6 +313,12 @@ export function makeMockUsage(
   return usage;
 }
 
+export function mockProcessExit() {
+  return mock.method(process, "exit", () => {
+    throw new Error("process.exit called");
+  });
+}
+
 export function makeAbortError(message = "aborted") {
   const err = new Error(message);
   err.name = "AbortError";

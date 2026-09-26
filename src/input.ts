@@ -8,6 +8,7 @@ import os from "node:os";
 import { assertAtBuildtime } from "./assert.ts";
 import {
   isAbortError,
+  isReadlineClosedError,
   tryCatch,
   tryCatchAsync,
   getMessageFromError,
@@ -436,6 +437,10 @@ export async function resolveUserInput({
   actions.setQuestionAbortController(null);
 
   if (!inputResult.ok) {
+    if (isReadlineClosedError(inputResult.error)) {
+      await exitSession();
+    }
+
     if (!isAbortError(inputResult.error)) {
       print.error(getMessageFromError(inputResult.error));
       return null;
@@ -491,6 +496,15 @@ export function shouldResolveSlashCommand(
   return true;
 }
 
+async function exitSession() {
+  const rl = getState().app.rl;
+  assertAtBuildtime(rl !== null);
+  rl.close();
+  printSessionStartDate();
+  await getState().mcp.close();
+  process.exit(0);
+}
+
 async function resolveExitConfirmation() {
   const rl = getState().app.rl;
   assertAtBuildtime(rl !== null);
@@ -506,11 +520,11 @@ async function resolveExitConfirmation() {
   actions.setQuestionAbortController(null);
 
   if (!exitResult.ok) {
-    if (isAbortError(exitResult.error)) {
-      rl.close();
-      printSessionStartDate();
-      await getState().mcp.close();
-      process.exit(0);
+    if (
+      isAbortError(exitResult.error) ||
+      isReadlineClosedError(exitResult.error)
+    ) {
+      await exitSession();
     }
 
     print.error(getMessageFromError(exitResult.error));
@@ -522,10 +536,7 @@ async function resolveExitConfirmation() {
       `${getState().config.promptPrefix}${exitResult.value}\n`,
     );
 
-    rl.close();
-    printSessionStartDate();
-    await getState().mcp.close();
-    process.exit(0);
+    await exitSession();
   }
 
   return;

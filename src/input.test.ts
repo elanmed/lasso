@@ -44,6 +44,8 @@ import {
   stripAnsi,
   mockStdout,
   makeAbortError,
+  makeErrnoError,
+  mockProcessExit,
 } from "./test-helpers.ts";
 import { fsDeps } from "./deps.ts";
 import { getGlobalConfigPath, getGlobalContextDir } from "./paths.ts";
@@ -388,11 +390,11 @@ describe("input", () => {
       assert.strictEqual(getState().app.editorInputValue, null);
       assert.strictEqual(
         testFs._files.get("/tmp/test-history.log"),
-        `
-1970-01-01T00:00:00.000Z  *user*
+        `1970-01-01T00:00:00.000Z  *user*
 editor content
 
 ---
+
 `,
       );
     });
@@ -407,11 +409,11 @@ editor content
       assert.strictEqual(getState().app.editorInputValue, null);
       assert.strictEqual(
         testFs._files.get("/tmp/test-history.log"),
-        `
-1970-01-01T00:00:00.000Z  *user*
+        `1970-01-01T00:00:00.000Z  *user*
 /model new-model
 
 ---
+
 `,
       );
     });
@@ -424,11 +426,11 @@ editor content
       assert.strictEqual(stripAnsi(getCapturedStdout()), "\n━━ Input ━━\n");
       assert.strictEqual(
         testFs._files.get("/tmp/test-history.log"),
-        `
-1970-01-01T00:00:00.000Z  *user*
+        `1970-01-01T00:00:00.000Z  *user*
   hello
 
 ---
+
 `,
       );
     });
@@ -445,11 +447,11 @@ editor content
       assert.strictEqual(getState().config.model, "new-model");
       assert.strictEqual(
         testFs._files.get("/tmp/test-history.log"),
-        `
-1970-01-01T00:00:00.000Z  *user*
+        `1970-01-01T00:00:00.000Z  *user*
 /model new-model
 
 ---
+
 `,
       );
     });
@@ -481,19 +483,17 @@ read failed
       assert.strictEqual(getState().app.editorInputValue, null);
       assert.strictEqual(
         testFs._files.get("/tmp/test-history.log"),
-        `
-1970-01-01T00:00:00.000Z  *user*
+        `1970-01-01T00:00:00.000Z  *user*
 from editor
 
 ---
+
 `,
       );
     });
 
     it("exits on abort during exit confirmation", async () => {
-      mock.method(process, "exit", () => {
-        throw new Error("process.exit called");
-      });
+      mockProcessExit();
       const questionMock = mock.method(getTestRl(), "question", () => {
         const err = makeAbortError("This operation was aborted");
         return Promise.reject(err);
@@ -517,9 +517,7 @@ from editor
     });
 
     it("exits when user confirms exit confirmation", async () => {
-      mock.method(process, "exit", () => {
-        throw new Error("process.exit called");
-      });
+      mockProcessExit();
       const err = makeAbortError("This operation was aborted");
       const questionMock = mock.method(getTestRl(), "question", () =>
         Promise.resolve("yes"),
@@ -536,9 +534,7 @@ from editor
       mock.restoreAll();
       setupTestContext({ now: 42_000 });
       getCapturedStdout = mockStdout();
-      mock.method(process, "exit", () => {
-        throw new Error("process.exit called");
-      });
+      mockProcessExit();
       actions.setRl(makeFakeRl());
       actions.resetStdout();
       const err = makeAbortError("This operation was aborted");
@@ -559,6 +555,65 @@ Resume this session with /resume 42000
       );
     });
 
+    it("exits on ctrl-d when readline closes", async () => {
+      mock.restoreAll();
+      setupTestContext({ now: 42_000 });
+      getCapturedStdout = mockStdout();
+      mockProcessExit();
+      actions.setRl(makeFakeRl());
+      actions.resetStdout();
+      const questionMock = mock.method(getTestRl(), "question", () =>
+        Promise.reject(
+          makeErrnoError("ERR_USE_AFTER_CLOSE", "readline was closed"),
+        ),
+      );
+      questionMock.mock.mockImplementationOnce(() =>
+        Promise.reject(makeAbortError("Aborted with Ctrl+D")),
+      );
+
+      await assert.rejects(
+        resolveUserInput({ isFirstInput: false }),
+        /process.exit called/,
+      );
+
+      assert.strictEqual(questionMock.mock.callCount(), 2);
+      assert.strictEqual(
+        stripAnsi(getCapturedStdout()),
+        `
+━━ Input ━━
+Resume this session with /resume 42000
+`,
+      );
+    });
+
+    it("exits when the prompt fails after readline closed", async () => {
+      mock.restoreAll();
+      setupTestContext({ now: 42_000 });
+      getCapturedStdout = mockStdout();
+      mockProcessExit();
+      actions.setRl(makeFakeRl());
+      actions.resetStdout();
+      const questionMock = mock.method(getTestRl(), "question", () =>
+        Promise.reject(
+          makeErrnoError("ERR_USE_AFTER_CLOSE", "readline was closed"),
+        ),
+      );
+
+      await assert.rejects(
+        resolveUserInput({ isFirstInput: false }),
+        /process.exit called/,
+      );
+
+      assert.strictEqual(questionMock.mock.callCount(), 1);
+      assert.strictEqual(
+        stripAnsi(getCapturedStdout()),
+        `
+━━ Input ━━
+Resume this session with /resume 42000
+`,
+      );
+    });
+
     it("returns the first queued editor message and keeps the rest for the next iteration", async () => {
       actions.setChatHistoryPath("/tmp/test-history.log");
       actions.setEditorInputValue("first\nl---\nsecond\n");
@@ -567,11 +622,11 @@ Resume this session with /resume 42000
       assert.strictEqual(getState().app.editorInputValue, "second\n");
       assert.strictEqual(
         testFs._files.get("/tmp/test-history.log"),
-        `
-1970-01-01T00:00:00.000Z  *user*
+        `1970-01-01T00:00:00.000Z  *user*
 first
 
 ---
+
 `,
       );
     });
@@ -606,11 +661,11 @@ second
       assert.strictEqual(getState().app.editorInputValue, null);
       assert.strictEqual(
         testFs._files.get("/tmp/test-history.log"),
-        `
-1970-01-01T00:00:00.000Z  *user*
+        `1970-01-01T00:00:00.000Z  *user*
 editor content
 
 ---
+
 `,
       );
     });
@@ -633,11 +688,11 @@ third
       );
       assert.strictEqual(
         testFs._files.get("/tmp/test-history.log"),
-        `
-1970-01-01T00:00:00.000Z  *user*
+        `1970-01-01T00:00:00.000Z  *user*
 first
 
 ---
+
 `,
       );
     });
@@ -688,11 +743,11 @@ l---
       assert.strictEqual(getState().app.editorInputValue, "/cwd\n");
       assert.strictEqual(
         testFs._files.get("/tmp/test-history.log"),
-        `
-1970-01-01T00:00:00.000Z  *user*
+        `1970-01-01T00:00:00.000Z  *user*
 message 2
 
 ---
+
 `,
       );
     });
@@ -2061,11 +2116,11 @@ editor input
       assert.strictEqual(result, "from editor\n");
       assert.strictEqual(
         testFs._files.get("/tmp/test-history.log"),
-        `
-1970-01-01T00:00:00.000Z  *user*
+        `1970-01-01T00:00:00.000Z  *user*
 from editor
 
 ---
+
 `,
       );
     });
@@ -2080,11 +2135,11 @@ from editor
       assert.strictEqual(result, "pasted content\n");
       assert.strictEqual(
         testFs._files.get("/tmp/test-history.log"),
-        `
-1970-01-01T00:00:00.000Z  *user*
+        `1970-01-01T00:00:00.000Z  *user*
 pasted content
 
 ---
+
 `,
       );
     });
