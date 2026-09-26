@@ -96,6 +96,26 @@ describe("print", () => {
     });
   });
 
+  describe("appendNewline", () => {
+    it("appends a newline by default", () => {
+      const getCaptured = mockStdout();
+      colorPrint("hello", "none");
+      assert.strictEqual(getCaptured(), "hello\n");
+    });
+
+    it("omits the newline when appendNewline is false", () => {
+      const getCaptured = mockStdout();
+      colorPrint("hello", "none", { appendNewline: false });
+      assert.strictEqual(getCaptured(), "hello");
+    });
+
+    it("keeps color codes around the text without a trailing newline", () => {
+      const getCaptured = mockStdout();
+      colorPrint("hello", "blue", { appendNewline: false });
+      assert.strictEqual(getCaptured(), "\u001b[34mhello\u001b[0m");
+    });
+  });
+
   describe("color disabled", () => {
     it("omits ansi codes when NO_COLOR is set", () => {
       testProcessEnv._set("NO_COLOR", "1");

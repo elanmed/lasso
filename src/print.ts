@@ -19,22 +19,37 @@ export function bold(text: string) {
   return `\x1b[1m${text}\x1b[22m`;
 }
 
+interface AppendNewlineOpts {
+  appendNewline?: boolean;
+}
+
 export const print = {
-  doing: (text: string) => colorPrint(text, "blue"),
-  error: (text: string) => colorPrint(text, "red"),
-  info: (text: string) => colorPrint(text, "purple"),
-  infoSubtle: (text: string) => colorPrint(text, "grey"),
-  warning: (text: string) => colorPrint(text, "yellow"),
-  plain: (text: string) => colorPrint(text, "none"),
+  doing: (text: string, opts: AppendNewlineOpts = {}) =>
+    colorPrint(text, "blue", opts),
+  error: (text: string, opts: AppendNewlineOpts = {}) =>
+    colorPrint(text, "red", opts),
+  info: (text: string, opts: AppendNewlineOpts = {}) =>
+    colorPrint(text, "purple", opts),
+  infoSubtle: (text: string, opts: AppendNewlineOpts = {}) =>
+    colorPrint(text, "grey", opts),
+  warning: (text: string, opts: AppendNewlineOpts = {}) =>
+    colorPrint(text, "yellow", opts),
+  plain: (text: string, opts: AppendNewlineOpts = {}) =>
+    colorPrint(text, "none", opts),
 };
 
-export function colorPrint(text: string, color: Color) {
+export function colorPrint(
+  text: string,
+  color: Color,
+  opts: AppendNewlineOpts = {},
+) {
   const reset = "\x1b[0m";
   const out = (() => {
+    const suffix = opts.appendNewline === false ? "" : "\n";
     if (color === "none" || shouldDisableColor()) {
-      return `${text}\n`;
+      return `${text}${suffix}`;
     }
-    return `${COLORS[color]}${text}${reset}\n`;
+    return `${COLORS[color]}${text}${reset}${suffix}`;
   })();
 
   const wasSpinnerActive = getState().app.loadingStateTimeout !== null;
