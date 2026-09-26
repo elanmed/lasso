@@ -1,7 +1,7 @@
 import { describe, it, beforeEach, afterEach, mock } from "node:test";
 import assert from "node:assert";
 import { createToolCallDiffer, execGitDiff } from "./differ.ts";
-import { getState } from "./state.ts";
+import { actions, getState } from "./state.ts";
 import {
   mockExecCalls,
   mockStdout,
@@ -95,6 +95,29 @@ describe("differ", () => {
         stripAnsi(getCaptured()),
         `\n━━ File change: /test/new-file.txt ━━\n+created content\n\n`,
       );
+      assert.deepStrictEqual(getState().app.toolEditDiffs, [
+        { fileName: "/test/new-file.txt", diffStdout: "+created content\n" },
+      ]);
+      assert.equal(testFs._files.has("/tmp/lasso-test-uuid.txt"), false);
+      assert.equal(differ.toolCallIdToTempFileBefore.has("call-1"), false);
+    });
+
+    it("suppresses printing, continues recording tool edit diffs", async () => {
+      const commands: string[] = [];
+      const getCaptured = mockStdout();
+      const differ = createToolCallDiffer();
+      mockExecCalls(
+        [{ stdout: "delta 0.18.2" }, { stdout: "+created content\n" }],
+        commands,
+      );
+      actions.setSuppressToolEditDiffs(true);
+
+      differ.setTempFileBefore("call-1", "/test/new-file.txt");
+      testFs._files.set("/test/new-file.txt", "created content");
+      await differ.diffAndCleanup("call-1", "/test/new-file.txt");
+
+      assert.equal(commands.length, 2);
+      assert.strictEqual(stripAnsi(getCaptured()), "");
       assert.deepStrictEqual(getState().app.toolEditDiffs, [
         { fileName: "/test/new-file.txt", diffStdout: "+created content\n" },
       ]);

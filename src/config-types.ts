@@ -78,6 +78,7 @@ const LoadingStateFramesSchema = z
   });
 const PromptPrefixSchema = z.string();
 const SuppressBatUnavailableWarningSchema = z.boolean();
+const SuppressToolEditDiffsSchema = z.boolean();
 const AsciiOnlySchema = z.boolean();
 const SuppressStartupDurationsSchema = z.boolean();
 const CompactWithStructuredOutputSchema = z.boolean();
@@ -133,6 +134,7 @@ export const ConfigSchema = z.strictObject({
   suppressBatUnavailableWarning: SuppressBatUnavailableWarningSchema.optional(),
   asciiOnly: AsciiOnlySchema.optional(),
   suppressStartupDurations: SuppressStartupDurationsSchema.optional(),
+  suppressToolEditDiffs: SuppressToolEditDiffsSchema.optional(),
   compactWithStructuredOutput: CompactWithStructuredOutputSchema.optional(),
   messageQueueDelimiter: MessageQueueDelimiterSchema.optional(),
   reasoning: ReasoningSchema.optional(),
@@ -159,6 +161,7 @@ export const DefaultedConfigSchema = z.strictObject({
   suppressBatUnavailableWarning: SuppressBatUnavailableWarningSchema,
   asciiOnly: AsciiOnlySchema,
   suppressStartupDurations: SuppressStartupDurationsSchema,
+  suppressToolEditDiffs: SuppressToolEditDiffsSchema,
   compactWithStructuredOutput: CompactWithStructuredOutputSchema,
   messageQueueDelimiter: MessageQueueDelimiterSchema,
   reasoning: ReasoningSchema,
@@ -200,6 +203,7 @@ export const defaultConfig: DefaultedConfig = {
   suppressBatUnavailableWarning: false,
   asciiOnly: false,
   suppressStartupDurations: false,
+  suppressToolEditDiffs: false,
   compactWithStructuredOutput: true,
   messageQueueDelimiter: "l---\n",
   reasoning: "provider-default",

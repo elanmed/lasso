@@ -76,6 +76,7 @@ If `model`, `baseURL`, or `LASSO_API_KEY` are missing at startup, lasso warns an
 | `promptPrefix`                  | `string`                                                                             | `"> "`                   | Prompt prefix string                                                       |
 | `suppressBatUnavailableWarning` | `boolean`                                                                            | `false`                  | Suppress the startup warning when `bat` is missing                         |
 | `suppressStartupDurations`      | `boolean`                                                                            | `false`                  | Hide durations of startup operations from the screen                       |
+| `suppressToolEditDiffs`         | `boolean`                                                                            | `false`                  | Suppress file-change diffs from tool editing files                         |
 | `asciiOnly`                     | `boolean`                                                                            | `false`                  | Replace unicode characters with ASCII equivalents                          |
 | `compactWithStructuredOutput`   | `boolean`                                                                            | `true`                   | Compact conversations with structured output when possible                 |
 | `messageQueueDelimiter`         | `string`                                                                             | `l---\\n`                | Delimiter line separating multiple messages in the editor input            |
@@ -87,7 +88,7 @@ If `model`, `baseURL`, or `LASSO_API_KEY` are missing at startup, lasso warns an
 
 The local config either overwrites or extends the global config per option:
 
-- **Overwrite**: scalar options (`model`, `sdkProvider`, `gateway`, `baseURL`, `loadingStateFrameDuration`, `promptPrefix`, `suppressBatUnavailableWarning`, `asciiOnly`, `suppressStartupDurations`, `messageQueueDelimiter`, `reasoning`, `usageLimit`, `compactWithStructuredOutput`) and arrays (`customSlashCommandDirs`, `customSkillDirs`, `subagentModels`, `loadingStateFrames`) replace the global value wholesale — arrays are not merged.
+- **Overwrite**: scalar options (`model`, `sdkProvider`, `gateway`, `baseURL`, `loadingStateFrameDuration`, `promptPrefix`, `suppressBatUnavailableWarning`, `asciiOnly`, `suppressStartupDurations`, `suppressToolEditDiffs`, `messageQueueDelimiter`, `reasoning`, `usageLimit`, `compactWithStructuredOutput`) and arrays (`customSlashCommandDirs`, `customSkillDirs`, `subagentModels`, `loadingStateFrames`) replace the global value wholesale — arrays are not merged.
 - **Extend**: `keymaps`, `mcps`, `pricingPerModel`, and `contextWindowPerModel` merge entry-by-entry with the default and global entries, the local entry winning on conflicts. `pricingPerModel` and `contextWindowPerModel` entries set to `null` cancel the global or default entry (see the relevant sections below).
 
 ### MCP Servers

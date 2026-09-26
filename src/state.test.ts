@@ -85,6 +85,7 @@ describe("state", () => {
         defaultConfig.suppressBatUnavailableWarning,
       asciiOnly: defaultConfig.asciiOnly,
       suppressStartupDurations: defaultConfig.suppressStartupDurations,
+      suppressToolEditDiffs: defaultConfig.suppressToolEditDiffs,
       compactWithStructuredOutput: defaultConfig.compactWithStructuredOutput,
       messageQueueDelimiter: defaultConfig.messageQueueDelimiter,
       reasoning: defaultConfig.reasoning,
@@ -657,6 +658,12 @@ hello`,
     assert.strictEqual(getState().config.suppressBatUnavailableWarning, false);
     actions.setSuppressBatUnavailableWarning(true);
     assert.strictEqual(getState().config.suppressBatUnavailableWarning, true);
+  });
+
+  it("set-suppress-tool-edit-diffs", () => {
+    assert.strictEqual(getState().config.suppressToolEditDiffs, false);
+    actions.setSuppressToolEditDiffs(true);
+    assert.strictEqual(getState().config.suppressToolEditDiffs, true);
   });
 
   it("set-message-queue-delimiter", () => {

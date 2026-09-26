@@ -13,7 +13,7 @@ import {
   tryCatch,
   tryCatchAsync,
 } from "./utils.ts";
-import { actions } from "./state.ts";
+import { actions, getState } from "./state.ts";
 
 export async function execGitDiff(opts: {
   tempFileBeforePath: string;
@@ -101,10 +101,13 @@ export function createToolCallDiffer() {
         fileName: path,
         diffStdout: diffResult.value.stdout,
       });
-      printNewline();
-      fencePrint(`File change: ${path}`);
-      print.plain(normalizeLine(diffResult.value.stdout));
-      printNewline();
+
+      if (!getState().config.suppressToolEditDiffs) {
+        printNewline();
+        fencePrint(`File change: ${path}`);
+        print.plain(normalizeLine(diffResult.value.stdout));
+        printNewline();
+      }
     }
 
     tryCatch(() => fsDeps.unlinkSync(tempFileAfterPath));

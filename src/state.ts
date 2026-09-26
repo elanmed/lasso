@@ -145,6 +145,7 @@ const createInitialState = (): State => ({
     suppressBatUnavailableWarning: defaultConfig.suppressBatUnavailableWarning,
     asciiOnly: defaultConfig.asciiOnly,
     suppressStartupDurations: defaultConfig.suppressStartupDurations,
+    suppressToolEditDiffs: defaultConfig.suppressToolEditDiffs,
     compactWithStructuredOutput: defaultConfig.compactWithStructuredOutput,
     messageQueueDelimiter: defaultConfig.messageQueueDelimiter,
     reasoning: defaultConfig.reasoning,
@@ -643,6 +644,16 @@ export const actions = {
       "set-hide-startup-durations",
       String(before),
       String(suppressStartupDurations),
+    );
+  },
+
+  setSuppressToolEditDiffs(suppressToolEditDiffs: boolean) {
+    const before = state.config.suppressToolEditDiffs;
+    state.config.suppressToolEditDiffs = suppressToolEditDiffs;
+    logStateChange(
+      "set-suppress-tool-edit-diffs",
+      String(before),
+      String(suppressToolEditDiffs),
     );
   },
 

@@ -582,6 +582,27 @@ describe("config", () => {
       );
     });
 
+    it("uses its suppressToolEditDiffs over the global config, default config", async () => {
+      testFs._files.set(
+        getGlobalConfigPath(),
+        JSON.stringify({
+          ...testConfig,
+          suppressToolEditDiffs: true,
+        }),
+      );
+      testFs._files.set(
+        getLocalConfigPath(),
+        JSON.stringify({
+          ...testConfig,
+          suppressToolEditDiffs: false,
+        }),
+      );
+
+      await initState();
+
+      assert.strictEqual(getState().config.suppressToolEditDiffs, false);
+    });
+
     it("uses its messageQueueDelimiter over the global config, default config", async () => {
       testFs._files.set(
         getGlobalConfigPath(),
@@ -935,6 +956,18 @@ describe("config", () => {
         JSON.stringify({
           ...testConfig,
           compactWithStructuredOutput: "yes",
+        }),
+      );
+
+      await assert.rejects(initState(), /Invalid input: expected boolean/);
+    });
+
+    it("rejects non-boolean suppressToolEditDiffs", async () => {
+      testFs._files.set(
+        getGlobalConfigPath(),
+        JSON.stringify({
+          ...testConfig,
+          suppressToolEditDiffs: "yes",
         }),
       );
 

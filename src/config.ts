@@ -210,6 +210,11 @@ export function initStateFromConfig({
       globalConfig.suppressBatUnavailableWarning ??
       defaultConfig.suppressBatUnavailableWarning,
   );
+  actions.setSuppressToolEditDiffs(
+    localConfig.suppressToolEditDiffs ??
+      globalConfig.suppressToolEditDiffs ??
+      defaultConfig.suppressToolEditDiffs,
+  );
   actions.setAsciiOnly(
     localConfig.asciiOnly ?? globalConfig.asciiOnly ?? defaultConfig.asciiOnly,
   );
