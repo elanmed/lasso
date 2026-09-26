@@ -222,8 +222,7 @@ export async function getMergedSummaries() {
   const targetCharLen = approxTokensToCharLen(targetTokens);
 
   const compactPrompt = `Merge the following two summaries into one. Output a maximum of ${String(targetCharLen)} characters:
-${JSON.stringify([firstSummary, secondSummary].map(({ compacted }) => compacted))}
-`;
+${JSON.stringify([firstSummary, secondSummary].map(({ compacted }) => compacted))}`;
 
   const structuredOutputOpts = (() => {
     if (getState().config.compactWithStructuredOutput) {
@@ -296,8 +295,7 @@ export async function getConversationSummary() {
   // messages[0..summaries.length) are re-appended summaries, one per entry,
   // so everything from summaries.length on is not yet summarized
   const compactPrompt = `Compact the following conversation. Output a maximum of ${String(targetCharLen)} characters:
-${JSON.stringify(getState().app.conversation.messages.slice(getState().app.conversation.summaries.length))}
-`;
+${JSON.stringify(getState().app.conversation.messages.slice(getState().app.conversation.summaries.length))}`;
   // messages[0..summaries.length) are re-appended summaries, one per entry,
   // so everything from summaries.length on is not yet summarized
 

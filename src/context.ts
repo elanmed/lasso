@@ -2,7 +2,7 @@ import { dirname, join } from "node:path";
 import * as YAML from "yaml";
 import { z } from "zod";
 import { fsDeps, processDeps } from "./deps.ts";
-import { tryCatch } from "./utils.ts";
+import { normalizeNewline, tryCatch } from "./utils.ts";
 import { print } from "./print.ts";
 import { getState } from "./state.ts";
 import {
@@ -25,8 +25,7 @@ export function getContextFilesStr(contextEntries: ContextEntry[]) {
     .map(
       (entry) => `## Path: ${entry.filePath}
 
-${entry.content}
-`,
+${normalizeNewline(entry.content)}`,
     )
     .join("\n\n");
 
@@ -75,8 +74,7 @@ would benefit from specialized instructions.
 
 ## Available skills:
 
-${skillsFormatted}
-`;
+${skillsFormatted}`;
 }
 export function getSkills() {
   const seenSkills = new Set<string>();

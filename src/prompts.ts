@@ -59,8 +59,7 @@ const headingOne = `# Base system prompt`;
 
 const corePrinciplesHeading = `## Core principles`;
 
-export const baseAgentPrompt = `
-${headingOne}
+export const baseAgentPrompt = `${headingOne}
 
 ${corePrinciplesHeading}
 
@@ -74,8 +73,7 @@ ${bashIntroHeadingTwo}
 
 ${readInstructions}
 
-${writeInstructions}
-`;
+${writeInstructions}`;
 
 export const getSubagentPrompt = (access: "read-only" | "read-write") => {
   if (access === "read-only") {
@@ -87,8 +85,7 @@ ${corePrinciplesHeading}
 
 ${bashIntroHeadingTwo}
 
-${readInstructions}
-`;
+${readInstructions}`;
   }
 
   return `
@@ -101,6 +98,5 @@ ${bashIntroHeadingTwo}
 
 ${readInstructions}
 
-${writeInstructions}
-`;
+${writeInstructions}`;
 };

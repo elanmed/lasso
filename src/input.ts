@@ -104,7 +104,7 @@ async function getEditorInitialContent(opts: {
   const prefilledEditorContent = (() => {
     const editorInputValue = getState().app.editorInputValue;
     if (editorInputValue !== null) {
-      return `${normalizeNewline(editorInputValue)}\n`;
+      return normalizeNewline(editorInputValue);
     }
 
     return "";
@@ -732,12 +732,11 @@ function resolveCustomSlashCommand(commandStr: string): SlashCommandOutcome {
   }
 
   const contentWithCommandContext = `Follow the instructions below along with the provided context:
-## [lasso] Instructions
-${matchedCommand.content}
-
 ## [lasso] Context
-${commandContext}
-`;
+${normalizeNewline(commandContext)}
+
+## [lasso] Instructions
+${normalizeNewline(matchedCommand.content)}`;
 
   return { handled: true, inputFromCommand: contentWithCommandContext };
 }
@@ -976,8 +975,10 @@ export function printAvailableContextFiles() {
 function resumeFromTranscript(transcript: string) {
   actions.resetConversation();
   return `Continue the conversation recorded in the transcript below. Respond to this message with "Ready to continue chatting."
-Transcript:
-${transcript}`;
+
+## [lasso] Transcript:
+
+${normalizeNewline(transcript)}`;
 }
 
 export function resume(rawInput: string) {
@@ -1058,15 +1059,15 @@ function getAllPrettyConfig() {
 
   return `# ${globalConfigTitle}
 
-${markdownFence("yaml", getState().app.globalConfigStr)}
+${markdownFence("yaml", normalizeNewline(getState().app.globalConfigStr))}
 
 # ${localConfigTitle}
 
-${markdownFence("yaml", getState().app.localConfigStr)}
+${markdownFence("yaml", normalizeNewline(getState().app.localConfigStr))}
 
 # Applied config
 
-${markdownFence("json", stringify(getState().config))}`;
+${markdownFence("json", normalizeNewline(stringify(getState().config)))}`;
 }
 
 const reloadTempFilePrefixes = [
@@ -1151,8 +1152,7 @@ async function reload() {
       assertAtBuildtime(prefix !== undefined);
       diffResults.push(
         `${getReloadTempFileDiffTitle()[prefix]}
-${diffResult.value.stdout}
-`,
+${normalizeNewline(diffResult.value.stdout)}`,
       );
     }
   }
@@ -1160,7 +1160,7 @@ ${diffResult.value.stdout}
     tryCatch(() => fsDeps.unlinkSync(path));
   }
 
-  const diff = diffResults.join("");
+  const diff = diffResults.join("\n");
   if (diff.length === 0) {
     print.info("No diff from reload");
   } else {
@@ -1362,10 +1362,9 @@ export function pageLastDiff() {
   const initialContentStr = toolEditDiffs
     .map(
       ({ diffStdout, fileName }) => `${wrapInFence(fileName)}
-${diffStdout}
-`,
+${diffStdout}`,
     )
-    .join("\n");
+    .join("\n\n");
 
   openWithPager({
     initialContentStr,
