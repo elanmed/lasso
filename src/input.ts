@@ -270,12 +270,16 @@ export function initKeypress() {
             redrawPendingQuestion();
             return;
           }
+          case "commands": {
+            pageCommands();
+            redrawPendingQuestion();
+            return;
+          }
           case "initlocal":
           case "initglobal":
           case "model":
           case "skills":
           case "context":
-          case "commands":
           case "keymaps":
           case "usage":
           case "resume":
@@ -602,7 +606,7 @@ async function resolveBuiltinSlashCommand(
       return { handled: true, inputFromCommand: null };
     }
     case "commands": {
-      printAvailableCommandsStr();
+      pageCommands();
       return { handled: true, inputFromCommand: null };
     }
     case "commandspage": {
@@ -898,10 +902,15 @@ ${editorInputValue}`;
   });
 }
 
-export function printAvailableCommandsStr() {
-  printNewline();
-  print.doing("Available commands:");
-  print.plain(getAvailableCommandsStr());
+export function pageCommands() {
+  const initialContentStr = `# Available commands:
+
+${getAvailableCommandsStr()}`;
+
+  openWithPager({
+    initialContentStr: normalizeLine(initialContentStr),
+    contentType: "markdown",
+  });
 }
 
 export function pageCustomSlashCommandsStr() {

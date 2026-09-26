@@ -15,6 +15,7 @@ import {
   printSkills,
   printAvailableContextFiles,
   pageContextStr,
+  pageCommands,
   pageCustomSlashCommandsStr,
   pageEditStr,
   spawnAndReadEditorContent,
@@ -1558,13 +1559,13 @@ Available context files:
     });
   });
 
-  describe("printAvailableCommandsStr", () => {
+  describe("pageCommands", () => {
     beforeEach(() => {
       actions.resetState();
       actions.resetStdout();
     });
 
-    it("prints builtin and custom commands", async () => {
+    it("writes builtin and custom commands into the temp file", () => {
       actions.setSlashCommands([
         {
           name: "custom.md",
@@ -1572,11 +1573,11 @@ Available context files:
           content: "custom",
         },
       ]);
-      await resolveSlashCommand("/commands");
+      pageCommands();
       assert.strictEqual(
-        stripAnsi(getCapturedStdout()),
-        `
-Available commands:
+        testFs._files.get("/tmp/lasso-test-uuid.txt"),
+        `# Available commands:
+
 - /edit
 - /editpage
 - /history
@@ -1603,6 +1604,14 @@ Available commands:
 - /test/.lasso/commands/custom.md
 `,
       );
+      assert.strictEqual(getCapturedStdout(), "");
+    });
+
+    it("opens commands in a pager via LASSO_PAGER", () => {
+      const { spawned } = mockPagerSpawn();
+      testProcessEnv._set("LASSO_PAGER", "nano __FILE__");
+      pageCommands();
+      assert.strictEqual(spawned[0], "nano /tmp/lasso-test-uuid.txt");
     });
   });
 
@@ -1886,12 +1895,56 @@ custom command content\n`,
       assert.deepStrictEqual(spawned, ["cat /tmp/lasso-test-uuid.txt"]);
     });
 
+    it("opens available commands in a pager when commands keymap matches", async () => {
+      const prompts: boolean[] = [];
+      mock.method(harness.rl, "prompt", (arg: boolean) => {
+        prompts.push(arg);
+      });
+      const { spawned } = mockPagerSpawn();
+      testProcessEnv._set("LASSO_PAGER", "cat __FILE__");
+      actions.setKeymap("commands", { name: "o", ctrl: true });
+      harness.emitKey({ name: "o", ctrl: true });
+      await harness.flush();
+      assert.strictEqual(
+        testFs._files.get("/tmp/lasso-test-uuid.txt"),
+        `# Available commands:
+
+- /edit
+- /editpage
+- /history
+- /clear
+- /paste
+- /model
+- /skills
+- /context
+- /contextpage
+- /commands
+- /commandspage
+- /keymaps
+- /usage
+- /resume
+- /config
+- /reload
+- /initlocal
+- /initglobal
+- /lastresponse
+- /lastmessage
+- /lastdiff
+- /messages
+- /summaries
+- /test/.lasso/commands/custom.md
+`,
+      );
+      assert.strictEqual(getCapturedStdout(), "");
+      assert.deepStrictEqual(prompts, [true]);
+      assert.deepStrictEqual(spawned, ["cat /tmp/lasso-test-uuid.txt"]);
+    });
+
     for (const [command, keyName] of [
       ["clear", "k"],
       ["model", "m"],
       ["skills", "l"],
       ["context", "n"],
-      ["commands", "o"],
       ["keymaps", "p"],
       ["usage", "u"],
       ["resume", "r"],
@@ -2133,14 +2186,14 @@ No available context files
       );
     });
 
-    it("handles /commands command by printing commands", async () => {
+    it("handles /commands command by opening commands in a pager", async () => {
       actions.resetStdout();
       const result = await resolveSlashCommand("/commands");
       assert.strictEqual(result, null);
       assert.strictEqual(
-        stripAnsi(getCapturedStdout()),
-        `
-Available commands:
+        testFs._files.get("/tmp/lasso-test-uuid.txt"),
+        `# Available commands:
+
 - /edit
 - /editpage
 - /history
