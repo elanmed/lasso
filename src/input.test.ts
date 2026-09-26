@@ -29,6 +29,8 @@ import {
   pageLastMessage,
   pageLastResponse,
   resolveInterruptWithEditor,
+  pageLastDiff,
+  printKeymaps,
 } from "./input.ts";
 import {
   testFs,
@@ -1216,6 +1218,23 @@ transcript content`,
       );
     });
 
+    it("does not add spacing when isKeypress is true", () => {
+      pageContextStr({ isKeypress: true });
+      assert.strictEqual(
+        stripAnsi(getCapturedStdout()),
+        "No available context files\n",
+      );
+    });
+
+    it("does not add spacing when streaming", () => {
+      actions.setApiStreamAbortController(new AbortController());
+      pageContextStr();
+      assert.strictEqual(
+        stripAnsi(getCapturedStdout()),
+        "No available context files\n",
+      );
+    });
+
     it("opens context string in a pager via LASSO_PAGER", () => {
       const { spawned } = mockPagerSpawn();
       testProcessEnv._set("LASSO_PAGER", "nano __FILE__");
@@ -1265,6 +1284,17 @@ transcript content`,
       );
     });
 
+    it("does not add spacing when isKeypress is true", () => {
+      pageHistory({ isKeypress: true });
+      assert.strictEqual(stripAnsi(getCapturedStdout()), "No chat history\n");
+    });
+
+    it("does not add spacing when streaming", () => {
+      actions.setApiStreamAbortController(new AbortController());
+      pageHistory();
+      assert.strictEqual(stripAnsi(getCapturedStdout()), "No chat history\n");
+    });
+
     it("opens the chat history in a pager with a heading prepended", () => {
       const { spawned } = mockPagerSpawn();
       testProcessEnv._set("LASSO_PAGER", "nano __FILE__");
@@ -1294,6 +1324,17 @@ log content
         stripAnsi(getCapturedStdout()),
         "\nNo llm messages\n\n",
       );
+    });
+
+    it("does not add spacing when isKeypress is true", async () => {
+      await pageLastResponse({ isKeypress: true });
+      assert.strictEqual(stripAnsi(getCapturedStdout()), "No llm messages\n");
+    });
+
+    it("does not add spacing when streaming", async () => {
+      actions.setApiStreamAbortController(new AbortController());
+      await pageLastResponse();
+      assert.strictEqual(stripAnsi(getCapturedStdout()), "No llm messages\n");
     });
 
     it("opens the latest assistant response in a pager", async () => {
@@ -1337,6 +1378,17 @@ second
       );
     });
 
+    it("does not add spacing when isKeypress is true", () => {
+      pageLastMessage({ isKeypress: true });
+      assert.strictEqual(stripAnsi(getCapturedStdout()), "No user messages\n");
+    });
+
+    it("does not add spacing when streaming", () => {
+      actions.setApiStreamAbortController(new AbortController());
+      pageLastMessage();
+      assert.strictEqual(stripAnsi(getCapturedStdout()), "No user messages\n");
+    });
+
     it("opens the latest user message in a pager", () => {
       const { spawned } = mockPagerSpawn();
       testProcessEnv._set("LASSO_PAGER", "nano __FILE__");
@@ -1360,6 +1412,30 @@ second
 latest question
 
 `,
+      );
+    });
+  });
+
+  describe("pageLastDiff", () => {
+    beforeEach(() => {
+      actions.resetState();
+      actions.resetStdout();
+    });
+
+    it("does not add spacing when isKeypress is true", () => {
+      pageLastDiff({ isKeypress: true });
+      assert.strictEqual(
+        stripAnsi(getCapturedStdout()),
+        "No diffs from the last turn\n",
+      );
+    });
+
+    it("does not add spacing when streaming", () => {
+      actions.setApiStreamAbortController(new AbortController());
+      pageLastDiff();
+      assert.strictEqual(
+        stripAnsi(getCapturedStdout()),
+        "No diffs from the last turn\n",
       );
     });
   });
@@ -1454,6 +1530,23 @@ older summary
       );
       assert.strictEqual(testFs._files.has("/tmp/lasso-test-uuid.txt"), false);
     });
+
+    it("does not add spacing when isKeypress is true", () => {
+      pageSummaries({ isKeypress: true });
+      assert.strictEqual(
+        stripAnsi(getCapturedStdout()),
+        "No conversation summaries\n",
+      );
+    });
+
+    it("does not add spacing when streaming", () => {
+      actions.setApiStreamAbortController(new AbortController());
+      pageSummaries();
+      assert.strictEqual(
+        stripAnsi(getCapturedStdout()),
+        "No conversation summaries\n",
+      );
+    });
   });
 
   describe("pageEditStr", () => {
@@ -1468,6 +1561,17 @@ older summary
         stripAnsi(getCapturedStdout()),
         "\nEditor is empty\n\n",
       );
+    });
+
+    it("does not add spacing when isKeypress is true", () => {
+      pageEditStr({ isKeypress: true });
+      assert.strictEqual(stripAnsi(getCapturedStdout()), "Editor is empty\n");
+    });
+
+    it("does not add spacing when streaming", () => {
+      actions.setApiStreamAbortController(new AbortController());
+      pageEditStr();
+      assert.strictEqual(stripAnsi(getCapturedStdout()), "Editor is empty\n");
     });
 
     it("opens the editor input in a pager with a header", () => {
@@ -1500,6 +1604,23 @@ editor input
       assert.strictEqual(
         stripAnsi(getCapturedStdout()),
         "\nNo available custom slash commands\n\n",
+      );
+    });
+
+    it("does not add spacing when isKeypress is true", () => {
+      pageCustomSlashCommandsStr({ isKeypress: true });
+      assert.strictEqual(
+        stripAnsi(getCapturedStdout()),
+        "No available custom slash commands\n",
+      );
+    });
+
+    it("does not add spacing when streaming", () => {
+      actions.setApiStreamAbortController(new AbortController());
+      pageCustomSlashCommandsStr();
+      assert.strictEqual(
+        stripAnsi(getCapturedStdout()),
+        "No available custom slash commands\n",
       );
     });
 
@@ -1550,6 +1671,23 @@ Available skills:
       assert.strictEqual(
         stripAnsi(getCapturedStdout()),
         `\nNo available skills\n\n`,
+      );
+    });
+
+    it("does not add spacing when isKeypress is true", () => {
+      printSkills({ isKeypress: true });
+      assert.strictEqual(
+        stripAnsi(getCapturedStdout()),
+        "No available skills\n",
+      );
+    });
+
+    it("does not add spacing when streaming", () => {
+      actions.setApiStreamAbortController(new AbortController());
+      printSkills();
+      assert.strictEqual(
+        stripAnsi(getCapturedStdout()),
+        "No available skills\n",
       );
     });
 
@@ -1640,6 +1778,56 @@ Available context files:
 - /other/AGENTS.md (as a skill)
 
 `,
+      );
+    });
+
+    // TODO: add test with extra newlines
+    it("does not add spacing when isKeypress is true", () => {
+      printAvailableContextFiles({ isKeypress: true });
+      assert.strictEqual(
+        stripAnsi(getCapturedStdout()),
+        "No available context files\n",
+      );
+    });
+
+    it("does not add spacing when streaming", () => {
+      actions.setApiStreamAbortController(new AbortController());
+      printAvailableContextFiles();
+      assert.strictEqual(
+        stripAnsi(getCapturedStdout()),
+        "No available context files\n",
+      );
+    });
+  });
+
+  describe("printKeymaps", () => {
+    beforeEach(() => {
+      actions.resetState();
+      actions.resetStdout();
+    });
+
+    it("prints the keymap list", () => {
+      printKeymaps();
+      assert.strictEqual(
+        stripAnsi(getCapturedStdout()),
+        `\nKeymaps:\n- edit: {"name":"g","ctrl":true}\n\n`,
+      );
+    });
+
+    it("does not add spacing when isKeypress is true", () => {
+      printKeymaps({ isKeypress: true });
+      assert.strictEqual(
+        stripAnsi(getCapturedStdout()),
+        `Keymaps:\n- edit: {"name":"g","ctrl":true}\n`,
+      );
+    });
+
+    it("does not add spacing when streaming", () => {
+      actions.setApiStreamAbortController(new AbortController());
+      printKeymaps();
+      assert.strictEqual(
+        stripAnsi(getCapturedStdout()),
+        `Keymaps:\n- edit: {"name":"g","ctrl":true}\n`,
       );
     });
   });
