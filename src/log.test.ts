@@ -58,11 +58,11 @@ describe("log", () => {
       prependToChatHistory("test content", "user");
       assert.equal(
         testFs._files.get("/test/editor.log"),
-        `
-2023-11-14T22:13:20.000Z  *user*
+        `2023-11-14T22:13:20.000Z  *user*
 test content
 
 ---
+
 `,
       );
     });
@@ -74,16 +74,30 @@ test content
       prependToChatHistory("response", "assistant");
       assert.equal(
         testFs._files.get("/test/editor.log"),
-        `
-2023-11-14T22:13:20.000Z  *assistant*
+        `2023-11-14T22:13:20.000Z  *assistant*
 response
 
 ---
-
 2023-11-14T22:13:20.000Z  *user*
 hello
 
 ---
+
+
+`,
+      );
+    });
+    it("normalizes trailing newlines in content", () => {
+      actions.setChatHistoryPath("/test/editor.log");
+      testFs._files.set("/test/editor.log", "");
+      prependToChatHistory("hello\n\n", "user");
+      assert.equal(
+        testFs._files.get("/test/editor.log"),
+        `2023-11-14T22:13:20.000Z  *user*
+hello
+
+---
+
 `,
       );
     });

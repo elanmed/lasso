@@ -29,11 +29,11 @@ export function prependToChatHistory(
   const readResult = tryCatch(() => fsDeps.readFileSync(path).toString());
   const existingContent = readResult.ok ? readResult.value : "";
 
-  const newChatHistory = `
-${new Date(Date.now()).toISOString()}  *${role}*
+  const newChatHistory = `${new Date(Date.now()).toISOString()}  *${role}*
 ${normalizeNewline(content)}
 ---
-${existingContent}`;
+${existingContent}
+`;
 
   tryCatch(() => fsDeps.writeFileSync(path, newChatHistory));
 }

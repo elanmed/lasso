@@ -1,6 +1,6 @@
 import { basename, extname, join } from "node:path";
 import { fsDeps } from "./deps.ts";
-import { tryCatch } from "./utils.ts";
+import { normalizeNewline, tryCatch } from "./utils.ts";
 import { getGlobalSlashCommandDir, getLocalSlashCommandDir } from "./paths.ts";
 import { getState, type SlashCommand } from "./state.ts";
 
@@ -46,7 +46,7 @@ export function getCustomSlashCommandsStr() {
     .app.slashCommands.map(
       ({ content, filePath }) => `## ${filePath}
 
-${content}`,
+${normalizeNewline(content, { count: 0 })}`,
     )
     .join("\n\n");
 

@@ -1,7 +1,10 @@
 import { describe, it, beforeEach, afterEach, mock } from "node:test";
 import assert from "node:assert";
 
-import { getAvailableSlashCommands } from "./slash-commands.ts";
+import {
+  getAvailableSlashCommands,
+  getCustomSlashCommandsStr,
+} from "./slash-commands.ts";
 import { actions } from "./state.ts";
 import { fsDeps } from "./deps.ts";
 import { setupTestContext, testFs } from "./test-helpers.ts";
@@ -116,5 +119,33 @@ describe("getAvailableSlashCommands", () => {
         content: "content",
       },
     ]);
+  });
+});
+
+describe("getCustomSlashCommandsStr", () => {
+  afterEach(() => {
+    mock.restoreAll();
+  });
+
+  beforeEach(() => {
+    setupTestContext();
+  });
+
+  it("normalizes CRLF and strips trailing newlines from content", () => {
+    actions.setSlashCommands([
+      {
+        name: "deploy",
+        filePath: "/test-cwd/.lasso/commands/deploy.md",
+        content: "line one\r\nline two\r\n\r\n",
+      },
+    ]);
+    assert.strictEqual(
+      getCustomSlashCommandsStr(),
+      `# [lasso] Slash commands:
+
+## /test-cwd/.lasso/commands/deploy.md
+
+line one\r\nline two`,
+    );
   });
 });
