@@ -18,6 +18,7 @@ import {
   listChatHistoryFiles,
   stringify,
   getStrFromAssistantContent,
+  markdownFence,
 } from "./utils.ts";
 import { truncate } from "./text.ts";
 import { print, printNewline, printSessionStartDate } from "./print.ts";
@@ -728,7 +729,10 @@ function resolveCustomSlashCommand(commandStr: string): SlashCommandOutcome {
   print.infoSubtle(`Executing custom slash command: ${command}`);
 
   if (commandContext === null || commandContext === "") {
-    return { handled: true, inputFromCommand: matchedCommand.content };
+    return {
+      handled: true,
+      inputFromCommand: normalizeNewline(matchedCommand.content, { count: 0 }),
+    };
   }
 
   const contentWithCommandContext = `Follow the instructions below along with the provided context:
@@ -1045,12 +1049,6 @@ export function printKeymaps() {
   for (const [command, keymap] of Object.entries(getState().config.keymaps)) {
     print.plain(`- ${command}: ${JSON.stringify(keymap)}`);
   }
-}
-
-function markdownFence(lang: string, content: string) {
-  return `\`\`\`${lang}
-${content}
-\`\`\``;
 }
 
 function getAllPrettyConfig() {

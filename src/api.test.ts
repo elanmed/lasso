@@ -174,7 +174,9 @@ response text
       await resolveApiCall("hello");
       assert.strictEqual(
         stripAnsi(getCaptured()),
-        `web_fetch_html: https://example.com\nweb_fetch_json: https://example.com/api\n`,
+        `web_fetch_html: https://example.com
+web_fetch_json: https://example.com/api
+`,
       );
     });
 
@@ -761,7 +763,14 @@ response text
       assert(capturedMessage !== undefined);
       assert.strictEqual(
         capturedMessage.content,
-        `Compact the following conversation. Output a maximum of 90000 characters:\n[{"role":"user","content":"hi"}]`,
+        `## [lasso] Compact conversation
+
+- Compact the following conversation.
+- Output a maximum of 90000 characters.
+
+\`\`\`json
+[{"role":"user","content":"hi"}]
+\`\`\``,
       );
       assert.deepStrictEqual(getState().app.conversation, {
         summaries: [
@@ -847,7 +856,9 @@ response text
       assert.strictEqual(getState().app.editorInputValue, "queued input");
       assert.strictEqual(
         stripAnsi(getCaptured()),
-        `Compacting…\nYou have queued messages! Edit them with {"name":"g","ctrl":true} or press enter to continue\n`,
+        `Compacting…
+You have queued messages! Edit them with {"name":"g","ctrl":true} or press enter to continue
+`,
       );
     });
 
@@ -918,7 +929,14 @@ response text
       assert.deepStrictEqual(compactionCall, [
         {
           role: "user",
-          content: `Compact the following conversation. Output a maximum of 90000 characters:\n[{"role":"user","content":"old"}]`,
+          content: `## [lasso] Compact conversation
+
+- Compact the following conversation.
+- Output a maximum of 90000 characters.
+
+\`\`\`json
+[{"role":"user","content":"old"}]
+\`\`\``,
         },
       ]);
       assert.strictEqual(calls.length, 2);
@@ -1066,7 +1084,14 @@ response text
       assert(capturedMessage !== undefined);
       assert.strictEqual(
         capturedMessage.content,
-        `Compact the following conversation. Output a maximum of 90000 characters:\n[{"role":"user","content":"not yet summarized"}]`,
+        `## [lasso] Compact conversation
+
+- Compact the following conversation.
+- Output a maximum of 90000 characters.
+
+\`\`\`json
+[{"role":"user","content":"not yet summarized"}]
+\`\`\``,
       );
     });
 
@@ -1269,7 +1294,14 @@ response text
       assert(capturedMessage !== undefined);
       assert.strictEqual(
         capturedMessage.content,
-        `Merge the following two summaries into one. Output a maximum of 30000 characters:\n["summary 1","summary 2"]`,
+        `## [lasso] Compact summaries
+
+- Merge the following two summaries into one.
+- Output a maximum of 30000 characters.
+
+\`\`\`json
+["summary 1","summary 2"]
+\`\`\``,
       );
       assert.deepStrictEqual(result, [
         { compacted: "merged summary", compactedAt: 42, tokens: 25_000 },

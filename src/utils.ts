@@ -74,6 +74,10 @@ export function normalizeNewline(
   return content.trimEnd().concat("\n".repeat(count));
 }
 
+export function markdownFence(lang: string, content: string) {
+  return `\`\`\`${lang}\n${content}\n\`\`\``;
+}
+
 export function getShortId(): string {
   return crypto.randomBytes(9).toString("base64url");
 }
