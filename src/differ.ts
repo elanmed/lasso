@@ -103,7 +103,7 @@ export function createToolCallDiffer() {
       });
       printNewline();
       fencePrint(`File change: ${path}`);
-      print(normalizeLine(diffResult.value.stdout));
+      print.plain(normalizeLine(diffResult.value.stdout));
       printNewline();
     }
 

@@ -86,9 +86,9 @@ describe("print", () => {
       startLoadingState();
       callbacks.forEach((cb) => cb());
 
-      colorPrint("X");
-      colorPrint("Y");
-      colorPrint("Z");
+      colorPrint("X", "none");
+      colorPrint("Y", "none");
+      colorPrint("Z", "none");
 
       await Promise.resolve();
 

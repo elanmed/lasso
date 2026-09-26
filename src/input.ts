@@ -762,7 +762,7 @@ export async function resolveSlashCommand(rawInput: string) {
 
   printNewline();
   print.error(`Invalid command: ${rawInput}, valid commands:`);
-  print(getAvailableCommandsStr());
+  print.plain(getAvailableCommandsStr());
   return null;
 }
 
@@ -901,7 +901,7 @@ ${editorInputValue}`;
 export function printAvailableCommandsStr() {
   printNewline();
   print.doing("Available commands:");
-  print(getAvailableCommandsStr());
+  print.plain(getAvailableCommandsStr());
 }
 
 export function pageCustomSlashCommandsStr() {
@@ -937,7 +937,7 @@ export function printSkills() {
 
   printNewline();
   print.doing("Available skills:");
-  print(skillsList);
+  print.plain(skillsList);
 }
 
 export function printAvailableContextFiles() {
@@ -961,7 +961,7 @@ export function printAvailableContextFiles() {
 
   printNewline();
   print.doing("Available context files:");
-  print(formatted);
+  print.plain(formatted);
 }
 
 function resumeFromTranscript(transcript: string) {
@@ -1033,7 +1033,7 @@ export function printKeymaps() {
   printNewline();
   print.doing("Keymaps:");
   for (const [command, keymap] of Object.entries(getState().config.keymaps)) {
-    print(`- ${command}: ${JSON.stringify(keymap)}`);
+    print.plain(`- ${command}: ${JSON.stringify(keymap)}`);
   }
 }
 

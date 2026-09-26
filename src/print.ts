@@ -12,31 +12,29 @@ const COLORS = {
   grey: "\x1b[90m",
 } as const;
 
-export type Color = keyof typeof COLORS;
+export type Color = keyof typeof COLORS | "none";
 
-export function bold(text: Uint8Array | string) {
-  if (shouldDisableColor()) return text.toString();
-  return `\x1b[1m${text.toString()}\x1b[22m`;
+export function bold(text: string) {
+  if (shouldDisableColor()) return text;
+  return `\x1b[1m${text}\x1b[22m`;
 }
 
-export const print = Object.assign(
-  (text: Uint8Array | string) => colorPrint(text),
-  {
-    doing: (text: Uint8Array | string) => colorPrint(text, "blue"),
-    error: (text: Uint8Array | string) => colorPrint(text, "red"),
-    info: (text: Uint8Array | string) => colorPrint(text, "purple"),
-    infoSubtle: (text: Uint8Array | string) => colorPrint(text, "grey"),
-    warning: (text: Uint8Array | string) => colorPrint(text, "yellow"),
-  },
-);
+export const print = {
+  doing: (text: string) => colorPrint(text, "blue"),
+  error: (text: string) => colorPrint(text, "red"),
+  info: (text: string) => colorPrint(text, "purple"),
+  infoSubtle: (text: string) => colorPrint(text, "grey"),
+  warning: (text: string) => colorPrint(text, "yellow"),
+  plain: (text: string) => colorPrint(text, "none"),
+};
 
-export function colorPrint(text: Uint8Array | string, color?: Color) {
+export function colorPrint(text: string, color: Color) {
   const reset = "\x1b[0m";
   const out = (() => {
-    if (color === undefined || shouldDisableColor()) {
-      return `${text.toString()}\n`;
+    if (color === "none" || shouldDisableColor()) {
+      return `${text}\n`;
     }
-    return `${COLORS[color]}${text.toString()}${reset}\n`;
+    return `${COLORS[color]}${text}${reset}\n`;
   })();
 
   const wasSpinnerActive = getState().app.loadingStateTimeout !== null;
@@ -48,7 +46,7 @@ export function colorPrint(text: Uint8Array | string, color?: Color) {
 
 export function printNewline() {
   if (getState().app.stdoutTail.endsWith("\n\n")) return;
-  colorPrint("");
+  colorPrint("", "none");
 }
 
 export function startLoadingState() {

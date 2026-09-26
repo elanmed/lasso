@@ -67,12 +67,12 @@ export async function executeBat(content: string) {
   content = await formatMarkdown(content);
   content = normalizeLine(content);
   if (!getState().app.batAvailable) {
-    return print(content);
+    return print.plain(content);
   }
 
   function fallbackPrint(message: string) {
     print.error(message);
-    print(content);
+    print.plain(content);
   }
   const baseMessage =
     "Falling back to plain text rendering, an error occurred when spawning `bat`: ";
@@ -92,7 +92,7 @@ export async function executeBat(content: string) {
   if (batResult.value.stderr.length !== 0) {
     return fallbackPrint(baseMessage.concat(batResult.value.stderr));
   }
-  print(batResult.value.stdout);
+  print.plain(batResult.value.stdout);
 }
 
 export function openWithPager({
