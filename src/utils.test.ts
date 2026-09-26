@@ -16,6 +16,7 @@ import {
   listChatHistoryFiles,
   getStrFromAssistantContent,
   getPrettyDuration,
+  getDurationColor,
   shouldDisableColor,
   decimalToPercent,
 } from "./utils.ts";
@@ -257,6 +258,45 @@ describe("utils", () => {
         getPrettyDuration(BigInt(0), BigInt(500_000_000)),
         "500ms",
       );
+    });
+  });
+
+  describe("getDurationColor", () => {
+    it("returns green below 500ms", () => {
+      assert.strictEqual(
+        getDurationColor(BigInt(0), BigInt(499_999_999)),
+        "green",
+      );
+    });
+
+    it("returns yellow from 500ms to below 1s", () => {
+      assert.strictEqual(
+        getDurationColor(BigInt(0), BigInt(500_000_000)),
+        "yellow",
+      );
+      assert.strictEqual(
+        getDurationColor(BigInt(0), BigInt(999_999_999)),
+        "yellow",
+      );
+    });
+
+    it("returns red at 1s and above", () => {
+      assert.strictEqual(
+        getDurationColor(BigInt(0), BigInt(1_000_000_000)),
+        "red",
+      );
+      assert.strictEqual(
+        getDurationColor(BigInt(0), BigInt(2_000_000_000)),
+        "red",
+      );
+    });
+
+    it("clamps a negative diff to zero and returns green", () => {
+      assert.strictEqual(getDurationColor(BigInt(10), BigInt(0)), "green");
+    });
+
+    it("returns green for equal start and end", () => {
+      assert.strictEqual(getDurationColor(BigInt(5), BigInt(5)), "green");
     });
   });
 

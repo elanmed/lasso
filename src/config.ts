@@ -8,7 +8,7 @@ import {
   getSkillsStr,
   getSkills,
 } from "./context.ts";
-import { actions, createPerformanceLogger, getState } from "./state.ts";
+import { actions, getState } from "./state.ts";
 import {
   ConfigSchema,
   defaultConfig,
@@ -23,7 +23,7 @@ import {
   getLocalConfigPath,
 } from "./paths.ts";
 import { syncInitialModelUsageForLimitWindow } from "./usage.ts";
-import { print } from "./print.ts";
+import { createPerformanceLogger, print } from "./print.ts";
 import { initMcpState } from "./mcp.ts";
 import { getTools } from "./tools.ts";
 
@@ -257,29 +257,22 @@ export async function initStateFromFs({
   });
   await syncInitialModelUsageForLimitWindow();
 
-  performanceLogger.start();
+  performanceLogger.start("Reading context files: ");
   const contextEntries = getContextEntries();
   actions.setContextEntries(contextEntries);
   actions.setContextStr(getContextFilesStr(contextEntries));
-  performanceLogger.end((duration) =>
-    print.doing(`Reading context files: ${duration}`),
-  );
+  performanceLogger.end();
 
-  performanceLogger.start();
+  performanceLogger.start("Reading skills: ");
   const skills = getSkills();
   actions.setSkills(skills);
   actions.setSkillsStr(getSkillsStr(skills));
-  performanceLogger.end(
-    (duration) => logDuration && print.doing(`Reading skills: ${duration}`),
-  );
+  performanceLogger.end();
 
-  performanceLogger.start();
+  performanceLogger.start("Reading slash commands: ");
   const slashCommands = getAvailableSlashCommands();
   actions.setSlashCommands(slashCommands);
-  performanceLogger.end(
-    (duration) =>
-      logDuration && print.doing(`Reading slash commands: ${duration}`),
-  );
+  performanceLogger.end();
 }
 
 export function initStateFirst() {

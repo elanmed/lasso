@@ -1,6 +1,7 @@
 import { describe, it, beforeEach, afterEach, mock } from "node:test";
 import assert from "node:assert";
 import {
+  createPerformanceLogger,
   startLoadingState,
   stopLoadingState,
   colorPrint,
@@ -93,6 +94,63 @@ describe("print", () => {
       await Promise.resolve();
 
       assert.strictEqual(stripAnsi(getCaptured()), "X\nY\nZ\n");
+    });
+  });
+
+  describe("createPerformanceLogger", () => {
+    it("prints the label when starting and the colored duration when ending", () => {
+      mock.method(process.hrtime, "bigint", () => BigInt(1_000_000_000));
+      const logger = createPerformanceLogger({ logDuration: true });
+      const getCaptured = mockStdout();
+      logger.start("Reading context files: ");
+      assert.strictEqual(stripAnsi(getCaptured()), "Reading context files: ");
+      mock.method(process.hrtime, "bigint", () => BigInt(1_234_567_890));
+
+      logger.end();
+
+      assert.strictEqual(
+        stripAnsi(getCaptured()),
+        "Reading context files: 234.567ms\n",
+      );
+    });
+
+    it("can start again after end", () => {
+      let callIdx = 0;
+      const values = [
+        1_000_000_000, 1_000_000_000, 2_000_000_000, 3_000_000_000,
+      ];
+      mock.method(process.hrtime, "bigint", () =>
+        BigInt(values[callIdx++] ?? 0),
+      );
+      const logger = createPerformanceLogger({ logDuration: true });
+      const getCaptured = mockStdout();
+
+      logger.start("a: ");
+      logger.end();
+      logger.start("a: ");
+      logger.end();
+
+      assert.strictEqual(stripAnsi(getCaptured()), "a: 0.0ms\na: 1s 0.0ms\n");
+    });
+
+    it("does nothing when logDuration is false", () => {
+      mock.method(process.hrtime, "bigint", () => BigInt(1_000_000_000));
+      const logger = createPerformanceLogger({ logDuration: false });
+      const getCaptured = mockStdout();
+      logger.start("a: ");
+      logger.end();
+      assert.strictEqual(getCaptured(), "");
+    });
+
+    it("throws when started twice", () => {
+      const logger = createPerformanceLogger({ logDuration: true });
+      logger.start("a: ");
+      assert.throws(() => logger.start("a: "));
+    });
+
+    it("throws when ended without start", () => {
+      const logger = createPerformanceLogger({ logDuration: true });
+      assert.throws(() => logger.end());
     });
   });
 

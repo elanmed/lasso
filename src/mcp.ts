@@ -1,14 +1,9 @@
 // eslint-disable-next-line import/no-unresolved
 import { Experimental_StdioMCPTransport as StdioClientTransport } from "@ai-sdk/mcp/mcp-stdio";
 import type { MCPClient } from "@ai-sdk/mcp";
-import {
-  actions,
-  createPerformanceLogger,
-  getState,
-  type MCPToolSet,
-} from "./state.ts";
+import { actions, getState, type MCPToolSet } from "./state.ts";
 import type { Mcp } from "./config-types.ts";
-import { print } from "./print.ts";
+import { createPerformanceLogger, print } from "./print.ts";
 import { getMessageFromError, tryCatchAsync } from "./utils.ts";
 import { mcpDeps } from "./deps.ts";
 
@@ -60,11 +55,9 @@ async function getMcpClients() {
       const performanceLogger = createPerformanceLogger({
         logDuration: !getState().config.suppressStartupDurations,
       });
-      performanceLogger.start();
+      performanceLogger.start(`Starting ${name} mcp server: `);
       const createMcpResult = await tryCatchAsync(createMcpClient(config));
-      performanceLogger.end((duration) =>
-        print.doing(`Starting ${name} mcp server: ${duration}`),
-      );
+      performanceLogger.end();
       if (createMcpResult.ok) {
         mcpClients[name] = createMcpResult.value;
       } else {

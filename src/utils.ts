@@ -6,6 +6,7 @@ import type { AssistantContent, ModelMessage } from "ai";
 import { assertAtRuntime } from "./assert.ts";
 import { fsDeps, processDeps } from "./deps.ts";
 import { getPromptHistoryDir } from "./paths.ts";
+import type { Color } from "./print.ts";
 
 export type Result<T> = { ok: true; value: T } | { ok: false; error: unknown };
 
@@ -322,6 +323,16 @@ export function decimalToPercent(
   { precision = 2 }: { precision?: number } = {},
 ) {
   return `${String(Number((decimal * 100).toFixed(precision)))}%`;
+}
+
+export function getDurationColor(startTime: bigint, endTime: bigint): Color {
+  const diffNs = (() => {
+    if (endTime > startTime) return endTime - startTime;
+    return 0n;
+  })();
+  if (diffNs < 500_000_000n) return "green";
+  if (diffNs < 1_000_000_000n) return "yellow";
+  return "red";
 }
 
 export function getPrettyDuration(

@@ -1,3 +1,5 @@
+import { assertAtRuntime } from "./assert.ts";
+import { getDurationColor, getPrettyDuration } from "./utils.ts";
 import { actions, getState } from "./state.ts";
 import { processDeps } from "./deps.ts";
 import { shouldDisableColor } from "./utils.ts";
@@ -57,6 +59,33 @@ export function colorPrint(
   processDeps.stdout.write(out);
   if (wasSpinnerActive) startLoadingState();
   actions.appendStdoutTail(out);
+}
+
+export function createPerformanceLogger({
+  logDuration,
+}: {
+  logDuration: boolean;
+}) {
+  let startTime: bigint | null = null;
+  function start(label: string) {
+    if (!logDuration) return;
+    assertAtRuntime(startTime === null);
+    startTime = process.hrtime.bigint();
+    print.doing(label, { appendNewline: false });
+  }
+
+  function end() {
+    if (!logDuration) return;
+    assertAtRuntime(startTime !== null);
+    const endTime = process.hrtime.bigint();
+    const duration = getPrettyDuration(startTime, endTime, {
+      includeMicroseconds: true,
+    });
+    colorPrint(duration, getDurationColor(startTime, endTime));
+    startTime = null;
+  }
+
+  return { start, end };
 }
 
 export function printNewline() {
