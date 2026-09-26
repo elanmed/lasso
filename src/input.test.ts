@@ -1080,7 +1080,11 @@ l---
 
       assert.strictEqual(
         result,
-        `Continue the conversation recorded in the transcript below. Respond to this message with "Ready to continue chatting."\nTranscript:\nnewer transcript`,
+        `Continue the conversation recorded in the transcript below. Respond to this message with "Ready to continue chatting."
+
+## [lasso] Transcript:
+
+newer transcript`,
       );
       assert.deepStrictEqual(getState().app.conversation, {
         summaries: [],
@@ -1099,7 +1103,9 @@ l---
       assert.strictEqual(
         result,
         `Continue the conversation recorded in the transcript below. Respond to this message with "Ready to continue chatting."
-Transcript:
+
+## [lasso] Transcript:
+
 transcript content`,
       );
       assert.deepStrictEqual(getState().app.conversation, {
@@ -2376,7 +2382,9 @@ Keymaps:
       assert.strictEqual(
         result,
         `Continue the conversation recorded in the transcript below. Respond to this message with "Ready to continue chatting."
-Transcript:
+
+## [lasso] Transcript:
+
 transcript content`,
       );
     });
@@ -2743,12 +2751,11 @@ hello
       assert.strictEqual(
         result,
         `Follow the instructions below along with the provided context:
-## [lasso] Instructions
-custom command content
-
 ## [lasso] Context
 some task
-`,
+
+## [lasso] Instructions
+custom command content`,
       );
     });
 
@@ -2764,12 +2771,11 @@ some task
       assert.strictEqual(
         result,
         `Follow the instructions below along with the provided context:
-## [lasso] Instructions
-custom command content
-
 ## [lasso] Context
 some   task
-`,
+
+## [lasso] Instructions
+custom command content`,
       );
     });
 

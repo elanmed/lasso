@@ -171,7 +171,7 @@ export const getState = () => state;
 export const promptDeps = {
   getSystemContent: () =>
     [baseAgentPrompt, getState().app.contextStr, getState().app.skillsStr].join(
-      "\n",
+      "\n\n",
     ),
 };
 

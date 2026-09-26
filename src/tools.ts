@@ -10,6 +10,7 @@ import {
   tryCatchAsync,
   execPromise,
   getMaxColLength,
+  normalizeNewline,
 } from "./utils.ts";
 import { getUnicodeChar } from "./text.ts";
 import { createToolCallDiffer } from "./differ.ts";
@@ -439,12 +440,12 @@ export async function createSubagentTool(
 
       const systemContent = [
         getSubagentPrompt(subagentSchema.access),
-        getState().app.contextStr,
-        getState().app.skillsStr,
+        normalizeNewline(getState().app.contextStr),
+        normalizeNewline(getState().app.skillsStr),
         accessSystemContent,
       ]
         .filter((content) => content.length > 0)
-        .join("\n");
+        .join("\n\n");
 
       const toolCallDiffer = createToolCallDiffer();
 

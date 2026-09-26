@@ -161,8 +161,7 @@ would benefit from specialized instructions.
 
 ## Available skills:
 
-- my-skill: A test skill
-`,
+- my-skill: A test skill`,
       );
     });
 
@@ -199,8 +198,7 @@ would benefit from specialized instructions.
 
 ## Available skills:
 
-- deploy: Local deploy
-`,
+- deploy: Local deploy`,
       );
     });
 
@@ -269,8 +267,7 @@ would benefit from specialized instructions.
 ## Available skills:
 
 - skill-a: First
-- skill-b: Second
-`,
+- skill-b: Second`,
       );
     });
 
@@ -296,8 +293,7 @@ would benefit from specialized instructions.
 
 ## Available skills:
 
-- my-skill: A test skill
-`,
+- my-skill: A test skill`,
       );
     });
 
@@ -328,8 +324,7 @@ would benefit from specialized instructions.
 
 ## Available skills:
 
-- good: Valid
-`,
+- good: Valid`,
       );
     });
 
@@ -356,8 +351,7 @@ would benefit from specialized instructions.
 
 ## Available skills:
 
-- custom-skill: From custom dir
-`,
+- custom-skill: From custom dir`,
       );
     });
 
@@ -395,8 +389,7 @@ would benefit from specialized instructions.
 
 ## Available skills:
 
-- deploy: Custom deploy
-`,
+- deploy: Custom deploy`,
       );
     });
 
@@ -415,8 +408,7 @@ would benefit from specialized instructions.
 
 ## Available skills:
 
-- __lasso-context-for-/test-cwd/src: Context relevant for /test-cwd/src
-`,
+- __lasso-context-for-/test-cwd/src: Context relevant for /test-cwd/src`,
       );
     });
 
@@ -437,8 +429,7 @@ would benefit from specialized instructions.
 
 ## Available skills:
 
-- __lasso-context-for-/test-cwd/src: Context relevant for /test-cwd/src
-`,
+- __lasso-context-for-/test-cwd/src: Context relevant for /test-cwd/src`,
       );
     });
 
@@ -469,8 +460,7 @@ would benefit from specialized instructions.
 ## Available skills:
 
 - my-skill: A test skill
-- __lasso-context-for-/test-cwd/src: Context relevant for /test-cwd/src
-`,
+- __lasso-context-for-/test-cwd/src: Context relevant for /test-cwd/src`,
       );
     });
 
@@ -501,8 +491,7 @@ would benefit from specialized instructions.
 
 ## Available skills:
 
-- ok: Works
-`,
+- ok: Works`,
       );
     });
   });

@@ -25,6 +25,7 @@ import {
 } from "./test-helpers.ts";
 import { processDeps } from "./deps.ts";
 import { actions } from "./state.ts";
+import { getSubagentPrompt } from "./prompts.ts";
 
 describe("tools", () => {
   beforeEach(() => {
@@ -889,6 +890,35 @@ describe("tools", () => {
 
       await assert.rejects(resultPromise, { name: "AbortError" });
       assert.deepStrictEqual(getEventListeners(controller.signal, "abort"), []);
+    });
+
+    it("builds subagent systemContent from prompt, context, skills, and access message", async () => {
+      actions.setContextStr("ctx body\n\n\n");
+      actions.setSkillsStr("skills body\n\n\n");
+      const calls: Record<string, unknown>[] = [];
+      mockGenerateText((options: Record<string, unknown>) => {
+        calls.push(options);
+        return makeGenerateTextResult({ text: "ok" });
+      });
+
+      await createSubagentTool({
+        tasks: [
+          { prompt: "inspect", access: "read-only", model: "main-model" },
+        ],
+      });
+
+      const firstCall = calls[0];
+      assert(firstCall !== undefined);
+      assert.strictEqual(
+        firstCall["instructions"],
+        `${getSubagentPrompt("read-only")}
+
+ctx body
+
+skills body
+
+You are a read-only subagent. Investigate the requested task and report findings.`,
+      );
     });
   });
 });

@@ -761,7 +761,7 @@ response text
       assert(capturedMessage !== undefined);
       assert.strictEqual(
         capturedMessage.content,
-        `Compact the following conversation. Output a maximum of 90000 characters:\n[{"role":"user","content":"hi"}]\n`,
+        `Compact the following conversation. Output a maximum of 90000 characters:\n[{"role":"user","content":"hi"}]`,
       );
       assert.deepStrictEqual(getState().app.conversation, {
         summaries: [
@@ -918,7 +918,7 @@ response text
       assert.deepStrictEqual(compactionCall, [
         {
           role: "user",
-          content: `Compact the following conversation. Output a maximum of 90000 characters:\n[{"role":"user","content":"old"}]\n`,
+          content: `Compact the following conversation. Output a maximum of 90000 characters:\n[{"role":"user","content":"old"}]`,
         },
       ]);
       assert.strictEqual(calls.length, 2);
@@ -1066,7 +1066,7 @@ response text
       assert(capturedMessage !== undefined);
       assert.strictEqual(
         capturedMessage.content,
-        `Compact the following conversation. Output a maximum of 90000 characters:\n[{"role":"user","content":"not yet summarized"}]\n`,
+        `Compact the following conversation. Output a maximum of 90000 characters:\n[{"role":"user","content":"not yet summarized"}]`,
       );
     });
 
@@ -1269,7 +1269,7 @@ response text
       assert(capturedMessage !== undefined);
       assert.strictEqual(
         capturedMessage.content,
-        `Merge the following two summaries into one. Output a maximum of 30000 characters:\n["summary 1","summary 2"]\n`,
+        `Merge the following two summaries into one. Output a maximum of 30000 characters:\n["summary 1","summary 2"]`,
       );
       assert.deepStrictEqual(result, [
         { compacted: "merged summary", compactedAt: 42, tokens: 25_000 },

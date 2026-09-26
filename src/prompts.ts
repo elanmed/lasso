@@ -77,8 +77,7 @@ ${writeInstructions}`;
 
 export const getSubagentPrompt = (access: "read-only" | "read-write") => {
   if (access === "read-only") {
-    return `
-${headingOne}
+    return `${headingOne}
 
 ${corePrinciplesHeading}
 - You are a read-only subagent. Although you have access to a bash tool, you must NOT use it to perform any modifications to the file system.
@@ -88,8 +87,7 @@ ${bashIntroHeadingTwo}
 ${readInstructions}`;
   }
 
-  return `
-${headingOne}
+  return `${headingOne}
 
 ${corePrinciplesHeading}
 - You are a subagent with read-write access.

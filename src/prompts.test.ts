@@ -7,7 +7,6 @@ describe("prompts", () => {
     assert.strictEqual(
       baseAgentPrompt,
       [
-        "",
         "# Base system prompt",
         "",
         "## Core principles",
@@ -72,7 +71,6 @@ describe("prompts", () => {
         "TMPFILE=$(mktemp)",
         'sed -e "${START},${END}d" target.txt > "$TMPFILE" && mv "$TMPFILE" target.txt',
         "```",
-        "",
       ].join("\n"),
     );
   });
@@ -81,7 +79,6 @@ describe("prompts", () => {
     assert.strictEqual(
       getSubagentPrompt("read-only"),
       [
-        "",
         "# Base system prompt",
         "",
         "## Core principles",
@@ -105,7 +102,6 @@ describe("prompts", () => {
         "```bash",
         "wc -l < target.txt",
         "```",
-        "",
       ].join("\n"),
     );
   });
@@ -114,7 +110,6 @@ describe("prompts", () => {
     assert.strictEqual(
       getSubagentPrompt("read-write"),
       [
-        "",
         "# Base system prompt",
         "",
         "## Core principles",
@@ -174,7 +169,6 @@ describe("prompts", () => {
         "TMPFILE=$(mktemp)",
         'sed -e "${START},${END}d" target.txt > "$TMPFILE" && mv "$TMPFILE" target.txt',
         "```",
-        "",
       ].join("\n"),
     );
   });

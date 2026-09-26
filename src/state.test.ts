@@ -1,12 +1,15 @@
 import { describe, it, beforeEach, afterEach, mock } from "node:test";
 import assert from "node:assert";
 import type { MCPClient } from "@ai-sdk/mcp";
-import { actions, getState } from "./state.ts";
+import { actions, getState, promptDeps } from "./state.ts";
+import { baseAgentPrompt } from "./prompts.ts";
 import { stringify } from "./utils.ts";
 import { defaultConfig } from "./config-types.ts";
 import { MISSING } from "./missing.ts";
 import { makeFakeRl, setupTestContext, testFs } from "./test-helpers.ts";
 import { initMcpState } from "./mcp.ts";
+
+const realGetSystemContent = promptDeps.getSystemContent;
 
 describe("state", () => {
   afterEach(() => {
@@ -15,6 +18,20 @@ describe("state", () => {
 
   beforeEach(() => {
     setupTestContext({ model: null, sdkProvider: null });
+  });
+
+  it("getSystemContent joins prompt, context, and skills with blank lines", () => {
+    mock.method(promptDeps, "getSystemContent", realGetSystemContent);
+    actions.setContextStr("ctx body");
+    actions.setSkillsStr("skills body");
+    assert.strictEqual(
+      promptDeps.getSystemContent(),
+      `${baseAgentPrompt}
+
+ctx body
+
+skills body`,
+    );
   });
 
   it("reset-state writes debug-log entry using pre-reset debug settings", () => {

@@ -733,10 +733,10 @@ function resolveCustomSlashCommand(commandStr: string): SlashCommandOutcome {
 
   const contentWithCommandContext = `Follow the instructions below along with the provided context:
 ## [lasso] Context
-${normalizeNewline(commandContext)}
+${normalizeNewline(commandContext, { count: 0 })}
 
 ## [lasso] Instructions
-${normalizeNewline(matchedCommand.content)}`;
+${normalizeNewline(matchedCommand.content, { count: 0 })}`;
 
   return { handled: true, inputFromCommand: contentWithCommandContext };
 }
@@ -978,7 +978,7 @@ function resumeFromTranscript(transcript: string) {
 
 ## [lasso] Transcript:
 
-${normalizeNewline(transcript)}`;
+${normalizeNewline(transcript, { count: 0 })}`;
 }
 
 export function resume(rawInput: string) {
@@ -1059,15 +1059,15 @@ function getAllPrettyConfig() {
 
   return `# ${globalConfigTitle}
 
-${markdownFence("yaml", normalizeNewline(getState().app.globalConfigStr))}
+${markdownFence("yaml", getState().app.globalConfigStr)}
 
 # ${localConfigTitle}
 
-${markdownFence("yaml", normalizeNewline(getState().app.localConfigStr))}
+${markdownFence("yaml", getState().app.localConfigStr)}
 
 # Applied config
 
-${markdownFence("json", normalizeNewline(stringify(getState().config)))}`;
+${markdownFence("json", stringify(getState().config))}`;
 }
 
 const reloadTempFilePrefixes = [
@@ -1308,7 +1308,7 @@ export function pageLastMessage() {
 ${contentStr}`;
 
   openWithPager({
-    initialContentStr: normalizeNewline(initialContentStr),
+    initialContentStr,
     contentType: "markdown",
   });
 }
