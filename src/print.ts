@@ -1,8 +1,11 @@
 import { assertAtRuntime } from "./assert.ts";
-import { getDurationColor, getPrettyDuration } from "./utils.ts";
+import {
+  getDurationColor,
+  getPrettyDuration,
+  shouldDisableColor,
+} from "./utils.ts";
 import { actions, getState } from "./state.ts";
 import { processDeps } from "./deps.ts";
-import { shouldDisableColor } from "./utils.ts";
 
 const COLORS = {
   red: "\x1b[31m",

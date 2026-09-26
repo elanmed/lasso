@@ -325,11 +325,16 @@ export function decimalToPercent(
   return `${String(Number((decimal * 100).toFixed(precision)))}%`;
 }
 
+export function nonNegativeDiff<T extends number | bigint>(
+  startTime: T,
+  endTime: T,
+): T {
+  const zero = typeof startTime === "bigint" ? 0n : 0;
+  return (endTime > startTime ? endTime - startTime : zero) as T;
+}
+
 export function getDurationColor(startTime: bigint, endTime: bigint): Color {
-  const diffNs = (() => {
-    if (endTime > startTime) return endTime - startTime;
-    return 0n;
-  })();
+  const diffNs = nonNegativeDiff(startTime, endTime);
   if (diffNs < 500_000_000n) return "green";
   if (diffNs < 1_000_000_000n) return "yellow";
   return "red";
@@ -340,10 +345,7 @@ export function getPrettyDuration(
   endTime: bigint,
   { includeMicroseconds = false }: { includeMicroseconds?: boolean } = {},
 ) {
-  const diffNs = (() => {
-    if (endTime > startTime) return endTime - startTime;
-    return 0n;
-  })();
+  const diffNs = nonNegativeDiff(startTime, endTime);
   const ms = Number((diffNs % 1_000_000_000n) / 1_000_000n);
   const us = Number((diffNs % 1_000_000n) / 1_000n);
   const sec = Number((diffNs / 1_000_000_000n) % 60n);
