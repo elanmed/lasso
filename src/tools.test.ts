@@ -892,9 +892,9 @@ describe("tools", () => {
       assert.deepStrictEqual(getEventListeners(controller.signal, "abort"), []);
     });
 
-    it("builds subagent systemContent from prompt, context, skills, and access message", async () => {
-      actions.setContextStr("ctx body\n\n\n");
-      actions.setSkillsStr("skills body\n\n\n");
+    it("builds subagent systemContent from prompt, context, and skills", async () => {
+      actions.setContextStr("ctx body");
+      actions.setSkillsStr("skills body");
       const calls: Record<string, unknown>[] = [];
       mockGenerateText((options: Record<string, unknown>) => {
         calls.push(options);
@@ -915,9 +915,7 @@ describe("tools", () => {
 
 ctx body
 
-skills body
-
-You are a read-only subagent. Investigate the requested task and report findings.`,
+skills body`,
       );
     });
   });

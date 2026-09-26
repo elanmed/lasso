@@ -10,7 +10,6 @@ import {
   tryCatchAsync,
   execPromise,
   getMaxColLength,
-  normalizeNewline,
 } from "./utils.ts";
 import { getUnicodeChar } from "./text.ts";
 import { createToolCallDiffer } from "./differ.ts";
@@ -431,18 +430,11 @@ export async function createSubagentTool(
       );
 
       const model = subagentSchema.model;
-      const accessSystemContent = (() => {
-        if (subagentSchema.access === "read-only") {
-          return "You are a read-only subagent. Investigate the requested task and report findings.";
-        }
-        return "You are a read-write subagent. Make the requested changes and report findings.";
-      })();
 
       const systemContent = [
         getSubagentPrompt(subagentSchema.access),
-        normalizeNewline(getState().app.contextStr),
-        normalizeNewline(getState().app.skillsStr),
-        accessSystemContent,
+        getState().app.contextStr,
+        getState().app.skillsStr,
       ]
         .filter((content) => content.length > 0)
         .join("\n\n");
