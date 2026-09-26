@@ -168,8 +168,10 @@ let state: State = createInitialState();
 export const getState = () => state;
 
 export function createPerformanceLogger({
-  logDuration = false,
-}: { logDuration?: boolean } = {}) {
+  logDuration,
+}: {
+  logDuration: boolean;
+}) {
   let startTime: bigint | null = null;
   function start() {
     if (!logDuration) return;

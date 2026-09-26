@@ -826,7 +826,7 @@ describe("createPerformanceLogger", () => {
 
   it("does nothing when logDuration is false", () => {
     mock.method(process.hrtime, "bigint", () => BigInt(1_000_000_000));
-    const logger = createPerformanceLogger();
+    const logger = createPerformanceLogger({ logDuration: false });
     let endCalls = 0;
     logger.start();
     logger.end(() => (endCalls += 1));
