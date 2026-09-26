@@ -1212,7 +1212,7 @@ transcript content`,
       pageContextStr();
       assert.strictEqual(
         stripAnsi(getCapturedStdout()),
-        "No available context files\n",
+        "\nNo available context files\n\n",
       );
     });
 
@@ -1250,13 +1250,19 @@ transcript content`,
 
     it("prints that history is empty when the chat history file does not exist", () => {
       pageHistory();
-      assert.strictEqual(stripAnsi(getCapturedStdout()), "No chat history\n");
+      assert.strictEqual(
+        stripAnsi(getCapturedStdout()),
+        "\nNo chat history\n\n",
+      );
     });
 
     it("prints that history is empty when the chat history file is empty", () => {
       testFs._files.set("/tmp/test-history.log", "");
       pageHistory();
-      assert.strictEqual(stripAnsi(getCapturedStdout()), "No chat history\n");
+      assert.strictEqual(
+        stripAnsi(getCapturedStdout()),
+        "\nNo chat history\n\n",
+      );
     });
 
     it("opens the chat history in a pager with a heading prepended", () => {
@@ -1284,7 +1290,10 @@ log content
 
     it("prints no messages when there is no assistant response", async () => {
       await pageLastResponse();
-      assert.strictEqual(stripAnsi(getCapturedStdout()), "No llm messages\n");
+      assert.strictEqual(
+        stripAnsi(getCapturedStdout()),
+        "\nNo llm messages\n\n",
+      );
     });
 
     it("opens the latest assistant response in a pager", async () => {
@@ -1322,7 +1331,10 @@ second
 
     it("prints no messages when there is no user message", () => {
       pageLastMessage();
-      assert.strictEqual(stripAnsi(getCapturedStdout()), "No user messages\n");
+      assert.strictEqual(
+        stripAnsi(getCapturedStdout()),
+        "\nNo user messages\n\n",
+      );
     });
 
     it("opens the latest user message in a pager", () => {
@@ -1438,7 +1450,7 @@ older summary
 
       assert.strictEqual(
         stripAnsi(getCapturedStdout()),
-        "No conversation summaries\n",
+        "\nNo conversation summaries\n\n",
       );
       assert.strictEqual(testFs._files.has("/tmp/lasso-test-uuid.txt"), false);
     });
@@ -1452,7 +1464,10 @@ older summary
 
     it("prints that the editor is empty when editor input is null", () => {
       pageEditStr();
-      assert.strictEqual(stripAnsi(getCapturedStdout()), "Editor is empty\n");
+      assert.strictEqual(
+        stripAnsi(getCapturedStdout()),
+        "\nEditor is empty\n\n",
+      );
     });
 
     it("opens the editor input in a pager with a header", () => {
@@ -1484,7 +1499,7 @@ editor input
       pageCustomSlashCommandsStr();
       assert.strictEqual(
         stripAnsi(getCapturedStdout()),
-        "No available custom slash commands\n",
+        "\nNo available custom slash commands\n\n",
       );
     });
 
@@ -1525,6 +1540,7 @@ editor input
 Available skills:
 - test-skill: A test skill
   /skills/test-skill
+
 `,
       );
     });
@@ -1533,9 +1549,7 @@ Available skills:
       printSkills();
       assert.strictEqual(
         stripAnsi(getCapturedStdout()),
-        `
-No available skills
-`,
+        `\nNo available skills\n\n`,
       );
     });
 
@@ -1561,6 +1575,7 @@ No available skills
 Available skills:
 - real-skill: A real skill
   /skills/real
+
 `,
       );
     });
@@ -1582,6 +1597,7 @@ Available skills:
         `
 Available context files:
 - /project/AGENTS.md
+
 `,
       );
     });
@@ -1592,6 +1608,7 @@ Available context files:
         stripAnsi(getCapturedStdout()),
         `
 No available context files
+
 `,
       );
     });
@@ -1621,6 +1638,7 @@ No available context files
 Available context files:
 - /project/AGENTS.md
 - /other/AGENTS.md (as a skill)
+
 `,
       );
     });
@@ -2202,7 +2220,7 @@ log content
       assert.strictEqual(result, null);
       assert.strictEqual(
         stripAnsi(getCapturedStdout()),
-        "No diffs from the last turn\n",
+        "\nNo diffs from the last turn\n\n",
       );
       assert.deepStrictEqual(spawned, []);
     });
@@ -2244,6 +2262,7 @@ log content
         stripAnsi(getCapturedStdout()),
         `
 No available skills
+
 `,
       );
     });
@@ -2256,6 +2275,7 @@ No available skills
         stripAnsi(getCapturedStdout()),
         `
 No available context files
+
 `,
       );
     });
@@ -2338,7 +2358,7 @@ custom command content\n\n`,
       assert.strictEqual(result, null);
       assert.strictEqual(
         stripAnsi(getCapturedStdout()),
-        "No available custom slash commands\n",
+        "\nNo available custom slash commands\n\n",
       );
     });
 
@@ -2348,7 +2368,7 @@ custom command content\n\n`,
       assert.strictEqual(result, null);
       assert.strictEqual(
         stripAnsi(getCapturedStdout()),
-        "No available context files\n",
+        "\nNo available context files\n\n",
       );
     });
 
@@ -2388,6 +2408,7 @@ custom command content\n\n`,
         `
 Keymaps:
 - edit: {"name":"g","ctrl":true}
+
 `,
       );
     });

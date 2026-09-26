@@ -218,7 +218,7 @@ export function initKeypress() {
             return;
           }
           case "history": {
-            pageHistory();
+            pageHistory({ isKeypress: true });
             redrawPendingQuestion();
             return;
           }
@@ -234,27 +234,27 @@ export function initKeypress() {
             return;
           }
           case "contextpage": {
-            pageContextStr();
+            pageContextStr({ isKeypress: true });
             redrawPendingQuestion();
             return;
           }
           case "commandspage": {
-            pageCustomSlashCommandsStr();
+            pageCustomSlashCommandsStr({ isKeypress: true });
             redrawPendingQuestion();
             return;
           }
           case "lastresponse": {
-            await pageLastResponse();
+            await pageLastResponse({ isKeypress: true });
             redrawPendingQuestion();
             return;
           }
           case "lastmessage": {
-            pageLastMessage();
+            pageLastMessage({ isKeypress: true });
             redrawPendingQuestion();
             return;
           }
           case "lastdiff": {
-            pageLastDiff();
+            pageLastDiff({ isKeypress: true });
             redrawPendingQuestion();
             return;
           }
@@ -264,7 +264,7 @@ export function initKeypress() {
             return;
           }
           case "summaries": {
-            pageSummaries();
+            pageSummaries({ isKeypress: true });
             redrawPendingQuestion();
             return;
           }
@@ -886,9 +886,11 @@ export function setModelCommand(rawInput: string) {
   warnOnLargePromptOverhead();
 }
 
-export function pageContextStr() {
+export function pageContextStr({ isKeypress = false }: KeypressOpts = {}) {
   if (getState().app.contextEntries.length === 0) {
-    print.doing("No available context files");
+    withSpacingUnless(isStreaming() || isKeypress, () =>
+      print.doing("No available context files"),
+    );
     return;
   }
 
@@ -904,10 +906,11 @@ function isStreaming() {
   return getState().abortControllers.apiStream !== null;
 }
 
-function withSpacingUnless(unless: boolean, cb: (...args: unknown[]) => void) {
-  const rl = getState().app.rl;
-  assertAtBuildtime(rl !== null);
+export interface KeypressOpts {
+  isKeypress?: boolean;
+}
 
+function withSpacingUnless(unless: boolean, cb: () => void) {
   if (unless) {
     cb();
   } else {
@@ -917,9 +920,7 @@ function withSpacingUnless(unless: boolean, cb: (...args: unknown[]) => void) {
   }
 }
 
-export function pageEditStr({
-  isKeypress = false,
-}: { isKeypress?: boolean } = {}) {
+export function pageEditStr({ isKeypress = false }: KeypressOpts = {}) {
   const { editorInputValue } = getState().app;
   if (editorInputValue === null) {
     withSpacingUnless(isStreaming() || isKeypress, () =>
@@ -949,9 +950,13 @@ ${getAvailableCommandsStr()}`;
   });
 }
 
-export function pageCustomSlashCommandsStr() {
+export function pageCustomSlashCommandsStr({
+  isKeypress = false,
+}: KeypressOpts = {}) {
   if (getState().app.slashCommands.length === 0) {
-    print.doing("No available custom slash commands");
+    withSpacingUnless(isStreaming() || isKeypress, () =>
+      print.doing("No available custom slash commands"),
+    );
     return;
   }
 
@@ -963,10 +968,11 @@ export function pageCustomSlashCommandsStr() {
   });
 }
 
-export function printSkills() {
+export function printSkills({ isKeypress = false }: KeypressOpts = {}) {
   if (getState().app.skills.length === 0) {
-    printNewline();
-    print.doing("No available skills");
+    withSpacingUnless(isStreaming() || isKeypress, () =>
+      print.doing("No available skills"),
+    );
     return;
   }
 
@@ -980,15 +986,19 @@ export function printSkills() {
     )
     .join("\n");
 
-  printNewline();
-  print.doing("Available skills:");
-  print.plain(skillsList);
+  withSpacingUnless(isStreaming() || isKeypress, () => {
+    print.doing("Available skills:");
+    print.plain(skillsList);
+  });
 }
 
-export function printAvailableContextFiles() {
+export function printAvailableContextFiles({
+  isKeypress = false,
+}: KeypressOpts = {}) {
   if (getState().app.contextEntries.length === 0) {
-    printNewline();
-    print.doing("No available context files");
+    withSpacingUnless(isStreaming() || isKeypress, () =>
+      print.doing("No available context files"),
+    );
     return;
   }
 
@@ -1004,9 +1014,10 @@ export function printAvailableContextFiles() {
 
   const formatted = contextFiles.concat(contextSkillFiles).join("\n");
 
-  printNewline();
-  print.doing("Available context files:");
-  print.plain(formatted);
+  withSpacingUnless(isStreaming() || isKeypress, () => {
+    print.doing("Available context files:");
+    print.plain(formatted);
+  });
 }
 
 function resumeFromTranscript(transcript: string) {
@@ -1076,12 +1087,13 @@ export function resume(rawInput: string) {
   return null;
 }
 
-export function printKeymaps() {
-  printNewline();
-  print.doing("Keymaps:");
-  for (const [command, keymap] of Object.entries(getState().config.keymaps)) {
-    print.plain(`- ${command}: ${JSON.stringify(keymap)}`);
-  }
+export function printKeymaps({ isKeypress = false }: KeypressOpts = {}) {
+  withSpacingUnless(isStreaming() || isKeypress, () => {
+    print.doing("Keymaps:");
+    for (const [command, keymap] of Object.entries(getState().config.keymaps)) {
+      print.plain(`- ${command}: ${JSON.stringify(keymap)}`);
+    }
+  });
 }
 
 function getAllPrettyConfig() {
@@ -1267,13 +1279,15 @@ export function initGlobalConfig() {
   print.info(`Created the global config at ${path}`);
 }
 
-export function pageHistory() {
+export function pageHistory({ isKeypress = false }: KeypressOpts = {}) {
   const path = getState().app.chatHistoryPath;
   const readResult = tryCatch(() => fsDeps.readFileSync(path).toString());
   const historyStr = readResult.ok ? readResult.value : "";
 
   if (historyStr.length === 0) {
-    print.doing("No chat history");
+    withSpacingUnless(isStreaming() || isKeypress, () =>
+      print.doing("No chat history"),
+    );
     return;
   }
 
@@ -1287,20 +1301,26 @@ ${historyStr}`;
   });
 }
 
-export async function pageLastResponse() {
+export async function pageLastResponse({
+  isKeypress = false,
+}: KeypressOpts = {}) {
   const { messages } = getState().app.conversation;
   const lastMessage = messages.findLast(
     (message) => message.role === "assistant",
   );
 
   if (lastMessage == undefined) {
-    print.doing("No llm messages");
+    withSpacingUnless(isStreaming() || isKeypress, () =>
+      print.doing("No llm messages"),
+    );
     return;
   }
 
   const contentStr = getStrFromAssistantContent(lastMessage.content);
   if (contentStr.length === 0) {
-    print.doing("No llm messages");
+    withSpacingUnless(isStreaming() || isKeypress, () =>
+      print.doing("No llm messages"),
+    );
     return;
   }
 
@@ -1316,12 +1336,14 @@ ${formattedContentStr}`;
   });
 }
 
-export function pageLastMessage() {
+export function pageLastMessage({ isKeypress = false }: KeypressOpts = {}) {
   const { messages } = getState().app.conversation;
   const lastMessage = messages.findLast((message) => message.role === "user");
 
   if (lastMessage == undefined) {
-    print.doing("No user messages");
+    withSpacingUnless(isStreaming() || isKeypress, () =>
+      print.doing("No user messages"),
+    );
     return;
   }
 
@@ -1329,7 +1351,9 @@ export function pageLastMessage() {
   assertAtBuildtime(typeof contentStr === "string");
 
   if (contentStr.length === 0) {
-    print.doing("No user messages");
+    withSpacingUnless(isStreaming() || isKeypress, () =>
+      print.doing("No user messages"),
+    );
     return;
   }
 
@@ -1354,9 +1378,11 @@ ${stringify(getState().app.conversation.messages.toReversed())}`;
   });
 }
 
-export function pageSummaries() {
+export function pageSummaries({ isKeypress = false }: KeypressOpts = {}) {
   if (getState().app.conversation.summaries.length === 0) {
-    print.doing("No conversation summaries");
+    withSpacingUnless(isStreaming() || isKeypress, () =>
+      print.doing("No conversation summaries"),
+    );
     return;
   }
 
@@ -1382,11 +1408,13 @@ ${summariesStr}`;
   });
 }
 
-export function pageLastDiff() {
+export function pageLastDiff({ isKeypress = false }: KeypressOpts = {}) {
   const { toolEditDiffs } = getState().app;
 
   if (toolEditDiffs.length === 0) {
-    print.doing("No diffs from the last turn");
+    withSpacingUnless(isStreaming() || isKeypress, () =>
+      print.doing("No diffs from the last turn"),
+    );
     return;
   }
   const initialContentStr = toolEditDiffs
