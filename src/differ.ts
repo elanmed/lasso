@@ -51,10 +51,15 @@ export async function execGitDiff(opts: {
   });
 }
 
+export function isToolCallDiffIgnoredPath(path: string) {
+  return path.startsWith(os.tmpdir());
+}
+
 export function createToolCallDiffer() {
   const toolCallIdToTempFileBefore = new Map<string, string>();
 
   function setTempFileBefore(toolCallId: string, path: string) {
+    if (isToolCallDiffIgnoredPath(path)) return;
     const tempFileBefore = getTempFileName({ initialContentPath: path });
     if (tempFileBefore === null) return;
     toolCallIdToTempFileBefore.set(toolCallId, tempFileBefore);

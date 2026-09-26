@@ -77,6 +77,31 @@ describe("differ", () => {
       assert.equal(testFs._files.has("/tmp/lasso-test-uuid.txt"), false);
     });
 
+    it("does not snapshot ignores-path files", () => {
+      testFs._files.set("/tmp/file.txt", "original content");
+      const differ = createToolCallDiffer();
+
+      differ.setTempFileBefore("call-1", "/tmp/file.txt");
+
+      assert.equal(testFs._files.has("/tmp/lasso-test-uuid.txt"), false);
+      assert.equal(differ.toolCallIdToTempFileBefore.has("call-1"), false);
+    });
+
+    it("does not diff and cleans up the after file for ignored paths", async () => {
+      const commands: string[] = [];
+      const getCaptured = mockStdout();
+      const differ = createToolCallDiffer();
+      mockExecCalls([], commands);
+
+      differ.setTempFileBefore("call-1", "/tmp/file.txt");
+      testFs._files.set("/tmp/file.txt", "new content");
+      await differ.diffAndCleanup("call-1", "/tmp/file.txt");
+
+      assert.equal(commands.length, 0);
+      assert.equal(getCaptured().length, 0);
+      assert.deepStrictEqual(getState().app.toolEditDiffs, []);
+    });
+
     it("prints and records the diff for a newly-created file", async () => {
       const commands: string[] = [];
       const getCaptured = mockStdout();
