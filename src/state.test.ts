@@ -281,6 +281,23 @@ skills body`,
     assert.equal(getState().app.sessionFilePath, "/tmp/session.json");
   });
 
+  it("set-conversation-messages", () => {
+    assert.deepStrictEqual(getState().app.conversation.messages, []);
+    actions.setConversationMessages([{ role: "user", content: "hello" }]);
+    assert.deepStrictEqual(getState().app.conversation, {
+      summaries: [],
+      messages: [{ role: "user", content: "hello" }],
+    });
+  });
+
+  it("set-transcript", () => {
+    assert.deepStrictEqual(getState().app.transcript, []);
+    actions.setTranscript([{ timestamp: 0, role: "user", message: "hello" }]);
+    assert.deepStrictEqual(getState().app.transcript, [
+      { timestamp: 0, role: "user", message: "hello" },
+    ]);
+  });
+
   it("set-prompt-tokens", () => {
     assert.equal(getState().app.promptTokens.value, 0);
     actions.setPromptTokens(42);

@@ -428,4 +428,5 @@ export async function maybeCompact(userInput: string) {
     .app.conversation.summaries.map(({ tokens }) => tokens)
     .reduce((accum, curr) => accum + curr, 0);
   actions.setPromptTokens(summaryTokens + promptOverheadTokensApprox);
+  actions.setPromptTokensDirty(false);
 }

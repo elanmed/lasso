@@ -5,6 +5,7 @@ import { Writable } from "node:stream";
 import { dirname, join } from "node:path";
 import childProcess from "node:child_process";
 import os from "node:os";
+import type { AssistantContent } from "ai";
 import { assertAtBuildtime } from "./assert.ts";
 import {
   isAbortError,
@@ -845,6 +846,7 @@ export function clearCommand() {
   print.infoSubtle(`Context cleared (${getPrettyTokenUsage()})`);
   syncSessionFile({
     messages: [],
+    summaries: [],
     transcript: [],
   });
   // the next api call only reports its token usage after it completes, so seeding with the
@@ -1430,7 +1432,9 @@ export async function pageLastResponse({ isTyped = false }: SpacingOpts = {}) {
     return;
   }
 
-  const contentStr = getStrFromAssistantContent(lastMessage.content);
+  const contentStr = getStrFromAssistantContent(
+    lastMessage.content as AssistantContent,
+  );
   if (contentStr.length === 0) {
     withSpacingIf(
       getState().abortControllers.apiStream === null && isTyped,
@@ -1463,7 +1467,7 @@ export function pageLastMessage({ isTyped = false }: SpacingOpts = {}) {
     return;
   }
 
-  const contentStr = lastMessage.content;
+  const contentStr = lastMessage.content as string;
   assertAtBuildtime(typeof contentStr === "string");
 
   if (contentStr.length === 0) {

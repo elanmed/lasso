@@ -2,7 +2,8 @@ import { basename, extname, join } from "node:path";
 import os from "node:os";
 import crypto from "node:crypto";
 import childProcess from "node:child_process";
-import type { AssistantContent, ModelMessage } from "ai";
+import type { AssistantContent } from "ai";
+import type { ModelMessage } from "./state.ts";
 import { assertAtRuntime } from "./assert.ts";
 import { fsDeps, processDeps } from "./deps.ts";
 import { getSessionDir } from "./paths.ts";
@@ -12,10 +13,11 @@ export type Result<T> = { ok: true; value: T } | { ok: false; error: unknown };
 
 export function getApproxTokensFromMessages(messages: ModelMessage[]) {
   const textOnly = messages.map((message) => {
-    if (typeof message.content === "string") return message;
+    const content = message.content as string | { type: string }[];
+    if (typeof content === "string") return message;
     return {
       ...message,
-      content: message.content.filter(
+      content: content.filter(
         (part) => part.type !== "image" && part.type !== "file",
       ),
     };

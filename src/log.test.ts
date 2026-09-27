@@ -6,6 +6,8 @@ import {
   initSessionFile,
   deleteExpiredSessionFiles,
   initLogs,
+  syncSessionFile,
+  resumeFromSessionFile,
 } from "./log.ts";
 import { actions, getState } from "./state.ts";
 import {
@@ -307,6 +309,166 @@ hello
           "/fake-home/.local/state/lasso/sessions/session-uuid-999997600000.json",
         ),
         true,
+      );
+    });
+  });
+
+  describe("syncSessionFile", () => {
+    beforeEach(() => {
+      mock.restoreAll();
+      setupTestContext({ now: 1_234_567_890_000 });
+      actions.setSessionFilePath(
+        "/fake-home/.local/state/lasso/sessions/session-1234567890000.json",
+      );
+    });
+
+    it("writes the current state to the session file", () => {
+      testFs._dirs.add("/fake-home/.local/state/lasso/sessions");
+      actions.appendToConversationMessages({ role: "user", content: "hello" });
+      actions.appendToTranscript({
+        timestamp: 0,
+        role: "user",
+        message: "hi",
+      });
+
+      syncSessionFile();
+
+      assert.equal(
+        testFs._files.get(
+          "/fake-home/.local/state/lasso/sessions/session-1234567890000.json",
+        ),
+        '{"messages":[{"role":"user","content":"hello"}],"summaries":[],"transcript":[{"timestamp":0,"role":"user","message":"hi"}]}',
+      );
+    });
+
+    it("replaces the provided fields and updates state", () => {
+      actions.appendToConversationMessages({ role: "user", content: "old" });
+      syncSessionFile({ messages: [{ role: "assistant", content: "reply" }] });
+
+      assert.equal(
+        testFs._files.get(
+          "/fake-home/.local/state/lasso/sessions/session-1234567890000.json",
+        ),
+        '{"messages":[{"role":"assistant","content":"reply"}],"summaries":[],"transcript":[]}',
+      );
+      assert.deepStrictEqual(getState().app.conversation, {
+        summaries: [],
+        messages: [{ role: "assistant", content: "reply" }],
+      });
+    });
+
+    it("creates the directory when it does not exist", () => {
+      syncSessionFile();
+      assert.equal(
+        testFs._dirs.has("/fake-home/.local/state/lasso/sessions"),
+        true,
+      );
+    });
+
+    it("warns and updates state when writing fails", () => {
+      mock.method(fsDeps, "writeFileSync", () => {
+        throw new Error("Permission denied");
+      });
+      const getCaptured = mockStdout();
+
+      syncSessionFile();
+
+      assert.equal(
+        stripAnsi(getCaptured()),
+        "Failed to write the session file to /fake-home/.local/state/lasso/sessions/session-1234567890000.json\n",
+      );
+      assert.deepStrictEqual(getState().app.conversation.messages, []);
+    });
+
+    it("warns and updates state when stringifying fails", () => {
+      const circularContent: { self?: unknown } = {};
+      circularContent.self = circularContent;
+
+      const getCaptured = mockStdout();
+      syncSessionFile({
+        messages: [{ role: "user", content: circularContent }],
+      });
+
+      assert.equal(
+        stripAnsi(getCaptured()),
+        "Failed to stringify the session file\n",
+      );
+      assert.equal(
+        testFs._files.has(
+          "/fake-home/.local/state/lasso/sessions/session-1234567890000.json",
+        ),
+        false,
+      );
+      assert.deepStrictEqual(getState().app.conversation.messages, [
+        { role: "user", content: circularContent },
+      ]);
+    });
+  });
+
+  describe("resumeFromSessionFile", () => {
+    beforeEach(() => {
+      mock.restoreAll();
+      setupTestContext({ now: 1_234_567_890_000 });
+    });
+
+    it("loads messages, summaries, and transcript into state and returns true", () => {
+      actions.appendToConversationMessages({ role: "user", content: "old" });
+      testFs._files.set(
+        "/test/session.json",
+        JSON.stringify({
+          messages: [{ role: "user", content: "hello" }],
+          summaries: [{ compacted: "summary", compactedAt: 123, tokens: 456 }],
+          transcript: [{ timestamp: 0, role: "user", message: "hello" }],
+        }),
+      );
+
+      const result = resumeFromSessionFile("/test/session.json");
+
+      assert.equal(result, true);
+      assert.deepStrictEqual(getState().app.conversation, {
+        summaries: [{ compacted: "summary", compactedAt: 123, tokens: 456 }],
+        messages: [{ role: "user", content: "hello" }],
+      });
+      assert.deepStrictEqual(getState().app.transcript, [
+        { timestamp: 0, role: "user", message: "hello" },
+      ]);
+    });
+
+    it("warns and returns false when the session file cannot be read", () => {
+      const getCaptured = mockStdout();
+
+      const result = resumeFromSessionFile("/test/missing.json");
+
+      assert.equal(result, false);
+      assert.equal(
+        stripAnsi(getCaptured()),
+        "Failed to read the session file at /test/missing.json\n",
+      );
+    });
+
+    it("warns and returns false when the session file is not valid json", () => {
+      testFs._files.set("/test/broken.json", "not json");
+      const getCaptured = mockStdout();
+
+      const result = resumeFromSessionFile("/test/broken.json");
+
+      assert.equal(result, false);
+      assert.equal(
+        stripAnsi(getCaptured()),
+        "Failed to parse the session file at /test/broken.json\n",
+      );
+    });
+
+    it("warns and returns false when the session file fails validation", () => {
+      testFs._files.set("/test/invalid.json", "{}");
+      const getCaptured = mockStdout();
+
+      const result = resumeFromSessionFile("/test/invalid.json");
+
+      assert.equal(result, false);
+      assert.equal(
+        stripAnsi(getCaptured()),
+        "Failed to validate the session file at /test/invalid.json\n",
       );
     });
   });

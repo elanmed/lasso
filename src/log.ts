@@ -67,7 +67,7 @@ export function syncSessionFile({
   messages?: ModelMessage[];
   summaries?: ModelSummary[];
   transcript?: TranscriptEntry[];
-}) {
+} = {}) {
   const { sessionFilePath } = getState().app;
   const sessionDir = getSessionDir();
   if (!fsDeps.existsSync(sessionDir)) {
@@ -85,9 +85,14 @@ export function syncSessionFile({
     summaries,
     transcript,
   };
+
+  actions.setConversationMessages(messages);
+  actions.setConversationSummaries(summaries);
+  actions.setTranscript(transcript);
+
   const stringifyResult = tryCatch(() => JSON.stringify(next));
   if (!stringifyResult.ok) {
-    // TODO: warn
+    print.warning("Failed to stringify the session file");
     return;
   }
 
@@ -95,7 +100,7 @@ export function syncSessionFile({
     fsDeps.writeFileSync(sessionFilePath, stringifyResult.value),
   );
   if (!writeResult.ok) {
-    // TODO: warn
+    print.warning(`Failed to write the session file to ${sessionFilePath}`);
     return;
   }
 }
@@ -105,19 +110,19 @@ export function resumeFromSessionFile(sessionFilePath: string) {
     fsDeps.readFileSync(sessionFilePath).toString(),
   );
   if (!readResult.ok) {
-    // TODO: warn
+    print.warning(`Failed to read the session file at ${sessionFilePath}`);
     return false;
   }
 
   const jsonResult = tryCatch((): unknown => JSON.parse(readResult.value));
   if (!jsonResult.ok) {
-    // TODO: warn
+    print.warning(`Failed to parse the session file at ${sessionFilePath}`);
     return false;
   }
 
-  const parseResult = tryCatch(() => SessionFileSchema.parse(jsonResult));
+  const parseResult = tryCatch(() => SessionFileSchema.parse(jsonResult.value));
   if (!parseResult.ok) {
-    // TODO: warn
+    print.warning(`Failed to validate the session file at ${sessionFilePath}`);
     return false;
   }
   const { messages, summaries, transcript } = parseResult.value;

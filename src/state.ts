@@ -236,6 +236,26 @@ export const actions = {
     logStateChange("reset-conversation-messages", String(before), "0");
   },
 
+  setConversationMessages(messages: ModelMessage[]) {
+    const before = state.app.conversation.messages;
+    state.app.conversation.messages = messages;
+    logStateChange(
+      "set-conversation-messages",
+      String(before.length),
+      String(messages.length),
+    );
+  },
+
+  setTranscript(transcript: TranscriptEntry[]) {
+    const before = state.app.transcript;
+    state.app.transcript = transcript;
+    logStateChange(
+      "set-transcript",
+      String(before.length),
+      String(transcript.length),
+    );
+  },
+
   appendToConversationMessages(message: ModelMessage) {
     const before = state.app.conversation.messages.length;
     state.app.conversation.messages.push(message);

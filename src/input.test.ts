@@ -1140,49 +1140,59 @@ Token count: 621 (0% of context window)
       testFs._dirs.add("/fake-home/.local/state/lasso/sessions");
       testFs._files.set(
         "/fake-home/.local/state/lasso/sessions/session-1234567890000.json",
-        "older transcript",
+        JSON.stringify({
+          messages: [{ role: "user", content: "older" }],
+          summaries: [],
+          transcript: [],
+        }),
       );
       testFs._files.set(
         "/fake-home/.local/state/lasso/sessions/session-1234567899999.json",
-        "newer transcript",
+        JSON.stringify({
+          messages: [{ role: "assistant", content: "newer" }],
+          summaries: [{ compacted: "summary", compactedAt: 123, tokens: 456 }],
+          transcript: [
+            { timestamp: 0, role: "user", message: "newer transcript" },
+          ],
+        }),
       );
 
       const result = resume("/resume");
 
-      assert.strictEqual(
-        result,
-        `Continue the conversation recorded in the transcript below. Respond to this message with "Ready to continue chatting."
-
-## [lasso] Transcript:
-
-newer transcript`,
-      );
+      assert.strictEqual(result, "continue");
       assert.deepStrictEqual(getState().app.conversation, {
-        summaries: [],
-        messages: [],
+        summaries: [{ compacted: "summary", compactedAt: 123, tokens: 456 }],
+        messages: [{ role: "assistant", content: "newer" }],
       });
+      assert.deepStrictEqual(getState().app.transcript, [
+        { timestamp: 0, role: "user", message: "newer transcript" },
+      ]);
     });
 
-    it("returns transcript and resets message params when conversation is found", () => {
-      actions.appendToConversationMessages({ role: "user", content: "hello" });
+    it("loads the session and returns continue when the date matches", () => {
+      actions.appendToConversationMessages({ role: "user", content: "old" });
       testFs._dirs.add("/fake-home/.local/state/lasso/sessions");
       testFs._files.set(
         "/fake-home/.local/state/lasso/sessions/session-1234567890000.json",
-        "transcript content",
+        JSON.stringify({
+          messages: [{ role: "user", content: "hello" }],
+          summaries: [],
+          transcript: [
+            { timestamp: 0, role: "user", message: "transcript content" },
+          ],
+        }),
       );
+
       const result = resume("/resume 1234567890000");
-      assert.strictEqual(
-        result,
-        `Continue the conversation recorded in the transcript below. Respond to this message with "Ready to continue chatting."
 
-## [lasso] Transcript:
-
-transcript content`,
-      );
+      assert.strictEqual(result, "continue");
       assert.deepStrictEqual(getState().app.conversation, {
         summaries: [],
-        messages: [],
+        messages: [{ role: "user", content: "hello" }],
       });
+      assert.deepStrictEqual(getState().app.transcript, [
+        { timestamp: 0, role: "user", message: "transcript content" },
+      ]);
       assert.deepStrictEqual(getState().app.promptTokens, {
         value: 0,
         dirty: false,
@@ -2672,17 +2682,14 @@ Token count: 602 (0% of context window)
       testFs._dirs.add("/fake-home/.local/state/lasso/sessions");
       testFs._files.set(
         "/fake-home/.local/state/lasso/sessions/session-1234567890000.json",
-        "transcript content",
+        JSON.stringify({
+          messages: [{ role: "user", content: "hello" }],
+          summaries: [],
+          transcript: [],
+        }),
       );
       const result = await resolveSlashCommand("/resume 1234567890000");
-      assert.strictEqual(
-        result,
-        `Continue the conversation recorded in the transcript below. Respond to this message with "Ready to continue chatting."
-
-## [lasso] Transcript:
-
-transcript content`,
-      );
+      assert.strictEqual(result, "continue");
     });
 
     it("skips the before-and-after diff when a before temp file cannot be created", async () => {
