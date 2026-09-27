@@ -766,6 +766,7 @@ web_fetch_json: https://example.com/api
         `## [lasso] Compact conversation
 
 - Compact the following conversation.
+- Output a plain-text prose summary. Do not repeat the input.
 - Output a maximum of 90000 characters.
 
 \`\`\`json
@@ -932,6 +933,7 @@ You have queued messages! Edit them with {"name":"g","ctrl":true} or press enter
           content: `## [lasso] Compact conversation
 
 - Compact the following conversation.
+- Output a plain-text prose summary. Do not repeat the input.
 - Output a maximum of 90000 characters.
 
 \`\`\`json
@@ -1087,6 +1089,7 @@ You have queued messages! Edit them with {"name":"g","ctrl":true} or press enter
         `## [lasso] Compact conversation
 
 - Compact the following conversation.
+- Output a plain-text prose summary. Do not repeat the input.
 - Output a maximum of 90000 characters.
 
 \`\`\`json
@@ -1297,6 +1300,7 @@ You have queued messages! Edit them with {"name":"g","ctrl":true} or press enter
         `## [lasso] Compact summaries
 
 - Merge the following two summaries into one.
+- Output a plain-text prose summary. Do not repeat the input.
 - Output a maximum of 30000 characters.
 
 \`\`\`json

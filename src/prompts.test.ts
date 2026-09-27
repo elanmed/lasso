@@ -1,15 +1,20 @@
 import assert from "node:assert";
 import { describe, it } from "node:test";
-import { baseAgentPrompt, getSubagentPrompt } from "./prompts.ts";
+import {
+  baseAgentPrompt,
+  getConversationSummaryPrompt,
+  getMergeSummariesPrompt,
+  getSubagentPrompt,
+} from "./prompts.ts";
 
 describe("prompts", () => {
   it("formats the base agent prompt exactly", () => {
     assert.strictEqual(
       baseAgentPrompt,
       [
-        "# Base system prompt",
+        "# [lasso] Base system prompt",
         "",
-        "## Core principles",
+        "## [lasso] Core principles",
         "",
         "- You are an AI agent being called from a minimal terminal cli called lasso.",
         "- Be concise: 1 sentence when possible, under 25 words unless detail is required. Questions get answers, no padding.",
@@ -79,9 +84,9 @@ describe("prompts", () => {
     assert.strictEqual(
       getSubagentPrompt("read-only"),
       [
-        "# Base system prompt",
+        "# [lasso] Base system prompt",
         "",
-        "## Core principles",
+        "## [lasso] Core principles",
         "- You are a read-only subagent. Although you have access to a bash tool, you must NOT use it to perform any modifications to the file system.",
         "",
         "## Filesystem actions (via bash)",
@@ -110,9 +115,9 @@ describe("prompts", () => {
     assert.strictEqual(
       getSubagentPrompt("read-write"),
       [
-        "# Base system prompt",
+        "# [lasso] Base system prompt",
         "",
-        "## Core principles",
+        "## [lasso] Core principles",
         "- You are a subagent with read-write access.",
         "",
         "## Filesystem actions (via bash)",
@@ -169,6 +174,50 @@ describe("prompts", () => {
         "TMPFILE=$(mktemp)",
         'sed -e "${START},${END}d" target.txt > "$TMPFILE" && mv "$TMPFILE" target.txt',
         "```",
+      ].join("\n"),
+    );
+  });
+
+  it("formats the conversation summary prompt exactly", () => {
+    assert.strictEqual(
+      getConversationSummaryPrompt({
+        targetCharLen: 1000,
+        conversation: `## user
+
+hello`,
+      }),
+      [
+        "## [lasso] Compact conversation",
+        "",
+        "- Compact the following conversation.",
+        "- Output a plain-text prose summary. Do not repeat the input.",
+        "- Output a maximum of 1000 characters.",
+        "",
+        "## user",
+        "",
+        "hello",
+      ].join("\n"),
+    );
+  });
+
+  it("formats the merge summaries prompt exactly", () => {
+    assert.strictEqual(
+      getMergeSummariesPrompt({
+        targetCharLen: 500,
+        summaries: `first
+
+second`,
+      }),
+      [
+        "## [lasso] Compact summaries",
+        "",
+        "- Merge the following two summaries into one.",
+        "- Output a plain-text prose summary. Do not repeat the input.",
+        "- Output a maximum of 500 characters.",
+        "",
+        "first",
+        "",
+        "second",
       ].join("\n"),
     );
   });

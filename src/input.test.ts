@@ -1097,11 +1097,11 @@ l---
       assert.strictEqual(
         stripAnsi(getCapturedStdout()),
         `
-Token count: 616
+Token count: 621
 - Chat messages: 11
 - Context files: 3
 - Harness and MCP tools: 4
-- Base system prompt: 597
+- Base system prompt: 602
 - Skill descriptions: 1
 
 `,
@@ -1114,11 +1114,11 @@ Token count: 616
       assert.strictEqual(
         stripAnsi(getCapturedStdout()),
         `
-Token count: 61,600
+Token count: 62,100
 - Chat messages: 1,100
 - Context files: 300
 - Harness and MCP tools: 400
-- Base system prompt: 59,700
+- Base system prompt: 60,200
 - Skill descriptions: 100
 
 `,
@@ -1132,11 +1132,11 @@ Token count: 61,600
       assert.strictEqual(
         stripAnsi(getCapturedStdout()),
         `
-Token count: 616 (0% of context window)
+Token count: 621 (0% of context window)
 - Chat messages: 11
 - Context files: 3
 - Harness and MCP tools: 4
-- Base system prompt: 597
+- Base system prompt: 602
 - Skill descriptions: 1
 
 `,
@@ -2692,7 +2692,15 @@ Keymaps:
       assert.strictEqual(result, null);
       assert.strictEqual(
         stripAnsi(getCapturedStdout()),
-        `\nToken count: 597 (0% of context window)\n- Chat messages: 0\n- Context files: 0\n- Harness and MCP tools: 0\n- Base system prompt: 597\n- Skill descriptions: 0\n\n`,
+        `
+Token count: 602 (0% of context window)
+- Chat messages: 0
+- Context files: 0
+- Harness and MCP tools: 0
+- Base system prompt: 602
+- Skill descriptions: 0
+
+`,
       );
     });
 

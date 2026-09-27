@@ -16,6 +16,10 @@ import { createToolCallDiffer } from "./differ.ts";
 import { getUnicodeChar } from "./text.ts";
 import { print, startLoadingState, stopLoadingState } from "./print.ts";
 import {
+  getConversationSummaryPrompt,
+  getMergeSummariesPrompt,
+} from "./prompts.ts";
+import {
   appendModelUsage,
   getApproxPromptTokens,
   getCurrentPromptTokens,
@@ -222,12 +226,15 @@ export async function getMergedSummaries() {
   const targetTokens = Math.floor(maxRatioPerSummary * contextWindow);
   const targetCharLen = approxTokensToCharLen(targetTokens);
 
-  const compactPrompt = `## [lasso] Compact summaries
-
-- Merge the following two summaries into one.
-- Output a maximum of ${String(targetCharLen)} characters.
-
-${markdownFence("json", JSON.stringify([firstSummary, secondSummary].map(({ compacted }) => compacted)))}`;
+  const compactPrompt = getMergeSummariesPrompt({
+    targetCharLen,
+    summaries: markdownFence(
+      "json",
+      JSON.stringify(
+        [firstSummary, secondSummary].map(({ compacted }) => compacted),
+      ),
+    ),
+  });
 
   const structuredOutputOpts = (() => {
     if (getState().config.compactWithStructuredOutput) {
@@ -299,12 +306,18 @@ export async function getConversationSummary() {
 
   // messages[0..summaries.length) are re-appended summaries, one per entry,
   // so everything from summaries.length on is not yet summarized
-  const compactPrompt = `## [lasso] Compact conversation
+  const compactPrompt = getConversationSummaryPrompt({
+    targetCharLen,
+    conversation: markdownFence(
+      "json",
+      JSON.stringify(
+        getState().app.conversation.messages.slice(
+          getState().app.conversation.summaries.length,
+        ),
+      ),
+    ),
+  });
 
-- Compact the following conversation.
-- Output a maximum of ${String(targetCharLen)} characters.
-
-${markdownFence("json", JSON.stringify(getState().app.conversation.messages.slice(getState().app.conversation.summaries.length)))}`;
   // messages[0..summaries.length) are re-appended summaries, one per entry,
   // so everything from summaries.length on is not yet summarized
 

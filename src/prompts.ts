@@ -55,9 +55,9 @@ Note: \${START}, \${END}, \${LINE} are placeholders. Replace with actual line nu
 
 const toolDiffLi = `- After a successful file-modifying tool (bash with fileSystemAccessType create-update-delete): the CLI auto-outputs a diff. Do NOT repeat the code, file contents, or a diff of the change in your response — summarize in prose only. Verification via a targeted read (e.g. sed -n) is fine, but don't re-echo what the diff already showed`;
 
-const headingOne = `# Base system prompt`;
+const headingOne = `# [lasso] Base system prompt`;
 
-const corePrinciplesHeading = `## Core principles`;
+const corePrinciplesHeading = `## [lasso] Core principles`;
 
 export const baseAgentPrompt = `${headingOne}
 
@@ -97,4 +97,40 @@ ${bashIntroHeadingTwo}
 ${readInstructions}
 
 ${writeInstructions}`;
+};
+
+const plainTextLi = `- Output a plain-text prose summary. Do not repeat the input.`;
+const getMaxLenLi = (targetCharLen: number) =>
+  `- Output a maximum of ${String(targetCharLen)} characters.`;
+
+export const getConversationSummaryPrompt = ({
+  targetCharLen,
+  conversation,
+}: {
+  targetCharLen: number;
+  conversation: string;
+}) => {
+  return `## [lasso] Compact conversation
+
+- Compact the following conversation.
+${plainTextLi}
+${getMaxLenLi(targetCharLen)}
+
+${conversation}`;
+};
+
+export const getMergeSummariesPrompt = ({
+  targetCharLen,
+  summaries,
+}: {
+  targetCharLen: number;
+  summaries: string;
+}) => {
+  return `## [lasso] Compact summaries
+
+- Merge the following two summaries into one.
+${plainTextLi}
+${getMaxLenLi(targetCharLen)}
+
+${summaries}`;
 };
