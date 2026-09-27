@@ -1010,8 +1010,8 @@ l---
     });
 
     it("resets params", () => {
-      actions.appendToConversation({ role: "user", content: "hello" });
-      actions.setSummaries([
+      actions.appendToConversationMessages({ role: "user", content: "hello" });
+      actions.setConversationSummaries([
         { compacted: "summary", compactedAt: 3, tokens: 5 },
       ]);
       mock.method(promptDeps, "getSystemContent", () => "abc");
@@ -1038,7 +1038,7 @@ l---
       actions.setToolsContentStr("123456789012");
       actions.setContextStr("123456789");
       actions.setSkillsStr("1234");
-      actions.appendToConversation({ role: "user", content: "hello" });
+      actions.appendToConversationMessages({ role: "user", content: "hello" });
     });
 
     it("prints the total and each area with its approx count when the cache is dirty", () => {
@@ -1136,7 +1136,7 @@ Token count: 621 (0% of context window)
     });
 
     it("resumes the most recent session when no date is provided", () => {
-      actions.appendToConversation({ role: "user", content: "hello" });
+      actions.appendToConversationMessages({ role: "user", content: "hello" });
       testFs._dirs.add("/fake-home/.local/state/lasso/sessions");
       testFs._files.set(
         "/fake-home/.local/state/lasso/sessions/session-1234567890000.json",
@@ -1164,7 +1164,7 @@ newer transcript`,
     });
 
     it("returns transcript and resets message params when conversation is found", () => {
-      actions.appendToConversation({ role: "user", content: "hello" });
+      actions.appendToConversationMessages({ role: "user", content: "hello" });
       testFs._dirs.add("/fake-home/.local/state/lasso/sessions");
       testFs._files.set(
         "/fake-home/.local/state/lasso/sessions/session-1234567890000.json",
@@ -1349,8 +1349,11 @@ log content
     it("opens the latest assistant response in a pager", async () => {
       const { spawned } = mockPagerSpawn();
       testProcessEnv._set("LASSO_PAGER", "nano __FILE__");
-      actions.appendToConversation({ role: "user", content: "question" });
-      actions.appendToConversation({
+      actions.appendToConversationMessages({
+        role: "user",
+        content: "question",
+      });
+      actions.appendToConversationMessages({
         role: "assistant",
         content: [
           { type: "text", text: "first" },
@@ -1401,12 +1404,12 @@ second
     it("opens the latest user message in a pager", () => {
       const { spawned } = mockPagerSpawn();
       testProcessEnv._set("LASSO_PAGER", "nano __FILE__");
-      actions.appendToConversation({ role: "user", content: "older" });
-      actions.appendToConversation({
+      actions.appendToConversationMessages({ role: "user", content: "older" });
+      actions.appendToConversationMessages({
         role: "assistant",
         content: [{ type: "text", text: "answer" }],
       });
-      actions.appendToConversation({
+      actions.appendToConversationMessages({
         role: "user",
         content: "latest question",
       });
@@ -1495,11 +1498,11 @@ latest question
     it("opens the message list newest first in a pager", () => {
       const { spawned } = mockPagerSpawn();
       testProcessEnv._set("LASSO_PAGER", "nano __FILE__");
-      actions.appendToConversation({
+      actions.appendToConversationMessages({
         role: "user",
         content: "question",
       });
-      actions.appendToConversation({
+      actions.appendToConversationMessages({
         role: "assistant",
         content: [{ type: "text", text: "answer" }],
       });
@@ -1541,7 +1544,7 @@ latest question
     it("opens the summaries list newest first in a pager", () => {
       const { spawned } = mockPagerSpawn();
       testProcessEnv._set("LASSO_PAGER", "nano __FILE__");
-      actions.setSummaries([
+      actions.setConversationSummaries([
         { compacted: "older summary", compactedAt: 100, tokens: 10 },
         { compacted: "latest summary", compactedAt: 200, tokens: 20 },
       ]);
@@ -2042,8 +2045,11 @@ log content
       const { spawned } = mockPagerSpawn();
       testProcessEnv._set("LASSO_PAGER", "nano __FILE__");
       actions.setKeymap("lastresponse", { name: "u", ctrl: true });
-      actions.appendToConversation({ role: "user", content: "question" });
-      actions.appendToConversation({
+      actions.appendToConversationMessages({
+        role: "user",
+        content: "question",
+      });
+      actions.appendToConversationMessages({
         role: "assistant",
         content: [{ type: "text", text: "first" }],
       });
@@ -2387,7 +2393,10 @@ log content
     it("handles /lastmessage command by opening the last user message in a pager", async () => {
       const { spawned } = mockPagerSpawn();
       testProcessEnv._set("LASSO_PAGER", "nano __FILE__");
-      actions.appendToConversation({ role: "user", content: "question" });
+      actions.appendToConversationMessages({
+        role: "user",
+        content: "question",
+      });
       const result = await resolveSlashCommand("/lastmessage");
       assert.strictEqual(result, null);
       assert.strictEqual(spawned[0], "nano /tmp/lasso-test-uuid.txt");
@@ -2429,7 +2438,10 @@ log content
     it("handles /messages command by opening the message list in a pager", async () => {
       const { spawned } = mockPagerSpawn();
       testProcessEnv._set("LASSO_PAGER", "nano __FILE__");
-      actions.appendToConversation({ role: "user", content: "question" });
+      actions.appendToConversationMessages({
+        role: "user",
+        content: "question",
+      });
       const result = await resolveSlashCommand("/messages");
       assert.strictEqual(result, null);
       assert.strictEqual(spawned[0], "nano /tmp/lasso-test-uuid.txt");

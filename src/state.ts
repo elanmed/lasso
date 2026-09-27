@@ -2,6 +2,7 @@
 import type readline from "node:readline/promises";
 import type { ModelMessage } from "ai";
 import type { MCPClient } from "@ai-sdk/mcp";
+import { z } from "zod";
 import { assertAtRuntime } from "./assert.ts";
 import {
   defaultConfig,
@@ -26,22 +27,39 @@ export interface SlashCommand {
   content: string;
 }
 
-export interface ModelSummary {
-  compacted: string;
-  compactedAt: number;
-  tokens: number;
-}
+export const ModelSummarySchema = z.strictObject({
+  compacted: z.string(),
+  compactedAt: z.number(),
+  tokens: z.number(),
+});
+
+export type ModelSummary = z.infer<typeof ModelSummarySchema>;
 
 export interface ToolEditDiff {
   fileName: string;
   diffStdout: string;
 }
 
-export interface TranscriptEntry {
-  timestamp: number;
-  role: "user" | "assistant";
-  message: string;
-}
+export const TranscriptEntrySchema = z.strictObject({
+  timestamp: z.number(),
+  role: z.enum(["user", "assistant"]),
+  message: z.string(),
+});
+
+export type TranscriptEntry = z.infer<typeof TranscriptEntrySchema>;
+
+export const SessionFileSchema = z.object({
+  messages: z.array(
+    z.looseObject({
+      role: z.string(),
+      content: z.any(),
+    }),
+  ),
+  summaries: z.array(ModelSummarySchema),
+  transcript: z.array(TranscriptEntrySchema),
+});
+
+export type SessionFile = z.infer<typeof SessionFileSchema>;
 
 export type MCPToolSet = Awaited<ReturnType<MCPClient["tools"]>>;
 
@@ -194,17 +212,21 @@ const logStateChange = (actionType: string, before: string, after: string) => {
 };
 
 export const actions = {
-  setSummaries(summaries: ModelSummary[]) {
+  setConversationSummaries(summaries: ModelSummary[]) {
     const before = state.app.conversation.summaries;
     state.app.conversation.summaries = summaries;
-    logStateChange("set-summaries", stringify(before), stringify(summaries));
+    logStateChange(
+      "set-conversation-summaries",
+      stringify(before),
+      stringify(summaries),
+    );
   },
 
-  appendToConversation(message: ModelMessage) {
+  appendToConversationMessages(message: ModelMessage) {
     const before = state.app.conversation.messages.length;
     state.app.conversation.messages.push(message);
     logStateChange(
-      "append-to-conversation",
+      "append-to-conversation-messages",
       String(before),
       String(state.app.conversation.messages.length),
     );
@@ -329,7 +351,7 @@ export const actions = {
     );
   },
 
-  resetConversation() {
+  resetConversationMessages() {
     const before = state.app.promptTokens.value;
     state.app.conversation = {
       messages: [],
@@ -339,7 +361,7 @@ export const actions = {
       value: 0,
       dirty: false,
     };
-    logStateChange("reset-conversation", String(before), "0");
+    logStateChange("reset-conversation-messages", String(before), "0");
   },
 
   setQuestionAbortController(controller: AbortController | null) {

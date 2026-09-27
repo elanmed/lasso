@@ -52,7 +52,7 @@ describe("fence", () => {
       actions.setApiEndTime();
       actions.setModel("test-model");
       actions.setContextWindowPerModel({ "test-model": 10_000 });
-      actions.appendToConversation({ role: "user", content: "hi" });
+      actions.appendToConversationMessages({ role: "user", content: "hi" });
       actions.setPromptTokens(5_000);
 
       fencePrint("Output", { showSessionInfo: true });

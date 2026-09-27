@@ -43,6 +43,39 @@ ${existingContent}
   }
 }
 
+export function appendToSessionFile(
+  content: string,
+  role: "user" | "assistant",
+) {
+  const path = getState().app.chatHistoryPath;
+  const dir = dirname(path);
+  if (!fsDeps.existsSync(dir)) {
+    const mkdirResult = tryCatch(() =>
+      fsDeps.mkdirSync(dir, { recursive: true }),
+    );
+    if (!mkdirResult.ok) {
+      print.warning(`Failed to create the directory: ${dir}`);
+      return;
+    }
+  }
+
+  const readResult = tryCatch(() => fsDeps.readFileSync(path).toString());
+  const existingContent = readResult.ok ? readResult.value : "";
+
+  const newChatHistory = `${new Date(Date.now()).toISOString()}  *${role}*
+${normalizeNewline(content)}
+---
+${existingContent}
+`;
+
+  const writeResult = tryCatch(() =>
+    fsDeps.writeFileSync(path, newChatHistory),
+  );
+  if (!writeResult.ok) {
+    print.warning(`Failed to write the chat history to ${path}`);
+  }
+}
+
 export function initSessionFile() {
   const sessionDir = getSessionDir();
   if (!fsDeps.existsSync(sessionDir)) {

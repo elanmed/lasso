@@ -337,7 +337,10 @@ web_fetch_json: https://example.com/api
     });
 
     it("re-baselines tokens from usage when stale after model switch", async () => {
-      actions.appendToConversation({ role: "user", content: "existing" });
+      actions.appendToConversationMessages({
+        role: "user",
+        content: "existing",
+      });
       actions.setPromptTokens(100);
       actions.setPromptTokensDirty(true);
       mock.method(aiDeps, "generateText", () =>
@@ -515,8 +518,14 @@ web_fetch_json: https://example.com/api
     });
 
     it("includes previous messages in request", async () => {
-      actions.appendToConversation({ role: "user", content: "previous" });
-      actions.appendToConversation({ role: "assistant", content: "response" });
+      actions.appendToConversationMessages({
+        role: "user",
+        content: "previous",
+      });
+      actions.appendToConversationMessages({
+        role: "assistant",
+        content: "response",
+      });
       let capturedOpts: Record<string, unknown> | undefined;
       mock.method(aiDeps, "generateText", (opts: Record<string, unknown>) => {
         capturedOpts = opts;
@@ -551,7 +560,7 @@ web_fetch_json: https://example.com/api
       ) + strToApproxTokens(promptDeps.getSystemContent());
 
     it("returns early when below the compact threshold", async () => {
-      actions.appendToConversation({ role: "user", content: "hi" });
+      actions.appendToConversationMessages({ role: "user", content: "hi" });
       actions.setPromptTokens(60_000);
       let called = false;
       mock.method(aiDeps, "generateText", () => {
@@ -572,7 +581,7 @@ web_fetch_json: https://example.com/api
 
     it("uses approximated tokens when stale to decide compaction", async () => {
       const longUserContent = "a".repeat(300_000);
-      actions.appendToConversation({
+      actions.appendToConversationMessages({
         role: "user",
         content: longUserContent,
       });
@@ -605,7 +614,7 @@ web_fetch_json: https://example.com/api
 
     it("returns early when approximated tokens are below the compact threshold only even when stale", async () => {
       const longUserContent = "a".repeat(20_000);
-      actions.appendToConversation({
+      actions.appendToConversationMessages({
         role: "user",
         content: longUserContent,
       });
@@ -632,7 +641,7 @@ web_fetch_json: https://example.com/api
       const systemContent = "s".repeat(100_000);
       mock.method(promptDeps, "getSystemContent", () => systemContent);
       const longUserContent = "a".repeat(190_000);
-      actions.appendToConversation({
+      actions.appendToConversationMessages({
         role: "user",
         content: longUserContent,
       });
@@ -658,7 +667,7 @@ web_fetch_json: https://example.com/api
 
     it("includes the tools in the stale approximation when deciding compaction", async () => {
       const longUserContent = "a".repeat(282_000);
-      actions.appendToConversation({
+      actions.appendToConversationMessages({
         role: "user",
         content: longUserContent,
       });
@@ -684,7 +693,7 @@ web_fetch_json: https://example.com/api
     it("includes mcp tools in the tokens after compaction", async () => {
       actions.setMcp({}, { mcp_tool: makeMcpTool() });
       actions.setToolsContentStr(safeStringify(getTools()));
-      actions.appendToConversation({ role: "user", content: "hi" });
+      actions.appendToConversationMessages({ role: "user", content: "hi" });
       actions.setPromptTokens(96_000);
       mock.method(aiDeps, "generateText", () =>
         Promise.resolve(
@@ -713,7 +722,7 @@ web_fetch_json: https://example.com/api
     });
 
     it("excludes image and file parts from the stale approximation", async () => {
-      actions.appendToConversation({
+      actions.appendToConversationMessages({
         role: "user",
         content: [
           {
@@ -736,7 +745,7 @@ web_fetch_json: https://example.com/api
     });
 
     it("compacts the conversation when above the threshold", async () => {
-      actions.appendToConversation({ role: "user", content: "hi" });
+      actions.appendToConversationMessages({ role: "user", content: "hi" });
       actions.setPromptTokens(96_000);
       let capturedOpts: Record<string, unknown> | undefined;
       mock.method(aiDeps, "generateText", (opts: Record<string, unknown>) => {
@@ -789,7 +798,7 @@ web_fetch_json: https://example.com/api
     });
 
     it("compacts when the user input pushes tokens over the threshold", async () => {
-      actions.appendToConversation({ role: "user", content: "hi" });
+      actions.appendToConversationMessages({ role: "user", content: "hi" });
       actions.setPromptTokens(95_000);
       let capturedOpts: Record<string, unknown> | undefined;
       mock.method(aiDeps, "generateText", (opts: Record<string, unknown>) => {
@@ -820,7 +829,7 @@ web_fetch_json: https://example.com/api
     });
 
     it("keeps messages when generateText fails", async () => {
-      actions.appendToConversation({ role: "user", content: "hi" });
+      actions.appendToConversationMessages({ role: "user", content: "hi" });
       actions.setPromptTokens(96_000);
       mock.method(aiDeps, "generateText", () =>
         Promise.reject(new Error("network error")),
@@ -838,7 +847,7 @@ web_fetch_json: https://example.com/api
 
     it("resolves the queued editor input when compaction is aborted", async () => {
       const getCaptured = mockStdout();
-      actions.appendToConversation({ role: "user", content: "hi" });
+      actions.appendToConversationMessages({ role: "user", content: "hi" });
       actions.setPromptTokens(96_000);
       actions.setRl(makeFakeRl());
       actions.setEditorInputValue("queued input");
@@ -857,7 +866,7 @@ You have queued messages! Edit them with {"name":"g","ctrl":true} or press enter
 
     it("keeps messages on abort error during compaction", async () => {
       const getCaptured = mockStdout();
-      actions.appendToConversation({ role: "user", content: "hi" });
+      actions.appendToConversationMessages({ role: "user", content: "hi" });
       actions.setPromptTokens(96_000);
       const err = makeAbortError();
       mock.method(aiDeps, "generateText", () => Promise.reject(err));
@@ -879,7 +888,7 @@ You have queued messages! Edit them with {"name":"g","ctrl":true} or press enter
     });
 
     it("resets messages before the api call so the summary and new user input are both sent", async () => {
-      actions.appendToConversation({ role: "user", content: "old" });
+      actions.appendToConversationMessages({ role: "user", content: "old" });
       actions.setPromptTokens(96_000);
       const calls: ModelMessage[][] = [];
       let callCount = 0;
@@ -944,16 +953,16 @@ You have queued messages! Edit them with {"name":"g","ctrl":true} or press enter
 
     it("merges existing summaries when at the summary max during compaction", async () => {
       for (const i of [1, 2, 3, 4, 5]) {
-        actions.setSummaries([
+        actions.setConversationSummaries([
           ...getState().app.conversation.summaries,
           { compacted: `summary ${String(i)}`, compactedAt: i, tokens: 100 },
         ]);
-        actions.appendToConversation({
+        actions.appendToConversationMessages({
           role: "assistant",
           content: `summary ${String(i)}`,
         });
       }
-      actions.appendToConversation({ role: "user", content: "hi" });
+      actions.appendToConversationMessages({ role: "user", content: "hi" });
       actions.setPromptTokens(96_000);
       const generate = mockGenerateTextResults([
         {
@@ -991,16 +1000,16 @@ You have queued messages! Edit them with {"name":"g","ctrl":true} or press enter
 
     it("keeps the existing summaries when merging fails during compaction", async () => {
       for (const i of [1, 2, 3, 4, 5]) {
-        actions.setSummaries([
+        actions.setConversationSummaries([
           ...getState().app.conversation.summaries,
           { compacted: `summary ${String(i)}`, compactedAt: i, tokens: 100 },
         ]);
-        actions.appendToConversation({
+        actions.appendToConversationMessages({
           role: "assistant",
           content: `summary ${String(i)}`,
         });
       }
-      actions.appendToConversation({ role: "user", content: "hi" });
+      actions.appendToConversationMessages({ role: "user", content: "hi" });
       actions.setPromptTokens(96_000);
       const generate = mockGenerateTextResults([
         {
@@ -1045,14 +1054,14 @@ You have queued messages! Edit them with {"name":"g","ctrl":true} or press enter
     const usage = makeMockUsage();
 
     const seedConversation = () => {
-      actions.setSummaries([
+      actions.setConversationSummaries([
         { compacted: "prior summary", compactedAt: 1, tokens: 10 },
       ]);
-      actions.appendToConversation({
+      actions.appendToConversationMessages({
         role: "assistant",
         content: "prior summary",
       });
-      actions.appendToConversation({
+      actions.appendToConversationMessages({
         role: "user",
         content: "not yet summarized",
       });
@@ -1244,11 +1253,11 @@ You have queued messages! Edit them with {"name":"g","ctrl":true} or press enter
 
     const seedSummaries = () => {
       for (const i of [1, 2, 3, 4, 5]) {
-        actions.setSummaries([
+        actions.setConversationSummaries([
           ...getState().app.conversation.summaries,
           { compacted: `summary ${String(i)}`, compactedAt: i, tokens: 100 },
         ]);
-        actions.appendToConversation({
+        actions.appendToConversationMessages({
           role: "assistant",
           content: `summary ${String(i)}`,
         });
@@ -1256,7 +1265,7 @@ You have queued messages! Edit them with {"name":"g","ctrl":true} or press enter
     };
 
     it("returns the existing summaries without calling the api when below the summary max", async () => {
-      actions.setSummaries([
+      actions.setConversationSummaries([
         { compacted: "summary", compactedAt: 1, tokens: 100 },
       ]);
       let called = false;

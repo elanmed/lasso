@@ -62,7 +62,7 @@ export async function resolveApiCall(userInput: string) {
 
   const systemContent = promptDeps.getSystemContent();
 
-  actions.appendToConversation(userMessage);
+  actions.appendToConversationMessages(userMessage);
 
   actions.resetToolEditDiffs();
   actions.setApiStartTime();
@@ -151,7 +151,7 @@ export async function resolveApiCall(userInput: string) {
         content: interruptContent,
       };
 
-      actions.appendToConversation(interruptMessage);
+      actions.appendToConversationMessages(interruptMessage);
       actions.setPromptTokensDirty(true);
 
       if (getState().app.editorInputValue !== null) {
@@ -175,7 +175,7 @@ export async function resolveApiCall(userInput: string) {
   actions.setPromptTokensDirty(false);
 
   for (const message of responseMessages) {
-    actions.appendToConversation(message);
+    actions.appendToConversationMessages(message);
   }
   actions.appendToTranscript({
     message: text,
@@ -379,10 +379,10 @@ export async function getConversationSummary() {
 }
 
 function applyCompactedConversation(summaries: ModelSummary[]) {
-  actions.resetConversation();
-  actions.setSummaries(summaries);
+  actions.resetConversationMessages();
+  actions.setConversationSummaries(summaries);
   for (const summary of summaries) {
-    actions.appendToConversation({
+    actions.appendToConversationMessages({
       content: summary.compacted,
       role: "assistant",
     });

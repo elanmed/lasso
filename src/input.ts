@@ -827,7 +827,7 @@ export async function resolveSlashCommand(rawInput: string) {
 
 export function clearCommand() {
   print.infoSubtle(`Context cleared (${getPrettyTokenUsage()})`);
-  actions.resetConversation();
+  actions.resetConversationMessages();
   // the next api call only reports its token usage after it completes, so seeding with the
   // system prompt approx keeps the context window percent from displaying 0% in the meantime
   actions.setPromptTokens(getApproxPromptTokens());
@@ -1119,7 +1119,7 @@ export function printAvailableContextFiles() {
 }
 
 function resumeFromTranscript(transcript: string) {
-  actions.resetConversation();
+  actions.resetConversationMessages();
   return `Continue the conversation recorded in the transcript below. Respond to this message with "Ready to continue chatting."
 
 ## [lasso] Transcript:

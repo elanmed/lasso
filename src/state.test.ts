@@ -1,7 +1,7 @@
 import { describe, it, beforeEach, afterEach, mock } from "node:test";
 import assert from "node:assert";
 import type { MCPClient } from "@ai-sdk/mcp";
-import { actions, getState, promptDeps } from "./state.ts";
+import { actions, getState, promptDeps, SessionFileSchema } from "./state.ts";
 import { baseAgentPrompt } from "./prompts.ts";
 import { stringify } from "./utils.ts";
 import { defaultConfig } from "./config-types.ts";
@@ -121,7 +121,7 @@ skills body`,
   };
 
   it("resetState restores initial state after mutations", () => {
-    actions.appendToConversation({ role: "user", content: "hi" });
+    actions.appendToConversationMessages({ role: "user", content: "hi" });
     actions.setPromptTokens(7);
     actions.setPromptTokensDirty(true);
     actions.setEditorInputValue("draft");
@@ -183,7 +183,7 @@ skills body`,
 
   it("initial state", assertInitialState);
 
-  describe("append-to-conversation", () => {
+  describe("append-to-conversation-messages", () => {
     it("appends new message to the list", () => {
       assert.deepStrictEqual(getState().app.conversation, {
         summaries: [],
@@ -193,7 +193,7 @@ skills body`,
         value: 0,
         dirty: false,
       });
-      actions.appendToConversation({ role: "user", content: "hi" });
+      actions.appendToConversationMessages({ role: "user", content: "hi" });
       assert.equal(getState().app.conversation.messages.length, 1);
       assert.deepStrictEqual(getState().app.conversation, {
         summaries: [],
@@ -214,8 +214,11 @@ skills body`,
         value: 0,
         dirty: false,
       });
-      actions.appendToConversation({ role: "user", content: "hi" });
-      actions.appendToConversation({ role: "assistant", content: "hello" });
+      actions.appendToConversationMessages({ role: "user", content: "hi" });
+      actions.appendToConversationMessages({
+        role: "assistant",
+        content: "hello",
+      });
 
       const params = getState().app.conversation.messages;
       assert.equal(params.length, 2);
@@ -297,12 +300,14 @@ skills body`,
     assert.equal(getState().app.promptTokens.dirty, true);
   });
 
-  it("reset-conversation resets summaries", () => {
-    actions.appendToConversation({ role: "user", content: "hi" });
-    actions.setSummaries([{ compacted: "summary", compactedAt: 4, tokens: 5 }]);
+  it("reset-conversation-messages resets summaries", () => {
+    actions.appendToConversationMessages({ role: "user", content: "hi" });
+    actions.setConversationSummaries([
+      { compacted: "summary", compactedAt: 4, tokens: 5 },
+    ]);
     actions.setPromptTokens(7);
     assert.equal(getState().app.promptTokens.value, 7);
-    actions.resetConversation();
+    actions.resetConversationMessages();
     assert.deepStrictEqual(getState().app.conversation, {
       summaries: [],
       messages: [],
@@ -866,5 +871,98 @@ hello`,
     clearTimeout(timeout);
     actions.setLoadingStateTimeout(null);
     assert.equal(getState().app.loadingStateTimeout, null);
+  });
+
+  describe("SessionFileSchema", () => {
+    it("parses a valid session file", () => {
+      assert.deepStrictEqual(
+        SessionFileSchema.parse({
+          messages: [{ role: "user", content: "hello" }],
+          summaries: [{ compacted: "summary", compactedAt: 123, tokens: 456 }],
+          transcript: [{ timestamp: 0, role: "user", message: "hello" }],
+        }),
+        {
+          messages: [{ role: "user", content: "hello" }],
+          summaries: [{ compacted: "summary", compactedAt: 123, tokens: 456 }],
+          transcript: [{ timestamp: 0, role: "user", message: "hello" }],
+        },
+      );
+    });
+
+    it("rejects an invalid transcript role", () => {
+      const result = SessionFileSchema.safeParse({
+        messages: [],
+        summaries: [],
+        transcript: [{ timestamp: 0, role: "system", message: "hello" }],
+      });
+      assert.strictEqual(result.success, false);
+    });
+
+    it("rejects an invalid summary shape", () => {
+      const result = SessionFileSchema.safeParse({
+        messages: [],
+        summaries: [{ compacted: 1, compactedAt: 123, tokens: 456 }],
+        transcript: [],
+      });
+      assert.strictEqual(result.success, false);
+    });
+
+    it("allows extra fields on messages", () => {
+      assert.deepStrictEqual(
+        SessionFileSchema.parse({
+          messages: [
+            {
+              role: "assistant",
+              content: [{ type: "text", text: "hello" }],
+              name: "assistant",
+            },
+          ],
+          summaries: [],
+          transcript: [],
+        }),
+        {
+          messages: [
+            {
+              role: "assistant",
+              content: [{ type: "text", text: "hello" }],
+              name: "assistant",
+            },
+          ],
+          summaries: [],
+          transcript: [],
+        },
+      );
+    });
+
+    it("rejects a message without content", () => {
+      const result = SessionFileSchema.safeParse({
+        messages: [{ role: "user" }],
+        summaries: [],
+        transcript: [],
+      });
+      assert.strictEqual(result.success, false);
+    });
+
+    it("rejects extra fields on summaries", () => {
+      const result = SessionFileSchema.safeParse({
+        messages: [],
+        summaries: [
+          { compacted: "summary", compactedAt: 123, tokens: 456, extra: 1 },
+        ],
+        transcript: [],
+      });
+      assert.strictEqual(result.success, false);
+    });
+
+    it("rejects extra fields on transcript entries", () => {
+      const result = SessionFileSchema.safeParse({
+        messages: [],
+        summaries: [],
+        transcript: [
+          { timestamp: 0, role: "user", message: "hello", extra: 1 },
+        ],
+      });
+      assert.strictEqual(result.success, false);
+    });
   });
 });
