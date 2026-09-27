@@ -37,8 +37,9 @@ export interface ToolEditDiff {
   diffStdout: string;
 }
 
-export interface ConversationHistoryEntry {
+export interface ConversationLogEntry {
   timestamp: number;
+  role: "user" | "assistant";
   message: string;
 }
 
@@ -56,7 +57,7 @@ interface State {
       messages: ModelMessage[];
       summaries: ModelSummary[];
     };
-    conversationHistory: ConversationHistoryEntry[];
+    conversationLog: ConversationLogEntry[];
     promptTokens: {
       value: number;
       dirty: boolean;
@@ -68,6 +69,7 @@ interface State {
     debugLog: boolean;
     debugLogPath: string;
     chatHistoryPath: string;
+    conversationLogPath: string;
     contextEntries: ContextEntry[];
     contextStr: string;
     globalConfigStr: string;
@@ -102,7 +104,7 @@ const createInitialState = (): State => ({
       messages: [],
       summaries: [],
     },
-    conversationHistory: [],
+    conversationLog: [],
     promptTokens: {
       value: 0,
       dirty: false,
@@ -114,6 +116,7 @@ const createInitialState = (): State => ({
     debugLog: false,
     debugLogPath: "",
     chatHistoryPath: "",
+    conversationLogPath: "",
     contextEntries: [],
     contextStr: "",
     globalConfigStr: "",
@@ -207,24 +210,30 @@ export const actions = {
     );
   },
 
-  appendToConversationHistory(entry: ConversationHistoryEntry) {
-    const before = state.app.conversationHistory.length;
-    state.app.conversationHistory.push(entry);
+  appendToConversationLog(entry: ConversationLogEntry) {
+    const before = state.app.conversationLog.length;
+    state.app.conversationLog.push(entry);
     logStateChange(
-      "append-to-conversation-history",
+      "append-to-conversation-log",
       String(before),
-      String(state.app.conversationHistory.length),
+      String(state.app.conversationLog.length),
     );
   },
 
-  resetConversationHistory() {
-    const before = state.app.conversationHistory.length;
-    state.app.conversationHistory = [];
+  resetConversationLog() {
+    const before = state.app.conversationLog.length;
+    state.app.conversationLog = [];
     logStateChange(
-      "reset-conversation-history",
+      "reset-conversation-log",
       String(before),
-      String(state.app.conversationHistory.length),
+      String(state.app.conversationLog.length),
     );
+  },
+
+  setConversationLogPath(conversationLogPath: string) {
+    const before = state.app.conversationLogPath;
+    state.app.conversationLogPath = conversationLogPath;
+    logStateChange("set-conversation-log-path", before, conversationLogPath);
   },
 
   setPromptTokens(tokens: number) {

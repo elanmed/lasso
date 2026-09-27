@@ -53,7 +53,7 @@ skills body`,
   const assertInitialState = () => {
     assert.deepStrictEqual(getState().app, {
       conversation: { summaries: [], messages: [] },
-      conversationHistory: [],
+      conversationLog: [],
       promptTokens: { value: 0, dirty: false },
       editorInputValue: null,
       slashCommands: [],
@@ -62,6 +62,7 @@ skills body`,
       debugLog: false,
       debugLogPath: "",
       chatHistoryPath: "",
+      conversationLogPath: "",
       contextEntries: [],
       contextStr: "",
       globalConfigStr: "",
@@ -230,32 +231,51 @@ skills body`,
     });
   });
 
-  describe("append-to-conversation-history", () => {
+  describe("append-to-conversation-log", () => {
     it("appends a single entry", () => {
-      assert.deepStrictEqual(getState().app.conversationHistory, []);
-      actions.appendToConversationHistory({
+      assert.deepStrictEqual(getState().app.conversationLog, []);
+      actions.appendToConversationLog({
         timestamp: 42,
+        role: "user",
         message: "hello",
       });
-      assert.deepStrictEqual(getState().app.conversationHistory, [
-        { timestamp: 42, message: "hello" },
+      assert.deepStrictEqual(getState().app.conversationLog, [
+        { timestamp: 42, role: "user", message: "hello" },
       ]);
     });
 
     it("appends multiple entries in order", () => {
-      actions.appendToConversationHistory({ timestamp: 1, message: "first" });
-      actions.appendToConversationHistory({ timestamp: 2, message: "second" });
-      assert.deepStrictEqual(getState().app.conversationHistory, [
-        { timestamp: 1, message: "first" },
-        { timestamp: 2, message: "second" },
+      actions.appendToConversationLog({
+        timestamp: 1,
+        role: "user",
+        message: "first",
+      });
+      actions.appendToConversationLog({
+        timestamp: 2,
+        role: "assistant",
+        message: "second",
+      });
+      assert.deepStrictEqual(getState().app.conversationLog, [
+        { timestamp: 1, role: "user", message: "first" },
+        { timestamp: 2, role: "assistant", message: "second" },
       ]);
     });
   });
 
-  it("reset-conversation-history", () => {
-    actions.appendToConversationHistory({ timestamp: 1, message: "first" });
-    actions.resetConversationHistory();
-    assert.deepStrictEqual(getState().app.conversationHistory, []);
+  it("reset-conversation-log", () => {
+    actions.appendToConversationLog({
+      timestamp: 1,
+      role: "user",
+      message: "first",
+    });
+    actions.resetConversationLog();
+    assert.deepStrictEqual(getState().app.conversationLog, []);
+  });
+
+  it("set-conversation-log-path", () => {
+    assert.equal(getState().app.conversationLogPath, "");
+    actions.setConversationLogPath("/tmp/conversation.log");
+    assert.equal(getState().app.conversationLogPath, "/tmp/conversation.log");
   });
 
   it("set-prompt-tokens", () => {
