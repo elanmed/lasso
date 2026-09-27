@@ -2,7 +2,6 @@ import { describe, it, beforeEach, afterEach, mock } from "node:test";
 import assert from "node:assert";
 import { join } from "node:path";
 import {
-  getChatHistoryDir,
   getSessionDir,
   getDataDir,
   getGlobalConfigDir,
@@ -43,7 +42,6 @@ describe("paths", () => {
   it("uses XDG_STATE_HOME for the state dir when set", () => {
     testProcessEnv._set("XDG_STATE_HOME", "/xdg-state");
     assert.equal(getStateDir(), join("/xdg-state", "lasso"));
-    assert.equal(getChatHistoryDir(), join("/xdg-state", "lasso", "history"));
     assert.equal(getSessionDir(), join("/xdg-state", "lasso", "sessions"));
     assert.equal(getDebugLogDir(), join("/xdg-state", "lasso", "debug"));
   });

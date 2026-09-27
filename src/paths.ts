@@ -52,10 +52,6 @@ export function getGlobalSlashCommandDir() {
   return join(getGlobalConfigDir(), "commands");
 }
 
-export function getChatHistoryDir() {
-  return join(getStateDir(), "history");
-}
-
 export function getSessionDir() {
   return join(getStateDir(), "sessions");
 }
