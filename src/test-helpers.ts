@@ -224,6 +224,7 @@ export function setupTestContext({
   sdkProvider?: SdkProvider | null;
   model?: string | null;
 } = {}) {
+  process.env["TZ"] = "UTC";
   testFs._restore();
   for (const key of Object.keys(testFs)) {
     if (!EXCLUDED_KEYS.includes(key)) {
