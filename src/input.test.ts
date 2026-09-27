@@ -1313,7 +1313,7 @@ transcript content`,
         testFs._files.get("/tmp/lasso-test-uuid.txt"),
         `# [lasso] Chat history
 
-1970-01-01T00:00:00.000Z  *user*
+Jan 1, 1970, 12:00:00 AM  *user*
 log content
 
 `,
@@ -2005,7 +2005,7 @@ Available context files:
         testFs._files.get("/tmp/lasso-test-uuid.txt"),
         `# [lasso] Chat history
 
-1970-01-01T00:00:00.000Z  *user*
+Jan 1, 1970, 12:00:00 AM  *user*
 log content
 
 `,
@@ -2377,7 +2377,7 @@ editor input
         testFs._files.get("/tmp/lasso-test-uuid.txt"),
         `# [lasso] Chat history
 
-1970-01-01T00:00:00.000Z  *user*
+Jan 1, 1970, 12:00:00 AM  *user*
 log content
 
 `,

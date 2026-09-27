@@ -1390,11 +1390,13 @@ export function pageHistory({ isTyped = false }: SpacingOpts = {}) {
 
   const formattedTranscript = transcript
     .map(
-      ({
-        message,
-        role,
-        timestamp,
-      }) => `${new Date(timestamp).toISOString()}  *${role}*
+      ({ message, role, timestamp }) => `${new Date(timestamp).toLocaleString(
+        "en-US",
+        {
+          dateStyle: "medium",
+          timeStyle: "medium",
+        },
+      )}  *${role}*
 ${normalizeNewline(message, { count: 0 })}`,
     )
     .join("\n\n---\n\n");
