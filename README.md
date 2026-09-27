@@ -6,7 +6,7 @@ _A minimal agent harness to rein in your llm_
 
 ## Features
 
-- **Minimal**: ~5,500 lines of source code, ~12,000 lines of tests
+- **Minimal**: ~5,600 lines of source code, ~12,000 lines of tests
   - Responses are piped through `bat` to render markdown
   - Multi-line input is supported by spawning an editor of your choice
   - Messages can be queued by typing a custom delimiter (default `l---`) in the spawned editor
@@ -324,6 +324,7 @@ Slash commands are triggered with `/command` at the prompt.
 | `/commandspage` | View custom slash command contents in a pager                                 |
 | `/keymaps`      | List configured keybindings                                                   |
 | `/usage`        | Show current session usage                                                    |
+| `/tokens`       | Show current token count by area                                              |
 | `/config`       | View global, local, and applied config in a pager                             |
 | `/reload`       | Reload config and context, diff the result in a pager                         |
 | `/initlocal`    | Create `./.lasso/settings.yaml` if it doesn't exist                           |

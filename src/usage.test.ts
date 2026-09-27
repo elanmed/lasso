@@ -1026,7 +1026,11 @@ describe("getPrettyTokensByArea", () => {
     actions.setPromptTokensDirty(true);
     assert.strictEqual(
       getPrettyTokensByArea(),
-      `Chat messages: 11\nContext files: 3\nHarness and MCP tools: 4\nBase system prompt: 597\nSkill descriptions: 1`,
+      `- Chat messages: 11
+- Context files: 3
+- Harness and MCP tools: 4
+- Base system prompt: 597
+- Skill descriptions: 1`,
     );
   });
 
@@ -1034,7 +1038,11 @@ describe("getPrettyTokensByArea", () => {
     actions.setPromptTokens(1500);
     assert.strictEqual(
       getPrettyTokensByArea(),
-      `Chat messages: 1,100\nContext files: 300\nHarness and MCP tools: 400\nBase system prompt: 59,700\nSkill descriptions: 100`,
+      `- Chat messages: 1,100
+- Context files: 300
+- Harness and MCP tools: 400
+- Base system prompt: 59,700
+- Skill descriptions: 100`,
     );
   });
 });

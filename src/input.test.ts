@@ -12,6 +12,7 @@ import {
   getModel,
   setModelCommand,
   clearCommand,
+  printTokens,
   printSkills,
   printAvailableContextFiles,
   pageContextStr,
@@ -1080,6 +1081,85 @@ l---
     });
   });
 
+  describe("printTokens", () => {
+    beforeEach(() => {
+      actions.resetStdout();
+      mock.method(promptDeps, "getSystemContent", () => "");
+      actions.setToolsContentStr("123456789012");
+      actions.setContextStr("123456789");
+      actions.setSkillsStr("1234");
+      actions.appendToConversation({ role: "user", content: "hello" });
+    });
+
+    it("prints the total and each area with its approx count when the cache is dirty", () => {
+      actions.setPromptTokensDirty(true);
+      printTokens();
+      assert.strictEqual(
+        stripAnsi(getCapturedStdout()),
+        `
+Token count: 616
+- Chat messages: 11
+- Context files: 3
+- Harness and MCP tools: 4
+- Base system prompt: 597
+- Skill descriptions: 1
+
+`,
+      );
+    });
+
+    it("prints the total scaled to the cached token count when clean", () => {
+      actions.setPromptTokens(1500);
+      printTokens();
+      assert.strictEqual(
+        stripAnsi(getCapturedStdout()),
+        `
+Token count: 61,600
+- Chat messages: 1,100
+- Context files: 300
+- Harness and MCP tools: 400
+- Base system prompt: 59,700
+- Skill descriptions: 100
+
+`,
+      );
+    });
+
+    it("includes the context window usage when configured", () => {
+      actions.setModel("test-model");
+      actions.setContextWindowPerModel({ "test-model": 10_000 });
+      printTokens();
+      assert.strictEqual(
+        stripAnsi(getCapturedStdout()),
+        `
+Token count: 616 (0% of context window)
+- Chat messages: 11
+- Context files: 3
+- Harness and MCP tools: 4
+- Base system prompt: 597
+- Skill descriptions: 1
+
+`,
+      );
+    });
+
+    it("does not add spacing when streaming", () => {
+      actions.setApiStreamAbortController(new AbortController());
+      printTokens();
+      assert.strictEqual(
+        stripAnsi(getCapturedStdout()),
+        `Token count: 616
+- Chat messages: 11
+- Context files: 3
+- Harness and MCP tools: 4
+- Base system prompt: 597
+- Skill descriptions: 1
+
+`,
+      );
+    });
+  });
+
   describe("resume", () => {
     beforeEach(() => {
       actions.resetStdout();
@@ -1919,6 +1999,7 @@ Available context files:
 - /commandspage
 - /keymaps
 - /usage
+- /tokens
 - /resume
 - /config
 - /reload
@@ -2253,6 +2334,7 @@ custom command content\n\n`,
 - /commandspage
 - /keymaps
 - /usage
+- /tokens
 - /resume
 - /config
 - /reload
@@ -2279,6 +2361,7 @@ custom command content\n\n`,
       ["context", "n"],
       ["keymaps", "p"],
       ["usage", "u"],
+      ["tokens", "t"],
       ["resume", "r"],
     ] as const) {
       it(`types /${command} into the prompt when its keymap matches`, () => {
@@ -2544,6 +2627,7 @@ No available context files
 - /commandspage
 - /keymaps
 - /usage
+- /tokens
 - /resume
 - /config
 - /reload
@@ -2663,37 +2747,7 @@ Keymaps:
       assert.strictEqual(result, null);
       assert.strictEqual(
         stripAnsi(getCapturedStdout()),
-        `
-0 tokens in session
-messages: 0
-context: 0
-tools: 0
-basePrompt: 597\
-skills: 0
-
-`,
-      );
-    });
-
-    it("handles /usage command with context window usage", async () => {
-      actions.resetStdout();
-      actions.setModel("test-model");
-      actions.setContextWindowPerModel({ "test-model": 10_000 });
-      actions.appendToConversation({ role: "user", content: "hi" });
-      actions.setPromptTokens(5_000);
-      const result = await resolveSlashCommand("/usage");
-      assert.strictEqual(result, null);
-      assert.strictEqual(
-        stripAnsi(getCapturedStdout()),
-        `
-0 tokens in session, 50% of context window
-messages: 5,000
-context: 0
-tools: 0
-basePrompt: 298,500
-skills: 0
-
-`,
+        `\nUsage:\n- Session: 0 tokens\n\n`,
       );
     });
 
@@ -2705,13 +2759,30 @@ skills: 0
       assert.strictEqual(result, null);
       assert.strictEqual(
         stripAnsi(getCapturedStdout()),
-        `0 tokens in session
-messages: 0
-context: 0
-tools: 0
-basePrompt: 597
-skills: 0
-`,
+        `Usage:\n- Session: 0 tokens\n`,
+      );
+    });
+
+    it("handles /tokens command", async () => {
+      actions.resetStdout();
+      actions.setModel("test-model");
+      actions.setContextWindowPerModel({ "test-model": 10_000 });
+      const result = await resolveSlashCommand("/tokens");
+      assert.strictEqual(result, null);
+      assert.strictEqual(
+        stripAnsi(getCapturedStdout()),
+        `\nToken count: 597 (0% of context window)\n- Chat messages: 0\n- Context files: 0\n- Harness and MCP tools: 0\n- Base system prompt: 597\n- Skill descriptions: 0\n\n`,
+      );
+    });
+
+    it("handles /tokens command without spacing when streaming", async () => {
+      actions.resetStdout();
+      actions.setApiStreamAbortController(new AbortController());
+      const result = await resolveSlashCommand("/tokens");
+      assert.strictEqual(result, null);
+      assert.strictEqual(
+        stripAnsi(getCapturedStdout()),
+        `Token count: 597\n- Chat messages: 0\n- Context files: 0\n- Harness and MCP tools: 0\n- Base system prompt: 597\n- Skill descriptions: 0\n\n`,
       );
     });
 
@@ -3172,6 +3243,7 @@ Invalid command: /unknown, valid commands:
 - /commandspage
 - /keymaps
 - /usage
+- /tokens
 - /resume
 - /config
 - /reload

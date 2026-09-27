@@ -5,7 +5,6 @@ import type { LanguageModelUsage } from "ai";
 import {
   getPrettyContextWindowUsage,
   getPrettyTokenUsage,
-  getPrettyUsage,
   getUsageMoneyForModel,
   sumUsageTokens,
 } from "./usage-format.ts";
@@ -17,27 +16,6 @@ import { processDeps } from "./deps.ts";
 describe("usage-format", () => {
   afterEach(() => {
     mock.restoreAll();
-  });
-
-  describe("getPrettyUsage", () => {
-    beforeEach(() => {
-      setupTestContext();
-    });
-
-    it("returns just token usage when the model has no context window configured", () => {
-      actions.setModel("unknown-model");
-      const result = getPrettyUsage();
-      assert.strictEqual(result, "0 tokens in session");
-    });
-
-    it("includes context window usage when configured", () => {
-      actions.setModel("test-model");
-      actions.setContextWindowPerModel({ "test-model": 10_000 });
-      actions.appendToConversation({ role: "user", content: "hi" });
-      actions.setPromptTokens(5_000);
-      const result = getPrettyUsage();
-      assert.strictEqual(result, "0 tokens in session, 50% of context window");
-    });
   });
 
   describe("getPrettyTokenUsage", () => {
@@ -303,10 +281,10 @@ describe("usage-format", () => {
       setupTestContext();
     });
 
-    it("returns empty string when the model has no context window configured", () => {
+    it("returns null when the model has no context window configured", () => {
       actions.setModel("unknown-model");
       const result = getPrettyContextWindowUsage();
-      assert.strictEqual(result, "");
+      assert.strictEqual(result, null);
     });
 
     it("returns 0% when no tokens are used", () => {
