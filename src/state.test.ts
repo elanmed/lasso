@@ -53,7 +53,7 @@ skills body`,
   const assertInitialState = () => {
     assert.deepStrictEqual(getState().app, {
       conversation: { summaries: [], messages: [] },
-      conversationLog: [],
+      transcript: [],
       promptTokens: { value: 0, dirty: false },
       editorInputValue: null,
       slashCommands: [],
@@ -62,7 +62,7 @@ skills body`,
       debugLog: false,
       debugLogPath: "",
       chatHistoryPath: "",
-      conversationPath: "",
+      sessionPath: "",
       contextEntries: [],
       contextStr: "",
       globalConfigStr: "",
@@ -231,51 +231,51 @@ skills body`,
     });
   });
 
-  describe("append-to-conversation-log", () => {
+  describe("append-to-transcript", () => {
     it("appends a single entry", () => {
-      assert.deepStrictEqual(getState().app.conversationLog, []);
-      actions.appendToConversationLog({
+      assert.deepStrictEqual(getState().app.transcript, []);
+      actions.appendToTranscript({
         timestamp: 42,
         role: "user",
         message: "hello",
       });
-      assert.deepStrictEqual(getState().app.conversationLog, [
+      assert.deepStrictEqual(getState().app.transcript, [
         { timestamp: 42, role: "user", message: "hello" },
       ]);
     });
 
     it("appends multiple entries in order", () => {
-      actions.appendToConversationLog({
+      actions.appendToTranscript({
         timestamp: 1,
         role: "user",
         message: "first",
       });
-      actions.appendToConversationLog({
+      actions.appendToTranscript({
         timestamp: 2,
         role: "assistant",
         message: "second",
       });
-      assert.deepStrictEqual(getState().app.conversationLog, [
+      assert.deepStrictEqual(getState().app.transcript, [
         { timestamp: 1, role: "user", message: "first" },
         { timestamp: 2, role: "assistant", message: "second" },
       ]);
     });
   });
 
-  it("reset-conversation-log", () => {
-    actions.appendToConversationLog({
+  it("reset-transcript", () => {
+    actions.appendToTranscript({
       timestamp: 1,
       role: "user",
       message: "first",
     });
-    actions.resetConversationLog();
-    assert.deepStrictEqual(getState().app.conversationLog, []);
+    actions.resetTranscript();
+    assert.deepStrictEqual(getState().app.transcript, []);
   });
 
-  it("set-conversation-path", () => {
-    assert.equal(getState().app.conversationPath, "");
-    actions.setConversationPath("/tmp/conversation.log");
-    assert.equal(getState().app.conversationPath, "/tmp/conversation.log");
+  it("set-session-path", () => {
+    assert.equal(getState().app.sessionPath, "");
+    actions.setSessionPath("/tmp/session.json");
+    assert.equal(getState().app.sessionPath, "/tmp/session.json");
   });
 
   it("set-prompt-tokens", () => {

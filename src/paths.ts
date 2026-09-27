@@ -56,8 +56,8 @@ export function getChatHistoryDir() {
   return join(getStateDir(), "history");
 }
 
-export function getConversationDir() {
-  return join(getStateDir(), "conversation");
+export function getSessionDir() {
+  return join(getStateDir(), "sessions");
 }
 
 export function getDebugLogDir() {

@@ -37,7 +37,7 @@ export interface ToolEditDiff {
   diffStdout: string;
 }
 
-export interface ConversationLogEntry {
+export interface TranscriptEntry {
   timestamp: number;
   role: "user" | "assistant";
   message: string;
@@ -57,7 +57,7 @@ interface State {
       messages: ModelMessage[];
       summaries: ModelSummary[];
     };
-    conversationLog: ConversationLogEntry[];
+    transcript: TranscriptEntry[];
     promptTokens: {
       value: number;
       dirty: boolean;
@@ -69,7 +69,7 @@ interface State {
     debugLog: boolean;
     debugLogPath: string;
     chatHistoryPath: string;
-    conversationPath: string;
+    sessionPath: string;
     contextEntries: ContextEntry[];
     contextStr: string;
     globalConfigStr: string;
@@ -104,7 +104,7 @@ const createInitialState = (): State => ({
       messages: [],
       summaries: [],
     },
-    conversationLog: [],
+    transcript: [],
     promptTokens: {
       value: 0,
       dirty: false,
@@ -116,7 +116,7 @@ const createInitialState = (): State => ({
     debugLog: false,
     debugLogPath: "",
     chatHistoryPath: "",
-    conversationPath: "",
+    sessionPath: "",
     contextEntries: [],
     contextStr: "",
     globalConfigStr: "",
@@ -210,30 +210,30 @@ export const actions = {
     );
   },
 
-  appendToConversationLog(entry: ConversationLogEntry) {
-    const before = state.app.conversationLog.length;
-    state.app.conversationLog.push(entry);
+  appendToTranscript(entry: TranscriptEntry) {
+    const before = state.app.transcript.length;
+    state.app.transcript.push(entry);
     logStateChange(
-      "append-to-conversation-log",
+      "append-to-transcript",
       String(before),
-      String(state.app.conversationLog.length),
+      String(state.app.transcript.length),
     );
   },
 
-  resetConversationLog() {
-    const before = state.app.conversationLog.length;
-    state.app.conversationLog = [];
+  resetTranscript() {
+    const before = state.app.transcript.length;
+    state.app.transcript = [];
     logStateChange(
-      "reset-conversation-log",
+      "reset-transcript",
       String(before),
-      String(state.app.conversationLog.length),
+      String(state.app.transcript.length),
     );
   },
 
-  setConversationPath(conversationPath: string) {
-    const before = state.app.conversationPath;
-    state.app.conversationPath = conversationPath;
-    logStateChange("set-conversation-path", before, conversationPath);
+  setSessionPath(sessionPath: string) {
+    const before = state.app.sessionPath;
+    state.app.sessionPath = sessionPath;
+    logStateChange("set-session-path", before, sessionPath);
   },
 
   setPromptTokens(tokens: number) {

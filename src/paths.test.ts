@@ -3,7 +3,7 @@ import assert from "node:assert";
 import { join } from "node:path";
 import {
   getChatHistoryDir,
-  getConversationDir,
+  getSessionDir,
   getDataDir,
   getGlobalConfigDir,
   getGlobalContextDir,
@@ -44,10 +44,7 @@ describe("paths", () => {
     testProcessEnv._set("XDG_STATE_HOME", "/xdg-state");
     assert.equal(getStateDir(), join("/xdg-state", "lasso"));
     assert.equal(getChatHistoryDir(), join("/xdg-state", "lasso", "history"));
-    assert.equal(
-      getConversationDir(),
-      join("/xdg-state", "lasso", "conversation"),
-    );
+    assert.equal(getSessionDir(), join("/xdg-state", "lasso", "sessions"));
     assert.equal(getDebugLogDir(), join("/xdg-state", "lasso", "debug"));
   });
 
