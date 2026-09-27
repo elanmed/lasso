@@ -5,7 +5,7 @@ import childProcess from "node:child_process";
 import type { AssistantContent, ModelMessage } from "ai";
 import { assertAtRuntime } from "./assert.ts";
 import { fsDeps, processDeps } from "./deps.ts";
-import { getChatHistoryDir } from "./paths.ts";
+import { getChatHistoryDir, getConversationLogDir } from "./paths.ts";
 import type { Color } from "./print.ts";
 
 export type Result<T> = { ok: true; value: T } | { ok: false; error: unknown };
@@ -231,6 +231,40 @@ export function listChatHistoryFiles() {
     });
   }
   return chatHistoryFiles;
+}
+
+interface ConversationLogFileEntry {
+  absolutePath: string;
+  timestampMs: number;
+}
+
+export function listConversationLogFiles() {
+  const conversationLogDir = getConversationLogDir();
+  if (!fsDeps.existsSync(conversationLogDir)) return [];
+
+  const conversationLogFiles: ConversationLogFileEntry[] = [];
+  for (const name of fsDeps.readdirSync(conversationLogDir)) {
+    const fullPath = join(conversationLogDir, name);
+    const statResult = tryCatch(() => fsDeps.statSync(fullPath));
+    if (!statResult.ok) continue;
+    if (!statResult.value.isFile()) continue;
+
+    const fileName = basename(name, extname(name));
+    const parts = fileName.split("-");
+    if (parts.length !== 3) continue;
+    if (parts[0] !== "conversation" || parts[1] !== "log") continue;
+
+    const timestampMs = Number(parts[2]);
+    if (Number.isNaN(timestampMs)) continue;
+
+    if (extname(name) !== ".json") continue;
+
+    conversationLogFiles.push({
+      absolutePath: fullPath,
+      timestampMs,
+    });
+  }
+  return conversationLogFiles;
 }
 
 export function createLockUtils(lockPath: string) {

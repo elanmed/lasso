@@ -15,6 +15,7 @@ import {
   createQueue,
   createLockUtils,
   listChatHistoryFiles,
+  listConversationLogFiles,
   getStrFromAssistantContent,
   getPrettyDuration,
   getDurationColor,
@@ -587,6 +588,76 @@ describe("utils", () => {
         "",
       );
       assert.deepStrictEqual(listChatHistoryFiles(), []);
+    });
+
+    describe("listConversationLogFiles", () => {
+      it("returns an empty array when the directory does not exist", () => {
+        assert.deepStrictEqual(listConversationLogFiles(), []);
+      });
+
+      it("returns an empty array when the directory has no files", () => {
+        testFs._dirs.add("/fake-home/.local/state/lasso/conversation");
+        assert.deepStrictEqual(listConversationLogFiles(), []);
+      });
+
+      it("returns valid conversation log files with absolute path and timestamp", () => {
+        testFs._dirs.add("/fake-home/.local/state/lasso/conversation");
+        testFs._files.set(
+          "/fake-home/.local/state/lasso/conversation/conversation-log-1234567890000.json",
+          "",
+        );
+        testFs._files.set(
+          "/fake-home/.local/state/lasso/conversation/conversation-log-999990000000.json",
+          "",
+        );
+
+        assert.deepStrictEqual(listConversationLogFiles(), [
+          {
+            absolutePath:
+              "/fake-home/.local/state/lasso/conversation/conversation-log-1234567890000.json",
+            timestampMs: 1234567890000,
+          },
+          {
+            absolutePath:
+              "/fake-home/.local/state/lasso/conversation/conversation-log-999990000000.json",
+            timestampMs: 999990000000,
+          },
+        ]);
+      });
+
+      it("skips directory entries", () => {
+        testFs._dirs.add("/fake-home/.local/state/lasso/conversation");
+        testFs._dirs.add(
+          "/fake-home/.local/state/lasso/conversation/conversation-log-1234567890000.json",
+        );
+        assert.deepStrictEqual(listConversationLogFiles(), []);
+      });
+
+      it("skips files that do not match conversation-log-<timestamp>", () => {
+        testFs._dirs.add("/fake-home/.local/state/lasso/conversation");
+        testFs._files.set(
+          "/fake-home/.local/state/lasso/conversation/random-file.json",
+          "",
+        );
+        testFs._files.set(
+          "/fake-home/.local/state/lasso/conversation/conversation-log-uuid-123.json",
+          "",
+        );
+        testFs._files.set(
+          "/fake-home/.local/state/lasso/conversation/conversation-log-notanumber.json",
+          "",
+        );
+        assert.deepStrictEqual(listConversationLogFiles(), []);
+      });
+
+      it("skips files with non-json extension", () => {
+        testFs._dirs.add("/fake-home/.local/state/lasso/conversation");
+        testFs._files.set(
+          "/fake-home/.local/state/lasso/conversation/conversation-log-123.md",
+          "",
+        );
+        assert.deepStrictEqual(listConversationLogFiles(), []);
+      });
     });
 
     describe("createLockUtils", () => {

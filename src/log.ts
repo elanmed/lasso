@@ -1,8 +1,13 @@
 import { dirname, join } from "node:path";
 import { actions, getState } from "./state.ts";
-import { listChatHistoryFiles, normalizeNewline, tryCatch } from "./utils.ts";
+import {
+  listChatHistoryFiles,
+  listConversationLogFiles,
+  normalizeNewline,
+  tryCatch,
+} from "./utils.ts";
 import { fsDeps } from "./deps.ts";
-import { getChatHistoryDir } from "./paths.ts";
+import { getChatHistoryDir, getConversationLogDir } from "./paths.ts";
 import { debugLog as writeDebugLog } from "./debug-log.ts";
 import { print } from "./print.ts";
 
@@ -58,6 +63,26 @@ export function initChatHistory() {
   tryCatch(() => fsDeps.writeFileSync(chatHistorySessionPath, ""));
 }
 
+export function initConversationLog() {
+  const conversationLogDir = getConversationLogDir();
+  if (!fsDeps.existsSync(conversationLogDir)) {
+    const mkDirResult = tryCatch(() =>
+      fsDeps.mkdirSync(conversationLogDir, { recursive: true }),
+    );
+    if (!mkDirResult.ok) {
+      print.warning(`Failed to create the directory: ${conversationLogDir}`);
+      return;
+    }
+  }
+
+  const conversationLogSessionPath = join(
+    conversationLogDir,
+    `conversation-log-${getState().app.sessionStartDate.toString()}.json`,
+  );
+  actions.setConversationLogPath(conversationLogSessionPath);
+  tryCatch(() => fsDeps.writeFileSync(conversationLogSessionPath, "[]"));
+}
+
 export function deleteExpiredChatHistory() {
   const chatHistoryFileEntries = listChatHistoryFiles();
 
@@ -69,7 +94,20 @@ export function deleteExpiredChatHistory() {
   }
 }
 
+export function deleteExpiredConversationLog() {
+  const conversationLogFiles = listConversationLogFiles();
+
+  for (const { absolutePath, timestampMs } of conversationLogFiles) {
+    const oneDay = 1_000 * 60 * 60 * 24;
+    if (timestampMs + oneDay < getState().app.sessionStartDate) {
+      tryCatch(() => fsDeps.unlinkSync(absolutePath));
+    }
+  }
+}
+
 export function initLogs() {
   deleteExpiredChatHistory();
+  deleteExpiredConversationLog();
   initChatHistory();
+  initConversationLog();
 }
