@@ -15,6 +15,7 @@ import {
 import { fsDeps } from "./deps.ts";
 import { getUsageLogLockPath, getUsageLogPath } from "./paths.ts";
 import { print } from "./print.ts";
+import { baseAgentPrompt } from "./prompts.ts";
 
 export const compactTriggerRatio = 0.95;
 export const dedicatedSummaryRatio = 0.5;
@@ -237,6 +238,41 @@ export function getCurrentPromptTokens() {
     return getApproxPromptTokens();
   }
   return getState().app.promptTokens.value;
+}
+
+interface TokensByArea {
+  messages: number;
+  tools: number;
+  context: number;
+  basePrompt: number;
+  skills: number;
+}
+
+export function getTokensByArea(): TokensByArea {
+  const totalTokensApprox = getCurrentPromptTokens();
+  const tokensByAreaApprox: TokensByArea = {
+    messages: getApproxTokensFromMessages(getState().app.conversation.messages),
+    context: strToApproxTokens(getState().app.contextStr),
+    tools: strToApproxTokens(getState().app.contextStr),
+    basePrompt: strToApproxTokens(baseAgentPrompt),
+    skills: strToApproxTokens(getState().app.skillsStr),
+  };
+
+  if (getState().app.promptTokens.dirty) {
+    return tokensByAreaApprox;
+  }
+
+  const realToApproxRatio =
+    getState().app.promptTokens.value / totalTokensApprox;
+
+  return Object.fromEntries(
+    Object.entries(tokensByAreaApprox).map(
+      ([area, tokens]): [keyof TokensByArea, number] => [
+        area,
+        tokens * realToApproxRatio,
+      ],
+    ),
+  );
 }
 
 export function orApproxTokens(value: number | undefined, text: string) {
