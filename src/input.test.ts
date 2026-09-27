@@ -1142,22 +1142,6 @@ Token count: 616 (0% of context window)
 `,
       );
     });
-
-    it("does not add spacing when streaming", () => {
-      actions.setApiStreamAbortController(new AbortController());
-      printTokens();
-      assert.strictEqual(
-        stripAnsi(getCapturedStdout()),
-        `Token count: 616
-- Chat messages: 11
-- Context files: 3
-- Harness and MCP tools: 4
-- Base system prompt: 597
-- Skill descriptions: 1
-
-`,
-      );
-    });
   });
 
   describe("resume", () => {
@@ -1298,8 +1282,8 @@ transcript content`,
       );
     });
 
-    it("does not add spacing when isKeypress is true", () => {
-      pageContextStr({ isKeypress: true });
+    it("does not add spacing when isTyped is false", () => {
+      pageContextStr({ isTyped: false });
       assert.strictEqual(
         stripAnsi(getCapturedStdout()),
         "No available context files\n",
@@ -1364,8 +1348,8 @@ transcript content`,
       );
     });
 
-    it("does not add spacing when isKeypress is true", () => {
-      pageHistory({ isKeypress: true });
+    it("does not add spacing when isTyped is false", () => {
+      pageHistory({ isTyped: false });
       assert.strictEqual(stripAnsi(getCapturedStdout()), "No chat history\n");
     });
 
@@ -1406,8 +1390,8 @@ log content
       );
     });
 
-    it("does not add spacing when isKeypress is true", async () => {
-      await pageLastResponse({ isKeypress: true });
+    it("does not add spacing when isTyped is false", async () => {
+      await pageLastResponse({ isTyped: false });
       assert.strictEqual(stripAnsi(getCapturedStdout()), "No llm messages\n");
     });
 
@@ -1458,8 +1442,8 @@ second
       );
     });
 
-    it("does not add spacing when isKeypress is true", () => {
-      pageLastMessage({ isKeypress: true });
+    it("does not add spacing when isTyped is false", () => {
+      pageLastMessage({ isTyped: false });
       assert.strictEqual(stripAnsi(getCapturedStdout()), "No user messages\n");
     });
 
@@ -1510,8 +1494,8 @@ latest question
       );
     });
 
-    it("does not add spacing when isKeypress is true", () => {
-      pageLastDiff({ isKeypress: true });
+    it("does not add spacing when isTyped is false", () => {
+      pageLastDiff({ isTyped: false });
       assert.strictEqual(
         stripAnsi(getCapturedStdout()),
         "No diffs from the last turn\n",
@@ -1648,8 +1632,8 @@ older summary
       assert.strictEqual(testFs._files.has("/tmp/lasso-test-uuid.txt"), false);
     });
 
-    it("does not add spacing when isKeypress is true", () => {
-      pageSummaries({ isKeypress: true });
+    it("does not add spacing when isTyped is false", () => {
+      pageSummaries({ isTyped: false });
       assert.strictEqual(
         stripAnsi(getCapturedStdout()),
         "No conversation summaries\n",
@@ -1680,8 +1664,8 @@ older summary
       );
     });
 
-    it("does not add spacing when isKeypress is true", () => {
-      pageEditStr({ isKeypress: true });
+    it("does not add spacing when isTyped is false", () => {
+      pageEditStr({ isTyped: false });
       assert.strictEqual(stripAnsi(getCapturedStdout()), "Editor is empty\n");
     });
 
@@ -1724,8 +1708,8 @@ editor input
       );
     });
 
-    it("does not add spacing when isKeypress is true", () => {
-      pageCustomSlashCommandsStr({ isKeypress: true });
+    it("does not add spacing when isTyped is false", () => {
+      pageCustomSlashCommandsStr({ isTyped: false });
       assert.strictEqual(
         stripAnsi(getCapturedStdout()),
         "No available custom slash commands\n",
@@ -1788,23 +1772,6 @@ Available skills:
       assert.strictEqual(
         stripAnsi(getCapturedStdout()),
         `\nNo available skills\n\n`,
-      );
-    });
-
-    it("does not add spacing when isKeypress is true", () => {
-      printSkills({ isKeypress: true });
-      assert.strictEqual(
-        stripAnsi(getCapturedStdout()),
-        "No available skills\n",
-      );
-    });
-
-    it("does not add spacing when streaming", () => {
-      actions.setApiStreamAbortController(new AbortController());
-      printSkills();
-      assert.strictEqual(
-        stripAnsi(getCapturedStdout()),
-        "No available skills\n",
       );
     });
 
@@ -1916,23 +1883,6 @@ Available context files:
 `,
       );
     });
-
-    it("does not add spacing when isKeypress is true", () => {
-      printAvailableContextFiles({ isKeypress: true });
-      assert.strictEqual(
-        stripAnsi(getCapturedStdout()),
-        "No available context files\n",
-      );
-    });
-
-    it("does not add spacing when streaming", () => {
-      actions.setApiStreamAbortController(new AbortController());
-      printAvailableContextFiles();
-      assert.strictEqual(
-        stripAnsi(getCapturedStdout()),
-        "No available context files\n",
-      );
-    });
   });
 
   describe("printKeymaps", () => {
@@ -1946,23 +1896,6 @@ Available context files:
       assert.strictEqual(
         stripAnsi(getCapturedStdout()),
         `\nKeymaps:\n- edit: {"name":"g","ctrl":true}\n\n`,
-      );
-    });
-
-    it("does not add spacing when isKeypress is true", () => {
-      printKeymaps({ isKeypress: true });
-      assert.strictEqual(
-        stripAnsi(getCapturedStdout()),
-        `Keymaps:\n- edit: {"name":"g","ctrl":true}\n`,
-      );
-    });
-
-    it("does not add spacing when streaming", () => {
-      actions.setApiStreamAbortController(new AbortController());
-      printKeymaps();
-      assert.strictEqual(
-        stripAnsi(getCapturedStdout()),
-        `Keymaps:\n- edit: {"name":"g","ctrl":true}\n`,
       );
     });
   });
@@ -2751,18 +2684,6 @@ Keymaps:
       );
     });
 
-    it("handles /usage command without spacing when streaming", async () => {
-      actions.resetStdout();
-      actions.setModel("unknown-model");
-      actions.setApiStreamAbortController(new AbortController());
-      const result = await resolveSlashCommand("/usage");
-      assert.strictEqual(result, null);
-      assert.strictEqual(
-        stripAnsi(getCapturedStdout()),
-        `Usage:\n- Session: 0 tokens\n`,
-      );
-    });
-
     it("handles /tokens command", async () => {
       actions.resetStdout();
       actions.setModel("test-model");
@@ -2772,17 +2693,6 @@ Keymaps:
       assert.strictEqual(
         stripAnsi(getCapturedStdout()),
         `\nToken count: 597 (0% of context window)\n- Chat messages: 0\n- Context files: 0\n- Harness and MCP tools: 0\n- Base system prompt: 597\n- Skill descriptions: 0\n\n`,
-      );
-    });
-
-    it("handles /tokens command without spacing when streaming", async () => {
-      actions.resetStdout();
-      actions.setApiStreamAbortController(new AbortController());
-      const result = await resolveSlashCommand("/tokens");
-      assert.strictEqual(result, null);
-      assert.strictEqual(
-        stripAnsi(getCapturedStdout()),
-        `Token count: 597\n- Chat messages: 0\n- Context files: 0\n- Harness and MCP tools: 0\n- Base system prompt: 597\n- Skill descriptions: 0\n\n`,
       );
     });
 
