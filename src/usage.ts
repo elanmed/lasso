@@ -261,7 +261,7 @@ export function getPrettyTokensByArea() {
   const tokensByArea = getTokensByArea();
   const lines = (Object.keys(tokensByArea) as TokenArea[]).map(
     (area) =>
-      `${tokenAreaToPrettyName[area]}: ${Math.round(tokensByArea[area]).toLocaleString()}`,
+      `- ${tokenAreaToPrettyName[area]}: ${Math.round(tokensByArea[area]).toLocaleString()}`,
   );
   return lines.join("\n");
 }

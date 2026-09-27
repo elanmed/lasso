@@ -1,9 +1,12 @@
 import { getState } from "./state.ts";
 import { assertAtRuntime } from "./assert.ts";
-import { getPrettyUsage } from "./usage-format.ts";
 import { getMaxColLength, getPrettyDuration } from "./utils.ts";
 import { getUnicodeChar, truncate } from "./text.ts";
 import { bold, colorPrint, type Color } from "./print.ts";
+import {
+  getPrettyContextWindowUsage,
+  getPrettyTokenUsage,
+} from "./usage-format.ts";
 
 interface FencePrintOpts {
   showSessionInfo?: boolean;
@@ -34,12 +37,22 @@ function getFenceSessionLine(text: string) {
   sessionInfo += prettyApiDurationInfo;
   accumulatedCol += prettyApiDurationInfo.length;
 
-  const prettyUsageInfo = ` (${getPrettyUsage()})`;
-  if (accumulatedCol + prettyUsageInfo.length > availCol) {
+  const prettyTokenUsage = ` (${getPrettyTokenUsage()})`;
+  if (accumulatedCol + prettyTokenUsage.length > availCol) {
     return sessionInfo;
   }
-  sessionInfo += prettyUsageInfo;
-  accumulatedCol += prettyUsageInfo.length;
+  sessionInfo += prettyTokenUsage;
+  accumulatedCol += prettyTokenUsage.length;
+
+  const prettyContextWindowUsageRaw = getPrettyContextWindowUsage();
+  if (prettyContextWindowUsageRaw !== null) {
+    const prettyContextWindowUsage = ` (${prettyContextWindowUsageRaw})`;
+    if (accumulatedCol + prettyContextWindowUsage.length > availCol) {
+      return sessionInfo;
+    }
+    sessionInfo += prettyContextWindowUsage;
+    accumulatedCol += prettyContextWindowUsage.length;
+  }
 
   return sessionInfo;
 }

@@ -10,15 +10,6 @@ import {
 
 const DOLLARS_PER_MILLION = 1_000_000;
 
-export function getPrettyUsage() {
-  const tokenUsage = getPrettyTokenUsage();
-  const contextWindowUsage = getPrettyContextWindowUsage();
-  if (contextWindowUsage.length > 0) {
-    return `${tokenUsage}, ${contextWindowUsage}`;
-  }
-  return tokenUsage;
-}
-
 export function getUsageMoneyForModel(usageTokens: TokenUsage, model: string) {
   const pricing = getState().config.pricingPerModel[model];
   assertAtBuildtime(pricing !== undefined);
@@ -68,6 +59,13 @@ export function sumUsageTokens(modelUsage: ModelUsage[]): TokenUsage {
   );
 }
 
+export function getPrettyMoney(money: number) {
+  return money.toLocaleString("en-US", {
+    minimumFractionDigits: 3,
+    maximumFractionDigits: 3,
+  });
+}
+
 export function getPrettyTokenUsage() {
   const { model } = getState().config;
   const pricing = getState().config.pricingPerModel[model];
@@ -83,17 +81,12 @@ export function getPrettyTokenUsage() {
     getState().app.modelUsageForLimitWindow[model] ?? [],
   );
 
-  const getPrettyMoney = (money: number) =>
-    money.toLocaleString("en-US", {
-      minimumFractionDigits: 3,
-      maximumFractionDigits: 3,
-    });
-
   const costForSession = getUsageMoneyForModel(tokenUsageForSession, model);
   const { usageLimit } = getState().config;
 
-  if (isUsageLimitDisabled())
+  if (isUsageLimitDisabled()) {
     return `$${getPrettyMoney(costForSession)} in session`;
+  }
 
   assertAtBuildtime(usageLimit !== undefined);
   const costForLimitWindow = getUsageMoneyForModel(
@@ -106,7 +99,7 @@ export function getPrettyTokenUsage() {
 export function getPrettyContextWindowUsage() {
   const { model } = getState().config;
   const contextWindow = getState().config.contextWindowPerModel[model];
-  if (contextWindow === undefined) return "";
+  if (contextWindow === undefined) return null;
 
   const currTokens = getCurrentPromptTokens();
 

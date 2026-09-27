@@ -24,10 +24,18 @@ import {
 import { truncate } from "./text.ts";
 import { print, printNewline, printSessionStartDate } from "./print.ts";
 import { fencePrint, wrapInFence } from "./fence.ts";
-import { getPrettyTokenUsage, getPrettyUsage } from "./usage-format.ts";
+import {
+  getPrettyContextWindowUsage,
+  getPrettyMoney,
+  getPrettyTokenUsage,
+  getUsageMoneyForModel,
+  sumUsageTokens,
+} from "./usage-format.ts";
 import {
   getApproxPromptTokens,
   getPrettyTokensByArea,
+  getTokensByArea,
+  isUsageLimitDisabled,
   warnOnLargePromptOverhead,
 } from "./usage.ts";
 import { actions, getState } from "./state.ts";
@@ -289,6 +297,7 @@ export function initKeypress() {
           case "context":
           case "keymaps":
           case "usage":
+          case "tokens":
           case "resume":
           case "clear": {
             if (getState().abortControllers.question !== null) {
@@ -639,6 +648,10 @@ async function resolveBuiltinSlashCommand(
       printUsage();
       return { handled: true, inputFromCommand: null };
     }
+    case "tokens": {
+      printTokens();
+      return { handled: true, inputFromCommand: null };
+    }
     case "config": {
       const initialContentStr = getAllPrettyConfig();
 
@@ -799,9 +812,62 @@ export function clearCommand() {
 }
 
 export function printUsage() {
+  const { model } = getState().config;
+  const pricing = getState().config.pricingPerModel[model];
+  const tokenUsageForSession = sumUsageTokens(
+    getState().app.modelUsageForSession[model] ?? [],
+  );
+  const tokenUsageForLimitWindow = sumUsageTokens(
+    getState().app.modelUsageForLimitWindow[model] ?? [],
+  );
+  const { usageLimit } = getState().config;
+
+  const usedInSession = (() => {
+    const tokensInSession = `${(tokenUsageForSession.inputTokens + tokenUsageForSession.outputTokens).toLocaleString()} tokens`;
+    if (pricing === undefined) {
+      return tokensInSession;
+    }
+    const dollarsInSession = `$${String(getUsageMoneyForModel(tokenUsageForSession, model))}`;
+    return `${tokensInSession}, ${dollarsInSession}`;
+  })();
+
   withSpacingUnless(isStreaming(), () => {
-    print.doing(getPrettyUsage());
+    print.doing("Usage:");
+    print.plain(`- Session: ${usedInSession}`);
+
+    if (!isUsageLimitDisabled()) {
+      assertAtBuildtime(usageLimit !== undefined);
+      const costForLimitWindow = getUsageMoneyForModel(
+        tokenUsageForLimitWindow,
+        model,
+      );
+
+      print.plain(
+        `- ${usageLimit.duration} window: $${getPrettyMoney(costForLimitWindow)} of $${String(usageLimit.dollarAmount)} limit`,
+      );
+    }
+  });
+}
+
+// TODO: do I need withSpacingUnless for print commands?
+export function printTokens() {
+  const total = Object.values(getTokensByArea()).reduce(
+    (accum: number, curr: number) => accum + curr,
+    0,
+  );
+
+  const contextWindowUsage = (() => {
+    const prettyContextWindowUsageRaw = getPrettyContextWindowUsage();
+    if (prettyContextWindowUsageRaw !== null) {
+      return ` (${prettyContextWindowUsageRaw})`;
+    }
+    return "";
+  })();
+
+  withSpacingUnless(isStreaming(), () => {
+    print.doing(`Token count: ${total.toLocaleString()}${contextWindowUsage}`);
     print.plain(getPrettyTokensByArea());
+    printNewline();
   });
 }
 

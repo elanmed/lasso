@@ -18,6 +18,7 @@ export const builtinSlashCommands = [
   "commandspage",
   "keymaps",
   "usage",
+  "tokens",
   "resume",
   "config",
   "reload",
