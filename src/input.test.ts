@@ -1422,6 +1422,14 @@ latest question
       actions.resetStdout();
     });
 
+    it("prints no diffs when there are no diffs", () => {
+      pageLastDiff();
+      assert.strictEqual(
+        stripAnsi(getCapturedStdout()),
+        "\nNo diffs from the last turn\n\n",
+      );
+    });
+
     it("does not add spacing when isKeypress is true", () => {
       pageLastDiff({ isKeypress: true });
       assert.strictEqual(
@@ -1436,6 +1444,35 @@ latest question
       assert.strictEqual(
         stripAnsi(getCapturedStdout()),
         "No diffs from the last turn\n",
+      );
+    });
+
+    it("opens the diffs in a pager with a fence per file", () => {
+      const { spawned } = mockPagerSpawn();
+      testProcessEnv._set("LASSO_PAGER", "nano __FILE__");
+      actions.appendToolEditDiff({ fileName: "/a.ts", diffStdout: "+a\n" });
+      actions.appendToolEditDiff({ fileName: "/b.ts", diffStdout: "+b\n" });
+
+      pageLastDiff();
+
+      assert.strictEqual(spawned[0], "nano /tmp/lasso-test-uuid.txt");
+      assert.strictEqual(
+        testFs._files.get("/tmp/lasso-test-uuid.txt"),
+        `━━ /a.ts ━━\n+a\n\n\n━━ /b.ts ━━\n+b\n\n`,
+      );
+    });
+
+    it("opens the diffs with collapsed extra trailing newlines", () => {
+      const { spawned } = mockPagerSpawn();
+      testProcessEnv._set("LASSO_PAGER", "nano __FILE__");
+      actions.appendToolEditDiff({ fileName: "/a.ts", diffStdout: "+a\n\n\n" });
+
+      pageLastDiff();
+
+      assert.strictEqual(spawned[0], "nano /tmp/lasso-test-uuid.txt");
+      assert.strictEqual(
+        testFs._files.get("/tmp/lasso-test-uuid.txt"),
+        `━━ /a.ts ━━\n+a\n\n`,
       );
     });
   });
@@ -1781,7 +1818,25 @@ Available context files:
       );
     });
 
-    // TODO: add test with extra newlines
+    it("does not add extra spacing when output already ends with a blank line", () => {
+      actions.setContextEntries([
+        { filePath: "/project/AGENTS.md", content: "context" },
+      ]);
+      printAvailableContextFiles();
+      printAvailableContextFiles();
+      assert.strictEqual(
+        stripAnsi(getCapturedStdout()),
+        `
+Available context files:
+- /project/AGENTS.md
+
+Available context files:
+- /project/AGENTS.md
+
+`,
+      );
+    });
+
     it("does not add spacing when isKeypress is true", () => {
       printAvailableContextFiles({ isKeypress: true });
       assert.strictEqual(
