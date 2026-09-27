@@ -487,7 +487,7 @@ skills body`,
     );
   });
 
-  it("set-prompt-history-path", () => {
+  it("set-chat-history-path", () => {
     assert.equal(getState().app.chatHistoryPath, "");
     actions.setChatHistoryPath("/tmp/editor.log");
     assert.equal(getState().app.chatHistoryPath, "/tmp/editor.log");

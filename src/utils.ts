@@ -5,7 +5,7 @@ import childProcess from "node:child_process";
 import type { AssistantContent, ModelMessage } from "ai";
 import { assertAtRuntime } from "./assert.ts";
 import { fsDeps, processDeps } from "./deps.ts";
-import { getPromptHistoryDir } from "./paths.ts";
+import { getChatHistoryDir } from "./paths.ts";
 import type { Color } from "./print.ts";
 
 export type Result<T> = { ok: true; value: T } | { ok: false; error: unknown };
@@ -205,7 +205,7 @@ interface ChatHistoryEntry {
 }
 
 export function listChatHistoryFiles() {
-  const chatHistoryPath = getPromptHistoryDir();
+  const chatHistoryPath = getChatHistoryDir();
   if (!fsDeps.existsSync(chatHistoryPath)) return [];
 
   const chatHistoryFiles: ChatHistoryEntry[] = [];

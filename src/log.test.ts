@@ -3,8 +3,8 @@ import assert from "node:assert/strict";
 
 import {
   prependToChatHistory,
-  initPromptHistory,
-  deleteExpiredPromptHistory,
+  initChatHistory,
+  deleteExpiredChatHistory,
 } from "./log.ts";
 import { actions, getState } from "./state.ts";
 import {
@@ -103,14 +103,14 @@ hello
     });
   });
 
-  describe("initPromptHistory", () => {
+  describe("initChatHistory", () => {
     beforeEach(() => {
       mock.restoreAll();
       setupTestContext({ now: 1_234_567_890_000 });
     });
 
     it("creates directory and sets path when directory does not exist", () => {
-      initPromptHistory();
+      initChatHistory();
       assert.equal(testFs._dirs.has("/fake-home/.config/lasso/history"), true);
       assert.equal(
         getState().app.chatHistoryPath,
@@ -131,7 +131,7 @@ hello
       });
       const getCaptured = mockStdout();
 
-      initPromptHistory();
+      initChatHistory();
 
       assert.equal(
         stripAnsi(getCaptured()),
@@ -141,7 +141,7 @@ hello
     });
 
     it("generates correct log path with session start date", () => {
-      initPromptHistory();
+      initChatHistory();
       assert.equal(
         getState().app.chatHistoryPath,
         "/fake-home/.config/lasso/history/chat-history-1234567890000.md",
@@ -155,14 +155,14 @@ hello
     });
   });
 
-  describe("deleteExpiredPromptHistory", () => {
+  describe("deleteExpiredChatHistory", () => {
     beforeEach(() => {
       mock.restoreAll();
       setupTestContext({ now: 1_000_000_000_000 });
     });
 
     it("returns early when directory does not exist", () => {
-      deleteExpiredPromptHistory();
+      deleteExpiredChatHistory();
       assert.equal(testFs._dirs.has("/fake-home/.config/lasso/history"), false);
     });
 
@@ -172,7 +172,7 @@ hello
         "/fake-home/.config/lasso/history/chat-history-999900000000.md",
         "old",
       );
-      deleteExpiredPromptHistory();
+      deleteExpiredChatHistory();
       assert.equal(
         testFs._files.has(
           "/fake-home/.config/lasso/history/chat-history-999900000000.md",
@@ -187,7 +187,7 @@ hello
         "/fake-home/.config/lasso/history/chat-history-999990000000.md",
         "new",
       );
-      deleteExpiredPromptHistory();
+      deleteExpiredChatHistory();
       assert.equal(
         testFs._files.has(
           "/fake-home/.config/lasso/history/chat-history-999990000000.md",
@@ -207,7 +207,7 @@ hello
         "/fake-home/.config/lasso/history/prompt-history-uuid-999990000001.log",
         "",
       );
-      deleteExpiredPromptHistory();
+      deleteExpiredChatHistory();
       assert.equal(
         testFs._files.has("/fake-home/.config/lasso/history/random-file.log"),
         true,
@@ -232,7 +232,7 @@ hello
         "/fake-home/.config/lasso/history/chat-history-uuid-999997600000.md",
         "",
       );
-      deleteExpiredPromptHistory();
+      deleteExpiredChatHistory();
       assert.equal(
         testFs._files.has(
           "/fake-home/.config/lasso/history/chat-history-uuid-999997600000.md",

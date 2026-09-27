@@ -2,7 +2,7 @@ import { dirname, join } from "node:path";
 import { actions, getState } from "./state.ts";
 import { listChatHistoryFiles, normalizeNewline, tryCatch } from "./utils.ts";
 import { fsDeps } from "./deps.ts";
-import { getPromptHistoryDir } from "./paths.ts";
+import { getChatHistoryDir } from "./paths.ts";
 import { debugLog as writeDebugLog } from "./debug-log.ts";
 import { print } from "./print.ts";
 
@@ -38,8 +38,8 @@ ${existingContent}
   tryCatch(() => fsDeps.writeFileSync(path, newChatHistory));
 }
 
-export function initPromptHistory() {
-  const chatHistoryDir = getPromptHistoryDir();
+export function initChatHistory() {
+  const chatHistoryDir = getChatHistoryDir();
   if (!fsDeps.existsSync(chatHistoryDir)) {
     const mkDirResult = tryCatch(() =>
       fsDeps.mkdirSync(chatHistoryDir, { recursive: true }),
@@ -58,7 +58,7 @@ export function initPromptHistory() {
   tryCatch(() => fsDeps.writeFileSync(chatHistorySessionPath, ""));
 }
 
-export function deleteExpiredPromptHistory() {
+export function deleteExpiredChatHistory() {
   const chatHistoryFileEntries = listChatHistoryFiles();
 
   for (const { absolutePath, timestampMs } of chatHistoryFileEntries) {
@@ -70,6 +70,6 @@ export function deleteExpiredPromptHistory() {
 }
 
 export function initLogs() {
-  deleteExpiredPromptHistory();
-  initPromptHistory();
+  deleteExpiredChatHistory();
+  initChatHistory();
 }

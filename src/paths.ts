@@ -44,7 +44,7 @@ export function getGlobalSlashCommandDir() {
   return join(getGlobalConfigDir(), "commands");
 }
 
-export function getPromptHistoryDir() {
+export function getChatHistoryDir() {
   return join(getGlobalConfigDir(), "history");
 }
 
