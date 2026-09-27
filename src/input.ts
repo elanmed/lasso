@@ -884,7 +884,10 @@ export async function spawnAndReadEditorContent(opts?: {
   });
 
   const tempFile = getTempFileName();
-  if (tempFile === null) return null;
+  if (tempFile === null) {
+    print.error("Failed to create a temp file");
+    return null;
+  }
 
   const editCommand = (() => {
     const lassoEditEnvValue = processDeps.env.get("LASSO_EDIT");

@@ -2,6 +2,7 @@ import { basename, extname, join } from "node:path";
 import { fsDeps } from "./deps.ts";
 import { normalizeNewline, tryCatch } from "./utils.ts";
 import { getGlobalSlashCommandDir, getLocalSlashCommandDir } from "./paths.ts";
+import { print } from "./print.ts";
 import { getState, type SlashCommand } from "./state.ts";
 
 export const builtinSlashCommands = [
@@ -71,13 +72,19 @@ export function getAvailableSlashCommands() {
   for (const dir of slashCommandDirs) {
     const glob = join(dir, "**/*.md");
     const globResult = tryCatch(() => fsDeps.globSync(glob));
-    if (!globResult.ok) continue;
+    if (!globResult.ok) {
+      print.warning(`Failed to list the slash command files in ${dir}`);
+      continue;
+    }
     slashCommandFilePaths.push(...globResult.value);
   }
 
   for (const filePath of slashCommandFilePaths) {
     const readResult = tryCatch(() => fsDeps.readFileSync(filePath).toString());
-    if (!readResult.ok) continue;
+    if (!readResult.ok) {
+      print.warning(`Failed to read the slash command file at ${filePath}`);
+      continue;
+    }
     const name = basename(filePath, extname(filePath));
     if (seenSlashCommands.has(name)) continue;
     seenSlashCommands.add(name);

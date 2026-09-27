@@ -7,7 +7,12 @@ import {
 } from "./slash-commands.ts";
 import { actions } from "./state.ts";
 import { fsDeps } from "./deps.ts";
-import { setupTestContext, testFs } from "./test-helpers.ts";
+import {
+  mockStdout,
+  setupTestContext,
+  stripAnsi,
+  testFs,
+} from "./test-helpers.ts";
 
 describe("getAvailableSlashCommands", () => {
   afterEach(() => {
@@ -119,6 +124,42 @@ describe("getAvailableSlashCommands", () => {
         content: "content",
       },
     ]);
+  });
+
+  it("warns when glob fails", () => {
+    mock.method(fsDeps, "globSync", () => {
+      throw new Error("permission denied");
+    });
+    const getCaptured = mockStdout();
+
+    const result = getAvailableSlashCommands();
+
+    assert.deepStrictEqual(result, []);
+    assert.strictEqual(
+      stripAnsi(getCaptured()),
+      `Failed to list the slash command files in /test-cwd/.lasso/commands
+Failed to list the slash command files in /fake-home/.config/lasso/commands
+`,
+    );
+  });
+
+  it("warns when a slash command file cannot be read", () => {
+    mock.method(fsDeps, "readFileSync", (path: string) => {
+      if (path.includes("bad")) throw new Error("read failed");
+      return Buffer.from("content");
+    });
+    testFs._globResults.set("/test-cwd/.lasso/commands/**/*.md", [
+      "/test-cwd/.lasso/commands/bad.md",
+    ]);
+    const getCaptured = mockStdout();
+
+    const result = getAvailableSlashCommands();
+
+    assert.deepStrictEqual(result, []);
+    assert.strictEqual(
+      stripAnsi(getCaptured()),
+      "Failed to read the slash command file at /test-cwd/.lasso/commands/bad.md\n",
+    );
   });
 });
 

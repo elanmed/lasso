@@ -2,7 +2,6 @@
 import type readline from "node:readline/promises";
 import type { ModelMessage } from "ai";
 import type { MCPClient } from "@ai-sdk/mcp";
-import { z } from "zod";
 import { assertAtRuntime } from "./assert.ts";
 import {
   defaultConfig,
@@ -38,13 +37,11 @@ export interface ToolEditDiff {
   diffStdout: string;
 }
 
-export const ConversationLogEntrySchema = z.object({
-  timestamp: z.number(),
-  role: z.enum(["user", "assistant"]),
-  message: z.string(),
-});
-
-export type ConversationLogEntry = z.infer<typeof ConversationLogEntrySchema>;
+export interface ConversationLogEntry {
+  timestamp: number;
+  role: "user" | "assistant";
+  message: string;
+}
 
 export type MCPToolSet = Awaited<ReturnType<MCPClient["tools"]>>;
 
@@ -72,7 +69,7 @@ interface State {
     debugLog: boolean;
     debugLogPath: string;
     chatHistoryPath: string;
-    conversationLogPath: string;
+    conversationPath: string;
     contextEntries: ContextEntry[];
     contextStr: string;
     globalConfigStr: string;
@@ -119,7 +116,7 @@ const createInitialState = (): State => ({
     debugLog: false,
     debugLogPath: "",
     chatHistoryPath: "",
-    conversationLogPath: "",
+    conversationPath: "",
     contextEntries: [],
     contextStr: "",
     globalConfigStr: "",
@@ -233,10 +230,10 @@ export const actions = {
     );
   },
 
-  setConversationLogPath(conversationLogPath: string) {
-    const before = state.app.conversationLogPath;
-    state.app.conversationLogPath = conversationLogPath;
-    logStateChange("set-conversation-log-path", before, conversationLogPath);
+  setConversationPath(conversationPath: string) {
+    const before = state.app.conversationPath;
+    state.app.conversationPath = conversationPath;
+    logStateChange("set-conversation-path", before, conversationPath);
   },
 
   setPromptTokens(tokens: number) {

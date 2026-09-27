@@ -3,7 +3,7 @@ import assert from "node:assert";
 import { join } from "node:path";
 import {
   getChatHistoryDir,
-  getConversationLogDir,
+  getConversationDir,
   getDataDir,
   getGlobalConfigDir,
   getGlobalContextDir,
@@ -45,7 +45,7 @@ describe("paths", () => {
     assert.equal(getStateDir(), join("/xdg-state", "lasso"));
     assert.equal(getChatHistoryDir(), join("/xdg-state", "lasso", "history"));
     assert.equal(
-      getConversationLogDir(),
+      getConversationDir(),
       join("/xdg-state", "lasso", "conversation"),
     );
     assert.equal(getDebugLogDir(), join("/xdg-state", "lasso", "debug"));

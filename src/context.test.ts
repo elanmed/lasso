@@ -1,6 +1,11 @@
 import { describe, it, beforeEach, afterEach, mock } from "node:test";
 import assert from "node:assert";
-import { testFs, setupTestContext } from "./test-helpers.ts";
+import {
+  mockStdout,
+  setupTestContext,
+  stripAnsi,
+  testFs,
+} from "./test-helpers.ts";
 import { fsDeps } from "./deps.ts";
 import { getGlobalContextDir } from "./paths.ts";
 import {
@@ -492,6 +497,48 @@ would benefit from specialized instructions.
 ## Available skills:
 
 - ok: Works`,
+      );
+    });
+  });
+
+  describe("getContextEntries", () => {
+    it("warns when an agent file cannot be read", () => {
+      testFs._files.set("/test-cwd/AGENTS.md", "content");
+      mock.method(fsDeps, "readFileSync", () => {
+        throw new Error("Permission denied");
+      });
+      const getCaptured = mockStdout();
+
+      const result = getContextEntries();
+
+      assert.deepStrictEqual(result, []);
+      assert.strictEqual(
+        stripAnsi(getCaptured()),
+        "Failed to read the agent file at /test-cwd/AGENTS.md\n",
+      );
+    });
+
+    it("does not warn when agent files are missing", () => {
+      const getCaptured = mockStdout();
+
+      const result = getContextEntries();
+
+      assert.deepStrictEqual(result, []);
+      assert.strictEqual(stripAnsi(getCaptured()), "");
+    });
+  });
+
+  describe("getSkills", () => {
+    it("warns when a skill agent file cannot be read", () => {
+      testFs._gitLsFilesResults.set("**/AGENTS.md", ["/repo/src/AGENTS.md"]);
+      const getCaptured = mockStdout();
+
+      const result = getSkills();
+
+      assert.deepStrictEqual(result, []);
+      assert.strictEqual(
+        stripAnsi(getCaptured()),
+        "Failed to read the agent file at /repo/src/AGENTS.md\n",
       );
     });
   });

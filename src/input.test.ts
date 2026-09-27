@@ -288,6 +288,21 @@ describe("input", () => {
       assert.strictEqual(result, null);
     });
 
+    it("warns when creating the temp file fails", async () => {
+      mock.method(fsDeps, "writeFileSync", () => {
+        throw new Error("write failed");
+      });
+      const getCaptured = mockStdout();
+
+      const result = await spawnAndReadEditorContent();
+
+      assert.strictEqual(result, null);
+      assert.strictEqual(
+        stripAnsi(getCaptured()),
+        "Failed to create a temp file\n",
+      );
+    });
+
     it("returns null and cleans up when readFile fails", async () => {
       mock.method(childProcess, "spawnSync", () => {
         testFs.writeFileSync("/tmp/lasso-test-uuid.txt", "modified");

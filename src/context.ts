@@ -40,8 +40,12 @@ export function getContextEntries() {
 
   for (const agentFileDir of agentFileDirs) {
     const filePath = join(agentFileDir, "AGENTS.md");
+    if (!fsDeps.existsSync(filePath)) continue;
     const readResult = tryCatch(() => fsDeps.readFileSync(filePath).toString());
-    if (!readResult.ok) continue;
+    if (!readResult.ok) {
+      print.warning(`Failed to read the agent file at ${filePath}`);
+      continue;
+    }
     entries.push({ filePath, content: readResult.value });
   }
 
@@ -111,7 +115,10 @@ export function getSkills() {
     const readResult = tryCatch(() =>
       fsDeps.readFileSync(agentFilePath).toString(),
     );
-    if (!readResult.ok) continue;
+    if (!readResult.ok) {
+      print.warning(`Failed to read the agent file at ${agentFilePath}`);
+      continue;
+    }
     const dir = dirname(agentFilePath);
 
     const skill: Skill = {

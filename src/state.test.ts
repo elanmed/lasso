@@ -1,12 +1,7 @@
 import { describe, it, beforeEach, afterEach, mock } from "node:test";
 import assert from "node:assert";
 import type { MCPClient } from "@ai-sdk/mcp";
-import {
-  ConversationLogEntrySchema,
-  actions,
-  getState,
-  promptDeps,
-} from "./state.ts";
+import { actions, getState, promptDeps } from "./state.ts";
 import { baseAgentPrompt } from "./prompts.ts";
 import { stringify } from "./utils.ts";
 import { defaultConfig } from "./config-types.ts";
@@ -67,7 +62,7 @@ skills body`,
       debugLog: false,
       debugLogPath: "",
       chatHistoryPath: "",
-      conversationLogPath: "",
+      conversationPath: "",
       contextEntries: [],
       contextStr: "",
       globalConfigStr: "",
@@ -267,19 +262,6 @@ skills body`,
     });
   });
 
-  describe("ConversationLogEntrySchema", () => {
-    it("parses a valid entry", () => {
-      assert.deepStrictEqual(
-        ConversationLogEntrySchema.parse({
-          timestamp: 42,
-          role: "user",
-          message: "hello",
-        }),
-        { timestamp: 42, role: "user", message: "hello" },
-      );
-    });
-  });
-
   it("reset-conversation-log", () => {
     actions.appendToConversationLog({
       timestamp: 1,
@@ -290,10 +272,10 @@ skills body`,
     assert.deepStrictEqual(getState().app.conversationLog, []);
   });
 
-  it("set-conversation-log-path", () => {
-    assert.equal(getState().app.conversationLogPath, "");
-    actions.setConversationLogPath("/tmp/conversation.log");
-    assert.equal(getState().app.conversationLogPath, "/tmp/conversation.log");
+  it("set-conversation-path", () => {
+    assert.equal(getState().app.conversationPath, "");
+    actions.setConversationPath("/tmp/conversation.log");
+    assert.equal(getState().app.conversationPath, "/tmp/conversation.log");
   });
 
   it("set-prompt-tokens", () => {
