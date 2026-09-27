@@ -21,6 +21,7 @@ import {
   pageEditStr,
   spawnAndReadEditorContent,
   resume,
+  resumeWithNoArgs,
   initSigInt,
   initLocalConfig,
   initGlobalConfig,
@@ -1103,12 +1104,12 @@ Token count: 621 (0% of context window)
       actions.resetStdout();
     });
 
-    it("prints an error when there are no sessions to resume", () => {
+    it("prints usage error when no session start date is provided", () => {
       const result = resume("/resume");
       assert.strictEqual(result, null);
       assert.strictEqual(
         stripAnsi(getCapturedStdout()),
-        "No sessions to resume\n",
+        "Usage: /resume [session start date]\n",
       );
     });
 
@@ -1139,40 +1140,6 @@ Token count: 621 (0% of context window)
       );
     });
 
-    it("resumes the most recent session when no date is provided", () => {
-      actions.setConversationMessages([{ role: "user", content: "hello" }]);
-      testFs._dirs.add("/fake-home/.local/state/lasso/sessions");
-      testFs._files.set(
-        "/fake-home/.local/state/lasso/sessions/session-1234567890000.json",
-        JSON.stringify({
-          messages: [{ role: "user", content: "older" }],
-          summaries: [],
-          transcript: [],
-        }),
-      );
-      testFs._files.set(
-        "/fake-home/.local/state/lasso/sessions/session-1234567899999.json",
-        JSON.stringify({
-          messages: [{ role: "assistant", content: "newer" }],
-          summaries: [{ compacted: "summary", compactedAt: 123, tokens: 456 }],
-          transcript: [
-            { timestamp: 0, role: "user", message: "newer transcript" },
-          ],
-        }),
-      );
-
-      const result = resume("/resume");
-
-      assert.strictEqual(result, "continue");
-      assert.deepStrictEqual(getState().app.conversation, {
-        summaries: [{ compacted: "summary", compactedAt: 123, tokens: 456 }],
-        messages: [{ role: "assistant", content: "newer" }],
-      });
-      assert.deepStrictEqual(getState().app.transcript, [
-        { timestamp: 0, role: "user", message: "newer transcript" },
-      ]);
-    });
-
     it("loads the session and returns continue when the date matches", () => {
       actions.setConversationMessages([{ role: "user", content: "old" }]);
       testFs._dirs.add("/fake-home/.local/state/lasso/sessions");
@@ -1189,7 +1156,7 @@ Token count: 621 (0% of context window)
 
       const result = resume("/resume 1234567890000");
 
-      assert.strictEqual(result, "continue");
+      assert.strictEqual(result, "Continue");
       assert.deepStrictEqual(getState().app.conversation, {
         summaries: [],
         messages: [{ role: "user", content: "hello" }],
@@ -1243,6 +1210,55 @@ Token count: 621 (0% of context window)
         stripAnsi(getCapturedStdout()),
         "No conversation found with session start date: 1234567890000\n",
       );
+    });
+  });
+
+  describe("resumeWithNoArgs", () => {
+    beforeEach(() => {
+      actions.resetStdout();
+    });
+
+    it("prints an error when there are no sessions to resume", () => {
+      const result = resumeWithNoArgs();
+      assert.strictEqual(result, null);
+      assert.strictEqual(
+        stripAnsi(getCapturedStdout()),
+        "No sessions to resume\n",
+      );
+    });
+
+    it("resumes the most recent session", () => {
+      actions.setConversationMessages([{ role: "user", content: "hello" }]);
+      testFs._dirs.add("/fake-home/.local/state/lasso/sessions");
+      testFs._files.set(
+        "/fake-home/.local/state/lasso/sessions/session-1234567890000.json",
+        JSON.stringify({
+          messages: [{ role: "user", content: "older" }],
+          summaries: [],
+          transcript: [],
+        }),
+      );
+      testFs._files.set(
+        "/fake-home/.local/state/lasso/sessions/session-1234567899999.json",
+        JSON.stringify({
+          messages: [{ role: "assistant", content: "newer" }],
+          summaries: [{ compacted: "summary", compactedAt: 123, tokens: 456 }],
+          transcript: [
+            { timestamp: 0, role: "user", message: "newer transcript" },
+          ],
+        }),
+      );
+
+      const result = resumeWithNoArgs();
+
+      assert.strictEqual(result, "Continue");
+      assert.deepStrictEqual(getState().app.conversation, {
+        summaries: [{ compacted: "summary", compactedAt: 123, tokens: 456 }],
+        messages: [{ role: "assistant", content: "newer" }],
+      });
+      assert.deepStrictEqual(getState().app.transcript, [
+        { timestamp: 0, role: "user", message: "newer transcript" },
+      ]);
     });
   });
 
@@ -2740,6 +2756,26 @@ Keymaps:
       );
     });
 
+    it("handles /usage command with a usage limit", async () => {
+      actions.resetStdout();
+      actions.setModel("claude-haiku-4-5");
+      actions.setPricingPerModel({
+        "claude-haiku-4-5": {
+          inputPerMillion: 1,
+          outputPerMillion: 5,
+          cacheReadPerMillion: 0.25,
+          cacheWritePerMillion: 1.25,
+        },
+      });
+      actions.setUsageLimit({ duration: "60m", dollarAmount: 10 });
+      const result = await resolveSlashCommand("/usage");
+      assert.strictEqual(result, null);
+      assert.strictEqual(
+        stripAnsi(getCapturedStdout()),
+        `\nUsage:\n- Session: 0 tokens, $0\n- 60m window: 0.000 of 10 limit\n\n`,
+      );
+    });
+
     it("handles /tokens command", async () => {
       actions.resetStdout();
       actions.setModel("test-model");
@@ -2762,12 +2798,20 @@ Token count: 602 (0% of context window)
 
     it("handles /resume without args", async () => {
       actions.resetStdout();
-      const result = await resolveSlashCommand("/resume");
-      assert.strictEqual(result, null);
-      assert.strictEqual(
-        stripAnsi(getCapturedStdout()),
-        "Usage: /resume [session start date]\n",
+      testFs._dirs.add("/fake-home/.local/state/lasso/sessions");
+      testFs._files.set(
+        "/fake-home/.local/state/lasso/sessions/session-1234567890000.json",
+        JSON.stringify({
+          messages: [{ role: "user", content: "hello" }],
+          summaries: [],
+          transcript: [],
+        }),
       );
+      const result = await resolveSlashCommand("/resume");
+      assert.strictEqual(result, "Continue");
+      assert.deepStrictEqual(getState().app.transcript, [
+        { timestamp: 0, role: "user", message: "Continue" },
+      ]);
     });
 
     it("handles /resume with a session start date", async () => {
@@ -2781,7 +2825,10 @@ Token count: 602 (0% of context window)
         }),
       );
       const result = await resolveSlashCommand("/resume 1234567890000");
-      assert.strictEqual(result, "continue");
+      assert.strictEqual(result, "Continue");
+      assert.deepStrictEqual(getState().app.transcript, [
+        { timestamp: 0, role: "user", message: "Continue" },
+      ]);
     });
 
     it("skips the before-and-after diff when a before temp file cannot be created", async () => {
@@ -3145,7 +3192,8 @@ hello
       const result = await resolveSlashCommand("/custom some task");
       assert.strictEqual(
         result,
-        `Follow the instructions below along with the provided context:
+        `# [lasso] Follow the instructions below along with the provided context:
+
 ## [lasso] Context
 some task
 
@@ -3165,7 +3213,8 @@ custom command content`,
       const result = await resolveSlashCommand("/custom   some   task");
       assert.strictEqual(
         result,
-        `Follow the instructions below along with the provided context:
+        `# [lasso] Follow the instructions below along with the provided context:
+
 ## [lasso] Context
 some   task
 

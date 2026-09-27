@@ -696,8 +696,17 @@ async function resolveBuiltinSlashCommand(
       return { handled: true, inputFromCommand: null };
     }
     case "resume": {
-      print.error("Usage: /resume [session start date]");
-      return { handled: true, inputFromCommand: null };
+      const inputFromCommand = resumeWithNoArgs();
+      if (inputFromCommand !== null) {
+        syncSessionFile({
+          transcript: getAppendedTranscript({
+            message: inputFromCommand,
+            role: "user",
+            timestamp: Date.now(),
+          }),
+        });
+      }
+      return { handled: true, inputFromCommand };
     }
     case "reload": {
       await reload();
@@ -751,16 +760,17 @@ function resolveParameterizedBuiltinSlashCommand(
       return { handled: true, inputFromCommand: null };
     }
     case "resume": {
-      const content = resume(commandWithArgs);
-      if (content !== null)
+      const inputFromCommand = resume(commandWithArgs);
+      if (inputFromCommand !== null) {
         syncSessionFile({
           transcript: getAppendedTranscript({
-            message: content,
+            message: inputFromCommand,
             role: "user",
             timestamp: Date.now(),
           }),
         });
-      return { handled: true, inputFromCommand: content };
+      }
+      return { handled: true, inputFromCommand: inputFromCommand };
     }
     default: {
       command satisfies never;
@@ -804,7 +814,8 @@ function resolveCustomSlashCommand(commandStr: string): SlashCommandOutcome {
     };
   }
 
-  const contentWithCommandContext = `Follow the instructions below along with the provided context:
+  const contentWithCommandContext = `# [lasso] Follow the instructions below along with the provided context:
+
 ## [lasso] Context
 ${normalizeNewline(commandContext, { count: 0 })}
 
@@ -875,22 +886,22 @@ export function printUsage() {
     return `${tokensInSession}, ${dollarsInSession}`;
   })();
 
-  printNewline();
-  print.doing("Usage:");
-  print.plain(`- Session: ${usedInSession}`);
+  withSpacing(() => {
+    print.doing("Usage:");
+    print.plain(`- Session: ${usedInSession}`);
 
-  if (!isUsageLimitDisabled()) {
-    assertAtBuildtime(usageLimit !== undefined);
-    const costForLimitWindow = getUsageMoneyForModel(
-      tokenUsageForLimitWindow,
-      model,
-    );
+    if (!isUsageLimitDisabled()) {
+      assertAtBuildtime(usageLimit !== undefined);
+      const costForLimitWindow = getUsageMoneyForModel(
+        tokenUsageForLimitWindow,
+        model,
+      );
 
-    print.plain(
-      `- ${usageLimit.duration} window: $${getPrettyMoney(costForLimitWindow)} of $${String(usageLimit.dollarAmount)} limit`,
-    );
-  }
-  printNewline();
+      print.plain(
+        `- ${usageLimit.duration} window: ${getPrettyMoney(costForLimitWindow)} of ${String(usageLimit.dollarAmount)} limit`,
+      );
+    }
+  });
 }
 
 export function printTokens() {
@@ -910,11 +921,11 @@ export function printTokens() {
     return "";
   })();
 
-  printNewline();
-  print.doing(`Token count: ${total.toLocaleString()}${contextWindowUsage}`);
-  print.plain(getPrettyTokensByArea());
-  printNewline();
-  printNewline();
+  withSpacing(() => {
+    print.doing(`Token count: ${total.toLocaleString()}${contextWindowUsage}`);
+    print.plain(getPrettyTokensByArea());
+    printNewline();
+  });
 }
 
 export async function spawnAndReadEditorContent(opts?: {
@@ -1039,6 +1050,12 @@ function withSpacingIf(shouldSpace: boolean, cb: () => void) {
   }
 }
 
+function withSpacing(cb: () => void) {
+  printNewline();
+  cb();
+  printNewline();
+}
+
 export function pageEditStr({ isTyped = false }: SpacingOpts = {}) {
   const { editorInputValue } = getState().app;
   if (editorInputValue === null) {
@@ -1091,9 +1108,7 @@ export function pageCustomSlashCommandsStr({
 
 export function printSkills() {
   if (getState().app.skills.length === 0) {
-    printNewline();
-    print.doing("No available skills");
-    printNewline();
+    withSpacing(() => print.doing("No available skills"));
     return;
   }
 
@@ -1107,17 +1122,15 @@ export function printSkills() {
     )
     .join("\n");
 
-  printNewline();
-  print.doing("Available skills:");
-  print.plain(skillsList);
-  printNewline();
+  withSpacing(() => {
+    print.doing("Available skills:");
+    print.plain(skillsList);
+  });
 }
 
 export function printAvailableContextFiles() {
   if (getState().app.contextEntries.length === 0) {
-    printNewline();
-    print.doing("No available context files");
-    printNewline();
+    withSpacing(() => print.doing("No available context files"));
     return;
   }
 
@@ -1133,32 +1146,32 @@ export function printAvailableContextFiles() {
 
   const formatted = contextFiles.concat(contextSkillFiles).join("\n");
 
-  printNewline();
-  print.doing("Available context files:");
-  print.plain(formatted);
-  printNewline();
+  withSpacing(() => {
+    print.doing("Available context files:");
+    print.plain(formatted);
+  });
+}
+
+export function resumeWithNoArgs() {
+  const sessionFiles = listSessionFiles();
+  if (sessionFiles.length === 0) {
+    print.error("No sessions to resume");
+    return null;
+  }
+
+  const sortedSessionFiles = sessionFiles.toSorted(
+    (a, b) => b.timestampMs - a.timestampMs,
+  );
+  const sessionFile = sortedSessionFiles[0];
+  assertAtBuildtime(sessionFile !== undefined);
+
+  const success = resumeFromSessionFile(sessionFile.absolutePath);
+  if (success) return "Continue";
+  return null;
 }
 
 export function resume(rawInput: string) {
   const parts = rawInput.split(/\s+/);
-
-  if (parts.length === 1) {
-    const sessionFiles = listSessionFiles();
-    if (sessionFiles.length === 0) {
-      print.error("No sessions to resume");
-      return null;
-    }
-
-    const sortedSessionFiles = sessionFiles.toSorted(
-      (a, b) => b.timestampMs - a.timestampMs,
-    );
-    const sessionFile = sortedSessionFiles[0];
-    assertAtBuildtime(sessionFile !== undefined);
-
-    const success = resumeFromSessionFile(sessionFile.absolutePath);
-    if (success) return "continue";
-    return null;
-  }
 
   if (parts.length !== 2) {
     print.error("Usage: /resume [session start date]");
@@ -1177,7 +1190,7 @@ export function resume(rawInput: string) {
     if (timestampMs !== Number(sessionStartDate)) continue;
     const success = resumeFromSessionFile(absolutePath);
     if (success) {
-      return "continue";
+      return "Continue";
     }
     return null;
   }
@@ -1189,12 +1202,12 @@ export function resume(rawInput: string) {
 }
 
 export function printKeymaps() {
-  printNewline();
-  print.doing("Keymaps:");
-  for (const [command, keymap] of Object.entries(getState().config.keymaps)) {
-    print.plain(`- ${command}: ${JSON.stringify(keymap)}`);
-  }
-  printNewline();
+  withSpacing(() => {
+    print.doing("Keymaps:");
+    for (const [command, keymap] of Object.entries(getState().config.keymaps)) {
+      print.plain(`- ${command}: ${JSON.stringify(keymap)}`);
+    }
+  });
 }
 
 function getAllPrettyConfig() {
