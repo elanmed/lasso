@@ -526,6 +526,53 @@ would benefit from specialized instructions.
       assert.deepStrictEqual(result, []);
       assert.strictEqual(stripAnsi(getCaptured()), "");
     });
+
+    it("returns the cwd agent file", () => {
+      testFs._files.set("/test-cwd/AGENTS.md", "# Project conventions");
+
+      const result = getContextEntries();
+
+      assert.deepStrictEqual(result, [
+        {
+          filePath: "/test-cwd/AGENTS.md",
+          content: "# Project conventions",
+        },
+      ]);
+    });
+
+    it("returns the global agent file", () => {
+      testFs._files.set(
+        "/fake-home/.config/lasso/context/AGENTS.md",
+        "# Global conventions",
+      );
+
+      const result = getContextEntries();
+
+      assert.deepStrictEqual(result, [
+        {
+          filePath: "/fake-home/.config/lasso/context/AGENTS.md",
+          content: "# Global conventions",
+        },
+      ]);
+    });
+
+    it("combines cwd and global agent files in order", () => {
+      testFs._files.set("/test-cwd/AGENTS.md", "local content");
+      testFs._files.set(
+        "/fake-home/.config/lasso/context/AGENTS.md",
+        "global content",
+      );
+
+      const result = getContextEntries();
+
+      assert.deepStrictEqual(result, [
+        { filePath: "/test-cwd/AGENTS.md", content: "local content" },
+        {
+          filePath: "/fake-home/.config/lasso/context/AGENTS.md",
+          content: "global content",
+        },
+      ]);
+    });
   });
 
   describe("getSkills", () => {
@@ -540,6 +587,192 @@ would benefit from specialized instructions.
         stripAnsi(getCaptured()),
         "Failed to read the agent file at /repo/src/AGENTS.md\n",
       );
+    });
+
+    it("returns skills from skill directories with front matter stripped", () => {
+      testFs._globResults.set("/fake-home/.config/lasso/skills/**/SKILL.md", [
+        "/fake-home/.config/lasso/skills/my-skill/SKILL.md",
+      ]);
+      testFs._files.set(
+        "/fake-home/.config/lasso/skills/my-skill/SKILL.md",
+        `---
+name: my-skill
+description: A test skill
+---
+# Body`,
+      );
+
+      const result = getSkills();
+
+      assert.deepStrictEqual(result, [
+        {
+          name: "my-skill",
+          description: "A test skill",
+          dir: "/fake-home/.config/lasso/skills/my-skill",
+          content: "# Body",
+        },
+      ]);
+    });
+
+    it("returns skills from custom, local, and global dirs in order", () => {
+      actions.setCustomSkillDirs(["/custom/skills"]);
+      testFs._globResults.set("/custom/skills/**/SKILL.md", [
+        "/custom/skills/custom-skill/SKILL.md",
+      ]);
+      testFs._globResults.set("/test-cwd/.lasso/skills/**/SKILL.md", [
+        "/test-cwd/.lasso/skills/local-skill/SKILL.md",
+      ]);
+      testFs._globResults.set("/fake-home/.config/lasso/skills/**/SKILL.md", [
+        "/fake-home/.config/lasso/skills/global-skill/SKILL.md",
+      ]);
+      testFs._files.set(
+        "/custom/skills/custom-skill/SKILL.md",
+        `---
+name: custom-skill
+description: From custom dir
+---
+`,
+      );
+      testFs._files.set(
+        "/test-cwd/.lasso/skills/local-skill/SKILL.md",
+        `---
+name: local-skill
+description: From local dir
+---
+`,
+      );
+      testFs._files.set(
+        "/fake-home/.config/lasso/skills/global-skill/SKILL.md",
+        `---
+name: global-skill
+description: From global dir
+---
+`,
+      );
+
+      const result = getSkills();
+
+      assert.deepStrictEqual(result, [
+        {
+          name: "custom-skill",
+          description: "From custom dir",
+          dir: "/custom/skills/custom-skill",
+          content: "",
+        },
+        {
+          name: "local-skill",
+          description: "From local dir",
+          dir: "/test-cwd/.lasso/skills/local-skill",
+          content: "",
+        },
+        {
+          name: "global-skill",
+          description: "From global dir",
+          dir: "/fake-home/.config/lasso/skills/global-skill",
+          content: "",
+        },
+      ]);
+    });
+
+    it("deduplicates skills by name keeping the first occurrence", () => {
+      testFs._globResults.set("/test-cwd/.lasso/skills/**/SKILL.md", [
+        "/test-cwd/.lasso/skills/deploy/SKILL.md",
+      ]);
+      testFs._globResults.set("/fake-home/.config/lasso/skills/**/SKILL.md", [
+        "/fake-home/.config/lasso/skills/deploy/SKILL.md",
+      ]);
+      testFs._files.set(
+        "/test-cwd/.lasso/skills/deploy/SKILL.md",
+        `---
+name: deploy
+description: Local deploy
+---
+`,
+      );
+      testFs._files.set(
+        "/fake-home/.config/lasso/skills/deploy/SKILL.md",
+        `---
+name: deploy
+description: Global deploy
+---
+`,
+      );
+
+      const result = getSkills();
+
+      assert.deepStrictEqual(result, [
+        {
+          name: "deploy",
+          description: "Local deploy",
+          dir: "/test-cwd/.lasso/skills/deploy",
+          content: "",
+        },
+      ]);
+    });
+
+    it("skips malformed skill files", () => {
+      testFs._globResults.set("/test-cwd/.lasso/skills/**/SKILL.md", [
+        "/test-cwd/.lasso/skills/broken/SKILL.md",
+        "/test-cwd/.lasso/skills/valid/SKILL.md",
+      ]);
+      testFs._files.set(
+        "/test-cwd/.lasso/skills/broken/SKILL.md",
+        "no front matter",
+      );
+      testFs._files.set(
+        "/test-cwd/.lasso/skills/valid/SKILL.md",
+        `---
+name: valid-skill
+description: A valid skill
+---
+`,
+      );
+
+      const result = getSkills();
+
+      assert.deepStrictEqual(result, [
+        {
+          name: "valid-skill",
+          description: "A valid skill",
+          dir: "/test-cwd/.lasso/skills/valid",
+          content: "",
+        },
+      ]);
+    });
+
+    it("converts nested git-tracked agent files into context skills", () => {
+      testFs._gitLsFilesResults.set("**/AGENTS.md", ["/repo/src/AGENTS.md"]);
+      testFs._files.set("/repo/src/AGENTS.md", "# Team conventions");
+
+      const result = getSkills();
+
+      assert.deepStrictEqual(result, [
+        {
+          name: "__lasso-context-for-/repo/src",
+          description: "Context relevant for /repo/src",
+          dir: "/repo/src",
+          content: "# Team conventions",
+        },
+      ]);
+    });
+
+    it("excludes the root agent file from context skills", () => {
+      testFs._gitLsFilesResults.set("**/AGENTS.md", [
+        "AGENTS.md",
+        "/repo/AGENTS.md",
+      ]);
+      testFs._files.set("/repo/AGENTS.md", "# Repo conventions");
+
+      const result = getSkills();
+
+      assert.deepStrictEqual(result, [
+        {
+          name: "__lasso-context-for-/repo",
+          description: "Context relevant for /repo",
+          dir: "/repo",
+          content: "# Repo conventions",
+        },
+      ]);
     });
   });
 
