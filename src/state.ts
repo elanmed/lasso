@@ -69,7 +69,7 @@ interface State {
     debugLog: boolean;
     debugLogPath: string;
     chatHistoryPath: string;
-    sessionPath: string;
+    sessionFilePath: string;
     contextEntries: ContextEntry[];
     contextStr: string;
     globalConfigStr: string;
@@ -116,7 +116,7 @@ const createInitialState = (): State => ({
     debugLog: false,
     debugLogPath: "",
     chatHistoryPath: "",
-    sessionPath: "",
+    sessionFilePath: "",
     contextEntries: [],
     contextStr: "",
     globalConfigStr: "",
@@ -230,10 +230,10 @@ export const actions = {
     );
   },
 
-  setSessionPath(sessionPath: string) {
-    const before = state.app.sessionPath;
-    state.app.sessionPath = sessionPath;
-    logStateChange("set-session-path", before, sessionPath);
+  setSessionFilePath(sessionFilePath: string) {
+    const before = state.app.sessionFilePath;
+    state.app.sessionFilePath = sessionFilePath;
+    logStateChange("set-session-file-path", before, sessionFilePath);
   },
 
   setPromptTokens(tokens: number) {

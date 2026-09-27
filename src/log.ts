@@ -1,8 +1,8 @@
 import { dirname, join } from "node:path";
 import { actions, getState } from "./state.ts";
-import { listChatHistoryFiles, normalizeNewline, tryCatch } from "./utils.ts";
+import { listSessionFiles, normalizeNewline, tryCatch } from "./utils.ts";
 import { fsDeps } from "./deps.ts";
-import { getChatHistoryDir } from "./paths.ts";
+import { getSessionDir } from "./paths.ts";
 import { debugLog as writeDebugLog } from "./debug-log.ts";
 import { print } from "./print.ts";
 
@@ -43,37 +43,33 @@ ${existingContent}
   }
 }
 
-export function initChatHistory() {
-  const chatHistoryDir = getChatHistoryDir();
-  if (!fsDeps.existsSync(chatHistoryDir)) {
+export function initSessionFile() {
+  const sessionDir = getSessionDir();
+  if (!fsDeps.existsSync(sessionDir)) {
     const mkDirResult = tryCatch(() =>
-      fsDeps.mkdirSync(chatHistoryDir, { recursive: true }),
+      fsDeps.mkdirSync(sessionDir, { recursive: true }),
     );
     if (!mkDirResult.ok) {
-      print.warning(`Failed to create the directory: ${chatHistoryDir}`);
+      print.warning(`Failed to create the directory: ${sessionDir}`);
       return;
     }
   }
 
-  const chatHistorySessionPath = join(
-    chatHistoryDir,
-    `chat-history-${getState().app.sessionStartDate.toString()}.md`,
+  const sessionFilePath = join(
+    sessionDir,
+    `session-${getState().app.sessionStartDate.toString()}.json`,
   );
-  actions.setChatHistoryPath(chatHistorySessionPath);
-  const writeResult = tryCatch(() =>
-    fsDeps.writeFileSync(chatHistorySessionPath, ""),
-  );
+  actions.setSessionFilePath(sessionFilePath);
+  const writeResult = tryCatch(() => fsDeps.writeFileSync(sessionFilePath, ""));
   if (!writeResult.ok) {
-    print.warning(
-      `Failed to write the chat history to ${chatHistorySessionPath}`,
-    );
+    print.warning(`Failed to write the session file to ${sessionFilePath}`);
   }
 }
 
-export function deleteExpiredChatHistory() {
-  const chatHistoryFileEntries = listChatHistoryFiles();
+export function deleteExpiredSessionFiles() {
+  const sessionFiles = listSessionFiles();
 
-  for (const { absolutePath, timestampMs } of chatHistoryFileEntries) {
+  for (const { absolutePath, timestampMs } of sessionFiles) {
     const oneDay = 1_000 * 60 * 60 * 24;
     if (timestampMs + oneDay < getState().app.sessionStartDate) {
       tryCatch(() => fsDeps.unlinkSync(absolutePath));
@@ -82,6 +78,6 @@ export function deleteExpiredChatHistory() {
 }
 
 export function initLogs() {
-  deleteExpiredChatHistory();
-  initChatHistory();
+  deleteExpiredSessionFiles();
+  initSessionFile();
 }

@@ -3,8 +3,8 @@ import assert from "node:assert/strict";
 
 import {
   prependToChatHistory,
-  initChatHistory,
-  deleteExpiredChatHistory,
+  initSessionFile,
+  deleteExpiredSessionFiles,
   initLogs,
 } from "./log.ts";
 import { actions, getState } from "./state.ts";
@@ -120,44 +120,44 @@ hello
     });
   });
 
-  describe("initChatHistory", () => {
+  describe("initSessionFile", () => {
     beforeEach(() => {
       mock.restoreAll();
       setupTestContext({ now: 1_234_567_890_000 });
     });
 
     it("creates directory and sets path when directory does not exist", () => {
-      initChatHistory();
+      initSessionFile();
       assert.equal(
-        testFs._dirs.has("/fake-home/.local/state/lasso/history"),
+        testFs._dirs.has("/fake-home/.local/state/lasso/sessions"),
         true,
       );
       assert.equal(
-        getState().app.chatHistoryPath,
-        "/fake-home/.local/state/lasso/history/chat-history-1234567890000.md",
+        getState().app.sessionFilePath,
+        "/fake-home/.local/state/lasso/sessions/session-1234567890000.json",
       );
       assert.equal(
         testFs._files.get(
-          "/fake-home/.local/state/lasso/history/chat-history-1234567890000.md",
+          "/fake-home/.local/state/lasso/sessions/session-1234567890000.json",
         ),
         "",
       );
     });
 
-    it("warns and disables history when mkdir fails", () => {
+    it("warns and leaves the session path empty when mkdir fails", () => {
       mock.method(fsDeps, "existsSync", () => false);
       mock.method(fsDeps, "mkdirSync", () => {
         throw new Error("Permission denied");
       });
       const getCaptured = mockStdout();
 
-      initChatHistory();
+      initSessionFile();
 
       assert.equal(
         stripAnsi(getCaptured()),
-        "Failed to create the directory: /fake-home/.local/state/lasso/history\n",
+        "Failed to create the directory: /fake-home/.local/state/lasso/sessions\n",
       );
-      assert.equal(getState().app.chatHistoryPath, "");
+      assert.equal(getState().app.sessionFilePath, "");
     });
 
     it("warns when the initial write fails", () => {
@@ -166,23 +166,23 @@ hello
       });
       const getCaptured = mockStdout();
 
-      initChatHistory();
+      initSessionFile();
 
       assert.equal(
         stripAnsi(getCaptured()),
-        "Failed to write the chat history to /fake-home/.local/state/lasso/history/chat-history-1234567890000.md\n",
+        "Failed to write the session file to /fake-home/.local/state/lasso/sessions/session-1234567890000.json\n",
       );
     });
 
     it("generates correct log path with session start date", () => {
-      initChatHistory();
+      initSessionFile();
       assert.equal(
-        getState().app.chatHistoryPath,
-        "/fake-home/.local/state/lasso/history/chat-history-1234567890000.md",
+        getState().app.sessionFilePath,
+        "/fake-home/.local/state/lasso/sessions/session-1234567890000.json",
       );
       assert.equal(
         testFs._files.get(
-          "/fake-home/.local/state/lasso/history/chat-history-1234567890000.md",
+          "/fake-home/.local/state/lasso/sessions/session-1234567890000.json",
         ),
         "",
       );
@@ -195,116 +195,116 @@ hello
       setupTestContext({ now: 1_234_567_890_000 });
     });
 
-    it("deletes expired chat history, initializes chat history", () => {
-      testFs._dirs.add("/fake-home/.local/state/lasso/history");
+    it("deletes expired session files, initializes the session file", () => {
+      testFs._dirs.add("/fake-home/.local/state/lasso/sessions");
       testFs._files.set(
-        "/fake-home/.local/state/lasso/history/chat-history-1000000000.md",
+        "/fake-home/.local/state/lasso/sessions/session-1000000000.json",
         "expired",
       );
       initLogs();
 
       assert.equal(
         testFs._files.has(
-          "/fake-home/.local/state/lasso/history/chat-history-1000000000.md",
+          "/fake-home/.local/state/lasso/sessions/session-1000000000.json",
         ),
         false,
       );
       assert.equal(
-        getState().app.chatHistoryPath,
-        "/fake-home/.local/state/lasso/history/chat-history-1234567890000.md",
+        getState().app.sessionFilePath,
+        "/fake-home/.local/state/lasso/sessions/session-1234567890000.json",
       );
     });
   });
 
-  describe("deleteExpiredChatHistory", () => {
+  describe("deleteExpiredSessionFiles", () => {
     beforeEach(() => {
       mock.restoreAll();
       setupTestContext({ now: 1_000_000_000_000 });
     });
 
     it("returns early when directory does not exist", () => {
-      deleteExpiredChatHistory();
+      deleteExpiredSessionFiles();
       assert.equal(
-        testFs._dirs.has("/fake-home/.local/state/lasso/history"),
+        testFs._dirs.has("/fake-home/.local/state/lasso/sessions"),
         false,
       );
     });
 
     it("deletes expired files older than 24 hours", () => {
-      testFs._dirs.add("/fake-home/.local/state/lasso/history");
+      testFs._dirs.add("/fake-home/.local/state/lasso/sessions");
       testFs._files.set(
-        "/fake-home/.local/state/lasso/history/chat-history-999900000000.md",
+        "/fake-home/.local/state/lasso/sessions/session-999900000000.json",
         "old",
       );
-      deleteExpiredChatHistory();
+      deleteExpiredSessionFiles();
       assert.equal(
         testFs._files.has(
-          "/fake-home/.local/state/lasso/history/chat-history-999900000000.md",
+          "/fake-home/.local/state/lasso/sessions/session-999900000000.json",
         ),
         false,
       );
     });
 
     it("keeps files newer than 24 hours", () => {
-      testFs._dirs.add("/fake-home/.local/state/lasso/history");
+      testFs._dirs.add("/fake-home/.local/state/lasso/sessions");
       testFs._files.set(
-        "/fake-home/.local/state/lasso/history/chat-history-999990000000.md",
+        "/fake-home/.local/state/lasso/sessions/session-999990000000.json",
         "new",
       );
-      deleteExpiredChatHistory();
+      deleteExpiredSessionFiles();
       assert.equal(
         testFs._files.has(
-          "/fake-home/.local/state/lasso/history/chat-history-999990000000.md",
+          "/fake-home/.local/state/lasso/sessions/session-999990000000.json",
         ),
         true,
       );
     });
 
     it("skips files without correct format", () => {
-      testFs._dirs.add("/fake-home/.local/state/lasso/history");
+      testFs._dirs.add("/fake-home/.local/state/lasso/sessions");
       testFs._files.set(
-        "/fake-home/.local/state/lasso/history/random-file.log",
+        "/fake-home/.local/state/lasso/sessions/random-file.log",
         "",
       );
       testFs._files.set(
-        "/fake-home/.local/state/lasso/history/other-uuid-123-notimestamp.log",
+        "/fake-home/.local/state/lasso/sessions/other-uuid-123-notimestamp.log",
         "",
       );
       testFs._files.set(
-        "/fake-home/.local/state/lasso/history/prompt-history-uuid-999990000001.log",
+        "/fake-home/.local/state/lasso/sessions/prompt-history-uuid-999990000001.log",
         "",
       );
-      deleteExpiredChatHistory();
+      deleteExpiredSessionFiles();
       assert.equal(
         testFs._files.has(
-          "/fake-home/.local/state/lasso/history/random-file.log",
+          "/fake-home/.local/state/lasso/sessions/random-file.log",
         ),
         true,
       );
       assert.equal(
         testFs._files.has(
-          "/fake-home/.local/state/lasso/history/other-uuid-123-notimestamp.log",
+          "/fake-home/.local/state/lasso/sessions/other-uuid-123-notimestamp.log",
         ),
         true,
       );
       assert.equal(
         testFs._files.has(
-          "/fake-home/.local/state/lasso/history/prompt-history-uuid-999990000001.log",
+          "/fake-home/.local/state/lasso/sessions/prompt-history-uuid-999990000001.log",
         ),
         true,
       );
     });
 
-    it("skips non-chat-history files with 4 parts", () => {
-      testFs._dirs.add("/fake-home/.local/state/lasso/history");
+    it("skips session files with 3 parts", () => {
+      testFs._dirs.add("/fake-home/.local/state/lasso/sessions");
       testFs._files.set(
-        "/fake-home/.local/state/lasso/history/chat-history-uuid-999997600000.md",
+        "/fake-home/.local/state/lasso/sessions/session-uuid-999997600000.json",
         "",
       );
-      deleteExpiredChatHistory();
+      deleteExpiredSessionFiles();
       assert.equal(
         testFs._files.has(
-          "/fake-home/.local/state/lasso/history/chat-history-uuid-999997600000.md",
+          "/fake-home/.local/state/lasso/sessions/session-uuid-999997600000.json",
         ),
         true,
       );

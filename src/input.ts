@@ -16,7 +16,7 @@ import {
   getTempFileName,
   execPromise,
   isExisty,
-  listChatHistoryFiles,
+  listSessionFiles,
   stringify,
   getStrFromAssistantContent,
   markdownFence,
@@ -1131,19 +1131,19 @@ export function resume(rawInput: string) {
   const parts = rawInput.split(/\s+/);
 
   if (parts.length === 1) {
-    const chatHistoryFileEntries = listChatHistoryFiles();
-    if (chatHistoryFileEntries.length === 0) {
+    const sessionFiles = listSessionFiles();
+    if (sessionFiles.length === 0) {
       print.error("No sessions to resume");
       return null;
     }
 
-    const sortedEntries = chatHistoryFileEntries.toSorted(
+    const sortedSessionFiles = sessionFiles.toSorted(
       (a, b) => b.timestampMs - a.timestampMs,
     );
-    const historyEntry = sortedEntries[0];
-    assertAtBuildtime(historyEntry !== undefined);
+    const sessionFile = sortedSessionFiles[0];
+    assertAtBuildtime(sessionFile !== undefined);
 
-    const { absolutePath, timestampMs } = historyEntry;
+    const { absolutePath, timestampMs } = sessionFile;
     const readResult = tryCatch(() =>
       fsDeps.readFileSync(absolutePath).toString(),
     );
@@ -1168,8 +1168,8 @@ export function resume(rawInput: string) {
     return null;
   }
 
-  const chatHistoryFileEntries = listChatHistoryFiles();
-  for (const { absolutePath, timestampMs } of chatHistoryFileEntries) {
+  const sessionFiles = listSessionFiles();
+  for (const { absolutePath, timestampMs } of sessionFiles) {
     if (timestampMs !== Number(sessionStartDate)) continue;
 
     const readResult = tryCatch(() =>

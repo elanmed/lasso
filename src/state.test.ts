@@ -62,7 +62,7 @@ skills body`,
       debugLog: false,
       debugLogPath: "",
       chatHistoryPath: "",
-      sessionPath: "",
+      sessionFilePath: "",
       contextEntries: [],
       contextStr: "",
       globalConfigStr: "",
@@ -272,10 +272,10 @@ skills body`,
     assert.deepStrictEqual(getState().app.transcript, []);
   });
 
-  it("set-session-path", () => {
-    assert.equal(getState().app.sessionPath, "");
-    actions.setSessionPath("/tmp/session.json");
-    assert.equal(getState().app.sessionPath, "/tmp/session.json");
+  it("set-session-file-path", () => {
+    assert.equal(getState().app.sessionFilePath, "");
+    actions.setSessionFilePath("/tmp/session.json");
+    assert.equal(getState().app.sessionFilePath, "/tmp/session.json");
   });
 
   it("set-prompt-tokens", () => {

@@ -5,7 +5,7 @@ import childProcess from "node:child_process";
 import type { AssistantContent, ModelMessage } from "ai";
 import { assertAtRuntime } from "./assert.ts";
 import { fsDeps, processDeps } from "./deps.ts";
-import { getChatHistoryDir } from "./paths.ts";
+import { getSessionDir } from "./paths.ts";
 import type { Color } from "./print.ts";
 
 export type Result<T> = { ok: true; value: T } | { ok: false; error: unknown };
@@ -199,38 +199,38 @@ export function getMaxColLength() {
   return Math.max(processDeps.stdout.getColumns() ?? 80, 1);
 }
 
-interface ChatHistoryEntry {
+interface SessionFile {
   absolutePath: string;
   timestampMs: number;
 }
 
-export function listChatHistoryFiles() {
-  const chatHistoryPath = getChatHistoryDir();
-  if (!fsDeps.existsSync(chatHistoryPath)) return [];
+export function listSessionFiles() {
+  const sessionDir = getSessionDir();
+  if (!fsDeps.existsSync(sessionDir)) return [];
 
-  const chatHistoryFiles: ChatHistoryEntry[] = [];
-  for (const name of fsDeps.readdirSync(chatHistoryPath)) {
-    const fullPath = join(chatHistoryPath, name);
+  const sessionFiles: SessionFile[] = [];
+  for (const name of fsDeps.readdirSync(sessionDir)) {
+    const fullPath = join(sessionDir, name);
     const statResult = tryCatch(() => fsDeps.statSync(fullPath));
     if (!statResult.ok) continue;
     if (!statResult.value.isFile()) continue;
 
     const fileName = basename(name, extname(name));
     const parts = fileName.split("-");
-    if (parts.length !== 3) continue;
-    if (parts[0] !== "chat" || parts[1] !== "history") continue;
+    if (parts.length !== 2) continue;
+    if (parts[0] !== "session") continue;
 
-    const timestampMs = Number(parts[2]);
+    const timestampMs = Number(parts[1]);
     if (Number.isNaN(timestampMs)) continue;
 
-    if (extname(name) !== ".md") continue;
+    if (extname(name) !== ".json") continue;
 
-    chatHistoryFiles.push({
+    sessionFiles.push({
       absolutePath: fullPath,
       timestampMs,
     });
   }
-  return chatHistoryFiles;
+  return sessionFiles;
 }
 
 export function createLockUtils(lockPath: string) {
