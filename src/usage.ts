@@ -247,13 +247,30 @@ interface TokensByArea {
   basePrompt: number;
   skills: number;
 }
+type TokenArea = keyof TokensByArea;
+
+const tokenAreaToPrettyName: Record<TokenArea, string> = {
+  basePrompt: "Base system prompt",
+  context: "Context files",
+  messages: "Chat messages",
+  skills: "Skill descriptions",
+  tools: "Harness and MCP tools",
+};
+
+export function getPrettyTokensByArea() {
+  const tokensByArea = getTokensByArea();
+  const lines = (Object.keys(tokensByArea) as TokenArea[]).map(
+    (area) =>
+      `${tokenAreaToPrettyName[area]}: ${Math.round(tokensByArea[area]).toLocaleString()}`,
+  );
+  return lines.join("\n");
+}
 
 export function getTokensByArea(): TokensByArea {
-  const totalTokensApprox = getCurrentPromptTokens();
   const tokensByAreaApprox: TokensByArea = {
     messages: getApproxTokensFromMessages(getState().app.conversation.messages),
     context: strToApproxTokens(getState().app.contextStr),
-    tools: strToApproxTokens(getState().app.contextStr),
+    tools: strToApproxTokens(getState().app.toolsContentStr),
     basePrompt: strToApproxTokens(baseAgentPrompt),
     skills: strToApproxTokens(getState().app.skillsStr),
   };
@@ -262,17 +279,18 @@ export function getTokensByArea(): TokensByArea {
     return tokensByAreaApprox;
   }
 
-  const realToApproxRatio =
-    getState().app.promptTokens.value / totalTokensApprox;
+  const realTokens = getState().app.promptTokens.value;
+  const approxTotal = getApproxPromptTokens();
+  if (realTokens === 0 || approxTotal === 0) {
+    return tokensByAreaApprox;
+  }
 
-  return Object.fromEntries(
-    Object.entries(tokensByAreaApprox).map(
-      ([area, tokens]): [keyof TokensByArea, number] => [
-        area,
-        tokens * realToApproxRatio,
-      ],
-    ),
-  );
+  const realToApproxRatio = realTokens / approxTotal;
+  const realTokensByArea = { ...tokensByAreaApprox };
+  for (const area of Object.keys(realTokensByArea) as TokenArea[]) {
+    realTokensByArea[area] = realTokensByArea[area] * realToApproxRatio;
+  }
+  return realTokensByArea;
 }
 
 export function orApproxTokens(value: number | undefined, text: string) {

@@ -8,7 +8,9 @@ import {
   getApproxPromptTokens,
   getCurrentPromptTokens,
   getExpiredTime,
+  getPrettyTokensByArea,
   getPromptOverheadTokensApprox,
+  getTokensByArea,
   warnOnLargePromptOverhead,
   isUsageLimitDisabled,
   orApproxTokens,
@@ -964,6 +966,76 @@ describe("getCurrentPromptTokens", () => {
     actions.setPromptTokens(50);
     actions.setPromptTokensDirty(true);
     assert.strictEqual(getCurrentPromptTokens(), 3);
+  });
+});
+
+describe("getTokensByArea", () => {
+  beforeEach(() => {
+    setupTestContext();
+    mock.method(promptDeps, "getSystemContent", () => "");
+    actions.setToolsContentStr("123456789012");
+    actions.setContextStr("123456789");
+    actions.setSkillsStr("1234");
+    actions.appendToConversation({ role: "user", content: "hello" });
+  });
+
+  it("returns the approx areas when the token cache is dirty", () => {
+    actions.setPromptTokensDirty(true);
+    assert.deepStrictEqual(getTokensByArea(), {
+      messages: 11,
+      context: 3,
+      tools: 4,
+      basePrompt: 597,
+      skills: 1,
+    });
+  });
+
+  it("returns the approx areas when the cached token count is zero", () => {
+    assert.deepStrictEqual(getTokensByArea(), {
+      messages: 11,
+      context: 3,
+      tools: 4,
+      basePrompt: 597,
+      skills: 1,
+    });
+  });
+
+  it("scales the areas to the cached token count when clean", () => {
+    actions.setPromptTokens(1500);
+    assert.deepStrictEqual(getTokensByArea(), {
+      messages: 1100,
+      context: 300,
+      tools: 400,
+      basePrompt: 59700,
+      skills: 100,
+    });
+  });
+});
+
+describe("getPrettyTokensByArea", () => {
+  beforeEach(() => {
+    setupTestContext();
+    mock.method(promptDeps, "getSystemContent", () => "");
+    actions.setToolsContentStr("123456789012");
+    actions.setContextStr("123456789");
+    actions.setSkillsStr("1234");
+    actions.appendToConversation({ role: "user", content: "hello" });
+  });
+
+  it("returns each area with its approx count when the cache is dirty", () => {
+    actions.setPromptTokensDirty(true);
+    assert.strictEqual(
+      getPrettyTokensByArea(),
+      `Chat messages: 11\nContext files: 3\nHarness and MCP tools: 4\nBase system prompt: 597\nSkill descriptions: 1`,
+    );
+  });
+
+  it("returns each area scaled to the cached token count when clean", () => {
+    actions.setPromptTokens(1500);
+    assert.strictEqual(
+      getPrettyTokensByArea(),
+      `Chat messages: 1,100\nContext files: 300\nHarness and MCP tools: 400\nBase system prompt: 59,700\nSkill descriptions: 100`,
+    );
   });
 });
 

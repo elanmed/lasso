@@ -25,7 +25,11 @@ import { truncate } from "./text.ts";
 import { print, printNewline, printSessionStartDate } from "./print.ts";
 import { fencePrint, wrapInFence } from "./fence.ts";
 import { getPrettyTokenUsage, getPrettyUsage } from "./usage-format.ts";
-import { getApproxPromptTokens, warnOnLargePromptOverhead } from "./usage.ts";
+import {
+  getApproxPromptTokens,
+  getPrettyTokensByArea,
+  warnOnLargePromptOverhead,
+} from "./usage.ts";
 import { actions, getState } from "./state.ts";
 import { initStateRepeatable } from "./config.ts";
 import { isSameKey, type Key } from "./config-types.ts";
@@ -795,7 +799,10 @@ export function clearCommand() {
 }
 
 export function printUsage() {
-  print.doing(getPrettyUsage());
+  withSpacingUnless(isStreaming(), () => {
+    print.doing(getPrettyUsage());
+    print.plain(getPrettyTokensByArea());
+  });
 }
 
 export async function spawnAndReadEditorContent(opts?: {

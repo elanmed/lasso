@@ -2663,7 +2663,15 @@ Keymaps:
       assert.strictEqual(result, null);
       assert.strictEqual(
         stripAnsi(getCapturedStdout()),
-        "0 tokens in session\n",
+        `
+0 tokens in session
+messages: 0
+context: 0
+tools: 0
+basePrompt: 597\
+skills: 0
+
+`,
       );
     });
 
@@ -2677,7 +2685,33 @@ Keymaps:
       assert.strictEqual(result, null);
       assert.strictEqual(
         stripAnsi(getCapturedStdout()),
-        "0 tokens in session, 50% of context window\n",
+        `
+0 tokens in session, 50% of context window
+messages: 5,000
+context: 0
+tools: 0
+basePrompt: 298,500
+skills: 0
+
+`,
+      );
+    });
+
+    it("handles /usage command without spacing when streaming", async () => {
+      actions.resetStdout();
+      actions.setModel("unknown-model");
+      actions.setApiStreamAbortController(new AbortController());
+      const result = await resolveSlashCommand("/usage");
+      assert.strictEqual(result, null);
+      assert.strictEqual(
+        stripAnsi(getCapturedStdout()),
+        `0 tokens in session
+messages: 0
+context: 0
+tools: 0
+basePrompt: 597
+skills: 0
+`,
       );
     });
 
