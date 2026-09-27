@@ -215,7 +215,7 @@ export function initKeypress() {
             return;
           }
           case "editpage": {
-            pageEditStr({ isTyped: false });
+            pageEditStr();
             redrawPendingQuestion();
             return;
           }
@@ -231,7 +231,7 @@ export function initKeypress() {
             return;
           }
           case "history": {
-            pageHistory({ isTyped: false });
+            pageHistory();
             redrawPendingQuestion();
             return;
           }
@@ -247,27 +247,27 @@ export function initKeypress() {
             return;
           }
           case "contextpage": {
-            pageContextStr({ isTyped: false });
+            pageContextStr();
             redrawPendingQuestion();
             return;
           }
           case "commandspage": {
-            pageCustomSlashCommandsStr({ isTyped: false });
+            pageCustomSlashCommandsStr();
             redrawPendingQuestion();
             return;
           }
           case "lastresponse": {
-            await pageLastResponse({ isTyped: false });
+            await pageLastResponse();
             redrawPendingQuestion();
             return;
           }
           case "lastmessage": {
-            pageLastMessage({ isTyped: false });
+            pageLastMessage();
             redrawPendingQuestion();
             return;
           }
           case "lastdiff": {
-            pageLastDiff({ isTyped: false });
+            pageLastDiff();
             redrawPendingQuestion();
             return;
           }
@@ -277,7 +277,7 @@ export function initKeypress() {
             return;
           }
           case "summaries": {
-            pageSummaries({ isTyped: false });
+            pageSummaries();
             redrawPendingQuestion();
             return;
           }
@@ -598,7 +598,7 @@ async function resolveBuiltinSlashCommand(
       return { handled: true, inputFromCommand: content };
     }
     case "editpage": {
-      pageEditStr();
+      pageEditStr({ isTyped: true });
       return { handled: true, inputFromCommand: null };
     }
     case "paste": {
@@ -613,7 +613,7 @@ async function resolveBuiltinSlashCommand(
       return { handled: true, inputFromCommand: null };
     }
     case "history": {
-      pageHistory();
+      pageHistory({ isTyped: true });
       return { handled: true, inputFromCommand: null };
     }
     case "model": {
@@ -629,7 +629,7 @@ async function resolveBuiltinSlashCommand(
       return { handled: true, inputFromCommand: null };
     }
     case "contextpage": {
-      pageContextStr();
+      pageContextStr({ isTyped: true });
       return { handled: true, inputFromCommand: null };
     }
     case "commands": {
@@ -637,7 +637,7 @@ async function resolveBuiltinSlashCommand(
       return { handled: true, inputFromCommand: null };
     }
     case "commandspage": {
-      pageCustomSlashCommandsStr();
+      pageCustomSlashCommandsStr({ isTyped: true });
 
       return { handled: true, inputFromCommand: null };
     }
@@ -680,15 +680,15 @@ async function resolveBuiltinSlashCommand(
       return { handled: true, inputFromCommand: null };
     }
     case "lastresponse": {
-      await pageLastResponse();
+      await pageLastResponse({ isTyped: true });
       return { handled: true, inputFromCommand: null };
     }
     case "lastmessage": {
-      pageLastMessage();
+      pageLastMessage({ isTyped: true });
       return { handled: true, inputFromCommand: null };
     }
     case "lastdiff": {
-      pageLastDiff();
+      pageLastDiff({ isTyped: true });
       return { handled: true, inputFromCommand: null };
     }
     case "messages": {
@@ -696,7 +696,7 @@ async function resolveBuiltinSlashCommand(
       return { handled: true, inputFromCommand: null };
     }
     case "summaries": {
-      pageSummaries();
+      pageSummaries({ isTyped: true });
       return { handled: true, inputFromCommand: null };
     }
     default: {
@@ -962,10 +962,11 @@ export function setModelCommand(rawInput: string) {
   warnOnLargePromptOverhead();
 }
 
-export function pageContextStr({ isTyped = true }: SpacingOpts = {}) {
+export function pageContextStr({ isTyped = false }: SpacingOpts = {}) {
   if (getState().app.contextEntries.length === 0) {
-    withSpacingIf(isSettled() && isTyped, () =>
-      print.doing("No available context files"),
+    withSpacingIf(
+      getState().abortControllers.apiStream === null && isTyped,
+      () => print.doing("No available context files"),
     );
     return;
   }
@@ -976,10 +977,6 @@ export function pageContextStr({ isTyped = true }: SpacingOpts = {}) {
     initialContentStr,
     contentType: "markdown",
   });
-}
-
-function isSettled() {
-  return getState().abortControllers.apiStream === null;
 }
 
 export interface SpacingOpts {
@@ -996,10 +993,13 @@ function withSpacingIf(shouldSpace: boolean, cb: () => void) {
   }
 }
 
-export function pageEditStr({ isTyped = true }: SpacingOpts = {}) {
+export function pageEditStr({ isTyped = false }: SpacingOpts = {}) {
   const { editorInputValue } = getState().app;
   if (editorInputValue === null) {
-    withSpacingIf(isSettled() && isTyped, () => print.doing("Editor is empty"));
+    withSpacingIf(
+      getState().abortControllers.apiStream === null && isTyped,
+      () => print.doing("Editor is empty"),
+    );
     return;
   }
 
@@ -1025,11 +1025,12 @@ ${getAvailableCommandsStr()}`;
 }
 
 export function pageCustomSlashCommandsStr({
-  isTyped = true,
+  isTyped = false,
 }: SpacingOpts = {}) {
   if (getState().app.slashCommands.length === 0) {
-    withSpacingIf(isSettled() && isTyped, () =>
-      print.doing("No available custom slash commands"),
+    withSpacingIf(
+      getState().abortControllers.apiStream === null && isTyped,
+      () => print.doing("No available custom slash commands"),
     );
     return;
   }
@@ -1351,13 +1352,16 @@ export function initGlobalConfig() {
   print.info(`Created the global config at ${path}`);
 }
 
-export function pageHistory({ isTyped = true }: SpacingOpts = {}) {
+export function pageHistory({ isTyped = false }: SpacingOpts = {}) {
   const path = getState().app.chatHistoryPath;
   const readResult = tryCatch(() => fsDeps.readFileSync(path).toString());
   const historyStr = readResult.ok ? readResult.value : "";
 
   if (historyStr.length === 0) {
-    withSpacingIf(isSettled() && isTyped, () => print.doing("No chat history"));
+    withSpacingIf(
+      getState().abortControllers.apiStream === null && isTyped,
+      () => print.doing("No chat history"),
+    );
     return;
   }
 
@@ -1371,20 +1375,26 @@ ${historyStr}`;
   });
 }
 
-export async function pageLastResponse({ isTyped = true }: SpacingOpts = {}) {
+export async function pageLastResponse({ isTyped = false }: SpacingOpts = {}) {
   const { messages } = getState().app.conversation;
   const lastMessage = messages.findLast(
     (message) => message.role === "assistant",
   );
 
   if (lastMessage == undefined) {
-    withSpacingIf(isSettled() && isTyped, () => print.doing("No llm messages"));
+    withSpacingIf(
+      getState().abortControllers.apiStream === null && isTyped,
+      () => print.doing("No llm messages"),
+    );
     return;
   }
 
   const contentStr = getStrFromAssistantContent(lastMessage.content);
   if (contentStr.length === 0) {
-    withSpacingIf(isSettled() && isTyped, () => print.doing("No llm messages"));
+    withSpacingIf(
+      getState().abortControllers.apiStream === null && isTyped,
+      () => print.doing("No llm messages"),
+    );
     return;
   }
 
@@ -1400,13 +1410,14 @@ ${formattedContentStr}`;
   });
 }
 
-export function pageLastMessage({ isTyped = true }: SpacingOpts = {}) {
+export function pageLastMessage({ isTyped = false }: SpacingOpts = {}) {
   const { messages } = getState().app.conversation;
   const lastMessage = messages.findLast((message) => message.role === "user");
 
   if (lastMessage == undefined) {
-    withSpacingIf(isSettled() && isTyped, () =>
-      print.doing("No user messages"),
+    withSpacingIf(
+      getState().abortControllers.apiStream === null && isTyped,
+      () => print.doing("No user messages"),
     );
     return;
   }
@@ -1415,8 +1426,9 @@ export function pageLastMessage({ isTyped = true }: SpacingOpts = {}) {
   assertAtBuildtime(typeof contentStr === "string");
 
   if (contentStr.length === 0) {
-    withSpacingIf(isSettled() && isTyped, () =>
-      print.doing("No user messages"),
+    withSpacingIf(
+      getState().abortControllers.apiStream === null && isTyped,
+      () => print.doing("No user messages"),
     );
     return;
   }
@@ -1442,10 +1454,11 @@ ${stringify(getState().app.conversation.messages.toReversed())}`;
   });
 }
 
-export function pageSummaries({ isTyped = true }: SpacingOpts = {}) {
+export function pageSummaries({ isTyped = false }: SpacingOpts = {}) {
   if (getState().app.conversation.summaries.length === 0) {
-    withSpacingIf(isSettled() && isTyped, () =>
-      print.doing("No conversation summaries"),
+    withSpacingIf(
+      getState().abortControllers.apiStream === null && isTyped,
+      () => print.doing("No conversation summaries"),
     );
     return;
   }
@@ -1472,12 +1485,13 @@ ${summariesStr}`;
   });
 }
 
-export function pageLastDiff({ isTyped = true }: SpacingOpts = {}) {
+export function pageLastDiff({ isTyped = false }: SpacingOpts = {}) {
   const { toolEditDiffs } = getState().app;
 
   if (toolEditDiffs.length === 0) {
-    withSpacingIf(isSettled() && isTyped, () =>
-      print.doing("No diffs from the last turn"),
+    withSpacingIf(
+      getState().abortControllers.apiStream === null && isTyped,
+      () => print.doing("No diffs from the last turn"),
     );
     return;
   }

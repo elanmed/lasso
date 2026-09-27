@@ -1275,7 +1275,7 @@ transcript content`,
     });
 
     it("prints no available context files when entries list is empty", () => {
-      pageContextStr();
+      pageContextStr({ isTyped: true });
       assert.strictEqual(
         stripAnsi(getCapturedStdout()),
         "\nNo available context files\n\n",
@@ -1283,7 +1283,7 @@ transcript content`,
     });
 
     it("does not add spacing when isTyped is false", () => {
-      pageContextStr({ isTyped: false });
+      pageContextStr();
       assert.strictEqual(
         stripAnsi(getCapturedStdout()),
         "No available context files\n",
@@ -1332,7 +1332,7 @@ transcript content`,
     });
 
     it("prints that history is empty when the chat history file does not exist", () => {
-      pageHistory();
+      pageHistory({ isTyped: true });
       assert.strictEqual(
         stripAnsi(getCapturedStdout()),
         "\nNo chat history\n\n",
@@ -1341,7 +1341,7 @@ transcript content`,
 
     it("prints that history is empty when the chat history file is empty", () => {
       testFs._files.set("/tmp/test-history.log", "");
-      pageHistory();
+      pageHistory({ isTyped: true });
       assert.strictEqual(
         stripAnsi(getCapturedStdout()),
         "\nNo chat history\n\n",
@@ -1349,7 +1349,7 @@ transcript content`,
     });
 
     it("does not add spacing when isTyped is false", () => {
-      pageHistory({ isTyped: false });
+      pageHistory();
       assert.strictEqual(stripAnsi(getCapturedStdout()), "No chat history\n");
     });
 
@@ -1383,7 +1383,7 @@ log content
     });
 
     it("prints no messages when there is no assistant response", async () => {
-      await pageLastResponse();
+      await pageLastResponse({ isTyped: true });
       assert.strictEqual(
         stripAnsi(getCapturedStdout()),
         "\nNo llm messages\n\n",
@@ -1391,7 +1391,7 @@ log content
     });
 
     it("does not add spacing when isTyped is false", async () => {
-      await pageLastResponse({ isTyped: false });
+      await pageLastResponse();
       assert.strictEqual(stripAnsi(getCapturedStdout()), "No llm messages\n");
     });
 
@@ -1435,7 +1435,7 @@ second
     });
 
     it("prints no messages when there is no user message", () => {
-      pageLastMessage();
+      pageLastMessage({ isTyped: true });
       assert.strictEqual(
         stripAnsi(getCapturedStdout()),
         "\nNo user messages\n\n",
@@ -1443,7 +1443,7 @@ second
     });
 
     it("does not add spacing when isTyped is false", () => {
-      pageLastMessage({ isTyped: false });
+      pageLastMessage();
       assert.strictEqual(stripAnsi(getCapturedStdout()), "No user messages\n");
     });
 
@@ -1487,7 +1487,7 @@ latest question
     });
 
     it("prints no diffs when there are no diffs", () => {
-      pageLastDiff();
+      pageLastDiff({ isTyped: true });
       assert.strictEqual(
         stripAnsi(getCapturedStdout()),
         "\nNo diffs from the last turn\n\n",
@@ -1495,7 +1495,7 @@ latest question
     });
 
     it("does not add spacing when isTyped is false", () => {
-      pageLastDiff({ isTyped: false });
+      pageLastDiff();
       assert.strictEqual(
         stripAnsi(getCapturedStdout()),
         "No diffs from the last turn\n",
@@ -1623,7 +1623,7 @@ older summary
     });
 
     it("prints a message when there are no conversation summaries", () => {
-      pageSummaries();
+      pageSummaries({ isTyped: true });
 
       assert.strictEqual(
         stripAnsi(getCapturedStdout()),
@@ -1633,7 +1633,7 @@ older summary
     });
 
     it("does not add spacing when isTyped is false", () => {
-      pageSummaries({ isTyped: false });
+      pageSummaries();
       assert.strictEqual(
         stripAnsi(getCapturedStdout()),
         "No conversation summaries\n",
@@ -1657,7 +1657,7 @@ older summary
     });
 
     it("prints that the editor is empty when editor input is null", () => {
-      pageEditStr();
+      pageEditStr({ isTyped: true });
       assert.strictEqual(
         stripAnsi(getCapturedStdout()),
         "\nEditor is empty\n\n",
@@ -1665,7 +1665,7 @@ older summary
     });
 
     it("does not add spacing when isTyped is false", () => {
-      pageEditStr({ isTyped: false });
+      pageEditStr();
       assert.strictEqual(stripAnsi(getCapturedStdout()), "Editor is empty\n");
     });
 
@@ -1701,7 +1701,7 @@ editor input
     });
 
     it("prints no available custom slash commands when list is empty", () => {
-      pageCustomSlashCommandsStr();
+      pageCustomSlashCommandsStr({ isTyped: true });
       assert.strictEqual(
         stripAnsi(getCapturedStdout()),
         "\nNo available custom slash commands\n\n",
@@ -1709,7 +1709,7 @@ editor input
     });
 
     it("does not add spacing when isTyped is false", () => {
-      pageCustomSlashCommandsStr({ isTyped: false });
+      pageCustomSlashCommandsStr();
       assert.strictEqual(
         stripAnsi(getCapturedStdout()),
         "No available custom slash commands\n",
