@@ -1647,7 +1647,7 @@ hello
     await initState();
     assert.strictEqual(
       getState().app.debugLogPath,
-      "/fake-home/.config/lasso/debug/debug-test-uuid.log",
+      "/fake-home/.local/state/lasso/debug/debug-test-uuid.log",
     );
   });
 

@@ -1187,13 +1187,13 @@ Token count: 621 (0% of context window)
 
     it("resumes the most recent session when no date is provided", () => {
       actions.appendToConversation({ role: "user", content: "hello" });
-      testFs._dirs.add("/fake-home/.config/lasso/history");
+      testFs._dirs.add("/fake-home/.local/state/lasso/history");
       testFs._files.set(
-        "/fake-home/.config/lasso/history/chat-history-1234567890000.md",
+        "/fake-home/.local/state/lasso/history/chat-history-1234567890000.md",
         "older transcript",
       );
       testFs._files.set(
-        "/fake-home/.config/lasso/history/chat-history-1234567899999.md",
+        "/fake-home/.local/state/lasso/history/chat-history-1234567899999.md",
         "newer transcript",
       );
 
@@ -1215,9 +1215,9 @@ newer transcript`,
 
     it("returns transcript and resets message params when conversation is found", () => {
       actions.appendToConversation({ role: "user", content: "hello" });
-      testFs._dirs.add("/fake-home/.config/lasso/history");
+      testFs._dirs.add("/fake-home/.local/state/lasso/history");
       testFs._files.set(
-        "/fake-home/.config/lasso/history/chat-history-1234567890000.md",
+        "/fake-home/.local/state/lasso/history/chat-history-1234567890000.md",
         "transcript content",
       );
       const result = resume("/resume 1234567890000");
@@ -1240,9 +1240,9 @@ transcript content`,
     });
 
     it("prints error when no conversation is found", () => {
-      testFs._dirs.add("/fake-home/.config/lasso/history");
+      testFs._dirs.add("/fake-home/.local/state/lasso/history");
       testFs._files.set(
-        "/fake-home/.config/lasso/history/chat-history-9999999999999.md",
+        "/fake-home/.local/state/lasso/history/chat-history-9999999999999.md",
         "transcript content",
       );
       const result = resume("/resume 1234567890000");
@@ -1254,9 +1254,9 @@ transcript content`,
     });
 
     it("skips files that do not match the chat-history format", () => {
-      testFs._dirs.add("/fake-home/.config/lasso/history");
+      testFs._dirs.add("/fake-home/.local/state/lasso/history");
       testFs._files.set(
-        "/fake-home/.config/lasso/history/other-1234567890000.md",
+        "/fake-home/.local/state/lasso/history/other-1234567890000.md",
         "other",
       );
       const result = resume("/resume 1234567890000");
@@ -2715,9 +2715,9 @@ Token count: 602 (0% of context window)
     });
 
     it("handles /resume with a session start date", async () => {
-      testFs._dirs.add("/fake-home/.config/lasso/history");
+      testFs._dirs.add("/fake-home/.local/state/lasso/history");
       testFs._files.set(
-        "/fake-home/.config/lasso/history/chat-history-1234567890000.md",
+        "/fake-home/.local/state/lasso/history/chat-history-1234567890000.md",
         "transcript content",
       );
       const result = await resolveSlashCommand("/resume 1234567890000");

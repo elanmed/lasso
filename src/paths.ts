@@ -8,16 +8,24 @@ export function getGlobalConfigDir() {
   return join(os.homedir(), ".config", "lasso");
 }
 
+export function getStateDir() {
+  const stateHome = processDeps.env.get("XDG_STATE_HOME");
+  if (stateHome !== undefined) return join(stateHome, "lasso");
+  return join(os.homedir(), ".local", "state", "lasso");
+}
+
+export function getDataDir() {
+  const dataHome = processDeps.env.get("XDG_DATA_HOME");
+  if (dataHome !== undefined) return join(dataHome, "lasso");
+  return join(os.homedir(), ".local", "share", "lasso");
+}
+
 export function getLocalConfigDir() {
   return join(processDeps.cwd(), ".lasso");
 }
 
 export function getGlobalConfigPath() {
   return join(getGlobalConfigDir(), "settings.yaml");
-}
-
-export function getDebugLogDir() {
-  return join(getGlobalConfigDir(), "debug");
 }
 
 export function getLocalConfigPath() {
@@ -45,13 +53,17 @@ export function getGlobalSlashCommandDir() {
 }
 
 export function getChatHistoryDir() {
-  return join(getGlobalConfigDir(), "history");
+  return join(getStateDir(), "history");
+}
+
+export function getDebugLogDir() {
+  return join(getStateDir(), "debug");
 }
 
 export function getUsageLogPath() {
-  return join(getGlobalConfigDir(), "usage.json");
+  return join(getDataDir(), "usage.json");
 }
 
 export function getUsageLogLockPath() {
-  return join(getGlobalConfigDir(), "usage.lock");
+  return join(getDataDir(), "usage.lock");
 }

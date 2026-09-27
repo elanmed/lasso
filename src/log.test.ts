@@ -111,14 +111,17 @@ hello
 
     it("creates directory and sets path when directory does not exist", () => {
       initChatHistory();
-      assert.equal(testFs._dirs.has("/fake-home/.config/lasso/history"), true);
+      assert.equal(
+        testFs._dirs.has("/fake-home/.local/state/lasso/history"),
+        true,
+      );
       assert.equal(
         getState().app.chatHistoryPath,
-        "/fake-home/.config/lasso/history/chat-history-1234567890000.md",
+        "/fake-home/.local/state/lasso/history/chat-history-1234567890000.md",
       );
       assert.equal(
         testFs._files.get(
-          "/fake-home/.config/lasso/history/chat-history-1234567890000.md",
+          "/fake-home/.local/state/lasso/history/chat-history-1234567890000.md",
         ),
         "",
       );
@@ -135,7 +138,7 @@ hello
 
       assert.equal(
         stripAnsi(getCaptured()),
-        "Failed to create the directory: /fake-home/.config/lasso/history\n",
+        "Failed to create the directory: /fake-home/.local/state/lasso/history\n",
       );
       assert.equal(getState().app.chatHistoryPath, "");
     });
@@ -144,11 +147,11 @@ hello
       initChatHistory();
       assert.equal(
         getState().app.chatHistoryPath,
-        "/fake-home/.config/lasso/history/chat-history-1234567890000.md",
+        "/fake-home/.local/state/lasso/history/chat-history-1234567890000.md",
       );
       assert.equal(
         testFs._files.get(
-          "/fake-home/.config/lasso/history/chat-history-1234567890000.md",
+          "/fake-home/.local/state/lasso/history/chat-history-1234567890000.md",
         ),
         "",
       );
@@ -163,79 +166,87 @@ hello
 
     it("returns early when directory does not exist", () => {
       deleteExpiredChatHistory();
-      assert.equal(testFs._dirs.has("/fake-home/.config/lasso/history"), false);
+      assert.equal(
+        testFs._dirs.has("/fake-home/.local/state/lasso/history"),
+        false,
+      );
     });
 
     it("deletes expired files older than 24 hours", () => {
-      testFs._dirs.add("/fake-home/.config/lasso/history");
+      testFs._dirs.add("/fake-home/.local/state/lasso/history");
       testFs._files.set(
-        "/fake-home/.config/lasso/history/chat-history-999900000000.md",
+        "/fake-home/.local/state/lasso/history/chat-history-999900000000.md",
         "old",
       );
       deleteExpiredChatHistory();
       assert.equal(
         testFs._files.has(
-          "/fake-home/.config/lasso/history/chat-history-999900000000.md",
+          "/fake-home/.local/state/lasso/history/chat-history-999900000000.md",
         ),
         false,
       );
     });
 
     it("keeps files newer than 24 hours", () => {
-      testFs._dirs.add("/fake-home/.config/lasso/history");
+      testFs._dirs.add("/fake-home/.local/state/lasso/history");
       testFs._files.set(
-        "/fake-home/.config/lasso/history/chat-history-999990000000.md",
+        "/fake-home/.local/state/lasso/history/chat-history-999990000000.md",
         "new",
       );
       deleteExpiredChatHistory();
       assert.equal(
         testFs._files.has(
-          "/fake-home/.config/lasso/history/chat-history-999990000000.md",
+          "/fake-home/.local/state/lasso/history/chat-history-999990000000.md",
         ),
         true,
       );
     });
 
     it("skips files without correct format", () => {
-      testFs._dirs.add("/fake-home/.config/lasso/history");
-      testFs._files.set("/fake-home/.config/lasso/history/random-file.log", "");
+      testFs._dirs.add("/fake-home/.local/state/lasso/history");
       testFs._files.set(
-        "/fake-home/.config/lasso/history/other-uuid-123-notimestamp.log",
+        "/fake-home/.local/state/lasso/history/random-file.log",
         "",
       );
       testFs._files.set(
-        "/fake-home/.config/lasso/history/prompt-history-uuid-999990000001.log",
+        "/fake-home/.local/state/lasso/history/other-uuid-123-notimestamp.log",
+        "",
+      );
+      testFs._files.set(
+        "/fake-home/.local/state/lasso/history/prompt-history-uuid-999990000001.log",
         "",
       );
       deleteExpiredChatHistory();
       assert.equal(
-        testFs._files.has("/fake-home/.config/lasso/history/random-file.log"),
-        true,
-      );
-      assert.equal(
         testFs._files.has(
-          "/fake-home/.config/lasso/history/other-uuid-123-notimestamp.log",
+          "/fake-home/.local/state/lasso/history/random-file.log",
         ),
         true,
       );
       assert.equal(
         testFs._files.has(
-          "/fake-home/.config/lasso/history/prompt-history-uuid-999990000001.log",
+          "/fake-home/.local/state/lasso/history/other-uuid-123-notimestamp.log",
+        ),
+        true,
+      );
+      assert.equal(
+        testFs._files.has(
+          "/fake-home/.local/state/lasso/history/prompt-history-uuid-999990000001.log",
         ),
         true,
       );
     });
 
     it("skips non-chat-history files with 4 parts", () => {
-      testFs._dirs.add("/fake-home/.config/lasso/history");
+      testFs._dirs.add("/fake-home/.local/state/lasso/history");
       testFs._files.set(
-        "/fake-home/.config/lasso/history/chat-history-uuid-999997600000.md",
+        "/fake-home/.local/state/lasso/history/chat-history-uuid-999997600000.md",
         "",
       );
       deleteExpiredChatHistory();
       assert.equal(
         testFs._files.has(
-          "/fake-home/.config/lasso/history/chat-history-uuid-999997600000.md",
+          "/fake-home/.local/state/lasso/history/chat-history-uuid-999997600000.md",
         ),
         true,
       );
