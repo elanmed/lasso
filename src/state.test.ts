@@ -53,6 +53,7 @@ skills body`,
   const assertInitialState = () => {
     assert.deepStrictEqual(getState().app, {
       conversation: { summaries: [], messages: [] },
+      conversationHistory: [],
       promptTokens: { value: 0, dirty: false },
       editorInputValue: null,
       slashCommands: [],
@@ -227,6 +228,34 @@ skills body`,
       assert.equal(second.role, "assistant");
       assert.equal(getState().app.promptTokens.value, 0);
     });
+  });
+
+  describe("append-to-conversation-history", () => {
+    it("appends a single entry", () => {
+      assert.deepStrictEqual(getState().app.conversationHistory, []);
+      actions.appendToConversationHistory({
+        timestamp: 42,
+        message: "hello",
+      });
+      assert.deepStrictEqual(getState().app.conversationHistory, [
+        { timestamp: 42, message: "hello" },
+      ]);
+    });
+
+    it("appends multiple entries in order", () => {
+      actions.appendToConversationHistory({ timestamp: 1, message: "first" });
+      actions.appendToConversationHistory({ timestamp: 2, message: "second" });
+      assert.deepStrictEqual(getState().app.conversationHistory, [
+        { timestamp: 1, message: "first" },
+        { timestamp: 2, message: "second" },
+      ]);
+    });
+  });
+
+  it("reset-conversation-history", () => {
+    actions.appendToConversationHistory({ timestamp: 1, message: "first" });
+    actions.resetConversationHistory();
+    assert.deepStrictEqual(getState().app.conversationHistory, []);
   });
 
   it("set-prompt-tokens", () => {

@@ -37,6 +37,11 @@ export interface ToolEditDiff {
   diffStdout: string;
 }
 
+export interface ConversationHistoryEntry {
+  timestamp: number;
+  message: string;
+}
+
 export type MCPToolSet = Awaited<ReturnType<MCPClient["tools"]>>;
 
 export interface McpState {
@@ -51,6 +56,7 @@ interface State {
       messages: ModelMessage[];
       summaries: ModelSummary[];
     };
+    conversationHistory: ConversationHistoryEntry[];
     promptTokens: {
       value: number;
       dirty: boolean;
@@ -96,6 +102,7 @@ const createInitialState = (): State => ({
       messages: [],
       summaries: [],
     },
+    conversationHistory: [],
     promptTokens: {
       value: 0,
       dirty: false,
@@ -197,6 +204,26 @@ export const actions = {
       "append-to-conversation",
       String(before),
       String(state.app.conversation.messages.length),
+    );
+  },
+
+  appendToConversationHistory(entry: ConversationHistoryEntry) {
+    const before = state.app.conversationHistory.length;
+    state.app.conversationHistory.push(entry);
+    logStateChange(
+      "append-to-conversation-history",
+      String(before),
+      String(state.app.conversationHistory.length),
+    );
+  },
+
+  resetConversationHistory() {
+    const before = state.app.conversationHistory.length;
+    state.app.conversationHistory = [];
+    logStateChange(
+      "reset-conversation-history",
+      String(before),
+      String(state.app.conversationHistory.length),
     );
   },
 
