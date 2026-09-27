@@ -1,7 +1,12 @@
 import { describe, it, beforeEach, afterEach, mock } from "node:test";
 import assert from "node:assert";
 import type { MCPClient } from "@ai-sdk/mcp";
-import { actions, getState, promptDeps } from "./state.ts";
+import {
+  ConversationLogEntrySchema,
+  actions,
+  getState,
+  promptDeps,
+} from "./state.ts";
 import { baseAgentPrompt } from "./prompts.ts";
 import { stringify } from "./utils.ts";
 import { defaultConfig } from "./config-types.ts";
@@ -259,6 +264,19 @@ skills body`,
         { timestamp: 1, role: "user", message: "first" },
         { timestamp: 2, role: "assistant", message: "second" },
       ]);
+    });
+  });
+
+  describe("ConversationLogEntrySchema", () => {
+    it("parses a valid entry", () => {
+      assert.deepStrictEqual(
+        ConversationLogEntrySchema.parse({
+          timestamp: 42,
+          role: "user",
+          message: "hello",
+        }),
+        { timestamp: 42, role: "user", message: "hello" },
+      );
     });
   });
 

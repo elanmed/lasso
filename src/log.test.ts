@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 
 import {
   prependToChatHistory,
+  appendToConversationLog,
   initChatHistory,
   initConversationLog,
   deleteExpiredChatHistory,
@@ -102,6 +103,115 @@ hello
 ---
 
 `,
+      );
+    });
+  });
+
+  describe("appendToConversationLog", () => {
+    beforeEach(() => {
+      mock.restoreAll();
+      setupTestContext({ now: 1_700_000_000_000 });
+    });
+
+    it("creates directory when log file does not exist", () => {
+      actions.setConversationLogPath("/test/conversation-log.json");
+      appendToConversationLog("test message", "user");
+      assert.equal(testFs._dirs.has("/test"), true);
+      assert.equal(testFs._files.has("/test/conversation-log.json"), false);
+    });
+
+    it("warns and skips writing when mkdir fails", () => {
+      actions.setConversationLogPath("/test/conversation-log.json");
+      mock.method(fsDeps, "existsSync", () => false);
+      mock.method(fsDeps, "mkdirSync", () => {
+        throw new Error("Permission denied");
+      });
+      const getCaptured = mockStdout();
+
+      appendToConversationLog("test message", "user");
+
+      assert.equal(
+        stripAnsi(getCaptured()),
+        "Failed to create the directory: /test\n",
+      );
+      assert.equal(testFs._files.has("/test/conversation-log.json"), false);
+    });
+
+    it("appends entry as json with timestamp, role, and message", () => {
+      actions.setConversationLogPath("/test/conversation-log.json");
+      testFs._files.set("/test/conversation-log.json", "[]");
+      appendToConversationLog("test message", "user");
+      assert.equal(
+        testFs._files.get("/test/conversation-log.json"),
+        '[{"timestamp":1700000000000,"role":"user","message":"test message"}]',
+      );
+    });
+
+    it("appends multiple entries in order", () => {
+      actions.setConversationLogPath("/test/conversation-log.json");
+      testFs._files.set("/test/conversation-log.json", "[]");
+      appendToConversationLog("first", "user");
+      appendToConversationLog("second", "assistant");
+      assert.equal(
+        testFs._files.get("/test/conversation-log.json"),
+        '[{"timestamp":1700000000000,"role":"user","message":"first"},{"timestamp":1700000000000,"role":"assistant","message":"second"}]',
+      );
+    });
+
+    it("warns when the log file cannot be read", () => {
+      actions.setConversationLogPath("/test/conversation-log.json");
+      mock.method(fsDeps, "readFileSync", () => {
+        throw new Error("Permission denied");
+      });
+      const getCaptured = mockStdout();
+
+      appendToConversationLog("test message", "user");
+
+      assert.equal(
+        stripAnsi(getCaptured()),
+        "Failed to read the conversation log at /test/conversation-log.json\n",
+      );
+    });
+
+    it("warns when the log file contains invalid json", () => {
+      actions.setConversationLogPath("/test/conversation-log.json");
+      testFs._files.set("/test/conversation-log.json", "not-json");
+      const getCaptured = mockStdout();
+
+      appendToConversationLog("test message", "user");
+
+      assert.equal(
+        stripAnsi(getCaptured()),
+        "Failed to parse the conversation log at /test/conversation-log.json\n",
+      );
+    });
+
+    it("warns when the log file has an invalid format", () => {
+      actions.setConversationLogPath("/test/conversation-log.json");
+      testFs._files.set("/test/conversation-log.json", '{"entries": []}');
+      const getCaptured = mockStdout();
+
+      appendToConversationLog("test message", "user");
+
+      assert.equal(
+        stripAnsi(getCaptured()),
+        "Invalid conversation log format at /test/conversation-log.json\n",
+      );
+    });
+
+    it("warns when writing fails", () => {
+      actions.setConversationLogPath("/test/conversation-log.json");
+      testFs._files.set("/test/conversation-log.json", "[]");
+      mock.method(fsDeps, "writeFileSync", () => {
+        throw new Error("Permission denied");
+      });
+      const getCaptured = mockStdout();
+
+      appendToConversationLog("test message", "user");
+
+      assert.equal(
+        stripAnsi(getCaptured()),
+        "Failed to write the conversation log to /test/conversation-log.json\n",
       );
     });
   });

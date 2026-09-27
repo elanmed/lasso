@@ -1,5 +1,11 @@
 import { dirname, join } from "node:path";
-import { actions, getState } from "./state.ts";
+import { z } from "zod";
+import {
+  type ConversationLogEntry,
+  ConversationLogEntrySchema,
+  actions,
+  getState,
+} from "./state.ts";
 import {
   listChatHistoryFiles,
   listConversationLogFiles,
@@ -41,6 +47,55 @@ ${existingContent}
 `;
 
   tryCatch(() => fsDeps.writeFileSync(path, newChatHistory));
+}
+
+export function appendToConversationLog(
+  content: string,
+  role: "user" | "assistant",
+) {
+  const path = getState().app.conversationLogPath;
+  const dir = dirname(path);
+  if (!fsDeps.existsSync(dir)) {
+    const mkdirResult = tryCatch(() =>
+      fsDeps.mkdirSync(dir, { recursive: true }),
+    );
+    if (!mkdirResult.ok) {
+      print.warning(`Failed to create the directory: ${dir}`);
+      return;
+    }
+  }
+
+  const readResult = tryCatch(() => fsDeps.readFileSync(path).toString());
+  if (!readResult.ok) {
+    print.warning(`Failed to read the conversation log at ${path}`);
+    return;
+  }
+  const jsonResult = tryCatch((): unknown => JSON.parse(readResult.value));
+  if (!jsonResult.ok) {
+    print.warning(`Failed to parse the conversation log at ${path}`);
+    return;
+  }
+
+  const parseResult = tryCatch(() =>
+    z.array(ConversationLogEntrySchema).parse(jsonResult.value),
+  );
+  if (!parseResult.ok) {
+    print.warning(`Invalid conversation log format at ${path}`);
+    return;
+  }
+
+  const entry: ConversationLogEntry = {
+    timestamp: Date.now(),
+    role,
+    message: content,
+  };
+
+  parseResult.value.push(entry);
+  const newContent = JSON.stringify(parseResult.value);
+  const writeResult = tryCatch(() => fsDeps.writeFileSync(path, newContent));
+  if (!writeResult.ok) {
+    print.warning(`Failed to write the conversation log to ${path}`);
+  }
 }
 
 export function initChatHistory() {
