@@ -51,6 +51,14 @@ ${existingContent}
   }
 }
 
+export function getAppendedConversationMessages(...messages: ModelMessage[]) {
+  return [...getState().app.conversation.messages, ...messages];
+}
+
+export function getAppendedTranscript(...transcriptEntries: TranscriptEntry[]) {
+  return [...getState().app.transcript, ...transcriptEntries];
+}
+
 export function syncSessionFile({
   messages = getState().app.conversation.messages,
   summaries = getState().app.conversation.summaries,
@@ -92,31 +100,31 @@ export function syncSessionFile({
   }
 }
 
-export function initStateFromSessionFile() {
-  const { sessionFilePath } = getState().app;
+export function resumeFromSessionFile(sessionFilePath: string) {
   const readResult = tryCatch(() =>
     fsDeps.readFileSync(sessionFilePath).toString(),
   );
   if (!readResult.ok) {
     // TODO: warn
-    return;
+    return false;
   }
 
   const jsonResult = tryCatch((): unknown => JSON.parse(readResult.value));
   if (!jsonResult.ok) {
     // TODO: warn
-    return;
+    return false;
   }
 
   const parseResult = tryCatch(() => SessionFileSchema.parse(jsonResult));
   if (!parseResult.ok) {
     // TODO: warn
-    return;
+    return false;
   }
   const { messages, summaries, transcript } = parseResult.value;
   actions.setTranscript(transcript);
   actions.setConversationSummaries(summaries);
   actions.setConversationMessages(messages);
+  return true;
 }
 
 export function initSessionFile() {

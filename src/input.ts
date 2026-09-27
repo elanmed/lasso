@@ -52,6 +52,11 @@ import {
   getCustomSlashCommandsStr,
   type BuiltinSlashCommand,
 } from "./slash-commands.ts";
+import {
+  getAppendedTranscript,
+  resumeFromSessionFile,
+  syncSessionFile,
+} from "./log.ts";
 
 // https://stackoverflow.com/a/33500118
 const mutedStdout = new Writable({
@@ -411,10 +416,12 @@ export function parseInputFromEditor() {
     );
   }
 
-  actions.appendToTranscript({
-    message: firstMessage,
-    role: "user",
-    timestamp: Date.now(),
+  syncSessionFile({
+    transcript: getAppendedTranscript({
+      message: firstMessage,
+      role: "user",
+      timestamp: Date.now(),
+    }),
   });
   return firstMessage;
 }
@@ -483,10 +490,12 @@ export async function resolveUserInput({
   actions.appendStdoutTail(
     `${getState().config.promptPrefix}${inputResult.value}\n`,
   );
-  actions.appendToTranscript({
-    message: inputResult.value,
-    role: "user",
-    timestamp: Date.now(),
+  syncSessionFile({
+    transcript: getAppendedTranscript({
+      message: inputResult.value,
+      role: "user",
+      timestamp: Date.now(),
+    }),
   });
 
   const rawInput = inputResult.value;
@@ -601,12 +610,15 @@ async function resolveBuiltinSlashCommand(
   switch (command) {
     case "edit": {
       const content = await spawnAndReadEditorContent();
-      if (content !== null)
-        actions.appendToTranscript({
-          message: content,
-          role: "user",
-          timestamp: Date.now(),
+      if (content !== null) {
+        syncSessionFile({
+          transcript: getAppendedTranscript({
+            message: content,
+            role: "user",
+            timestamp: Date.now(),
+          }),
         });
+      }
       return { handled: true, inputFromCommand: content };
     }
     case "editpage": {
@@ -618,10 +630,12 @@ async function resolveBuiltinSlashCommand(
         includeClipboardSuffix: true,
       });
       if (content !== null)
-        actions.appendToTranscript({
-          message: content,
-          role: "user",
-          timestamp: Date.now(),
+        syncSessionFile({
+          transcript: getAppendedTranscript({
+            message: content,
+            role: "user",
+            timestamp: Date.now(),
+          }),
         });
       return { handled: true, inputFromCommand: content };
     }
@@ -738,10 +752,12 @@ function resolveParameterizedBuiltinSlashCommand(
     case "resume": {
       const content = resume(commandWithArgs);
       if (content !== null)
-        actions.appendToTranscript({
-          message: content,
-          role: "user",
-          timestamp: Date.now(),
+        syncSessionFile({
+          transcript: getAppendedTranscript({
+            message: content,
+            role: "user",
+            timestamp: Date.now(),
+          }),
         });
       return { handled: true, inputFromCommand: content };
     }
@@ -827,7 +843,10 @@ export async function resolveSlashCommand(rawInput: string) {
 
 export function clearCommand() {
   print.infoSubtle(`Context cleared (${getPrettyTokenUsage()})`);
-  actions.resetConversationMessages();
+  syncSessionFile({
+    messages: [],
+    transcript: [],
+  });
   // the next api call only reports its token usage after it completes, so seeding with the
   // system prompt approx keeps the context window percent from displaying 0% in the meantime
   actions.setPromptTokens(getApproxPromptTokens());
@@ -1118,15 +1137,6 @@ export function printAvailableContextFiles() {
   printNewline();
 }
 
-function resumeFromTranscript(transcript: string) {
-  actions.resetConversationMessages();
-  return `Continue the conversation recorded in the transcript below. Respond to this message with "Ready to continue chatting."
-
-## [lasso] Transcript:
-
-${normalizeNewline(transcript, { count: 0 })}`;
-}
-
 export function resume(rawInput: string) {
   const parts = rawInput.split(/\s+/);
 
@@ -1143,17 +1153,9 @@ export function resume(rawInput: string) {
     const sessionFile = sortedSessionFiles[0];
     assertAtBuildtime(sessionFile !== undefined);
 
-    const { absolutePath, timestampMs } = sessionFile;
-    const readResult = tryCatch(() =>
-      fsDeps.readFileSync(absolutePath).toString(),
-    );
-    if (!readResult.ok) {
-      print.error(
-        `Unable to read the transcript from session ${String(timestampMs)} located at ${absolutePath}`,
-      );
-      return null;
-    }
-    return resumeFromTranscript(readResult.value);
+    const success = resumeFromSessionFile(sessionFile.absolutePath);
+    if (success) return "continue";
+    return null;
   }
 
   if (parts.length !== 2) {
@@ -1171,12 +1173,15 @@ export function resume(rawInput: string) {
   const sessionFiles = listSessionFiles();
   for (const { absolutePath, timestampMs } of sessionFiles) {
     if (timestampMs !== Number(sessionStartDate)) continue;
-
-    const readResult = tryCatch(() =>
-      fsDeps.readFileSync(absolutePath).toString(),
-    );
-    if (!readResult.ok) continue;
-    return resumeFromTranscript(readResult.value);
+    const success = resumeFromSessionFile(absolutePath);
+    if (success) {
+      return "continue";
+    } else {
+      print.error(
+        `Unable to resume from session file located at ${absolutePath}`,
+      );
+      return null;
+    }
   }
 
   print.error(

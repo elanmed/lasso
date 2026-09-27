@@ -41,6 +41,11 @@ import type { ModelSummary } from "./state.ts";
 import { aiDeps } from "./deps.ts";
 import { getLanguageModel } from "./model.ts";
 import { resolveInterruptWithEditor } from "./input.ts";
+import {
+  getAppendedConversationMessages,
+  getAppendedTranscript,
+  syncSessionFile,
+} from "./log.ts";
 
 const compactTargetRatio = 0.3;
 const maxNumberSummaries = 5;
@@ -62,7 +67,7 @@ export async function resolveApiCall(userInput: string) {
 
   const systemContent = promptDeps.getSystemContent();
 
-  actions.appendToConversationMessages(userMessage);
+  syncSessionFile({ messages: getAppendedConversationMessages(userMessage) });
 
   actions.resetToolEditDiffs();
   actions.setApiStartTime();
@@ -73,7 +78,7 @@ export async function resolveApiCall(userInput: string) {
       model: getLanguageModel(getState().config.model),
       reasoning: getState().config.reasoning,
       instructions: systemContent,
-      messages: [...getState().app.conversation.messages],
+      messages: [...getState().app.conversation.messages] as ModelMessage[],
       tools: getTools(),
       stopWhen: aiDeps.isLoopFinished(),
       abortSignal: getApiStreamAbortSignal(),
@@ -151,7 +156,9 @@ export async function resolveApiCall(userInput: string) {
         content: interruptContent,
       };
 
-      actions.appendToConversationMessages(interruptMessage);
+      syncSessionFile({
+        messages: getAppendedConversationMessages(interruptMessage),
+      });
       actions.setPromptTokensDirty(true);
 
       if (getState().app.editorInputValue !== null) {
@@ -174,13 +181,13 @@ export async function resolveApiCall(userInput: string) {
   actions.setPromptTokens(inputTokens + outputTokens);
   actions.setPromptTokensDirty(false);
 
-  for (const message of responseMessages) {
-    actions.appendToConversationMessages(message);
-  }
-  actions.appendToTranscript({
-    message: text,
-    role: "assistant",
-    timestamp: Date.now(),
+  syncSessionFile({
+    transcript: getAppendedTranscript({
+      message: text,
+      role: "assistant",
+      timestamp: Date.now(),
+    }),
+    messages: getAppendedConversationMessages(...responseMessages),
   });
 
   return text;
@@ -379,14 +386,13 @@ export async function getConversationSummary() {
 }
 
 function applyCompactedConversation(summaries: ModelSummary[]) {
-  actions.resetConversationMessages();
-  actions.setConversationSummaries(summaries);
-  for (const summary of summaries) {
-    actions.appendToConversationMessages({
-      content: summary.compacted,
+  syncSessionFile({
+    messages: summaries.map(({ compacted }) => ({
+      content: compacted,
       role: "assistant",
-    });
-  }
+    })),
+    summaries: summaries,
+  });
 }
 
 export async function maybeCompact(userInput: string) {

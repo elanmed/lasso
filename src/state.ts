@@ -1,6 +1,5 @@
 /* eslint-disable @typescript-eslint/no-base-to-string */
 import type readline from "node:readline/promises";
-import type { ModelMessage } from "ai";
 import type { MCPClient } from "@ai-sdk/mcp";
 import { z } from "zod";
 import { assertAtRuntime } from "./assert.ts";
@@ -224,6 +223,19 @@ export const actions = {
     );
   },
 
+  resetConversationMessages() {
+    const before = state.app.promptTokens.value;
+    state.app.conversation = {
+      messages: [],
+      summaries: [],
+    };
+    state.app.promptTokens = {
+      value: 0,
+      dirty: false,
+    };
+    logStateChange("reset-conversation-messages", String(before), "0");
+  },
+
   appendToConversationMessages(message: ModelMessage) {
     const before = state.app.conversation.messages.length;
     state.app.conversation.messages.push(message);
@@ -351,19 +363,6 @@ export const actions = {
       stringify(before),
       stringify(keymap),
     );
-  },
-
-  resetConversationMessages() {
-    const before = state.app.promptTokens.value;
-    state.app.conversation = {
-      messages: [],
-      summaries: [],
-    };
-    state.app.promptTokens = {
-      value: 0,
-      dirty: false,
-    };
-    logStateChange("reset-conversation-messages", String(before), "0");
   },
 
   setQuestionAbortController(controller: AbortController | null) {
