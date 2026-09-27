@@ -35,6 +35,13 @@ export const ModelSummarySchema = z.strictObject({
 
 export type ModelSummary = z.infer<typeof ModelSummarySchema>;
 
+export const ModelMessageSchema = z.looseObject({
+  role: z.string(),
+  content: z.any(),
+});
+
+export type ModelMessage = z.infer<typeof ModelMessageSchema>;
+
 export interface ToolEditDiff {
   fileName: string;
   diffStdout: string;
@@ -49,12 +56,7 @@ export const TranscriptEntrySchema = z.strictObject({
 export type TranscriptEntry = z.infer<typeof TranscriptEntrySchema>;
 
 export const SessionFileSchema = z.object({
-  messages: z.array(
-    z.looseObject({
-      role: z.string(),
-      content: z.any(),
-    }),
-  ),
+  messages: z.array(ModelMessageSchema),
   summaries: z.array(ModelSummarySchema),
   transcript: z.array(TranscriptEntrySchema),
 });
