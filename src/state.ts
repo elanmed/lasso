@@ -6,7 +6,6 @@ import { assertAtRuntime } from "./assert.ts";
 import {
   defaultConfig,
   type DefaultedConfig,
-  type Key,
   type ModelPricing,
   type Mcp,
   type SdkProvider,
@@ -87,7 +86,6 @@ interface State {
     batAvailable: boolean;
     debugLog: boolean;
     debugLogPath: string;
-    chatHistoryPath: string;
     sessionFilePath: string;
     contextEntries: ContextEntry[];
     contextStr: string;
@@ -134,7 +132,6 @@ const createInitialState = (): State => ({
     batAvailable: false,
     debugLog: false,
     debugLogPath: "",
-    chatHistoryPath: "",
     sessionFilePath: "",
     contextEntries: [],
     contextStr: "",
@@ -223,19 +220,6 @@ export const actions = {
     );
   },
 
-  resetConversationMessages() {
-    const before = state.app.promptTokens.value;
-    state.app.conversation = {
-      messages: [],
-      summaries: [],
-    };
-    state.app.promptTokens = {
-      value: 0,
-      dirty: false,
-    };
-    logStateChange("reset-conversation-messages", String(before), "0");
-  },
-
   setConversationMessages(messages: ModelMessage[]) {
     const before = state.app.conversation.messages;
     state.app.conversation.messages = messages;
@@ -256,36 +240,6 @@ export const actions = {
     );
   },
 
-  appendToConversationMessages(message: ModelMessage) {
-    const before = state.app.conversation.messages.length;
-    state.app.conversation.messages.push(message);
-    logStateChange(
-      "append-to-conversation-messages",
-      String(before),
-      String(state.app.conversation.messages.length),
-    );
-  },
-
-  appendToTranscript(entry: TranscriptEntry) {
-    const before = state.app.transcript.length;
-    state.app.transcript.push(entry);
-    logStateChange(
-      "append-to-transcript",
-      String(before),
-      String(state.app.transcript.length),
-    );
-  },
-
-  resetTranscript() {
-    const before = state.app.transcript.length;
-    state.app.transcript = [];
-    logStateChange(
-      "reset-transcript",
-      String(before),
-      String(state.app.transcript.length),
-    );
-  },
-
   setSessionFilePath(sessionFilePath: string) {
     const before = state.app.sessionFilePath;
     state.app.sessionFilePath = sessionFilePath;
@@ -296,13 +250,6 @@ export const actions = {
     const before = state.app.promptTokens.value;
     state.app.promptTokens.value = tokens;
     logStateChange("set-prompt-tokens", String(before), String(tokens));
-  },
-
-  appendToPromptTokens(tokens: number) {
-    const before = state.app.promptTokens.value;
-    const after = state.app.promptTokens.value + tokens;
-    state.app.promptTokens.value = after;
-    logStateChange("append-to-prompt-tokens", String(before), String(after));
   },
 
   setPromptTokensDirty(tokensStale: boolean) {
@@ -373,16 +320,6 @@ export const actions = {
     const before = structuredClone(state.config.keymaps);
     state.config.keymaps = keymaps;
     logStateChange("set-keymaps", stringify(before), stringify(keymaps));
-  },
-
-  setKeymap(command: string, keymap: Key) {
-    const before = state.config.keymaps[command];
-    state.config.keymaps[command] = keymap;
-    logStateChange(
-      `set-keymap-${command}`,
-      stringify(before),
-      stringify(keymap),
-    );
   },
 
   setQuestionAbortController(controller: AbortController | null) {
@@ -477,12 +414,6 @@ export const actions = {
     const before = state.app.debugLogPath;
     state.app.debugLogPath = debugLogPath;
     logStateChange("set-debug-log-path", before, debugLogPath);
-  },
-
-  setChatHistoryPath(chatHistoryPath: string) {
-    const before = state.app.chatHistoryPath;
-    state.app.chatHistoryPath = chatHistoryPath;
-    logStateChange("set-chat-history-path", before, chatHistoryPath);
   },
 
   setContextEntries(contextEntries: ContextEntry[]) {

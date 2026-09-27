@@ -1178,12 +1178,8 @@ export function resume(rawInput: string) {
     const success = resumeFromSessionFile(absolutePath);
     if (success) {
       return "continue";
-    } else {
-      print.error(
-        `Unable to resume from session file located at ${absolutePath}`,
-      );
-      return null;
     }
+    return null;
   }
 
   print.error(
@@ -1340,7 +1336,7 @@ export function initLocalConfig() {
       fsDeps.mkdirSync(dir, { recursive: true }),
     );
     if (!mkdirResult.ok) {
-      print.warning(`Failed to create the directory: ${dir}`);
+      print.error(`Failed to create the directory: ${dir}`);
       return;
     }
   }
@@ -1349,7 +1345,7 @@ export function initLocalConfig() {
     fsDeps.writeFileSync(path, getDefaultConfig("initlocal")),
   );
   if (!writeResult.ok) {
-    print.warning(`Failed to write the config to ${path}`);
+    print.error(`Failed to write the config to ${path}`);
     return;
   }
   print.info(`Created the local config at ${path}`);
@@ -1369,7 +1365,7 @@ export function initGlobalConfig() {
       fsDeps.mkdirSync(dir, { recursive: true }),
     );
     if (!mkdirResult.ok) {
-      print.warning(`Failed to create the directory: ${dir}`);
+      print.error(`Failed to create the directory: ${dir}`);
       return;
     }
   }
@@ -1378,7 +1374,7 @@ export function initGlobalConfig() {
     fsDeps.writeFileSync(path, getDefaultConfig("initglobal")),
   );
   if (!writeResult.ok) {
-    print.warning(`Failed to write the config to ${path}`);
+    print.error(`Failed to write the config to ${path}`);
     return;
   }
   print.info(`Created the global config at ${path}`);

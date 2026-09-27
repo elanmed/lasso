@@ -2,7 +2,6 @@ import { describe, it, beforeEach, afterEach, mock } from "node:test";
 import assert from "node:assert/strict";
 
 import {
-  prependToChatHistory,
   initSessionFile,
   deleteExpiredSessionFiles,
   initLogs,
@@ -25,101 +24,6 @@ describe("log", () => {
 
   beforeEach(() => {
     setupTestContext();
-  });
-
-  describe("prependToChatHistory", () => {
-    beforeEach(() => {
-      mock.restoreAll();
-      setupTestContext({ now: 1_700_000_000_000 });
-    });
-
-    it("creates directory when log file does not exist", () => {
-      actions.setChatHistoryPath("/test/editor.log");
-      prependToChatHistory("test message", "user");
-      assert.equal(testFs._dirs.has("/test"), true);
-    });
-
-    it("warns and skips writing when mkdir fails", () => {
-      actions.setChatHistoryPath("/test/editor.log");
-      mock.method(fsDeps, "mkdirSync", () => {
-        throw new Error("Permission denied");
-      });
-      const getCaptured = mockStdout();
-
-      prependToChatHistory("test message", "user");
-
-      assert.equal(
-        stripAnsi(getCaptured()),
-        "Failed to create the directory: /test\n",
-      );
-      assert.equal(testFs._files.has("/test/editor.log"), false);
-    });
-
-    it("warns when writing fails", () => {
-      actions.setChatHistoryPath("/test/editor.log");
-      testFs._files.set("/test/editor.log", "");
-      mock.method(fsDeps, "writeFileSync", () => {
-        throw new Error("Permission denied");
-      });
-      const getCaptured = mockStdout();
-
-      prependToChatHistory("test message", "user");
-
-      assert.equal(
-        stripAnsi(getCaptured()),
-        "Failed to write the chat history to /test/editor.log\n",
-      );
-    });
-
-    it("appends content with timestamp and role", () => {
-      actions.setChatHistoryPath("/test/editor.log");
-      testFs._files.set("/test/editor.log", "");
-      prependToChatHistory("test content", "user");
-      assert.equal(
-        testFs._files.get("/test/editor.log"),
-        `2023-11-14T22:13:20.000Z  *user*
-test content
-
----
-
-`,
-      );
-    });
-
-    it("appends multiple messages with different roles", () => {
-      actions.setChatHistoryPath("/test/editor.log");
-      testFs._files.set("/test/editor.log", "");
-      prependToChatHistory("hello", "user");
-      prependToChatHistory("response", "assistant");
-      assert.equal(
-        testFs._files.get("/test/editor.log"),
-        `2023-11-14T22:13:20.000Z  *assistant*
-response
-
----
-2023-11-14T22:13:20.000Z  *user*
-hello
-
----
-
-
-`,
-      );
-    });
-    it("normalizes trailing newlines in content", () => {
-      actions.setChatHistoryPath("/test/editor.log");
-      testFs._files.set("/test/editor.log", "");
-      prependToChatHistory("hello\n\n", "user");
-      assert.equal(
-        testFs._files.get("/test/editor.log"),
-        `2023-11-14T22:13:20.000Z  *user*
-hello
-
----
-
-`,
-      );
-    });
   });
 
   describe("initSessionFile", () => {
@@ -324,12 +228,14 @@ hello
 
     it("writes the current state to the session file", () => {
       testFs._dirs.add("/fake-home/.local/state/lasso/sessions");
-      actions.appendToConversationMessages({ role: "user", content: "hello" });
-      actions.appendToTranscript({
-        timestamp: 0,
-        role: "user",
-        message: "hi",
-      });
+      actions.setConversationMessages([{ role: "user", content: "hello" }]);
+      actions.setTranscript([
+        {
+          timestamp: 0,
+          role: "user",
+          message: "hi",
+        },
+      ]);
 
       syncSessionFile();
 
@@ -342,7 +248,7 @@ hello
     });
 
     it("replaces the provided fields and updates state", () => {
-      actions.appendToConversationMessages({ role: "user", content: "old" });
+      actions.setConversationMessages([{ role: "user", content: "old" }]);
       syncSessionFile({ messages: [{ role: "assistant", content: "reply" }] });
 
       assert.equal(
@@ -412,7 +318,7 @@ hello
     });
 
     it("loads messages, summaries, and transcript into state and returns true", () => {
-      actions.appendToConversationMessages({ role: "user", content: "old" });
+      actions.setConversationMessages([{ role: "user", content: "old" }]);
       testFs._files.set(
         "/test/session.json",
         JSON.stringify({
@@ -434,7 +340,7 @@ hello
       ]);
     });
 
-    it("warns and returns false when the session file cannot be read", () => {
+    it("prints an error and returns false when the session file cannot be read", () => {
       const getCaptured = mockStdout();
 
       const result = resumeFromSessionFile("/test/missing.json");
@@ -446,7 +352,7 @@ hello
       );
     });
 
-    it("warns and returns false when the session file is not valid json", () => {
+    it("prints an error and returns false when the session file is not valid json", () => {
       testFs._files.set("/test/broken.json", "not json");
       const getCaptured = mockStdout();
 
@@ -459,7 +365,7 @@ hello
       );
     });
 
-    it("warns and returns false when the session file fails validation", () => {
+    it("prints an error and returns false when the session file fails validation", () => {
       testFs._files.set("/test/invalid.json", "{}");
       const getCaptured = mockStdout();
 

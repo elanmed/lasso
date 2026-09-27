@@ -945,7 +945,7 @@ describe("getApproxPromptTokens", () => {
   });
 
   it("sums messages approx with the system instructions approx", () => {
-    actions.appendToConversationMessages({ role: "user", content: "hello" });
+    actions.setConversationMessages([{ role: "user", content: "hello" }]);
     assert.strictEqual(getApproxPromptTokens(), 14);
   });
 });
@@ -976,7 +976,7 @@ describe("getTokensByArea", () => {
     actions.setToolsContentStr("123456789012");
     actions.setContextStr("123456789");
     actions.setSkillsStr("1234");
-    actions.appendToConversationMessages({ role: "user", content: "hello" });
+    actions.setConversationMessages([{ role: "user", content: "hello" }]);
   });
 
   it("returns the approx areas when the token cache is dirty", () => {
@@ -1019,7 +1019,7 @@ describe("getPrettyTokensByArea", () => {
     actions.setToolsContentStr("123456789012");
     actions.setContextStr("123456789");
     actions.setSkillsStr("1234");
-    actions.appendToConversationMessages({ role: "user", content: "hello" });
+    actions.setConversationMessages([{ role: "user", content: "hello" }]);
   });
 
   it("returns each area with its approx count when the cache is dirty", () => {

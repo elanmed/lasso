@@ -61,7 +61,6 @@ skills body`,
       batAvailable: false,
       debugLog: false,
       debugLogPath: "",
-      chatHistoryPath: "",
       sessionFilePath: "",
       contextEntries: [],
       contextStr: "",
@@ -121,7 +120,7 @@ skills body`,
   };
 
   it("resetState restores initial state after mutations", () => {
-    actions.appendToConversationMessages({ role: "user", content: "hi" });
+    actions.setConversationMessages([{ role: "user", content: "hi" }]);
     actions.setPromptTokens(7);
     actions.setPromptTokensDirty(true);
     actions.setEditorInputValue("draft");
@@ -135,7 +134,6 @@ skills body`,
     actions.appendStdoutTail("out\n");
     actions.setDebugLog(true);
     actions.setDebugLogPath("/fake-home/lasso/debug.log");
-    actions.setChatHistoryPath("/tmp/test.log");
     actions.setContextEntries([{ filePath: "/a/AGENTS.md", content: "A" }]);
     actions.setContextStr("# context");
     actions.setGlobalConfigStr("global");
@@ -163,7 +161,7 @@ skills body`,
       "claude-haiku-4-5": { inputPerMillion: 1, outputPerMillion: 2 },
     });
     actions.setContextWindowPerModel({ "claude-haiku-4-5": 200000 });
-    actions.setKeymap("edit", { name: "e", ctrl: true });
+    actions.setKeymaps({ edit: { name: "e", ctrl: true } });
     actions.setCustomSlashCommandDirs(["/commands"]);
     actions.setCustomSkillDirs(["/skills"]);
     actions.setModelUsageForLimitWindow({ "claude-haiku-4-5": [] });
@@ -182,98 +180,6 @@ skills body`,
   });
 
   it("initial state", assertInitialState);
-
-  describe("append-to-conversation-messages", () => {
-    it("appends new message to the list", () => {
-      assert.deepStrictEqual(getState().app.conversation, {
-        summaries: [],
-        messages: [],
-      });
-      assert.deepStrictEqual(getState().app.promptTokens, {
-        value: 0,
-        dirty: false,
-      });
-      actions.appendToConversationMessages({ role: "user", content: "hi" });
-      assert.equal(getState().app.conversation.messages.length, 1);
-      assert.deepStrictEqual(getState().app.conversation, {
-        summaries: [],
-        messages: [{ role: "user", content: "hi" }],
-      });
-      assert.deepStrictEqual(getState().app.promptTokens, {
-        value: 0,
-        dirty: false,
-      });
-    });
-
-    it("appends multiple messages in order", () => {
-      assert.deepStrictEqual(getState().app.conversation, {
-        summaries: [],
-        messages: [],
-      });
-      assert.deepStrictEqual(getState().app.promptTokens, {
-        value: 0,
-        dirty: false,
-      });
-      actions.appendToConversationMessages({ role: "user", content: "hi" });
-      actions.appendToConversationMessages({
-        role: "assistant",
-        content: "hello",
-      });
-
-      const params = getState().app.conversation.messages;
-      assert.equal(params.length, 2);
-      const first = params[0];
-      assert(first !== undefined);
-
-      const second = params[1];
-      assert(second !== undefined);
-
-      assert.equal(first.role, "user");
-      assert.equal(second.role, "assistant");
-      assert.equal(getState().app.promptTokens.value, 0);
-    });
-  });
-
-  describe("append-to-transcript", () => {
-    it("appends a single entry", () => {
-      assert.deepStrictEqual(getState().app.transcript, []);
-      actions.appendToTranscript({
-        timestamp: 42,
-        role: "user",
-        message: "hello",
-      });
-      assert.deepStrictEqual(getState().app.transcript, [
-        { timestamp: 42, role: "user", message: "hello" },
-      ]);
-    });
-
-    it("appends multiple entries in order", () => {
-      actions.appendToTranscript({
-        timestamp: 1,
-        role: "user",
-        message: "first",
-      });
-      actions.appendToTranscript({
-        timestamp: 2,
-        role: "assistant",
-        message: "second",
-      });
-      assert.deepStrictEqual(getState().app.transcript, [
-        { timestamp: 1, role: "user", message: "first" },
-        { timestamp: 2, role: "assistant", message: "second" },
-      ]);
-    });
-  });
-
-  it("reset-transcript", () => {
-    actions.appendToTranscript({
-      timestamp: 1,
-      role: "user",
-      message: "first",
-    });
-    actions.resetTranscript();
-    assert.deepStrictEqual(getState().app.transcript, []);
-  });
 
   it("set-session-file-path", () => {
     assert.equal(getState().app.sessionFilePath, "");
@@ -304,35 +210,10 @@ skills body`,
     assert.equal(getState().app.promptTokens.value, 42);
   });
 
-  it("append-to-prompt-tokens", () => {
-    actions.setPromptTokens(40);
-    actions.appendToPromptTokens(2);
-    assert.equal(getState().app.promptTokens.value, 42);
-    assert.equal(getState().app.promptTokens.dirty, false);
-  });
-
   it("set-prompt-tokens-dirty", () => {
     assert.equal(getState().app.promptTokens.dirty, false);
     actions.setPromptTokensDirty(true);
     assert.equal(getState().app.promptTokens.dirty, true);
-  });
-
-  it("reset-conversation-messages resets summaries", () => {
-    actions.appendToConversationMessages({ role: "user", content: "hi" });
-    actions.setConversationSummaries([
-      { compacted: "summary", compactedAt: 4, tokens: 5 },
-    ]);
-    actions.setPromptTokens(7);
-    assert.equal(getState().app.promptTokens.value, 7);
-    actions.resetConversationMessages();
-    assert.deepStrictEqual(getState().app.conversation, {
-      summaries: [],
-      messages: [],
-    });
-    assert.deepStrictEqual(getState().app.promptTokens, {
-      value: 0,
-      dirty: false,
-    });
   });
 
   it("set-model", () => {
@@ -415,41 +296,6 @@ skills body`,
     });
   });
 
-  it("set-keymap", () => {
-    assert.deepStrictEqual(
-      getState().config.keymaps.edit,
-      defaultConfig.keymaps.edit,
-    );
-    actions.setKeymap("edit", {
-      name: "v",
-      ctrl: false,
-      meta: false,
-      shift: false,
-    });
-    assert.deepStrictEqual(getState().config.keymaps.edit, {
-      name: "v",
-      ctrl: false,
-      meta: false,
-      shift: false,
-    });
-  });
-
-  it("set-keymap-adds-new-command", () => {
-    assert.strictEqual(getState().config.keymaps["skills"], undefined);
-    actions.setKeymap("skills", {
-      name: "s",
-      ctrl: false,
-      meta: false,
-      shift: false,
-    });
-    assert.deepStrictEqual(getState().config.keymaps["skills"], {
-      name: "s",
-      ctrl: false,
-      meta: false,
-      shift: false,
-    });
-  });
-
   it("set-keymaps", () => {
     actions.setKeymaps({
       edit: { name: "v", ctrl: false, meta: false, shift: false },
@@ -507,12 +353,6 @@ skills body`,
       getState().app.debugLogPath,
       "/fake-home/.config/lasso/debug-test-uuid.log",
     );
-  });
-
-  it("set-chat-history-path", () => {
-    assert.equal(getState().app.chatHistoryPath, "");
-    actions.setChatHistoryPath("/tmp/editor.log");
-    assert.equal(getState().app.chatHistoryPath, "/tmp/editor.log");
   });
 
   it("set-context-str", () => {

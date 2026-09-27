@@ -52,6 +52,7 @@ import {
 } from "./test-helpers.ts";
 import { fsDeps } from "./deps.ts";
 import { getGlobalConfigPath, getGlobalContextDir } from "./paths.ts";
+import { defaultConfig } from "./config-types.ts";
 
 function getTestRl() {
   const rl = getState().app.rl;
@@ -75,7 +76,10 @@ describe("input", () => {
     it("waits for enter and clears the interrupt controller", async () => {
       const prompts: string[] = [];
       let questionOptions: { signal: AbortSignal } | undefined;
-      actions.setKeymap("edit", { name: "e", ctrl: true });
+      actions.setKeymaps({
+        ...defaultConfig.keymaps,
+        edit: { name: "e", ctrl: true },
+      });
       actions.setRl(
         makeFakeRl({
           question: (prompt: string, options: { signal: AbortSignal }) => {
@@ -1010,7 +1014,7 @@ l---
     });
 
     it("resets params", () => {
-      actions.appendToConversationMessages({ role: "user", content: "hello" });
+      actions.setConversationMessages([{ role: "user", content: "hello" }]);
       actions.setConversationSummaries([
         { compacted: "summary", compactedAt: 3, tokens: 5 },
       ]);
@@ -1038,7 +1042,7 @@ l---
       actions.setToolsContentStr("123456789012");
       actions.setContextStr("123456789");
       actions.setSkillsStr("1234");
-      actions.appendToConversationMessages({ role: "user", content: "hello" });
+      actions.setConversationMessages([{ role: "user", content: "hello" }]);
     });
 
     it("prints the total and each area with its approx count when the cache is dirty", () => {
@@ -1136,7 +1140,7 @@ Token count: 621 (0% of context window)
     });
 
     it("resumes the most recent session when no date is provided", () => {
-      actions.appendToConversationMessages({ role: "user", content: "hello" });
+      actions.setConversationMessages([{ role: "user", content: "hello" }]);
       testFs._dirs.add("/fake-home/.local/state/lasso/sessions");
       testFs._files.set(
         "/fake-home/.local/state/lasso/sessions/session-1234567890000.json",
@@ -1170,7 +1174,7 @@ Token count: 621 (0% of context window)
     });
 
     it("loads the session and returns continue when the date matches", () => {
-      actions.appendToConversationMessages({ role: "user", content: "old" });
+      actions.setConversationMessages([{ role: "user", content: "old" }]);
       testFs._dirs.add("/fake-home/.local/state/lasso/sessions");
       testFs._files.set(
         "/fake-home/.local/state/lasso/sessions/session-1234567890000.json",
@@ -1210,6 +1214,20 @@ Token count: 621 (0% of context window)
       assert.strictEqual(
         stripAnsi(getCapturedStdout()),
         "No conversation found with session start date: 1234567890000\n",
+      );
+    });
+
+    it("prints an error and returns null when the session file cannot be parsed", () => {
+      testFs._dirs.add("/fake-home/.local/state/lasso/sessions");
+      testFs._files.set(
+        "/fake-home/.local/state/lasso/sessions/session-1234567890000.json",
+        "not json",
+      );
+      const result = resume("/resume 1234567890000");
+      assert.strictEqual(result, null);
+      assert.strictEqual(
+        stripAnsi(getCapturedStdout()),
+        "Failed to parse the session file at /fake-home/.local/state/lasso/sessions/session-1234567890000.json\n",
       );
     });
 
@@ -1312,11 +1330,13 @@ Token count: 621 (0% of context window)
     it("opens the chat history in a pager with a heading prepended", () => {
       const { spawned } = mockPagerSpawn();
       testProcessEnv._set("LASSO_PAGER", "nano __FILE__");
-      actions.appendToTranscript({
-        timestamp: 0,
-        role: "user",
-        message: "log content",
-      });
+      actions.setTranscript([
+        {
+          timestamp: 0,
+          role: "user",
+          message: "log content",
+        },
+      ]);
       pageHistory();
       assert.strictEqual(spawned[0], "nano /tmp/lasso-test-uuid.txt");
       assert.strictEqual(
@@ -1359,17 +1379,19 @@ log content
     it("opens the latest assistant response in a pager", async () => {
       const { spawned } = mockPagerSpawn();
       testProcessEnv._set("LASSO_PAGER", "nano __FILE__");
-      actions.appendToConversationMessages({
-        role: "user",
-        content: "question",
-      });
-      actions.appendToConversationMessages({
-        role: "assistant",
-        content: [
-          { type: "text", text: "first" },
-          { type: "text", text: "second" },
-        ],
-      });
+      actions.setConversationMessages([
+        {
+          role: "user",
+          content: "question",
+        },
+        {
+          role: "assistant",
+          content: [
+            { type: "text", text: "first" },
+            { type: "text", text: "second" },
+          ],
+        },
+      ]);
 
       await pageLastResponse();
 
@@ -1414,15 +1436,17 @@ second
     it("opens the latest user message in a pager", () => {
       const { spawned } = mockPagerSpawn();
       testProcessEnv._set("LASSO_PAGER", "nano __FILE__");
-      actions.appendToConversationMessages({ role: "user", content: "older" });
-      actions.appendToConversationMessages({
-        role: "assistant",
-        content: [{ type: "text", text: "answer" }],
-      });
-      actions.appendToConversationMessages({
-        role: "user",
-        content: "latest question",
-      });
+      actions.setConversationMessages([
+        { role: "user", content: "older" },
+        {
+          role: "assistant",
+          content: [{ type: "text", text: "answer" }],
+        },
+        {
+          role: "user",
+          content: "latest question",
+        },
+      ]);
 
       pageLastMessage();
 
@@ -1508,14 +1532,16 @@ latest question
     it("opens the message list newest first in a pager", () => {
       const { spawned } = mockPagerSpawn();
       testProcessEnv._set("LASSO_PAGER", "nano __FILE__");
-      actions.appendToConversationMessages({
-        role: "user",
-        content: "question",
-      });
-      actions.appendToConversationMessages({
-        role: "assistant",
-        content: [{ type: "text", text: "answer" }],
-      });
+      actions.setConversationMessages([
+        {
+          role: "user",
+          content: "question",
+        },
+        {
+          role: "assistant",
+          content: [{ type: "text", text: "answer" }],
+        },
+      ]);
 
       pageMessages();
 
@@ -1927,7 +1953,10 @@ Available context files:
           content: "custom command content",
         },
       ]);
-      actions.setKeymap("custom", { name: "c", ctrl: true });
+      actions.setKeymaps({
+        ...defaultConfig.keymaps,
+        custom: { name: "c", ctrl: true },
+      });
       harness = setupKeypressTests();
     });
 
@@ -1968,7 +1997,10 @@ Available context files:
     });
 
     it("runs paste command with clipboard when its keymap matches", async () => {
-      actions.setKeymap("paste", { name: "v", ctrl: true });
+      actions.setKeymaps({
+        ...defaultConfig.keymaps,
+        paste: { name: "v", ctrl: true },
+      });
       mockClipboardPaste("world");
       mock.method(childProcess, "spawnSync", () => {
         testFs.writeFileSync(
@@ -2005,12 +2037,17 @@ Available context files:
       });
       const { spawned } = mockPagerSpawn();
       actions.setBatAvailable(true);
-      actions.setKeymap("history", { name: "h", ctrl: true });
-      actions.appendToTranscript({
-        timestamp: 0,
-        role: "user",
-        message: "log content",
+      actions.setKeymaps({
+        ...defaultConfig.keymaps,
+        history: { name: "h", ctrl: true },
       });
+      actions.setTranscript([
+        {
+          timestamp: 0,
+          role: "user",
+          message: "log content",
+        },
+      ]);
       harness.emitKey({ name: "h", ctrl: true });
       await harness.flush();
       assert.strictEqual(spawned[0], batPagerCmd("/tmp/lasso-test-uuid.txt"));
@@ -2035,12 +2072,17 @@ log content
       const { spawned } = mockPagerSpawn();
       actions.setBatAvailable(true);
       actions.setQuestionAbortController(null);
-      actions.setKeymap("history", { name: "h", ctrl: true });
-      actions.appendToTranscript({
-        timestamp: 0,
-        role: "user",
-        message: "log content",
+      actions.setKeymaps({
+        ...defaultConfig.keymaps,
+        history: { name: "h", ctrl: true },
       });
+      actions.setTranscript([
+        {
+          timestamp: 0,
+          role: "user",
+          message: "log content",
+        },
+      ]);
       harness.emitKey({ name: "h", ctrl: true });
       await harness.flush();
       assert.strictEqual(spawned[0], batPagerCmd("/tmp/lasso-test-uuid.txt"));
@@ -2054,15 +2096,20 @@ log content
       });
       const { spawned } = mockPagerSpawn();
       testProcessEnv._set("LASSO_PAGER", "nano __FILE__");
-      actions.setKeymap("lastresponse", { name: "u", ctrl: true });
-      actions.appendToConversationMessages({
-        role: "user",
-        content: "question",
+      actions.setKeymaps({
+        ...defaultConfig.keymaps,
+        lastresponse: { name: "u", ctrl: true },
       });
-      actions.appendToConversationMessages({
-        role: "assistant",
-        content: [{ type: "text", text: "first" }],
-      });
+      actions.setConversationMessages([
+        {
+          role: "user",
+          content: "question",
+        },
+        {
+          role: "assistant",
+          content: [{ type: "text", text: "first" }],
+        },
+      ]);
       harness.emitKey({ name: "u", ctrl: true });
       await harness.flush();
       assert.deepStrictEqual(spawned, ["nano /tmp/lasso-test-uuid.txt"]);
@@ -2076,7 +2123,10 @@ log content
       });
       const { spawned } = mockPagerSpawn();
       testProcessEnv._set("LASSO_PAGER", "nano __FILE__");
-      actions.setKeymap("lastdiff", { name: "d", ctrl: true });
+      actions.setKeymaps({
+        ...defaultConfig.keymaps,
+        lastdiff: { name: "d", ctrl: true },
+      });
       actions.appendToolEditDiff({ fileName: "/a.ts", diffStdout: "+a\n" });
       harness.emitKey({ name: "d", ctrl: true });
       await harness.flush();
@@ -2112,7 +2162,10 @@ log content
         { stdout: "delta 0.18.2" },
         { stdout: "commands diff\n" },
       ]);
-      actions.setKeymap("reload", { name: "w", ctrl: true });
+      actions.setKeymaps({
+        ...defaultConfig.keymaps,
+        reload: { name: "w", ctrl: true },
+      });
       harness.emitKey({ name: "w", ctrl: true });
       await harness.flush();
       assert.deepStrictEqual(prompts, [true]);
@@ -2126,7 +2179,10 @@ log content
       });
       const { spawned } = mockPagerSpawn();
       testProcessEnv._set("LASSO_PAGER", "cat __FILE__");
-      actions.setKeymap("editpage", { name: "e", ctrl: true });
+      actions.setKeymaps({
+        ...defaultConfig.keymaps,
+        editpage: { name: "e", ctrl: true },
+      });
       actions.setEditorInputValue("editor input");
       harness.emitKey({ name: "e", ctrl: true });
       await harness.flush();
@@ -2150,7 +2206,10 @@ editor input
       });
       const { spawned } = mockPagerSpawn();
       testProcessEnv._set("LASSO_PAGER", "cat __FILE__");
-      actions.setKeymap("config", { name: "q", ctrl: true });
+      actions.setKeymaps({
+        ...defaultConfig.keymaps,
+        config: { name: "q", ctrl: true },
+      });
       harness.emitKey({ name: "q", ctrl: true });
       await harness.flush();
       assert.match(
@@ -2169,7 +2228,10 @@ editor input
       });
       const { spawned } = mockPagerSpawn();
       testProcessEnv._set("LASSO_PAGER", "cat __FILE__");
-      actions.setKeymap("contextpage", { name: "d", ctrl: true });
+      actions.setKeymaps({
+        ...defaultConfig.keymaps,
+        contextpage: { name: "d", ctrl: true },
+      });
       actions.setContextEntries([
         { filePath: "/project/AGENTS.md", content: "context" },
       ]);
@@ -2192,7 +2254,10 @@ editor input
       });
       const { spawned } = mockPagerSpawn();
       testProcessEnv._set("LASSO_PAGER", "cat __FILE__");
-      actions.setKeymap("commandspage", { name: "m", ctrl: true });
+      actions.setKeymaps({
+        ...defaultConfig.keymaps,
+        commandspage: { name: "m", ctrl: true },
+      });
       harness.emitKey({ name: "m", ctrl: true });
       await harness.flush();
       assert.strictEqual(
@@ -2215,7 +2280,10 @@ custom command content\n\n`,
       });
       const { spawned } = mockPagerSpawn();
       testProcessEnv._set("LASSO_PAGER", "cat __FILE__");
-      actions.setKeymap("commands", { name: "o", ctrl: true });
+      actions.setKeymaps({
+        ...defaultConfig.keymaps,
+        commands: { name: "o", ctrl: true },
+      });
       harness.emitKey({ name: "o", ctrl: true });
       await harness.flush();
       assert.strictEqual(
@@ -2266,7 +2334,10 @@ custom command content\n\n`,
       ["resume", "r"],
     ] as const) {
       it(`types /${command} into the prompt when its keymap matches`, () => {
-        actions.setKeymap(command, { name: keyName, ctrl: true });
+        actions.setKeymaps({
+          ...defaultConfig.keymaps,
+          [command]: { name: keyName, ctrl: true },
+        });
         harness.emitKey({ name: keyName, ctrl: true });
         assert.deepStrictEqual(harness.writes, [
           { chunk: `/${command}\n`, key: undefined },
@@ -2275,15 +2346,21 @@ custom command content\n\n`,
     }
 
     it("does not type builtin command when no question is pending", () => {
-      actions.setKeymap("clear", { name: "k", ctrl: true });
+      actions.setKeymaps({
+        ...defaultConfig.keymaps,
+        clear: { name: "k", ctrl: true },
+      });
       actions.setQuestionAbortController(null);
       harness.emitKey({ name: "k", ctrl: true });
       assert.deepStrictEqual(harness.writes, []);
     });
 
     it("uses the first matching builtin keymap when commands share a key", () => {
-      actions.setKeymap("clear", { name: "x", ctrl: true });
-      actions.setKeymap("skills", { name: "x", ctrl: true });
+      actions.setKeymaps({
+        ...defaultConfig.keymaps,
+        clear: { name: "x", ctrl: true },
+        skills: { name: "x", ctrl: true },
+      });
       harness.emitKey({ name: "x", ctrl: true });
       assert.deepStrictEqual(harness.writes, [
         { chunk: "/clear\n", key: undefined },
@@ -2291,7 +2368,10 @@ custom command content\n\n`,
     });
 
     it("prefers builtin commands over custom commands on the same key", () => {
-      actions.setKeymap("clear", { name: "c", ctrl: true });
+      actions.setKeymaps({
+        ...defaultConfig.keymaps,
+        clear: { name: "c", ctrl: true },
+      });
       harness.emitKey({ name: "c", ctrl: true });
       assert.deepStrictEqual(harness.writes, [
         { chunk: "/clear\n", key: undefined },
@@ -2308,7 +2388,10 @@ custom command content\n\n`,
     });
 
     it("types keymap command while loading when a question is pending", () => {
-      actions.setKeymap("clear", { name: "k", ctrl: true });
+      actions.setKeymaps({
+        ...defaultConfig.keymaps,
+        clear: { name: "k", ctrl: true },
+      });
       actions.setLoadingStateTimeout({} as NodeJS.Timeout);
       harness.emitKey({ name: "k", ctrl: true });
       assert.deepStrictEqual(harness.writes, [
@@ -2317,7 +2400,10 @@ custom command content\n\n`,
     });
 
     it("does not clear the line for matched keys during loading", () => {
-      actions.setKeymap("clear", { name: "k", ctrl: true });
+      actions.setKeymaps({
+        ...defaultConfig.keymaps,
+        clear: { name: "k", ctrl: true },
+      });
       actions.setQuestionAbortController(null);
       actions.setLoadingStateTimeout({} as NodeJS.Timeout);
       harness.emitKey({ name: "k", ctrl: true });
@@ -2382,11 +2468,13 @@ editor input
 
     it("handles /history command by opening chat history in a pager", async () => {
       testProcessEnv._set("LASSO_PAGER", "nano __FILE__");
-      actions.appendToTranscript({
-        timestamp: 0,
-        role: "user",
-        message: "log content",
-      });
+      actions.setTranscript([
+        {
+          timestamp: 0,
+          role: "user",
+          message: "log content",
+        },
+      ]);
       const result = await resolveSlashCommand("/history");
       assert.strictEqual(result, null);
       assert.strictEqual(
@@ -2403,10 +2491,12 @@ log content
     it("handles /lastmessage command by opening the last user message in a pager", async () => {
       const { spawned } = mockPagerSpawn();
       testProcessEnv._set("LASSO_PAGER", "nano __FILE__");
-      actions.appendToConversationMessages({
-        role: "user",
-        content: "question",
-      });
+      actions.setConversationMessages([
+        {
+          role: "user",
+          content: "question",
+        },
+      ]);
       const result = await resolveSlashCommand("/lastmessage");
       assert.strictEqual(result, null);
       assert.strictEqual(spawned[0], "nano /tmp/lasso-test-uuid.txt");
@@ -2448,10 +2538,12 @@ log content
     it("handles /messages command by opening the message list in a pager", async () => {
       const { spawned } = mockPagerSpawn();
       testProcessEnv._set("LASSO_PAGER", "nano __FILE__");
-      actions.appendToConversationMessages({
-        role: "user",
-        content: "question",
-      });
+      actions.setConversationMessages([
+        {
+          role: "user",
+          content: "question",
+        },
+      ]);
       const result = await resolveSlashCommand("/messages");
       assert.strictEqual(result, null);
       assert.strictEqual(spawned[0], "nano /tmp/lasso-test-uuid.txt");

@@ -1,4 +1,4 @@
-import { dirname, join } from "node:path";
+import { join } from "node:path";
 import {
   actions,
   getState,
@@ -8,7 +8,7 @@ import {
   type SessionFile,
   type TranscriptEntry,
 } from "./state.ts";
-import { listSessionFiles, normalizeNewline, tryCatch } from "./utils.ts";
+import { listSessionFiles, tryCatch } from "./utils.ts";
 import { fsDeps } from "./deps.ts";
 import { getSessionDir } from "./paths.ts";
 import { debugLog as writeDebugLog } from "./debug-log.ts";
@@ -16,39 +16,6 @@ import { print } from "./print.ts";
 
 export function debugLog(content: string) {
   writeDebugLog(getState().app.debugLog, getState().app.debugLogPath, content);
-}
-
-export function prependToChatHistory(
-  content: string,
-  role: "user" | "assistant",
-) {
-  const path = getState().app.chatHistoryPath;
-  const dir = dirname(path);
-  if (!fsDeps.existsSync(dir)) {
-    const mkdirResult = tryCatch(() =>
-      fsDeps.mkdirSync(dir, { recursive: true }),
-    );
-    if (!mkdirResult.ok) {
-      print.warning(`Failed to create the directory: ${dir}`);
-      return;
-    }
-  }
-
-  const readResult = tryCatch(() => fsDeps.readFileSync(path).toString());
-  const existingContent = readResult.ok ? readResult.value : "";
-
-  const newChatHistory = `${new Date(Date.now()).toISOString()}  *${role}*
-${normalizeNewline(content)}
----
-${existingContent}
-`;
-
-  const writeResult = tryCatch(() =>
-    fsDeps.writeFileSync(path, newChatHistory),
-  );
-  if (!writeResult.ok) {
-    print.warning(`Failed to write the chat history to ${path}`);
-  }
 }
 
 export function getAppendedConversationMessages(...messages: ModelMessage[]) {
@@ -110,19 +77,19 @@ export function resumeFromSessionFile(sessionFilePath: string) {
     fsDeps.readFileSync(sessionFilePath).toString(),
   );
   if (!readResult.ok) {
-    print.warning(`Failed to read the session file at ${sessionFilePath}`);
+    print.error(`Failed to read the session file at ${sessionFilePath}`);
     return false;
   }
 
   const jsonResult = tryCatch((): unknown => JSON.parse(readResult.value));
   if (!jsonResult.ok) {
-    print.warning(`Failed to parse the session file at ${sessionFilePath}`);
+    print.error(`Failed to parse the session file at ${sessionFilePath}`);
     return false;
   }
 
   const parseResult = tryCatch(() => SessionFileSchema.parse(jsonResult.value));
   if (!parseResult.ok) {
-    print.warning(`Failed to validate the session file at ${sessionFilePath}`);
+    print.error(`Failed to validate the session file at ${sessionFilePath}`);
     return false;
   }
   const { messages, summaries, transcript } = parseResult.value;
