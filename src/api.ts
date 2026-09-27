@@ -39,7 +39,6 @@ import {
 import { MISSING } from "./missing.ts";
 import type { ModelSummary } from "./state.ts";
 import { aiDeps } from "./deps.ts";
-import { prependToChatHistory } from "./log.ts";
 import { getLanguageModel } from "./model.ts";
 import { resolveInterruptWithEditor } from "./input.ts";
 
@@ -178,7 +177,11 @@ export async function resolveApiCall(userInput: string) {
   for (const message of responseMessages) {
     actions.appendToConversation(message);
   }
-  prependToChatHistory(text, "assistant");
+  actions.appendToTranscript({
+    message: text,
+    role: "assistant",
+    timestamp: Date.now(),
+  });
 
   return text;
 }

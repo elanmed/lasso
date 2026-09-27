@@ -41,7 +41,6 @@ import {
 import { actions, getState } from "./state.ts";
 import { initStateRepeatable } from "./config.ts";
 import { isSameKey, type Key } from "./config-types.ts";
-import { prependToChatHistory } from "./log.ts";
 import { fsDeps, processDeps } from "./deps.ts";
 import { getGlobalConfigPath, getLocalConfigPath } from "./paths.ts";
 import { contextFileSkillNamePrefix } from "./context.ts";
@@ -412,7 +411,11 @@ export function parseInputFromEditor() {
     );
   }
 
-  prependToChatHistory(firstMessage, "user");
+  actions.appendToTranscript({
+    message: firstMessage,
+    role: "user",
+    timestamp: Date.now(),
+  });
   return firstMessage;
 }
 
@@ -480,7 +483,11 @@ export async function resolveUserInput({
   actions.appendStdoutTail(
     `${getState().config.promptPrefix}${inputResult.value}\n`,
   );
-  prependToChatHistory(inputResult.value, "user");
+  actions.appendToTranscript({
+    message: inputResult.value,
+    role: "user",
+    timestamp: Date.now(),
+  });
 
   const rawInput = inputResult.value;
   if (shouldResolveSlashCommand(rawInput, { forceKnownCommand: false })) {
@@ -594,7 +601,12 @@ async function resolveBuiltinSlashCommand(
   switch (command) {
     case "edit": {
       const content = await spawnAndReadEditorContent();
-      if (content !== null) prependToChatHistory(content, "user");
+      if (content !== null)
+        actions.appendToTranscript({
+          message: content,
+          role: "user",
+          timestamp: Date.now(),
+        });
       return { handled: true, inputFromCommand: content };
     }
     case "editpage": {
@@ -605,7 +617,12 @@ async function resolveBuiltinSlashCommand(
       const content = await spawnAndReadEditorContent({
         includeClipboardSuffix: true,
       });
-      if (content !== null) prependToChatHistory(content, "user");
+      if (content !== null)
+        actions.appendToTranscript({
+          message: content,
+          role: "user",
+          timestamp: Date.now(),
+        });
       return { handled: true, inputFromCommand: content };
     }
     case "clear": {
@@ -720,7 +737,12 @@ function resolveParameterizedBuiltinSlashCommand(
     }
     case "resume": {
       const content = resume(commandWithArgs);
-      if (content !== null) prependToChatHistory(content, "user");
+      if (content !== null)
+        actions.appendToTranscript({
+          message: content,
+          role: "user",
+          timestamp: Date.now(),
+        });
       return { handled: true, inputFromCommand: content };
     }
     default: {
@@ -1356,11 +1378,9 @@ export function initGlobalConfig() {
 }
 
 export function pageHistory({ isTyped = false }: SpacingOpts = {}) {
-  const path = getState().app.chatHistoryPath;
-  const readResult = tryCatch(() => fsDeps.readFileSync(path).toString());
-  const historyStr = readResult.ok ? readResult.value : "";
+  const { transcript } = getState().app;
 
-  if (historyStr.length === 0) {
+  if (transcript.length === 0) {
     withSpacingIf(
       getState().abortControllers.apiStream === null && isTyped,
       () => print.doing("No chat history"),
@@ -1368,9 +1388,20 @@ export function pageHistory({ isTyped = false }: SpacingOpts = {}) {
     return;
   }
 
+  const formattedTranscript = transcript
+    .map(
+      ({
+        message,
+        role,
+        timestamp,
+      }) => `${new Date(timestamp).toISOString()}  *${role}*
+${normalizeNewline(message, { count: 0 })}`,
+    )
+    .join("\n\n---\n\n");
+
   const initialContentStr = `# [lasso] Chat history
 
-${historyStr}`;
+${formattedTranscript}`;
 
   openWithPager({
     initialContentStr,

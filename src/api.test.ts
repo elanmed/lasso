@@ -47,18 +47,11 @@ describe("api", () => {
 
   describe("resolveApiCall", () => {
     it("returns text on success", async () => {
-      actions.setChatHistoryPath("/tmp/test-history.log");
       const result = await resolveApiCall("hello");
       assert.strictEqual(result, "response text");
-      assert.strictEqual(
-        testFs._files.get("/tmp/test-history.log"),
-        `1970-01-01T00:00:00.000Z  *assistant*
-response text
-
----
-
-`,
-      );
+      assert.deepStrictEqual(getState().app.transcript, [
+        { timestamp: 0, role: "assistant", message: "response text" },
+      ]);
     });
 
     it("returns null on non-abort error", async () => {
@@ -225,7 +218,6 @@ web_fetch_json: https://example.com/api
     });
 
     it("resolves the queued editor input when the api call is interrupted", async () => {
-      actions.setChatHistoryPath("/tmp/test-history.log");
       actions.setRl(makeFakeRl());
       actions.setEditorInputValue("queued input");
       const err = makeAbortError();

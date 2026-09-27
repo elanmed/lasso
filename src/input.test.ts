@@ -401,60 +401,38 @@ describe("input", () => {
     });
 
     it("returns editor input value when set and clears it", async () => {
-      actions.setChatHistoryPath("/tmp/test-history.log");
       actions.setEditorInputValue("editor content");
       const result = await resolveUserInput({ isFirstInput: false });
       assert.strictEqual(result, "editor content");
       assert.strictEqual(getState().app.editorInputValue, null);
-      assert.strictEqual(
-        testFs._files.get("/tmp/test-history.log"),
-        `1970-01-01T00:00:00.000Z  *user*
-editor content
-
----
-
-`,
-      );
+      assert.deepStrictEqual(getState().app.transcript, [
+        { timestamp: 0, role: "user", message: "editor content" },
+      ]);
     });
 
     it("resolves slash commands from editor input", async () => {
-      actions.setChatHistoryPath("/tmp/test-history.log");
       actions.setModel("old");
       actions.setEditorInputValue("/model new-model");
       const result = await resolveUserInput({ isFirstInput: false });
       assert.strictEqual(result, null);
       assert.strictEqual(getState().config.model, "new-model");
       assert.strictEqual(getState().app.editorInputValue, null);
-      assert.strictEqual(
-        testFs._files.get("/tmp/test-history.log"),
-        `1970-01-01T00:00:00.000Z  *user*
-/model new-model
-
----
-
-`,
-      );
+      assert.deepStrictEqual(getState().app.transcript, [
+        { timestamp: 0, role: "user", message: "/model new-model" },
+      ]);
     });
 
     it("returns trimmed user input", async () => {
       mock.method(getTestRl(), "question", () => Promise.resolve("  hello  "));
-      actions.setChatHistoryPath("/tmp/test-history.log");
       const result = await resolveUserInput({ isFirstInput: false });
       assert.strictEqual(result, "hello");
       assert.strictEqual(stripAnsi(getCapturedStdout()), "\n━━ Input ━━\n");
-      assert.strictEqual(
-        testFs._files.get("/tmp/test-history.log"),
-        `1970-01-01T00:00:00.000Z  *user*
-  hello
-
----
-
-`,
-      );
+      assert.deepStrictEqual(getState().app.transcript, [
+        { timestamp: 0, role: "user", message: "  hello  " },
+      ]);
     });
 
     it("resolves slash commands when input starts with /", async () => {
-      actions.setChatHistoryPath("/tmp/test-history.log");
       actions.setModel("old");
       actions.resetStdout();
       mock.method(getTestRl(), "question", () =>
@@ -463,15 +441,9 @@ editor content
       const result = await resolveUserInput({ isFirstInput: false });
       assert.strictEqual(result, null);
       assert.strictEqual(getState().config.model, "new-model");
-      assert.strictEqual(
-        testFs._files.get("/tmp/test-history.log"),
-        `1970-01-01T00:00:00.000Z  *user*
-/model new-model
-
----
-
-`,
-      );
+      assert.deepStrictEqual(getState().app.transcript, [
+        { timestamp: 0, role: "user", message: "/model new-model" },
+      ]);
     });
 
     it("returns null and prints error on non-abort error", async () => {
@@ -490,7 +462,6 @@ read failed
     });
 
     it("returns editor value when aborted by editor", async () => {
-      actions.setChatHistoryPath("/tmp/test-history.log");
       mock.method(getTestRl(), "question", () => {
         actions.setEditorInputValue("from editor");
         const err = makeAbortError("This operation was aborted");
@@ -499,15 +470,9 @@ read failed
       const result = await resolveUserInput({ isFirstInput: false });
       assert.strictEqual(result, "from editor");
       assert.strictEqual(getState().app.editorInputValue, null);
-      assert.strictEqual(
-        testFs._files.get("/tmp/test-history.log"),
-        `1970-01-01T00:00:00.000Z  *user*
-from editor
-
----
-
-`,
-      );
+      assert.deepStrictEqual(getState().app.transcript, [
+        { timestamp: 0, role: "user", message: "from editor" },
+      ]);
     });
 
     it("exits on abort during exit confirmation", async () => {
@@ -633,24 +598,16 @@ Resume this session with /resume 42000
     });
 
     it("returns the first queued editor message and keeps the rest for the next iteration", async () => {
-      actions.setChatHistoryPath("/tmp/test-history.log");
       actions.setEditorInputValue("first\nl---\nsecond\n");
       const result = await resolveUserInput({ isFirstInput: false });
       assert.strictEqual(result, "first\n");
       assert.strictEqual(getState().app.editorInputValue, "second\n");
-      assert.strictEqual(
-        testFs._files.get("/tmp/test-history.log"),
-        `1970-01-01T00:00:00.000Z  *user*
-first
-
----
-
-`,
-      );
+      assert.deepStrictEqual(getState().app.transcript, [
+        { timestamp: 0, role: "user", message: "first\n" },
+      ]);
     });
 
     it("drains queued editor messages across iterations", async () => {
-      actions.setChatHistoryPath("/tmp/test-history.log");
       actions.setEditorInputValue(`first
 l---
 second
@@ -668,24 +625,14 @@ second
   });
 
   describe("parseInputFromEditor", () => {
-    beforeEach(() => {
-      actions.setChatHistoryPath("/tmp/test-history.log");
-    });
-
     it("returns the whole editor value and clears it when no delimiter is present", () => {
       actions.setEditorInputValue("editor content");
       const result = parseInputFromEditor();
       assert.strictEqual(result, "editor content");
       assert.strictEqual(getState().app.editorInputValue, null);
-      assert.strictEqual(
-        testFs._files.get("/tmp/test-history.log"),
-        `1970-01-01T00:00:00.000Z  *user*
-editor content
-
----
-
-`,
-      );
+      assert.deepStrictEqual(getState().app.transcript, [
+        { timestamp: 0, role: "user", message: "editor content" },
+      ]);
     });
 
     it("splits on the delimiter, returns the first message, and keeps the rest", () => {
@@ -704,15 +651,9 @@ l---
 third
 `,
       );
-      assert.strictEqual(
-        testFs._files.get("/tmp/test-history.log"),
-        `1970-01-01T00:00:00.000Z  *user*
-first
-
----
-
-`,
-      );
+      assert.deepStrictEqual(getState().app.transcript, [
+        { timestamp: 0, role: "user", message: "first\n" },
+      ]);
     });
 
     it("returns queued messages one per call until the queue is drained", () => {
@@ -759,15 +700,9 @@ l---
 `);
       assert.strictEqual(parseInputFromEditor(), "message 2\n");
       assert.strictEqual(getState().app.editorInputValue, "/cwd\n");
-      assert.strictEqual(
-        testFs._files.get("/tmp/test-history.log"),
-        `1970-01-01T00:00:00.000Z  *user*
-message 2
-
----
-
-`,
-      );
+      assert.deepStrictEqual(getState().app.transcript, [
+        { timestamp: 0, role: "user", message: "message 2\n" },
+      ]);
     });
 
     it("keeps the user's internal newlines when a command splits multi-line text", () => {
@@ -1343,19 +1278,9 @@ transcript content`,
     beforeEach(() => {
       actions.resetState();
       actions.resetStdout();
-      actions.setChatHistoryPath("/tmp/test-history.log");
     });
 
-    it("prints that history is empty when the chat history file does not exist", () => {
-      pageHistory({ isTyped: true });
-      assert.strictEqual(
-        stripAnsi(getCapturedStdout()),
-        "\nNo chat history\n\n",
-      );
-    });
-
-    it("prints that history is empty when the chat history file is empty", () => {
-      testFs._files.set("/tmp/test-history.log", "");
+    it("prints that history is empty when the transcript is empty", () => {
       pageHistory({ isTyped: true });
       assert.strictEqual(
         stripAnsi(getCapturedStdout()),
@@ -1377,13 +1302,18 @@ transcript content`,
     it("opens the chat history in a pager with a heading prepended", () => {
       const { spawned } = mockPagerSpawn();
       testProcessEnv._set("LASSO_PAGER", "nano __FILE__");
-      testFs._files.set("/tmp/test-history.log", "log content");
+      actions.appendToTranscript({
+        timestamp: 0,
+        role: "user",
+        message: "log content",
+      });
       pageHistory();
       assert.strictEqual(spawned[0], "nano /tmp/lasso-test-uuid.txt");
       assert.strictEqual(
         testFs._files.get("/tmp/lasso-test-uuid.txt"),
         `# [lasso] Chat history
 
+1970-01-01T00:00:00.000Z  *user*
 log content
 
 `,
@@ -2063,8 +1993,11 @@ Available context files:
       const { spawned } = mockPagerSpawn();
       actions.setBatAvailable(true);
       actions.setKeymap("history", { name: "h", ctrl: true });
-      actions.setChatHistoryPath("/tmp/editor.log");
-      testFs._files.set("/tmp/editor.log", "log content");
+      actions.appendToTranscript({
+        timestamp: 0,
+        role: "user",
+        message: "log content",
+      });
       harness.emitKey({ name: "h", ctrl: true });
       await harness.flush();
       assert.strictEqual(spawned[0], batPagerCmd("/tmp/lasso-test-uuid.txt"));
@@ -2072,6 +2005,7 @@ Available context files:
         testFs._files.get("/tmp/lasso-test-uuid.txt"),
         `# [lasso] Chat history
 
+1970-01-01T00:00:00.000Z  *user*
 log content
 
 `,
@@ -2089,8 +2023,11 @@ log content
       actions.setBatAvailable(true);
       actions.setQuestionAbortController(null);
       actions.setKeymap("history", { name: "h", ctrl: true });
-      actions.setChatHistoryPath("/tmp/editor.log");
-      testFs._files.set("/tmp/editor.log", "log content");
+      actions.appendToTranscript({
+        timestamp: 0,
+        role: "user",
+        message: "log content",
+      });
       harness.emitKey({ name: "h", ctrl: true });
       await harness.flush();
       assert.strictEqual(spawned[0], batPagerCmd("/tmp/lasso-test-uuid.txt"));
@@ -2399,41 +2336,27 @@ editor input
       );
     });
 
-    it("handles /edit command and logs editor content to chat history", async () => {
-      actions.setChatHistoryPath("/tmp/test-history.log");
+    it("handles /edit command and logs editor content to the transcript", async () => {
       mock.method(childProcess, "spawnSync", () => {
         testFs.writeFileSync("/tmp/lasso-test-uuid.txt", "from editor");
       });
       const result = await resolveSlashCommand("/edit");
       assert.strictEqual(result, "from editor\n");
-      assert.strictEqual(
-        testFs._files.get("/tmp/test-history.log"),
-        `1970-01-01T00:00:00.000Z  *user*
-from editor
-
----
-
-`,
-      );
+      assert.deepStrictEqual(getState().app.transcript, [
+        { timestamp: 0, role: "user", message: "from editor\n" },
+      ]);
     });
 
-    it("handles /paste command and logs editor content to chat history", async () => {
-      actions.setChatHistoryPath("/tmp/test-history.log");
+    it("handles /paste command and logs editor content to the transcript", async () => {
       mockClipboardPaste("clip");
       mock.method(childProcess, "spawnSync", () => {
         testFs.writeFileSync("/tmp/lasso-test-uuid.txt", "pasted content");
       });
       const result = await resolveSlashCommand("/paste");
       assert.strictEqual(result, "pasted content\n");
-      assert.strictEqual(
-        testFs._files.get("/tmp/test-history.log"),
-        `1970-01-01T00:00:00.000Z  *user*
-pasted content
-
----
-
-`,
-      );
+      assert.deepStrictEqual(getState().app.transcript, [
+        { timestamp: 0, role: "user", message: "pasted content\n" },
+      ]);
     });
 
     it("handles /clear command", async () => {
@@ -2443,14 +2366,18 @@ pasted content
 
     it("handles /history command by opening chat history in a pager", async () => {
       testProcessEnv._set("LASSO_PAGER", "nano __FILE__");
-      actions.setChatHistoryPath("/tmp/test-history.log");
-      testFs._files.set("/tmp/test-history.log", "log content");
+      actions.appendToTranscript({
+        timestamp: 0,
+        role: "user",
+        message: "log content",
+      });
       const result = await resolveSlashCommand("/history");
       assert.strictEqual(result, null);
       assert.strictEqual(
         testFs._files.get("/tmp/lasso-test-uuid.txt"),
         `# [lasso] Chat history
 
+1970-01-01T00:00:00.000Z  *user*
 log content
 
 `,
