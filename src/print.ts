@@ -96,6 +96,12 @@ export function printNewline() {
   colorPrint("", "none");
 }
 
+export function withSpacing(cb: () => void) {
+  printNewline();
+  cb();
+  printNewline();
+}
+
 export function startLoadingState() {
   writeLoadingStateFrame();
 

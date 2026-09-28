@@ -23,7 +23,12 @@ import {
   markdownFence,
 } from "./utils.ts";
 import { truncate } from "./text.ts";
-import { print, printNewline, printSessionStartDate } from "./print.ts";
+import {
+  print,
+  printNewline,
+  printSessionStartDate,
+  withSpacing,
+} from "./print.ts";
 import { fencePrint, wrapInFence } from "./fence.ts";
 import {
   getPrettyContextWindowUsage,
@@ -1050,12 +1055,6 @@ function withSpacingIf(shouldSpace: boolean, cb: () => void) {
   }
 }
 
-function withSpacing(cb: () => void) {
-  printNewline();
-  cb();
-  printNewline();
-}
-
 export function pageEditStr({ isTyped = false }: SpacingOpts = {}) {
   const { editorInputValue } = getState().app;
   if (editorInputValue === null) {
@@ -1157,7 +1156,7 @@ export function resumeWithNoArgs() {
     ({ absolutePath }) => getState().app.sessionFilePath !== absolutePath,
   );
   if (sessionFiles.length === 0) {
-    print.error("No sessions to resume");
+    withSpacing(() => print.error("No sessions to resume"));
     return null;
   }
 
@@ -1197,9 +1196,11 @@ export function resume(rawInput: string) {
     return null;
   }
 
-  print.error(
-    `No conversation found with session start date: ${sessionStartDate}`,
-  );
+  withSpacing(() => {
+    print.error(
+      `No conversation found with session start date: ${sessionStartDate}`,
+    );
+  });
   return null;
 }
 

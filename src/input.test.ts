@@ -1137,7 +1137,7 @@ Token count: 621 (0% of context window)
       assert.strictEqual(result, null);
       assert.strictEqual(
         stripAnsi(getCapturedStdout()),
-        "No conversation found with session start date: 1234567890000\n",
+        "\nNo conversation found with session start date: 1234567890000\n\n",
       );
     });
 
@@ -1177,7 +1177,7 @@ Token count: 621 (0% of context window)
       assert.strictEqual(result, null);
       assert.strictEqual(
         stripAnsi(getCapturedStdout()),
-        "No conversation found with session start date: 1234567890000\n",
+        "\nNo conversation found with session start date: 1234567890000\n\n",
       );
     });
 
@@ -1191,7 +1191,7 @@ Token count: 621 (0% of context window)
       assert.strictEqual(result, null);
       assert.strictEqual(
         stripAnsi(getCapturedStdout()),
-        "Failed to parse the session file at /fake-home/.local/state/lasso/sessions/session-1234567890000.json\n",
+        "\nFailed to parse the session file at /fake-home/.local/state/lasso/sessions/session-1234567890000.json\n\n",
       );
     });
 
@@ -1205,7 +1205,7 @@ Token count: 621 (0% of context window)
       assert.strictEqual(result, null);
       assert.strictEqual(
         stripAnsi(getCapturedStdout()),
-        "No conversation found with session start date: 1234567890000\n",
+        "\nNo conversation found with session start date: 1234567890000\n\n",
       );
     });
   });
@@ -1220,7 +1220,7 @@ Token count: 621 (0% of context window)
       assert.strictEqual(result, null);
       assert.strictEqual(
         stripAnsi(getCapturedStdout()),
-        "No sessions to resume\n",
+        "\nNo sessions to resume\n\n",
       );
     });
 
@@ -1293,7 +1293,7 @@ Token count: 621 (0% of context window)
       assert.strictEqual(result, null);
       assert.strictEqual(
         stripAnsi(getCapturedStdout()),
-        "No sessions to resume\n",
+        "\nNo sessions to resume\n\n",
       );
     });
   });

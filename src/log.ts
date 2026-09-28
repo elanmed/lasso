@@ -12,7 +12,7 @@ import { listSessionFiles, tryCatch } from "./utils.ts";
 import { fsDeps } from "./deps.ts";
 import { getSessionDir } from "./paths.ts";
 import { debugLog as writeDebugLog } from "./debug-log.ts";
-import { print } from "./print.ts";
+import { print, withSpacing } from "./print.ts";
 
 export function debugLog(content: string) {
   writeDebugLog(getState().app.debugLog, getState().app.debugLogPath, content);
@@ -77,19 +77,25 @@ export function resumeFromSessionFile(sessionFilePath: string) {
     fsDeps.readFileSync(sessionFilePath).toString(),
   );
   if (!readResult.ok) {
-    print.error(`Failed to read the session file at ${sessionFilePath}`);
+    withSpacing(() => {
+      print.error(`Failed to read the session file at ${sessionFilePath}`);
+    });
     return false;
   }
 
   const jsonResult = tryCatch((): unknown => JSON.parse(readResult.value));
   if (!jsonResult.ok) {
-    print.error(`Failed to parse the session file at ${sessionFilePath}`);
+    withSpacing(() => {
+      print.error(`Failed to parse the session file at ${sessionFilePath}`);
+    });
     return false;
   }
 
   const parseResult = tryCatch(() => SessionFileSchema.parse(jsonResult.value));
   if (!parseResult.ok) {
-    print.error(`Failed to validate the session file at ${sessionFilePath}`);
+    withSpacing(() => {
+      print.error(`Failed to validate the session file at ${sessionFilePath}`);
+    });
     return false;
   }
   const { messages, summaries, transcript } = parseResult.value;

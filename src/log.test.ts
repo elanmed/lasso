@@ -348,7 +348,7 @@ describe("log", () => {
       assert.equal(result, false);
       assert.equal(
         stripAnsi(getCaptured()),
-        "Failed to read the session file at /test/missing.json\n",
+        "\nFailed to read the session file at /test/missing.json\n\n",
       );
     });
 
@@ -361,7 +361,7 @@ describe("log", () => {
       assert.equal(result, false);
       assert.equal(
         stripAnsi(getCaptured()),
-        "Failed to parse the session file at /test/broken.json\n",
+        "\nFailed to parse the session file at /test/broken.json\n\n",
       );
     });
 
@@ -374,7 +374,7 @@ describe("log", () => {
       assert.equal(result, false);
       assert.equal(
         stripAnsi(getCaptured()),
-        "Failed to validate the session file at /test/invalid.json\n",
+        "\nFailed to validate the session file at /test/invalid.json\n\n",
       );
     });
   });
