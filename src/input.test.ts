@@ -1,6 +1,7 @@
 import { describe, it, beforeEach, afterEach, mock } from "node:test";
 import assert from "node:assert";
 import childProcess from "node:child_process";
+import os from "node:os";
 import { actions, getState, promptDeps } from "./state.ts";
 
 import { strToApproxTokens } from "./utils.ts";
@@ -424,6 +425,18 @@ describe("input", () => {
         includeClipboardSuffix: true,
       });
       assert.strictEqual(result, null);
+    });
+
+    it("uses pbpaste on darwin when LASSO_CLIPBOARD_PASTE is not set", async () => {
+      actions.setRl(makeFakeRl({ line: "query" }));
+      mock.method(os, "platform", () => "darwin");
+      const commands: string[] = [];
+      mockExecCalls([{ stdout: "clip" }], commands);
+      const result = await spawnAndReadEditorContent({
+        includeClipboardSuffix: true,
+      });
+      assert.strictEqual(result, null);
+      assert.strictEqual(commands[0], "pbpaste");
     });
 
     it("includes a clipboard error marker in the editor content when the paste command fails", async () => {
