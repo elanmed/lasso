@@ -787,7 +787,7 @@ web_fetch_json: https://example.com/api
 
 - Compact the following conversation.
 - Output a plain-text prose summary. Do not repeat the input.
-- Output a maximum of 90000 characters.
+- Output a maximum of 30000 characters.
 
 \`\`\`json
 [{"role":"user","content":"hi"}]
@@ -954,7 +954,7 @@ You have queued messages! Edit them with {"name":"g","ctrl":true} or press enter
 
 - Compact the following conversation.
 - Output a plain-text prose summary. Do not repeat the input.
-- Output a maximum of 90000 characters.
+- Output a maximum of 30000 characters.
 
 \`\`\`json
 [{"role":"user","content":"old"}]
@@ -1118,7 +1118,7 @@ You have queued messages! Edit them with {"name":"g","ctrl":true} or press enter
 
 - Compact the following conversation.
 - Output a plain-text prose summary. Do not repeat the input.
-- Output a maximum of 90000 characters.
+- Output a maximum of 30000 characters.
 
 \`\`\`json
 [{"role":"user","content":"not yet summarized"}]

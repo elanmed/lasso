@@ -2,7 +2,6 @@ import { Output, type ModelMessage } from "ai";
 import { z } from "zod";
 import { assertAtBuildtime } from "./assert.ts";
 import { actions, getState, promptDeps } from "./state.ts";
-
 import {
   isAbortError,
   tryCatchAsync,
@@ -47,7 +46,6 @@ import {
   syncSessionFile,
 } from "./log.ts";
 
-const compactTargetRatio = 0.3;
 const maxNumberSummaries = 5;
 const maxRatioPerSummary = dedicatedSummaryRatio / maxNumberSummaries;
 
@@ -311,7 +309,7 @@ export async function getConversationSummary() {
   const contextWindow = getState().config.contextWindowPerModel[model];
   assertAtBuildtime(contextWindow !== undefined);
 
-  const targetTokens = Math.floor(compactTargetRatio * contextWindow);
+  const targetTokens = Math.floor(maxRatioPerSummary * contextWindow);
   const targetCharLen = approxTokensToCharLen(targetTokens);
 
   // messages[0..summaries.length) are re-appended summaries, one per entry,
