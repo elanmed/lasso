@@ -127,32 +127,20 @@ async function getEditorInitialContent(opts: {
 
   const prefilledEditorContent = (() => {
     const editorInputValue = getState().app.editorInputValue;
-    if (editorInputValue !== null) {
-      return normalizeNewline(editorInputValue);
-    }
-
+    if (editorInputValue !== null) return normalizeNewline(editorInputValue);
     return "";
   })();
 
   const readlineContent = (() => {
-    if (rl.line.length > 0) {
-      return rl.line;
-    }
-
+    if (rl.line.length > 0) return rl.line;
     return "";
   })();
 
   let clipboardContent = "";
   if (opts.includeClipboardSuffix) {
     const defaultPasteCmd = (() => {
-      if (os.platform() === "darwin") {
-        return "pbpaste";
-      }
-
-      if (os.platform() === "linux") {
-        return "xclip -selection clipboard -o";
-      }
-
+      if (os.platform() === "darwin") return "pbpaste";
+      if (os.platform() === "linux") return "xclip -selection clipboard -o";
       return "";
     })();
 
@@ -162,14 +150,15 @@ async function getEditorInitialContent(opts: {
     const pasteResult = await tryCatchAsync(execPromise(pasteCmd));
     if (pasteResult.ok) {
       clipboardContent = normalizeNewline(pasteResult.value.stdout);
+    } else {
+      clipboardContent = `[Error executing ${pasteCmd}: ${getMessageFromError(pasteResult.error)}]`;
     }
   }
 
   return `${prefilledEditorContent}${readlineContent}${clipboardContent}`;
 }
 
-function abortRlQuestionForEditor(editorContent: string) {
-  actions.setEditorInputValue(editorContent);
+function abortRlQuestionForEditorIfActive(editorContent: string) {
   const abortController = getState().abortControllers.question;
   if (abortController !== null) {
     const rl = clearRlLine();
@@ -219,7 +208,7 @@ export function initKeypress() {
             if (editorContent === null) {
               redrawPendingQuestion();
             } else {
-              abortRlQuestionForEditor(editorContent);
+              abortRlQuestionForEditorIfActive(editorContent);
             }
 
             return;
@@ -236,7 +225,7 @@ export function initKeypress() {
             if (editorContent === null) {
               redrawPendingQuestion();
             } else {
-              abortRlQuestionForEditor(editorContent);
+              abortRlQuestionForEditorIfActive(editorContent);
             }
             return;
           }
@@ -996,8 +985,18 @@ export async function spawnAndReadEditorContent(opts?: {
   ) {
     return null;
   }
-  if (readResult.value === "") return null;
 
+  const trimmedBefore = initialContent.trim();
+  const trimmedAfter = readResult.value.trim();
+
+  if (trimmedAfter === "") {
+    if (trimmedBefore !== "") {
+      actions.setEditorInputValue(null);
+    }
+    return null;
+  }
+
+  actions.setEditorInputValue(readResult.value);
   return normalizeNewline(readResult.value);
 }
 

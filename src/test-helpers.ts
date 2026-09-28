@@ -421,6 +421,11 @@ export function mockClipboardPaste(stdout: string) {
   mock.method(os, "platform", () => "linux");
   mockExec({ stdout });
 }
+
+export function mockClipboardPasteFailure(error: Error) {
+  mock.method(os, "platform", () => "linux");
+  mockExec({ stdout: "", error });
+}
 export interface SpawnSyncResult {
   status: number | null;
   stdout?: string;

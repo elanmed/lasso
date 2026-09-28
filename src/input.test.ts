@@ -42,6 +42,7 @@ import {
   setupKeypressTests,
   makeFakeRl,
   mockClipboardPaste,
+  mockClipboardPasteFailure,
   mockExecCalls,
   mockSpawnSync,
   mockPagerSpawn,
@@ -329,12 +330,32 @@ describe("input", () => {
       assert.strictEqual(result, null);
     });
 
+    it("clears the editor input value and returns null when the editor result is whitespace only", async () => {
+      actions.setEditorInputValue("prefill");
+      mock.method(childProcess, "spawnSync", () => {
+        testFs.writeFileSync("/tmp/lasso-test-uuid.txt", "   \n\t");
+      });
+      const result = await spawnAndReadEditorContent();
+      assert.strictEqual(result, null);
+      assert.strictEqual(getState().app.editorInputValue, null);
+    });
+
+    it("returns null without state changes when the editor result is whitespace only and there was no prefill", async () => {
+      mock.method(childProcess, "spawnSync", () => {
+        testFs.writeFileSync("/tmp/lasso-test-uuid.txt", "   ");
+      });
+      const result = await spawnAndReadEditorContent();
+      assert.strictEqual(result, null);
+      assert.strictEqual(getState().app.editorInputValue, null);
+    });
+
     it("returns normalized content", async () => {
       mock.method(childProcess, "spawnSync", () => {
         testFs.writeFileSync("/tmp/lasso-test-uuid.txt", "  hello  ");
       });
       const result = await spawnAndReadEditorContent();
       assert.strictEqual(result, "  hello\n");
+      assert.strictEqual(getState().app.editorInputValue, "  hello  ");
     });
 
     it("uses LASSO_EDIT env var with __FILE__ when available", async () => {
@@ -397,6 +418,26 @@ describe("input", () => {
         includeClipboardSuffix: true,
       });
       assert.strictEqual(result, null);
+    });
+
+    it("includes a clipboard error marker in the editor content when the paste command fails", async () => {
+      actions.setRl(makeFakeRl({ line: "hello " }));
+      mockClipboardPasteFailure(new Error("boom"));
+      let initialEditorContent = "";
+      mock.method(childProcess, "spawnSync", () => {
+        initialEditorContent = testFs
+          .readFileSync("/tmp/lasso-test-uuid.txt")
+          .toString();
+        testFs.writeFileSync("/tmp/lasso-test-uuid.txt", "final");
+      });
+      const result = await spawnAndReadEditorContent({
+        includeClipboardSuffix: true,
+      });
+      assert.strictEqual(result, "final\n");
+      assert.strictEqual(
+        initialEditorContent,
+        "hello [Error executing xclip -selection clipboard -o: boom]",
+      );
     });
   });
 
@@ -2045,7 +2086,7 @@ Available context files:
       harness.emitKey({ name: "g", ctrl: true });
       await harness.flush();
       assert.deepStrictEqual(prompts, []);
-      assert.strictEqual(getState().app.editorInputValue, "  edited\n");
+      assert.strictEqual(getState().app.editorInputValue, "  edited  ");
     });
 
     it("runs paste command with clipboard when its keymap matches", async () => {
@@ -2064,7 +2105,7 @@ Available context files:
       await harness.flush();
       assert.strictEqual(
         getState().app.editorInputValue,
-        "  hello world modified\n",
+        "  hello world modified  \n",
       );
     });
 
