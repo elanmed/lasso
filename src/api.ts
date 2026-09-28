@@ -147,6 +147,7 @@ export async function resolveApiCall(userInput: string) {
   actions.setApiEndTime();
 
   if (!generateTextResult.ok) {
+    actions.setPromptTokensDirty(true);
     toolCallDiffer.cleanupAllTempFileBefore();
 
     if (isAbortError(generateTextResult.error)) {
@@ -159,7 +160,6 @@ export async function resolveApiCall(userInput: string) {
       syncSessionFile({
         messages: getAppendedConversationMessages(interruptMessage),
       });
-      actions.setPromptTokensDirty(true);
 
       if (getState().app.editorInputValue !== null) {
         await resolveInterruptWithEditor();

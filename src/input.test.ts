@@ -1163,7 +1163,7 @@ Token count: 621 (0% of context window)
       ]);
       assert.deepStrictEqual(getState().app.promptTokens, {
         value: 0,
-        dirty: false,
+        dirty: true,
       });
     });
 

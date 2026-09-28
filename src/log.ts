@@ -102,6 +102,7 @@ export function resumeFromSessionFile(sessionFilePath: string) {
   actions.setTranscript(transcript);
   actions.setConversationSummaries(summaries);
   actions.setConversationMessages(messages);
+  actions.setPromptTokensDirty(true);
   return true;
 }
 

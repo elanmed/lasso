@@ -328,6 +328,8 @@ describe("log", () => {
         }),
       );
 
+      actions.setPromptTokens(100);
+
       const result = resumeFromSessionFile("/test/session.json");
 
       assert.equal(result, true);
@@ -338,6 +340,10 @@ describe("log", () => {
       assert.deepStrictEqual(getState().app.transcript, [
         { timestamp: 0, role: "user", message: "hello" },
       ]);
+      assert.deepStrictEqual(getState().app.promptTokens, {
+        value: 100,
+        dirty: true,
+      });
     });
 
     it("prints an error and returns false when the session file cannot be read", () => {

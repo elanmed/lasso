@@ -54,12 +54,17 @@ describe("api", () => {
       ]);
     });
 
-    it("returns null on non-abort error", async () => {
+    it("marks prompt tokens dirty on non-abort error", async () => {
+      actions.setPromptTokens(50);
       mock.method(aiDeps, "generateText", () =>
         Promise.reject(new Error("network error")),
       );
       const result = await resolveApiCall("hello");
       assert.strictEqual(result, null);
+      assert.deepStrictEqual(getState().app.promptTokens, {
+        value: 50,
+        dirty: true,
+      });
     });
 
     it("passes harness and MCP tools to generateText", async () => {
