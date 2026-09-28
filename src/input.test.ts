@@ -35,6 +35,7 @@ import {
   printKeymaps,
 } from "./input.ts";
 import {
+  addSessionFile,
   testFs,
   testProcessEnv,
   setupTestContext,
@@ -1142,17 +1143,13 @@ Token count: 621 (0% of context window)
 
     it("loads the session and returns continue when the date matches", () => {
       actions.setConversationMessages([{ role: "user", content: "old" }]);
-      testFs._dirs.add("/fake-home/.local/state/lasso/sessions");
-      testFs._files.set(
-        "/fake-home/.local/state/lasso/sessions/session-1234567890000.json",
-        JSON.stringify({
-          messages: [{ role: "user", content: "hello" }],
-          summaries: [],
-          transcript: [
-            { timestamp: 0, role: "user", message: "transcript content" },
-          ],
-        }),
-      );
+      addSessionFile(1234567890000, {
+        messages: [{ role: "user", content: "hello" }],
+        summaries: [],
+        transcript: [
+          { timestamp: 0, role: "user", message: "transcript content" },
+        ],
+      });
 
       const result = resume("/resume 1234567890000");
 
@@ -1229,25 +1226,18 @@ Token count: 621 (0% of context window)
 
     it("resumes the most recent session", () => {
       actions.setConversationMessages([{ role: "user", content: "hello" }]);
-      testFs._dirs.add("/fake-home/.local/state/lasso/sessions");
-      testFs._files.set(
-        "/fake-home/.local/state/lasso/sessions/session-1234567890000.json",
-        JSON.stringify({
-          messages: [{ role: "user", content: "older" }],
-          summaries: [],
-          transcript: [],
-        }),
-      );
-      testFs._files.set(
-        "/fake-home/.local/state/lasso/sessions/session-1234567899999.json",
-        JSON.stringify({
-          messages: [{ role: "assistant", content: "newer" }],
-          summaries: [{ compacted: "summary", compactedAt: 123, tokens: 456 }],
-          transcript: [
-            { timestamp: 0, role: "user", message: "newer transcript" },
-          ],
-        }),
-      );
+      addSessionFile(1234567890000, {
+        messages: [{ role: "user", content: "older" }],
+        summaries: [],
+        transcript: [],
+      });
+      addSessionFile(1234567899999, {
+        messages: [{ role: "assistant", content: "newer" }],
+        summaries: [{ compacted: "summary", compactedAt: 123, tokens: 456 }],
+        transcript: [
+          { timestamp: 0, role: "user", message: "newer transcript" },
+        ],
+      });
 
       const result = resumeWithNoArgs();
 
@@ -1259,6 +1249,52 @@ Token count: 621 (0% of context window)
       assert.deepStrictEqual(getState().app.transcript, [
         { timestamp: 0, role: "user", message: "newer transcript" },
       ]);
+    });
+
+    it("excludes the current session file when resuming the most recent session", () => {
+      addSessionFile(1234567899999, {
+        messages: [{ role: "assistant", content: "newer" }],
+        summaries: [{ compacted: "summary", compactedAt: 123, tokens: 456 }],
+        transcript: [
+          { timestamp: 0, role: "user", message: "newer transcript" },
+        ],
+      });
+      actions.setSessionFilePath(
+        "/fake-home/.local/state/lasso/sessions/session-1234567899999.json",
+      );
+      addSessionFile(1234567890000, {
+        messages: [{ role: "user", content: "older" }],
+        summaries: [],
+        transcript: [],
+      });
+
+      const result = resumeWithNoArgs();
+
+      assert.strictEqual(result, "Continue");
+      assert.deepStrictEqual(getState().app.conversation, {
+        summaries: [],
+        messages: [{ role: "user", content: "older" }],
+      });
+      assert.deepStrictEqual(getState().app.transcript, []);
+    });
+
+    it("prints an error when the current session is the only session", () => {
+      actions.setSessionFilePath(
+        "/fake-home/.local/state/lasso/sessions/session-1234567890000.json",
+      );
+      addSessionFile(1234567890000, {
+        messages: [{ role: "user", content: "hello" }],
+        summaries: [],
+        transcript: [],
+      });
+
+      const result = resumeWithNoArgs();
+
+      assert.strictEqual(result, null);
+      assert.strictEqual(
+        stripAnsi(getCapturedStdout()),
+        "No sessions to resume\n",
+      );
     });
   });
 

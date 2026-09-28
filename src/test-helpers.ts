@@ -9,7 +9,7 @@ import { z } from "zod";
 import type { ModelMessage, ToolSet } from "ai";
 import type { MCPClient } from "@ai-sdk/mcp";
 import { aiDeps, fsDeps, mcpDeps, processDeps } from "./deps.ts";
-import { actions, promptDeps } from "./state.ts";
+import { actions, promptDeps, type SessionFile } from "./state.ts";
 import { initKeypress } from "./input.ts";
 import type { Key, SdkProvider } from "./config-types.ts";
 import { baseBatFlags, markdownBatFlags } from "./terminal.ts";
@@ -182,6 +182,13 @@ export function makeFakeCwd() {
 export const testFs = makeFakeFsDeps();
 export const testProcessEnv = makeFakeProcessEnv();
 export const testCwd = makeFakeCwd();
+
+export function addSessionFile(timestampMs: number, session: SessionFile) {
+  testFs._dirs.add("/fake-home/.local/state/lasso/sessions");
+  const path = `/fake-home/.local/state/lasso/sessions/session-${timestampMs.toString()}.json`;
+  testFs._files.set(path, JSON.stringify(session));
+  return path;
+}
 
 const ANSI_ESCAPE_PATTERN =
   // eslint-disable-next-line no-control-regex

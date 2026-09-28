@@ -1153,7 +1153,9 @@ export function printAvailableContextFiles() {
 }
 
 export function resumeWithNoArgs() {
-  const sessionFiles = listSessionFiles();
+  const sessionFiles = listSessionFiles().filter(
+    ({ absolutePath }) => getState().app.sessionFilePath !== absolutePath,
+  );
   if (sessionFiles.length === 0) {
     print.error("No sessions to resume");
     return null;
