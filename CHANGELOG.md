@@ -1,5 +1,22 @@
 # Changelog
 
+## v0.9.0 - 2026-09-28
+
+- Resume the most recent session from `/resume` without args
+- Resume from a session file with the entire transcript, summaries, and current set of messages
+- Warn on session file sync and resume failures, and wrap those errors with spacing
+- Print token usage by area in `/usage` and add the `/tokens` command
+- Add the `suppressToolEditDiffs` config option to record diffs while hiding file-change prints
+- Ignore tool diffs for files under `os.tmpdir()`
+- Page available commands via the pager
+- Treat whitespace-only editor results as cleared, and insert a clipboard paste error marker into the editor content
+- Pin `pbpaste` as the default clipboard paste command on darwin
+- Compact conversations at 95% of the context window, and target conversation summaries at 10%
+- Drop dollar signs from the usage limit window display
+- Move chat history, debug logs, and usage files to XDG state and data dirs
+- Mark prompt tokens dirty when resuming a session file or when an API call fails
+- Fix an infinite loop on control-d
+
 ## v0.8.0 - 2026-09-24
 
 - Add the `/lastdiff` command and keymap to page tool-edit diffs from the last turn
