@@ -370,6 +370,12 @@ describe("input", () => {
       assert.strictEqual(spawned[0], "vim /tmp/lasso-test-uuid.txt");
     });
 
+    it("uses EDITOR env var with __FILE__ when LASSO_EDIT is not set", async () => {
+      testProcessEnv._set("EDITOR", "nano __FILE__");
+      await spawnAndReadEditorContent();
+      assert.strictEqual(spawned[0], "nano /tmp/lasso-test-uuid.txt");
+    });
+
     it("falls back to vi when no editor env vars are set", async () => {
       await spawnAndReadEditorContent();
       assert.strictEqual(spawned[0], "vi /tmp/lasso-test-uuid.txt");

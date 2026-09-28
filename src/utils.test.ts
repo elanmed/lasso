@@ -2,6 +2,7 @@ import { describe, it, beforeEach, afterEach, mock } from "node:test";
 import assert from "node:assert";
 import {
   isAbortError,
+  isNullish,
   isReadlineClosedError,
   tryCatch,
   safeStringify,
@@ -186,6 +187,24 @@ describe("utils", () => {
 
     it("returns false for a string", () => {
       assert.equal(isAbortError("AbortError"), false);
+    });
+  });
+
+  describe("isNullish", () => {
+    it("returns true for null", () => {
+      assert.equal(isNullish(null), true);
+    });
+
+    it("returns true for undefined", () => {
+      assert.equal(isNullish(undefined), true);
+    });
+
+    it("returns false for an empty string", () => {
+      assert.equal(isNullish(""), false);
+    });
+
+    it("returns false for a non-nullish value", () => {
+      assert.equal(isNullish("vi"), false);
     });
   });
 

@@ -21,6 +21,7 @@ import {
   stringify,
   getStrFromAssistantContent,
   markdownFence,
+  isNullish,
 } from "./utils.ts";
 import { truncate } from "./text.ts";
 import {
@@ -119,33 +120,37 @@ export function initReadline() {
   return rl;
 }
 
+function getDefaultPasteCmd() {
+  if (os.platform() === "darwin") return "pbpaste";
+  if (os.platform() === "linux") return "xclip -selection clipboard -o";
+  return "";
+}
+
+function getPrefilledEditorContent() {
+  const editorInputValue = getState().app.editorInputValue;
+  if (editorInputValue !== null) return normalizeNewline(editorInputValue);
+  return "";
+}
+
+function getReadlineContent(rl: readline.Interface) {
+  if (rl.line.length > 0) return rl.line;
+  return "";
+}
+
 async function getEditorInitialContent(opts: {
   includeClipboardSuffix: boolean;
 }) {
   const rl = getState().app.rl;
   assertAtBuildtime(rl !== null);
 
-  const prefilledEditorContent = (() => {
-    const editorInputValue = getState().app.editorInputValue;
-    if (editorInputValue !== null) return normalizeNewline(editorInputValue);
-    return "";
-  })();
+  const prefilledEditorContent = getPrefilledEditorContent();
 
-  const readlineContent = (() => {
-    if (rl.line.length > 0) return rl.line;
-    return "";
-  })();
+  const readlineContent = getReadlineContent(rl);
 
   let clipboardContent = "";
   if (opts.includeClipboardSuffix) {
-    const defaultPasteCmd = (() => {
-      if (os.platform() === "darwin") return "pbpaste";
-      if (os.platform() === "linux") return "xclip -selection clipboard -o";
-      return "";
-    })();
-
     const pasteCmd =
-      processDeps.env.get("LASSO_CLIPBOARD_PASTE") ?? defaultPasteCmd;
+      processDeps.env.get("LASSO_CLIPBOARD_PASTE") ?? getDefaultPasteCmd();
 
     const pasteResult = await tryCatchAsync(execPromise(pasteCmd));
     if (pasteResult.ok) {
@@ -922,6 +927,22 @@ export function printTokens() {
   });
 }
 
+function getEditCommand(tempFile: string) {
+  const lassoEditEnvValue = processDeps.env.get("LASSO_EDIT");
+  if (isExisty(lassoEditEnvValue)) {
+    return lassoEditEnvValue.replace("__FILE__", tempFile);
+  }
+
+  const editorEnvValue = processDeps.env.get("EDITOR");
+  if (isNullish(editorEnvValue)) return `vi ${tempFile}`;
+
+  if (editorEnvValue.includes("__FILE__")) {
+    return editorEnvValue.replace("__FILE__", tempFile);
+  }
+
+  return `${editorEnvValue} ${tempFile}`;
+}
+
 export async function spawnAndReadEditorContent(opts?: {
   includeClipboardSuffix?: boolean;
 }) {
@@ -937,21 +958,7 @@ export async function spawnAndReadEditorContent(opts?: {
     return null;
   }
 
-  const editCommand = (() => {
-    const lassoEditEnvValue = processDeps.env.get("LASSO_EDIT");
-    if (isExisty(lassoEditEnvValue)) {
-      return lassoEditEnvValue.replace("__FILE__", tempFile);
-    }
-
-    const editorEnvValue = processDeps.env.get("EDITOR");
-    if (isExisty(editorEnvValue)) {
-      return editorEnvValue.includes("__FILE__")
-        ? editorEnvValue.replace("__FILE__", tempFile)
-        : `${editorEnvValue} ${tempFile}`;
-    }
-
-    return `vi ${tempFile}`;
-  })();
+  const editCommand = getEditCommand(tempFile);
 
   const writeResult = tryCatch(() =>
     fsDeps.writeFileSync(tempFile, initialContent),
