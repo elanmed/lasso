@@ -1197,7 +1197,7 @@ Token count: 621 (0% of context window)
       assert.strictEqual(result, null);
       assert.strictEqual(
         stripAnsi(getCapturedStdout()),
-        "\nNo conversation found with session start date: 1234567890000\n\n",
+        "No conversation found with session start date: 1234567890000\n\n",
       );
     });
 
@@ -1237,7 +1237,7 @@ Token count: 621 (0% of context window)
       assert.strictEqual(result, null);
       assert.strictEqual(
         stripAnsi(getCapturedStdout()),
-        "\nNo conversation found with session start date: 1234567890000\n\n",
+        "No conversation found with session start date: 1234567890000\n\n",
       );
     });
 
@@ -1251,7 +1251,7 @@ Token count: 621 (0% of context window)
       assert.strictEqual(result, null);
       assert.strictEqual(
         stripAnsi(getCapturedStdout()),
-        "\nFailed to parse the session file at /fake-home/.local/state/lasso/sessions/session-1234567890000.json\n\n",
+        "Failed to parse the session file at /fake-home/.local/state/lasso/sessions/session-1234567890000.json\n\n",
       );
     });
 
@@ -1265,7 +1265,7 @@ Token count: 621 (0% of context window)
       assert.strictEqual(result, null);
       assert.strictEqual(
         stripAnsi(getCapturedStdout()),
-        "\nNo conversation found with session start date: 1234567890000\n\n",
+        "No conversation found with session start date: 1234567890000\n\n",
       );
     });
   });
@@ -1280,7 +1280,7 @@ Token count: 621 (0% of context window)
       assert.strictEqual(result, null);
       assert.strictEqual(
         stripAnsi(getCapturedStdout()),
-        "\nNo sessions to resume\n\n",
+        "No sessions to resume\n\n",
       );
     });
 
@@ -1353,7 +1353,7 @@ Token count: 621 (0% of context window)
       assert.strictEqual(result, null);
       assert.strictEqual(
         stripAnsi(getCapturedStdout()),
-        "\nNo sessions to resume\n\n",
+        "No sessions to resume\n\n",
       );
     });
   });
@@ -1867,7 +1867,7 @@ Available skills:
       printSkills();
       assert.strictEqual(
         stripAnsi(getCapturedStdout()),
-        `\nNo available skills\n\n`,
+        `No available skills\n\n`,
       );
     });
 
@@ -1924,8 +1924,7 @@ Available context files:
       printAvailableContextFiles();
       assert.strictEqual(
         stripAnsi(getCapturedStdout()),
-        `
-No available context files
+        `No available context files
 
 `,
       );
@@ -2687,8 +2686,7 @@ log content
       assert.strictEqual(result, null);
       assert.strictEqual(
         stripAnsi(getCapturedStdout()),
-        `
-No available skills
+        `No available skills
 
 `,
       );
@@ -2700,8 +2698,7 @@ No available skills
       assert.strictEqual(result, null);
       assert.strictEqual(
         stripAnsi(getCapturedStdout()),
-        `
-No available context files
+        `No available context files
 
 `,
       );

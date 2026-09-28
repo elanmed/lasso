@@ -25,6 +25,7 @@ import {
 } from "./utils.ts";
 import { truncate } from "./text.ts";
 import {
+  earlyReturnWithSpacing,
   print,
   printNewline,
   printSessionStartDate,
@@ -1113,7 +1114,7 @@ export function pageCustomSlashCommandsStr({
 
 export function printSkills() {
   if (getState().app.skills.length === 0) {
-    withSpacing(() => print.doing("No available skills"));
+    earlyReturnWithSpacing(() => print.doing("No available skills"));
     return;
   }
 
@@ -1135,7 +1136,7 @@ export function printSkills() {
 
 export function printAvailableContextFiles() {
   if (getState().app.contextEntries.length === 0) {
-    withSpacing(() => print.doing("No available context files"));
+    earlyReturnWithSpacing(() => print.doing("No available context files"));
     return;
   }
 
@@ -1162,7 +1163,7 @@ export function resumeWithNoArgs() {
     ({ absolutePath }) => getState().app.sessionFilePath !== absolutePath,
   );
   if (sessionFiles.length === 0) {
-    withSpacing(() => print.error("No sessions to resume"));
+    earlyReturnWithSpacing(() => print.error("No sessions to resume"));
     return null;
   }
 
@@ -1202,7 +1203,7 @@ export function resume(rawInput: string) {
     return null;
   }
 
-  withSpacing(() => {
+  earlyReturnWithSpacing(() => {
     print.error(
       `No conversation found with session start date: ${sessionStartDate}`,
     );

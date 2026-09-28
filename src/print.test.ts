@@ -6,6 +6,9 @@ import {
   stopLoadingState,
   colorPrint,
   printSessionStartDate,
+  printNewline,
+  withSpacing,
+  earlyReturnWithSpacing,
   bold,
 } from "./print.ts";
 import { actions } from "./state.ts";
@@ -189,6 +192,45 @@ describe("print", () => {
       const getCaptured = mockStdout();
       colorPrint("hello", "blue");
       assert.equal(getCaptured(), "hello\n");
+    });
+  });
+
+  describe("printNewline", () => {
+    it("prints nothing when stdoutTail already ends with two newlines", () => {
+      const getCaptured = mockStdout();
+      actions.appendStdoutTail("\n\n");
+      printNewline();
+      assert.strictEqual(getCaptured(), "");
+    });
+
+    it("appends a newline when stdoutTail does not end with two newlines", () => {
+      const getCaptured = mockStdout();
+      colorPrint("a", "none", { appendNewline: false });
+      printNewline();
+      assert.strictEqual(getCaptured(), "a\n");
+    });
+  });
+
+  describe("withSpacing", () => {
+    it("surrounds the callback output with blank lines", () => {
+      const getCaptured = mockStdout();
+      withSpacing(() => colorPrint("hello", "none"));
+      assert.strictEqual(getCaptured(), "\nhello\n\n");
+    });
+  });
+
+  describe("earlyReturnWithSpacing", () => {
+    it("prints the callback output followed by a blank line", () => {
+      const getCaptured = mockStdout();
+      earlyReturnWithSpacing(() => colorPrint("hello", "none"));
+      assert.strictEqual(getCaptured(), "hello\n\n");
+    });
+
+    it("does not reduce the blank lines between messages", () => {
+      const getCaptured = mockStdout();
+      withSpacing(() => colorPrint("a", "none"));
+      earlyReturnWithSpacing(() => colorPrint("b", "none"));
+      assert.strictEqual(getCaptured(), "\na\n\nb\n\n");
     });
   });
 

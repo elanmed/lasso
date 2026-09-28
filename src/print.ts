@@ -102,6 +102,11 @@ export function withSpacing(cb: () => void) {
   printNewline();
 }
 
+export function earlyReturnWithSpacing(cb: () => void) {
+  cb();
+  printNewline();
+}
+
 export function startLoadingState() {
   writeLoadingStateFrame();
 

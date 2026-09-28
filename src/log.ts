@@ -12,7 +12,7 @@ import { listSessionFiles, tryCatch } from "./utils.ts";
 import { fsDeps } from "./deps.ts";
 import { getSessionDir } from "./paths.ts";
 import { debugLog as writeDebugLog } from "./debug-log.ts";
-import { print, withSpacing } from "./print.ts";
+import { earlyReturnWithSpacing, print } from "./print.ts";
 
 export function debugLog(content: string) {
   writeDebugLog(getState().app.debugLog, getState().app.debugLogPath, content);
@@ -77,7 +77,7 @@ export function resumeFromSessionFile(sessionFilePath: string) {
     fsDeps.readFileSync(sessionFilePath).toString(),
   );
   if (!readResult.ok) {
-    withSpacing(() => {
+    earlyReturnWithSpacing(() => {
       print.error(`Failed to read the session file at ${sessionFilePath}`);
     });
     return false;
@@ -85,7 +85,7 @@ export function resumeFromSessionFile(sessionFilePath: string) {
 
   const jsonResult = tryCatch((): unknown => JSON.parse(readResult.value));
   if (!jsonResult.ok) {
-    withSpacing(() => {
+    earlyReturnWithSpacing(() => {
       print.error(`Failed to parse the session file at ${sessionFilePath}`);
     });
     return false;
@@ -93,7 +93,7 @@ export function resumeFromSessionFile(sessionFilePath: string) {
 
   const parseResult = tryCatch(() => SessionFileSchema.parse(jsonResult.value));
   if (!parseResult.ok) {
-    withSpacing(() => {
+    earlyReturnWithSpacing(() => {
       print.error(`Failed to validate the session file at ${sessionFilePath}`);
     });
     return false;
