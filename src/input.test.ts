@@ -1368,15 +1368,15 @@ Token count: 621 (0% of context window)
       pageContextStr({ isTyped: true });
       assert.strictEqual(
         stripAnsi(getCapturedStdout()),
-        "\nNo available context files\n\n",
+        "No available context files\n\n",
       );
     });
 
-    it("does not add spacing when isTyped is false", () => {
+    it("surrounds the message with blank lines when isTyped is false", () => {
       pageContextStr();
       assert.strictEqual(
         stripAnsi(getCapturedStdout()),
-        "No available context files\n",
+        "\nNo available context files\n\n",
       );
     });
 
@@ -1422,15 +1422,15 @@ Token count: 621 (0% of context window)
 
     it("prints that history is empty when the transcript is empty", () => {
       pageHistory({ isTyped: true });
+      assert.strictEqual(stripAnsi(getCapturedStdout()), "No chat history\n\n");
+    });
+
+    it("surrounds the message with blank lines when isTyped is false", () => {
+      pageHistory();
       assert.strictEqual(
         stripAnsi(getCapturedStdout()),
         "\nNo chat history\n\n",
       );
-    });
-
-    it("does not add spacing when isTyped is false", () => {
-      pageHistory();
-      assert.strictEqual(stripAnsi(getCapturedStdout()), "No chat history\n");
     });
 
     it("does not add spacing when streaming", () => {
@@ -1471,15 +1471,15 @@ log content
 
     it("prints no messages when there is no assistant response", async () => {
       await pageLastResponse({ isTyped: true });
+      assert.strictEqual(stripAnsi(getCapturedStdout()), "No llm messages\n\n");
+    });
+
+    it("surrounds the message with blank lines when isTyped is false", async () => {
+      await pageLastResponse();
       assert.strictEqual(
         stripAnsi(getCapturedStdout()),
         "\nNo llm messages\n\n",
       );
-    });
-
-    it("does not add spacing when isTyped is false", async () => {
-      await pageLastResponse();
-      assert.strictEqual(stripAnsi(getCapturedStdout()), "No llm messages\n");
     });
 
     it("does not add spacing when streaming", async () => {
@@ -1530,13 +1530,16 @@ second
       pageLastMessage({ isTyped: true });
       assert.strictEqual(
         stripAnsi(getCapturedStdout()),
-        "\nNo user messages\n\n",
+        "No user messages\n\n",
       );
     });
 
-    it("does not add spacing when isTyped is false", () => {
+    it("surrounds the message with blank lines when isTyped is false", () => {
       pageLastMessage();
-      assert.strictEqual(stripAnsi(getCapturedStdout()), "No user messages\n");
+      assert.strictEqual(
+        stripAnsi(getCapturedStdout()),
+        "\nNo user messages\n\n",
+      );
     });
 
     it("does not add spacing when streaming", () => {
@@ -1584,15 +1587,15 @@ latest question
       pageLastDiff({ isTyped: true });
       assert.strictEqual(
         stripAnsi(getCapturedStdout()),
-        "\nNo diffs from the last turn\n\n",
+        "No diffs from the last turn\n\n",
       );
     });
 
-    it("does not add spacing when isTyped is false", () => {
+    it("surrounds the message with blank lines when isTyped is false", () => {
       pageLastDiff();
       assert.strictEqual(
         stripAnsi(getCapturedStdout()),
-        "No diffs from the last turn\n",
+        "\nNo diffs from the last turn\n\n",
       );
     });
 
@@ -1723,16 +1726,16 @@ older summary
 
       assert.strictEqual(
         stripAnsi(getCapturedStdout()),
-        "\nNo conversation summaries\n\n",
+        "No conversation summaries\n\n",
       );
       assert.strictEqual(testFs._files.has("/tmp/lasso-test-uuid.txt"), false);
     });
 
-    it("does not add spacing when isTyped is false", () => {
+    it("surrounds the message with blank lines when isTyped is false", () => {
       pageSummaries();
       assert.strictEqual(
         stripAnsi(getCapturedStdout()),
-        "No conversation summaries\n",
+        "\nNo conversation summaries\n\n",
       );
     });
 
@@ -1754,15 +1757,15 @@ older summary
 
     it("prints that the editor is empty when editor input is null", () => {
       pageEditStr({ isTyped: true });
+      assert.strictEqual(stripAnsi(getCapturedStdout()), "Editor is empty\n\n");
+    });
+
+    it("surrounds the message with blank lines when isTyped is false", () => {
+      pageEditStr();
       assert.strictEqual(
         stripAnsi(getCapturedStdout()),
         "\nEditor is empty\n\n",
       );
-    });
-
-    it("does not add spacing when isTyped is false", () => {
-      pageEditStr();
-      assert.strictEqual(stripAnsi(getCapturedStdout()), "Editor is empty\n");
     });
 
     it("does not add spacing when streaming", () => {
@@ -1800,15 +1803,15 @@ editor input
       pageCustomSlashCommandsStr({ isTyped: true });
       assert.strictEqual(
         stripAnsi(getCapturedStdout()),
-        "\nNo available custom slash commands\n\n",
+        "No available custom slash commands\n\n",
       );
     });
 
-    it("does not add spacing when isTyped is false", () => {
+    it("surrounds the message with blank lines when isTyped is false", () => {
       pageCustomSlashCommandsStr();
       assert.strictEqual(
         stripAnsi(getCapturedStdout()),
-        "No available custom slash commands\n",
+        "\nNo available custom slash commands\n\n",
       );
     });
 
@@ -2641,7 +2644,7 @@ log content
       assert.strictEqual(result, null);
       assert.strictEqual(
         stripAnsi(getCapturedStdout()),
-        "\nNo diffs from the last turn\n\n",
+        "No diffs from the last turn\n\n",
       );
       assert.deepStrictEqual(spawned, []);
     });
@@ -2783,7 +2786,7 @@ custom command content\n\n`,
       assert.strictEqual(result, null);
       assert.strictEqual(
         stripAnsi(getCapturedStdout()),
-        "\nNo available custom slash commands\n\n",
+        "No available custom slash commands\n\n",
       );
     });
 
@@ -2793,7 +2796,7 @@ custom command content\n\n`,
       assert.strictEqual(result, null);
       assert.strictEqual(
         stripAnsi(getCapturedStdout()),
-        "\nNo available context files\n\n",
+        "No available context files\n\n",
       );
     });
 
