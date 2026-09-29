@@ -25,11 +25,11 @@ import {
 } from "./utils.ts";
 import { truncate } from "./text.ts";
 import {
-  earlyReturnWithSpacing,
+  errorWithSpacing,
   print,
   printNewline,
   printSessionStartDate,
-  withSpacing,
+  successWithSpacing,
 } from "./print.ts";
 import { fencePrint, wrapInFence } from "./fence.ts";
 import {
@@ -886,7 +886,7 @@ export function printUsage() {
     return `${tokensInSession}, ${dollarsInSession}`;
   })();
 
-  withSpacing(() => {
+  successWithSpacing(() => {
     print.doing("Usage:");
     print.plain(`- Session: ${usedInSession}`);
 
@@ -921,7 +921,7 @@ export function printTokens() {
     return "";
   })();
 
-  withSpacing(() => {
+  successWithSpacing(() => {
     print.doing(`Token count: ${total.toLocaleString()}${contextWindowUsage}`);
     print.plain(getPrettyTokensByArea());
     printNewline();
@@ -1033,7 +1033,7 @@ export function setModelCommand(rawInput: string) {
 
 export function pageContextStr({ isTyped = false }: SpacingOpts = {}) {
   if (getState().app.contextEntries.length === 0) {
-    withSpacingElan(isTyped, () => print.doing("No available context files"));
+    streamingSupportedWithSpacing(isTyped, () => print.doing("No available context files"));
     return;
   }
 
@@ -1049,7 +1049,7 @@ export interface SpacingOpts {
   isTyped?: boolean;
 }
 
-function withSpacingElan(isTyped: boolean, cb: () => void) {
+function streamingSupportedWithSpacing(isTyped: boolean, cb: () => void) {
   if (getState().abortControllers.apiStream !== null) {
     cb();
     return;
@@ -1069,7 +1069,7 @@ function withSpacingElan(isTyped: boolean, cb: () => void) {
 export function pageEditStr({ isTyped = false }: SpacingOpts = {}) {
   const { editorInputValue } = getState().app;
   if (editorInputValue === null) {
-    withSpacingElan(isTyped, () => print.doing("Editor is empty"));
+    streamingSupportedWithSpacing(isTyped, () => print.doing("Editor is empty"));
     return;
   }
 
@@ -1098,7 +1098,7 @@ export function pageCustomSlashCommandsStr({
   isTyped = false,
 }: SpacingOpts = {}) {
   if (getState().app.slashCommands.length === 0) {
-    withSpacingElan(isTyped, () =>
+    streamingSupportedWithSpacing(isTyped, () =>
       print.doing("No available custom slash commands"),
     );
     return;
@@ -1114,7 +1114,7 @@ export function pageCustomSlashCommandsStr({
 
 export function printSkills() {
   if (getState().app.skills.length === 0) {
-    earlyReturnWithSpacing(() => print.doing("No available skills"));
+    errorWithSpacing(() => print.doing("No available skills"));
     return;
   }
 
@@ -1128,7 +1128,7 @@ export function printSkills() {
     )
     .join("\n");
 
-  withSpacing(() => {
+  successWithSpacing(() => {
     print.doing("Available skills:");
     print.plain(skillsList);
   });
@@ -1136,7 +1136,7 @@ export function printSkills() {
 
 export function printAvailableContextFiles() {
   if (getState().app.contextEntries.length === 0) {
-    earlyReturnWithSpacing(() => print.doing("No available context files"));
+    errorWithSpacing(() => print.doing("No available context files"));
     return;
   }
 
@@ -1152,7 +1152,7 @@ export function printAvailableContextFiles() {
 
   const formatted = contextFiles.concat(contextSkillFiles).join("\n");
 
-  withSpacing(() => {
+  successWithSpacing(() => {
     print.doing("Available context files:");
     print.plain(formatted);
   });
@@ -1163,7 +1163,7 @@ export function resumeWithNoArgs() {
     ({ absolutePath }) => getState().app.sessionFilePath !== absolutePath,
   );
   if (sessionFiles.length === 0) {
-    earlyReturnWithSpacing(() => print.error("No sessions to resume"));
+    errorWithSpacing(() => print.error("No sessions to resume"));
     return null;
   }
 
@@ -1203,7 +1203,7 @@ export function resume(rawInput: string) {
     return null;
   }
 
-  earlyReturnWithSpacing(() => {
+  errorWithSpacing(() => {
     print.error(
       `No conversation found with session start date: ${sessionStartDate}`,
     );
@@ -1212,7 +1212,7 @@ export function resume(rawInput: string) {
 }
 
 export function printKeymaps() {
-  withSpacing(() => {
+  successWithSpacing(() => {
     print.doing("Keymaps:");
     for (const [command, keymap] of Object.entries(getState().config.keymaps)) {
       print.plain(`- ${command}: ${JSON.stringify(keymap)}`);
@@ -1407,7 +1407,7 @@ export function pageHistory({ isTyped = false }: SpacingOpts = {}) {
   const { transcript } = getState().app;
 
   if (transcript.length === 0) {
-    withSpacingElan(isTyped, () => print.doing("No chat history"));
+    streamingSupportedWithSpacing(isTyped, () => print.doing("No chat history"));
     return;
   }
 
@@ -1441,7 +1441,7 @@ export async function pageLastResponse({ isTyped = false }: SpacingOpts = {}) {
   );
 
   if (lastMessage == undefined) {
-    withSpacingElan(isTyped, () => print.doing("No llm messages"));
+    streamingSupportedWithSpacing(isTyped, () => print.doing("No llm messages"));
     return;
   }
 
@@ -1449,7 +1449,7 @@ export async function pageLastResponse({ isTyped = false }: SpacingOpts = {}) {
     lastMessage.content as AssistantContent,
   );
   if (contentStr.length === 0) {
-    withSpacingElan(isTyped, () => print.doing("No llm messages"));
+    streamingSupportedWithSpacing(isTyped, () => print.doing("No llm messages"));
     return;
   }
 
@@ -1470,7 +1470,7 @@ export function pageLastMessage({ isTyped = false }: SpacingOpts = {}) {
   const lastMessage = messages.findLast((message) => message.role === "user");
 
   if (lastMessage == undefined) {
-    withSpacingElan(isTyped, () => print.doing("No user messages"));
+    streamingSupportedWithSpacing(isTyped, () => print.doing("No user messages"));
     return;
   }
 
@@ -1478,7 +1478,7 @@ export function pageLastMessage({ isTyped = false }: SpacingOpts = {}) {
   assertAtBuildtime(typeof contentStr === "string");
 
   if (contentStr.length === 0) {
-    withSpacingElan(isTyped, () => print.doing("No user messages"));
+    streamingSupportedWithSpacing(isTyped, () => print.doing("No user messages"));
     return;
   }
 
@@ -1505,7 +1505,7 @@ ${stringify(getState().app.conversation.messages.toReversed())}`;
 
 export function pageSummaries({ isTyped = false }: SpacingOpts = {}) {
   if (getState().app.conversation.summaries.length === 0) {
-    withSpacingElan(isTyped, () => print.doing("No conversation summaries"));
+    streamingSupportedWithSpacing(isTyped, () => print.doing("No conversation summaries"));
     return;
   }
 
@@ -1535,7 +1535,7 @@ export function pageLastDiff({ isTyped = false }: SpacingOpts = {}) {
   const { toolEditDiffs } = getState().app;
 
   if (toolEditDiffs.length === 0) {
-    withSpacingElan(isTyped, () => print.doing("No diffs from the last turn"));
+    streamingSupportedWithSpacing(isTyped, () => print.doing("No diffs from the last turn"));
     return;
   }
   const initialContentStr = toolEditDiffs

@@ -7,8 +7,8 @@ import {
   colorPrint,
   printSessionStartDate,
   printNewline,
-  withSpacing,
-  earlyReturnWithSpacing,
+  successWithSpacing,
+  errorWithSpacing,
   bold,
 } from "./print.ts";
 import { actions } from "./state.ts";
@@ -211,25 +211,25 @@ describe("print", () => {
     });
   });
 
-  describe("withSpacing", () => {
+  describe("successWithSpacing", () => {
     it("surrounds the callback output with blank lines", () => {
       const getCaptured = mockStdout();
-      withSpacing(() => colorPrint("hello", "none"));
+      successWithSpacing(() => colorPrint("hello", "none"));
       assert.strictEqual(getCaptured(), "\nhello\n\n");
     });
   });
 
-  describe("earlyReturnWithSpacing", () => {
+  describe("errorWithSpacing", () => {
     it("prints the callback output followed by a blank line", () => {
       const getCaptured = mockStdout();
-      earlyReturnWithSpacing(() => colorPrint("hello", "none"));
+      errorWithSpacing(() => colorPrint("hello", "none"));
       assert.strictEqual(getCaptured(), "hello\n\n");
     });
 
     it("does not reduce the blank lines between messages", () => {
       const getCaptured = mockStdout();
-      withSpacing(() => colorPrint("a", "none"));
-      earlyReturnWithSpacing(() => colorPrint("b", "none"));
+      successWithSpacing(() => colorPrint("a", "none"));
+      errorWithSpacing(() => colorPrint("b", "none"));
       assert.strictEqual(getCaptured(), "\na\n\nb\n\n");
     });
   });

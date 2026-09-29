@@ -96,13 +96,13 @@ export function printNewline() {
   colorPrint("", "none");
 }
 
-export function withSpacing(cb: () => void) {
+export function successWithSpacing(cb: () => void) {
   printNewline();
   cb();
   printNewline();
 }
 
-export function earlyReturnWithSpacing(cb: () => void) {
+export function errorWithSpacing(cb: () => void) {
   cb();
   printNewline();
 }
