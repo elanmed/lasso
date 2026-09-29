@@ -1033,10 +1033,7 @@ export function setModelCommand(rawInput: string) {
 
 export function pageContextStr({ isTyped = false }: SpacingOpts = {}) {
   if (getState().app.contextEntries.length === 0) {
-    withSpacingIf(
-      getState().abortControllers.apiStream === null && isTyped,
-      () => print.doing("No available context files"),
-    );
+    withSpacingElan(isTyped, () => print.doing("No available context files"));
     return;
   }
 
@@ -1052,23 +1049,27 @@ export interface SpacingOpts {
   isTyped?: boolean;
 }
 
-function withSpacingIf(shouldSpace: boolean, cb: () => void) {
-  if (shouldSpace) {
-    printNewline();
+function withSpacingElan(isTyped: boolean, cb: () => void) {
+  if (getState().abortControllers.apiStream !== null) {
     cb();
-    printNewline();
-  } else {
-    cb();
+    return;
   }
+
+  if (isTyped) {
+    cb();
+    printNewline();
+    return;
+  }
+
+  printNewline();
+  cb();
+  printNewline();
 }
 
 export function pageEditStr({ isTyped = false }: SpacingOpts = {}) {
   const { editorInputValue } = getState().app;
   if (editorInputValue === null) {
-    withSpacingIf(
-      getState().abortControllers.apiStream === null && isTyped,
-      () => print.doing("Editor is empty"),
-    );
+    withSpacingElan(isTyped, () => print.doing("Editor is empty"));
     return;
   }
 
@@ -1097,9 +1098,8 @@ export function pageCustomSlashCommandsStr({
   isTyped = false,
 }: SpacingOpts = {}) {
   if (getState().app.slashCommands.length === 0) {
-    withSpacingIf(
-      getState().abortControllers.apiStream === null && isTyped,
-      () => print.doing("No available custom slash commands"),
+    withSpacingElan(isTyped, () =>
+      print.doing("No available custom slash commands"),
     );
     return;
   }
@@ -1407,10 +1407,7 @@ export function pageHistory({ isTyped = false }: SpacingOpts = {}) {
   const { transcript } = getState().app;
 
   if (transcript.length === 0) {
-    withSpacingIf(
-      getState().abortControllers.apiStream === null && isTyped,
-      () => print.doing("No chat history"),
-    );
+    withSpacingElan(isTyped, () => print.doing("No chat history"));
     return;
   }
 
@@ -1444,10 +1441,7 @@ export async function pageLastResponse({ isTyped = false }: SpacingOpts = {}) {
   );
 
   if (lastMessage == undefined) {
-    withSpacingIf(
-      getState().abortControllers.apiStream === null && isTyped,
-      () => print.doing("No llm messages"),
-    );
+    withSpacingElan(isTyped, () => print.doing("No llm messages"));
     return;
   }
 
@@ -1455,10 +1449,7 @@ export async function pageLastResponse({ isTyped = false }: SpacingOpts = {}) {
     lastMessage.content as AssistantContent,
   );
   if (contentStr.length === 0) {
-    withSpacingIf(
-      getState().abortControllers.apiStream === null && isTyped,
-      () => print.doing("No llm messages"),
-    );
+    withSpacingElan(isTyped, () => print.doing("No llm messages"));
     return;
   }
 
@@ -1479,10 +1470,7 @@ export function pageLastMessage({ isTyped = false }: SpacingOpts = {}) {
   const lastMessage = messages.findLast((message) => message.role === "user");
 
   if (lastMessage == undefined) {
-    withSpacingIf(
-      getState().abortControllers.apiStream === null && isTyped,
-      () => print.doing("No user messages"),
-    );
+    withSpacingElan(isTyped, () => print.doing("No user messages"));
     return;
   }
 
@@ -1490,10 +1478,7 @@ export function pageLastMessage({ isTyped = false }: SpacingOpts = {}) {
   assertAtBuildtime(typeof contentStr === "string");
 
   if (contentStr.length === 0) {
-    withSpacingIf(
-      getState().abortControllers.apiStream === null && isTyped,
-      () => print.doing("No user messages"),
-    );
+    withSpacingElan(isTyped, () => print.doing("No user messages"));
     return;
   }
 
@@ -1520,10 +1505,7 @@ ${stringify(getState().app.conversation.messages.toReversed())}`;
 
 export function pageSummaries({ isTyped = false }: SpacingOpts = {}) {
   if (getState().app.conversation.summaries.length === 0) {
-    withSpacingIf(
-      getState().abortControllers.apiStream === null && isTyped,
-      () => print.doing("No conversation summaries"),
-    );
+    withSpacingElan(isTyped, () => print.doing("No conversation summaries"));
     return;
   }
 
@@ -1553,10 +1535,7 @@ export function pageLastDiff({ isTyped = false }: SpacingOpts = {}) {
   const { toolEditDiffs } = getState().app;
 
   if (toolEditDiffs.length === 0) {
-    withSpacingIf(
-      getState().abortControllers.apiStream === null && isTyped,
-      () => print.doing("No diffs from the last turn"),
-    );
+    withSpacingElan(isTyped, () => print.doing("No diffs from the last turn"));
     return;
   }
   const initialContentStr = toolEditDiffs
