@@ -16,9 +16,7 @@ import {
   printTokens,
   printSkills,
   printAvailableContextFiles,
-  pageContextStr,
   pageCommands,
-  pageCustomSlashCommandsStr,
   pageEditStr,
   spawnAndReadEditorContent,
   resume,
@@ -26,7 +24,6 @@ import {
   initSigInt,
   initLocalConfig,
   initGlobalConfig,
-  pageMessages,
   pageSummaries,
   pageHistory,
   pageLastMessage,
@@ -1358,62 +1355,6 @@ Token count: 621 (0% of context window)
     });
   });
 
-  describe("pageContextStr", () => {
-    beforeEach(() => {
-      actions.resetState();
-      actions.resetStdout();
-    });
-
-    it("prints no available context files when entries list is empty", () => {
-      pageContextStr({ isTyped: true });
-      assert.strictEqual(
-        stripAnsi(getCapturedStdout()),
-        "No available context files\n\n",
-      );
-    });
-
-    it("surrounds the message with blank lines when isTyped is false", () => {
-      pageContextStr();
-      assert.strictEqual(
-        stripAnsi(getCapturedStdout()),
-        "\nNo available context files\n\n",
-      );
-    });
-
-    it("does not add spacing when streaming", () => {
-      actions.setApiStreamAbortController(new AbortController());
-      pageContextStr();
-      assert.strictEqual(
-        stripAnsi(getCapturedStdout()),
-        "No available context files\n",
-      );
-    });
-
-    it("opens context string in a pager via LASSO_PAGER", () => {
-      const { spawned } = mockPagerSpawn();
-      testProcessEnv._set("LASSO_PAGER", "nano __FILE__");
-      actions.setContextStr("context string content");
-      actions.setContextEntries([
-        { filePath: "/project/AGENTS.md", content: "context" },
-      ]);
-      pageContextStr();
-      assert.strictEqual(spawned[0], "nano /tmp/lasso-test-uuid.txt");
-    });
-
-    it("copies context string into the temp file", () => {
-      actions.setContextStr("context string content");
-      actions.setContextEntries([
-        { filePath: "/project/AGENTS.md", content: "context" },
-      ]);
-      pageContextStr();
-      assert.strictEqual(
-        testFs._files.get("/tmp/lasso-test-uuid.txt"),
-        `context string content\n\n`,
-      );
-      assert.strictEqual(getCapturedStdout(), "");
-    });
-  });
-
   describe("pageHistory", () => {
     beforeEach(() => {
       actions.resetState();
@@ -1638,54 +1579,6 @@ latest question
     });
   });
 
-  describe("pageMessages", () => {
-    beforeEach(() => {
-      actions.resetState();
-      actions.resetStdout();
-    });
-
-    it("opens the message list newest first in a pager", () => {
-      const { spawned } = mockPagerSpawn();
-      testProcessEnv._set("LASSO_PAGER", "nano __FILE__");
-      actions.setConversationMessages([
-        {
-          role: "user",
-          content: "question",
-        },
-        {
-          role: "assistant",
-          content: [{ type: "text", text: "answer" }],
-        },
-      ]);
-
-      pageMessages();
-
-      assert.strictEqual(spawned[0], "nano /tmp/lasso-test-uuid.txt");
-      assert.deepStrictEqual(
-        stripAnsi(testFs._files.get("/tmp/lasso-test-uuid.txt") ?? ""),
-        `# [lasso] Messages
-
-[
-  {
-    "role": "assistant",
-    "content": [
-      {
-        "type": "text",
-        "text": "answer"
-      }
-    ]
-  },
-  {
-    "role": "user",
-    "content": "question"
-  }
-]
-
-`,
-      );
-    });
-  });
-
   describe("pageSummaries", () => {
     beforeEach(() => {
       actions.resetState();
@@ -1790,52 +1683,6 @@ editor input
 
 `,
       );
-    });
-  });
-
-  describe("pageCustomSlashCommandsStr", () => {
-    beforeEach(() => {
-      actions.resetState();
-      actions.resetStdout();
-    });
-
-    it("prints no available custom slash commands when list is empty", () => {
-      pageCustomSlashCommandsStr({ isTyped: true });
-      assert.strictEqual(
-        stripAnsi(getCapturedStdout()),
-        "No available custom slash commands\n\n",
-      );
-    });
-
-    it("surrounds the message with blank lines when isTyped is false", () => {
-      pageCustomSlashCommandsStr();
-      assert.strictEqual(
-        stripAnsi(getCapturedStdout()),
-        "\nNo available custom slash commands\n\n",
-      );
-    });
-
-    it("does not add spacing when streaming", () => {
-      actions.setApiStreamAbortController(new AbortController());
-      pageCustomSlashCommandsStr();
-      assert.strictEqual(
-        stripAnsi(getCapturedStdout()),
-        "No available custom slash commands\n",
-      );
-    });
-
-    it("opens custom commands in a pager via LASSO_PAGER", () => {
-      const { spawned } = mockPagerSpawn();
-      testProcessEnv._set("LASSO_PAGER", "nano __FILE__");
-      actions.setSlashCommands([
-        {
-          name: "custom",
-          filePath: "/test/.lasso/commands/custom.md",
-          content: "custom command content",
-        },
-      ]);
-      pageCustomSlashCommandsStr();
-      assert.strictEqual(spawned[0], "nano /tmp/lasso-test-uuid.txt");
     });
   });
 
@@ -2025,9 +1872,7 @@ Available context files:
 - /model
 - /skills
 - /context
-- /contextpage
 - /commands
-- /commandspage
 - /keymaps
 - /usage
 - /tokens
@@ -2039,7 +1884,6 @@ Available context files:
 - /lastresponse
 - /lastmessage
 - /lastdiff
-- /messages
 - /summaries
 - /test/.lasso/commands/custom.md
 
@@ -2335,58 +2179,6 @@ editor input
       assert.deepStrictEqual(spawned, ["cat /tmp/lasso-test-uuid.txt"]);
     });
 
-    it("opens context in a pager when contextpage keymap matches", async () => {
-      const prompts: boolean[] = [];
-      mock.method(harness.rl, "prompt", (arg: boolean) => {
-        prompts.push(arg);
-      });
-      const { spawned } = mockPagerSpawn();
-      testProcessEnv._set("LASSO_PAGER", "cat __FILE__");
-      actions.setKeymaps({
-        ...defaultConfig.keymaps,
-        contextpage: { name: "d", ctrl: true },
-      });
-      actions.setContextEntries([
-        { filePath: "/project/AGENTS.md", content: "context" },
-      ]);
-      actions.setContextStr("context string content");
-      harness.emitKey({ name: "d", ctrl: true });
-      await harness.flush();
-      assert.strictEqual(
-        testFs._files.get("/tmp/lasso-test-uuid.txt"),
-        `context string content\n\n`,
-      );
-      assert.strictEqual(getCapturedStdout(), "");
-      assert.deepStrictEqual(prompts, [true]);
-      assert.deepStrictEqual(spawned, ["cat /tmp/lasso-test-uuid.txt"]);
-    });
-
-    it("opens custom commands in a pager when commandspage keymap matches", async () => {
-      const prompts: boolean[] = [];
-      mock.method(harness.rl, "prompt", (arg: boolean) => {
-        prompts.push(arg);
-      });
-      const { spawned } = mockPagerSpawn();
-      testProcessEnv._set("LASSO_PAGER", "cat __FILE__");
-      actions.setKeymaps({
-        ...defaultConfig.keymaps,
-        commandspage: { name: "m", ctrl: true },
-      });
-      harness.emitKey({ name: "m", ctrl: true });
-      await harness.flush();
-      assert.strictEqual(
-        testFs._files.get("/tmp/lasso-test-uuid.txt"),
-        `# [lasso] Slash commands:
-
-## /test/.lasso/commands/custom.md
-
-custom command content\n\n`,
-      );
-      assert.strictEqual(getCapturedStdout(), "");
-      assert.deepStrictEqual(prompts, [true]);
-      assert.deepStrictEqual(spawned, ["cat /tmp/lasso-test-uuid.txt"]);
-    });
-
     it("opens available commands in a pager when commands keymap matches", async () => {
       const prompts: boolean[] = [];
       mock.method(harness.rl, "prompt", (arg: boolean) => {
@@ -2412,9 +2204,7 @@ custom command content\n\n`,
 - /model
 - /skills
 - /context
-- /contextpage
 - /commands
-- /commandspage
 - /keymaps
 - /usage
 - /tokens
@@ -2426,7 +2216,6 @@ custom command content\n\n`,
 - /lastresponse
 - /lastmessage
 - /lastdiff
-- /messages
 - /summaries
 - /test/.lasso/commands/custom.md
 
@@ -2649,20 +2438,6 @@ log content
       assert.deepStrictEqual(spawned, []);
     });
 
-    it("handles /messages command by opening the message list in a pager", async () => {
-      const { spawned } = mockPagerSpawn();
-      testProcessEnv._set("LASSO_PAGER", "nano __FILE__");
-      actions.setConversationMessages([
-        {
-          role: "user",
-          content: "question",
-        },
-      ]);
-      const result = await resolveSlashCommand("/messages");
-      assert.strictEqual(result, null);
-      assert.strictEqual(spawned[0], "nano /tmp/lasso-test-uuid.txt");
-    });
-
     it("handles /model command", async () => {
       actions.setModel("old");
       actions.resetStdout();
@@ -2723,9 +2498,7 @@ log content
 - /model
 - /skills
 - /context
-- /contextpage
 - /commands
-- /commandspage
 - /keymaps
 - /usage
 - /tokens
@@ -2737,80 +2510,9 @@ log content
 - /lastresponse
 - /lastmessage
 - /lastdiff
-- /messages
 - /summaries
 
 `,
-      );
-    });
-
-    it("handles /commandspage command by opening custom commands in a pager", async () => {
-      testProcessEnv._set("LASSO_PAGER", "nano __FILE__");
-      actions.setSlashCommands([
-        {
-          name: "custom",
-          filePath: "/test/.lasso/commands/custom.md",
-          content: "custom command content",
-        },
-      ]);
-      const result = await resolveSlashCommand("/commandspage");
-      assert.strictEqual(result, null);
-      assert.strictEqual(
-        testFs._files.get("/tmp/lasso-test-uuid.txt"),
-        `# [lasso] Slash commands:
-
-## /test/.lasso/commands/custom.md
-
-custom command content\n\n`,
-      );
-    });
-
-    it("uses LASSO_PAGER for the commandspage pager", async () => {
-      const { spawned } = mockPagerSpawn();
-      testProcessEnv._set("LASSO_PAGER", "nano __FILE__");
-      actions.setSlashCommands([
-        {
-          name: "custom",
-          filePath: "/test/.lasso/commands/custom.md",
-          content: "custom command content",
-        },
-      ]);
-      const result = await resolveSlashCommand("/commandspage");
-      assert.strictEqual(result, null);
-      assert.strictEqual(spawned[0], "nano /tmp/lasso-test-uuid.txt");
-    });
-
-    it("prints message for commandspage when there are no custom commands", async () => {
-      actions.resetStdout();
-      const result = await resolveSlashCommand("/commandspage");
-      assert.strictEqual(result, null);
-      assert.strictEqual(
-        stripAnsi(getCapturedStdout()),
-        "No available custom slash commands\n\n",
-      );
-    });
-
-    it("handles /contextpage command with no context files", async () => {
-      actions.resetStdout();
-      const result = await resolveSlashCommand("/contextpage");
-      assert.strictEqual(result, null);
-      assert.strictEqual(
-        stripAnsi(getCapturedStdout()),
-        "No available context files\n\n",
-      );
-    });
-
-    it("handles /contextpage command by opening context in a pager", async () => {
-      testProcessEnv._set("LASSO_PAGER", "nano __FILE__");
-      actions.setContextStr("context string content");
-      actions.setContextEntries([
-        { filePath: "/project/AGENTS.md", content: "context" },
-      ]);
-      const result = await resolveSlashCommand("/contextpage");
-      assert.strictEqual(result, null);
-      assert.strictEqual(
-        testFs._files.get("/tmp/lasso-test-uuid.txt"),
-        `context string content\n\n`,
       );
     });
 
@@ -3354,9 +3056,7 @@ Invalid command: /unknown, valid commands:
 - /model
 - /skills
 - /context
-- /contextpage
 - /commands
-- /commandspage
 - /keymaps
 - /usage
 - /tokens
@@ -3368,7 +3068,6 @@ Invalid command: /unknown, valid commands:
 - /lastresponse
 - /lastmessage
 - /lastdiff
-- /messages
 - /summaries
 - /test-cwd/.lasso/commands/known.md
 `,

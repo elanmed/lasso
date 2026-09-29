@@ -14,9 +14,7 @@ export const builtinSlashCommands = [
   "model",
   "skills",
   "context",
-  "contextpage",
   "commands",
-  "commandspage",
   "keymaps",
   "usage",
   "tokens",
@@ -28,7 +26,6 @@ export const builtinSlashCommands = [
   "lastresponse",
   "lastmessage",
   "lastdiff",
-  "messages",
   "summaries",
 ] as const;
 export type BuiltinSlashCommand = (typeof builtinSlashCommands)[number];

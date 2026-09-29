@@ -251,16 +251,6 @@ export function initKeypress() {
 
             return;
           }
-          case "contextpage": {
-            pageContextStr();
-            redrawPendingQuestion();
-            return;
-          }
-          case "commandspage": {
-            pageCustomSlashCommandsStr();
-            redrawPendingQuestion();
-            return;
-          }
           case "lastresponse": {
             await pageLastResponse();
             redrawPendingQuestion();
@@ -273,11 +263,6 @@ export function initKeypress() {
           }
           case "lastdiff": {
             pageLastDiff();
-            redrawPendingQuestion();
-            return;
-          }
-          case "messages": {
-            pageMessages();
             redrawPendingQuestion();
             return;
           }
@@ -660,17 +645,8 @@ async function resolveBuiltinSlashCommand(
       printAvailableContextFiles();
       return { handled: true, inputFromCommand: null };
     }
-    case "contextpage": {
-      pageContextStr({ isTyped: true });
-      return { handled: true, inputFromCommand: null };
-    }
     case "commands": {
       pageCommands();
-      return { handled: true, inputFromCommand: null };
-    }
-    case "commandspage": {
-      pageCustomSlashCommandsStr({ isTyped: true });
-
       return { handled: true, inputFromCommand: null };
     }
     case "keymaps": {
@@ -730,10 +706,6 @@ async function resolveBuiltinSlashCommand(
     }
     case "lastdiff": {
       pageLastDiff({ isTyped: true });
-      return { handled: true, inputFromCommand: null };
-    }
-    case "messages": {
-      pageMessages();
       return { handled: true, inputFromCommand: null };
     }
     case "summaries": {
@@ -1031,22 +1003,6 @@ export function setModelCommand(rawInput: string) {
   warnOnLargePromptOverhead();
 }
 
-export function pageContextStr({ isTyped = false }: SpacingOpts = {}) {
-  if (getState().app.contextEntries.length === 0) {
-    streamingSupportedWithSpacing(isTyped, () =>
-      print.doing("No available context files"),
-    );
-    return;
-  }
-
-  const initialContentStr = getState().app.contextStr;
-
-  openWithPager({
-    initialContentStr,
-    contentType: "markdown",
-  });
-}
-
 export interface SpacingOpts {
   isTyped?: boolean;
 }
@@ -1091,24 +1047,6 @@ export function pageCommands() {
   const initialContentStr = `# Available commands:
 
 ${getAvailableCommandsStr()}`;
-
-  openWithPager({
-    initialContentStr,
-    contentType: "markdown",
-  });
-}
-
-export function pageCustomSlashCommandsStr({
-  isTyped = false,
-}: SpacingOpts = {}) {
-  if (getState().app.slashCommands.length === 0) {
-    streamingSupportedWithSpacing(isTyped, () =>
-      print.doing("No available custom slash commands"),
-    );
-    return;
-  }
-
-  const initialContentStr = getCustomSlashCommandsStr();
 
   openWithPager({
     initialContentStr,
@@ -1499,17 +1437,6 @@ export function pageLastMessage({ isTyped = false }: SpacingOpts = {}) {
   const initialContentStr = `# [lasso] Last message
 
 ${contentStr}`;
-
-  openWithPager({
-    initialContentStr,
-    contentType: "markdown",
-  });
-}
-
-export function pageMessages() {
-  const initialContentStr = `# [lasso] Messages
-
-${stringify(getState().app.conversation.messages.toReversed())}`;
 
   openWithPager({
     initialContentStr,

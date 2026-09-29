@@ -6,7 +6,7 @@ _A minimal agent harness to rein in your llm_
 
 ## Features
 
-- **Minimal**: ~5,800 lines of source code, ~12,700 lines of tests
+- **Minimal**: ~5,800 lines of source code, ~12,500 lines of tests
   - Responses are piped through `bat` to render markdown
   - Multi-line input is supported by spawning an editor of your choice
   - Messages can be queued by typing a custom delimiter (default `l---`) in the spawned editor
@@ -212,7 +212,7 @@ keymaps:
 | ------ | ----- | --------------------------- | -------------------------------------------------------------------- |
 | `edit` | `Key` | `{ name: "g", ctrl: true }` | Call `$LASSO_EDIT` or `$EDITOR __FILE__` to input multi-line prompts |
 
-Pressing a bound key runs the command directly for `edit`/`paste` (editor) and pager commands (`editpage`, `history`, `config`, `contextpage`, `commandspage`); all other commands, builtin or custom, are typed into the prompt. Custom command keymaps use the command's name (its filename without extension).
+Pressing a bound key runs the command directly for `edit`/`paste` (editor) and pager commands (`editpage`, `history`, `config`); all other commands, builtin or custom, are typed into the prompt. Custom command keymaps use the command's name (its filename without extension).
 
 Keymaps must be unique across the merged default, global, and local configs — two commands bound to the same key cause a startup validation error.
 
@@ -314,14 +314,11 @@ Slash commands are triggered with `/command` at the prompt.
 | `/lastresponse` | View the latest assistant response in a pager                                 |
 | `/lastmessage`  | View the last user message in a pager                                         |
 | `/lastdiff`     | View the last turn's tool edit diffs in a pager                               |
-| `/messages`     | View the full message list in a pager                                         |
 | `/paste`        | Call the `paste` keymap                                                       |
 | `/model`        | Switch the model at runtime (e.g. `/model kimi-k2.6`)                         |
 | `/skills`       | List available skills                                                         |
 | `/context`      | List available context files                                                  |
-| `/contextpage`  | View the raw context string in a pager                                        |
 | `/commands`     | List available slash commands (builtin and custom)                            |
-| `/commandspage` | View custom slash command contents in a pager                                 |
 | `/keymaps`      | List configured keybindings                                                   |
 | `/usage`        | Show current session usage                                                    |
 | `/tokens`       | Show current token count by area                                              |
