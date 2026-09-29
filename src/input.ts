@@ -1033,7 +1033,9 @@ export function setModelCommand(rawInput: string) {
 
 export function pageContextStr({ isTyped = false }: SpacingOpts = {}) {
   if (getState().app.contextEntries.length === 0) {
-    streamingSupportedWithSpacing(isTyped, () => print.doing("No available context files"));
+    streamingSupportedWithSpacing(isTyped, () =>
+      print.doing("No available context files"),
+    );
     return;
   }
 
@@ -1069,7 +1071,9 @@ function streamingSupportedWithSpacing(isTyped: boolean, cb: () => void) {
 export function pageEditStr({ isTyped = false }: SpacingOpts = {}) {
   const { editorInputValue } = getState().app;
   if (editorInputValue === null) {
-    streamingSupportedWithSpacing(isTyped, () => print.doing("Editor is empty"));
+    streamingSupportedWithSpacing(isTyped, () =>
+      print.doing("Editor is empty"),
+    );
     return;
   }
 
@@ -1407,7 +1411,9 @@ export function pageHistory({ isTyped = false }: SpacingOpts = {}) {
   const { transcript } = getState().app;
 
   if (transcript.length === 0) {
-    streamingSupportedWithSpacing(isTyped, () => print.doing("No chat history"));
+    streamingSupportedWithSpacing(isTyped, () =>
+      print.doing("No chat history"),
+    );
     return;
   }
 
@@ -1441,7 +1447,9 @@ export async function pageLastResponse({ isTyped = false }: SpacingOpts = {}) {
   );
 
   if (lastMessage == undefined) {
-    streamingSupportedWithSpacing(isTyped, () => print.doing("No llm messages"));
+    streamingSupportedWithSpacing(isTyped, () =>
+      print.doing("No llm messages"),
+    );
     return;
   }
 
@@ -1449,7 +1457,9 @@ export async function pageLastResponse({ isTyped = false }: SpacingOpts = {}) {
     lastMessage.content as AssistantContent,
   );
   if (contentStr.length === 0) {
-    streamingSupportedWithSpacing(isTyped, () => print.doing("No llm messages"));
+    streamingSupportedWithSpacing(isTyped, () =>
+      print.doing("No llm messages"),
+    );
     return;
   }
 
@@ -1470,7 +1480,9 @@ export function pageLastMessage({ isTyped = false }: SpacingOpts = {}) {
   const lastMessage = messages.findLast((message) => message.role === "user");
 
   if (lastMessage == undefined) {
-    streamingSupportedWithSpacing(isTyped, () => print.doing("No user messages"));
+    streamingSupportedWithSpacing(isTyped, () =>
+      print.doing("No user messages"),
+    );
     return;
   }
 
@@ -1478,7 +1490,9 @@ export function pageLastMessage({ isTyped = false }: SpacingOpts = {}) {
   assertAtBuildtime(typeof contentStr === "string");
 
   if (contentStr.length === 0) {
-    streamingSupportedWithSpacing(isTyped, () => print.doing("No user messages"));
+    streamingSupportedWithSpacing(isTyped, () =>
+      print.doing("No user messages"),
+    );
     return;
   }
 
@@ -1505,7 +1519,9 @@ ${stringify(getState().app.conversation.messages.toReversed())}`;
 
 export function pageSummaries({ isTyped = false }: SpacingOpts = {}) {
   if (getState().app.conversation.summaries.length === 0) {
-    streamingSupportedWithSpacing(isTyped, () => print.doing("No conversation summaries"));
+    streamingSupportedWithSpacing(isTyped, () =>
+      print.doing("No conversation summaries"),
+    );
     return;
   }
 
@@ -1535,7 +1551,9 @@ export function pageLastDiff({ isTyped = false }: SpacingOpts = {}) {
   const { toolEditDiffs } = getState().app;
 
   if (toolEditDiffs.length === 0) {
-    streamingSupportedWithSpacing(isTyped, () => print.doing("No diffs from the last turn"));
+    streamingSupportedWithSpacing(isTyped, () =>
+      print.doing("No diffs from the last turn"),
+    );
     return;
   }
   const initialContentStr = toolEditDiffs
