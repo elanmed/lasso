@@ -2603,7 +2603,49 @@ Keymaps:
       assert.strictEqual(result, null);
       assert.strictEqual(
         stripAnsi(getCapturedStdout()),
-        `\nUsage:\n- Session: 0 tokens, $0\n- 60m window: 0.000 of 10 limit\n\n`,
+        `\nUsage:\n- Session: 0 tokens, $0.000\n- 60m window: $0.000 of $10.000 limit\n\n`,
+      );
+    });
+
+    it("handles /usage command with usage and a usage limit", async () => {
+      actions.resetStdout();
+      actions.setModel("claude-haiku-4-5");
+      actions.setPricingPerModel({
+        "claude-haiku-4-5": {
+          inputPerMillion: 1,
+          outputPerMillion: 5,
+          cacheReadPerMillion: 0.25,
+          cacheWritePerMillion: 1.25,
+        },
+      });
+      actions.setModelUsageForSession({
+        "claude-haiku-4-5": [
+          {
+            inputTokens: 3_000_000,
+            outputTokens: 100_000,
+            cacheReadTokens: 1_000_000,
+            cacheWriteTokens: 0,
+            date: 42,
+          },
+        ],
+      });
+      actions.setModelUsageForLimitWindow({
+        "claude-haiku-4-5": [
+          {
+            inputTokens: 1_500_000,
+            outputTokens: 40_000,
+            cacheReadTokens: 500_000,
+            cacheWriteTokens: 100_000,
+            date: 42,
+          },
+        ],
+      });
+      actions.setUsageLimit({ duration: "60m", dollarAmount: 1234.5 });
+      const result = await resolveSlashCommand("/usage");
+      assert.strictEqual(result, null);
+      assert.strictEqual(
+        stripAnsi(getCapturedStdout()),
+        `\nUsage:\n- Session: 3,100,000 tokens, $2.750\n- 60m window: $1.350 of $1,234.500 limit\n\n`,
       );
     });
 

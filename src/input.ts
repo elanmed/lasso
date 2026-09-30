@@ -854,7 +854,7 @@ export function printUsage() {
     if (pricing === undefined) {
       return tokensInSession;
     }
-    const dollarsInSession = `$${String(getUsageMoneyForModel(tokenUsageForSession, model))}`;
+    const dollarsInSession = `$${getPrettyMoney(getUsageMoneyForModel(tokenUsageForSession, model))}`;
     return `${tokensInSession}, ${dollarsInSession}`;
   })();
 
@@ -870,7 +870,7 @@ export function printUsage() {
       );
 
       print.plain(
-        `- ${usageLimit.duration} window: ${getPrettyMoney(costForLimitWindow)} of ${String(usageLimit.dollarAmount)} limit`,
+        `- ${usageLimit.duration} window: $${getPrettyMoney(costForLimitWindow)} of $${getPrettyMoney(usageLimit.dollarAmount)} limit`,
       );
     }
   });
