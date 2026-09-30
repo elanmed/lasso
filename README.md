@@ -449,7 +449,7 @@ contextWindowPerModel:
   your-model: 200000
 ```
 
-The new conversation summary targets 30% of the context window. Lasso reserves up to 50% for summary history and keeps at most five summaries. When five already exist, it first merges the adjacent pair which was updated (added or merged) longest ago.
+The new conversation summary targets 5% of the context window. Lasso reserves up to 50% for summary history and keeps at most ten summaries. When ten already exist, it first merges the adjacent pair which was updated (added or merged) longest ago.
 
 By default, lasso uses structured output to enforce the summary's maximum length. Set `compactWithStructuredOutput: false` to use plain-text output for models that do not support structured output. In that case, the requested lengths are targets rather than enforced limits.
 

@@ -787,7 +787,7 @@ web_fetch_json: https://example.com/api
 
 - Compact the following conversation.
 - Output a plain-text prose summary. Do not repeat the input.
-- Output a maximum of 30000 characters.
+- Output a maximum of 15000 characters.
 
 \`\`\`json
 [{"role":"user","content":"hi"}]
@@ -954,7 +954,7 @@ You have queued messages! Edit them with {"name":"g","ctrl":true} or press enter
 
 - Compact the following conversation.
 - Output a plain-text prose summary. Do not repeat the input.
-- Output a maximum of 30000 characters.
+- Output a maximum of 15000 characters.
 
 \`\`\`json
 [{"role":"user","content":"old"}]
@@ -971,7 +971,7 @@ You have queued messages! Edit them with {"name":"g","ctrl":true} or press enter
     });
 
     it("merges existing summaries when at the summary max during compaction", async () => {
-      for (const i of [1, 2, 3, 4, 5]) {
+      for (const i of [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]) {
         actions.setConversationSummaries([
           ...getState().app.conversation.summaries,
           { compacted: `summary ${String(i)}`, compactedAt: i, tokens: 100 },
@@ -1004,6 +1004,11 @@ You have queued messages! Edit them with {"name":"g","ctrl":true} or press enter
           { compacted: "summary 3", compactedAt: 3, tokens: 100 },
           { compacted: "summary 4", compactedAt: 4, tokens: 100 },
           { compacted: "summary 5", compactedAt: 5, tokens: 100 },
+          { compacted: "summary 6", compactedAt: 6, tokens: 100 },
+          { compacted: "summary 7", compactedAt: 7, tokens: 100 },
+          { compacted: "summary 8", compactedAt: 8, tokens: 100 },
+          { compacted: "summary 9", compactedAt: 9, tokens: 100 },
+          { compacted: "summary 10", compactedAt: 10, tokens: 100 },
           { compacted: "compacted summary", compactedAt: 0, tokens: 20 },
         ],
         messages: [
@@ -1011,17 +1016,22 @@ You have queued messages! Edit them with {"name":"g","ctrl":true} or press enter
           { role: "assistant", content: "summary 3" },
           { role: "assistant", content: "summary 4" },
           { role: "assistant", content: "summary 5" },
+          { role: "assistant", content: "summary 6" },
+          { role: "assistant", content: "summary 7" },
+          { role: "assistant", content: "summary 8" },
+          { role: "assistant", content: "summary 9" },
+          { role: "assistant", content: "summary 10" },
           { role: "assistant", content: "compacted summary" },
         ],
       });
       assert.deepStrictEqual(getState().app.promptTokens, {
-        value: 15 + 300 + 20 + getApproxAdditions(),
+        value: 15 + 800 + 20 + getApproxAdditions(),
         dirty: false,
       });
     });
 
     it("keeps the existing summaries when merging fails during compaction", async () => {
-      for (const i of [1, 2, 3, 4, 5]) {
+      for (const i of [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]) {
         actions.setConversationSummaries([
           ...getState().app.conversation.summaries,
           { compacted: `summary ${String(i)}`, compactedAt: i, tokens: 100 },
@@ -1052,6 +1062,11 @@ You have queued messages! Edit them with {"name":"g","ctrl":true} or press enter
           { compacted: "summary 3", compactedAt: 3, tokens: 100 },
           { compacted: "summary 4", compactedAt: 4, tokens: 100 },
           { compacted: "summary 5", compactedAt: 5, tokens: 100 },
+          { compacted: "summary 6", compactedAt: 6, tokens: 100 },
+          { compacted: "summary 7", compactedAt: 7, tokens: 100 },
+          { compacted: "summary 8", compactedAt: 8, tokens: 100 },
+          { compacted: "summary 9", compactedAt: 9, tokens: 100 },
+          { compacted: "summary 10", compactedAt: 10, tokens: 100 },
           { compacted: "compacted summary", compactedAt: 0, tokens: 20 },
         ],
         messages: [
@@ -1060,11 +1075,16 @@ You have queued messages! Edit them with {"name":"g","ctrl":true} or press enter
           { role: "assistant", content: "summary 3" },
           { role: "assistant", content: "summary 4" },
           { role: "assistant", content: "summary 5" },
+          { role: "assistant", content: "summary 6" },
+          { role: "assistant", content: "summary 7" },
+          { role: "assistant", content: "summary 8" },
+          { role: "assistant", content: "summary 9" },
+          { role: "assistant", content: "summary 10" },
           { role: "assistant", content: "compacted summary" },
         ],
       });
       assert.deepStrictEqual(getState().app.promptTokens, {
-        value: 500 + 20 + getApproxAdditions(),
+        value: 1000 + 20 + getApproxAdditions(),
         dirty: false,
       });
     });
@@ -1118,7 +1138,7 @@ You have queued messages! Edit them with {"name":"g","ctrl":true} or press enter
 
 - Compact the following conversation.
 - Output a plain-text prose summary. Do not repeat the input.
-- Output a maximum of 30000 characters.
+- Output a maximum of 15000 characters.
 
 \`\`\`json
 [{"role":"user","content":"not yet summarized"}]
@@ -1279,7 +1299,7 @@ You have queued messages! Edit them with {"name":"g","ctrl":true} or press enter
     const usage = makeMockUsage();
 
     const seedSummaries = () => {
-      for (const i of [1, 2, 3, 4, 5]) {
+      for (const i of [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]) {
         actions.setConversationSummaries([
           ...getState().app.conversation.summaries,
           { compacted: `summary ${String(i)}`, compactedAt: i, tokens: 100 },
@@ -1331,7 +1351,7 @@ You have queued messages! Edit them with {"name":"g","ctrl":true} or press enter
 
 - Merge the following two summaries into one.
 - Output a plain-text prose summary. Do not repeat the input.
-- Output a maximum of 30000 characters.
+- Output a maximum of 15000 characters.
 
 \`\`\`json
 ["summary 1","summary 2"]
@@ -1342,6 +1362,11 @@ You have queued messages! Edit them with {"name":"g","ctrl":true} or press enter
         { compacted: "summary 3", compactedAt: 3, tokens: 100 },
         { compacted: "summary 4", compactedAt: 4, tokens: 100 },
         { compacted: "summary 5", compactedAt: 5, tokens: 100 },
+        { compacted: "summary 6", compactedAt: 6, tokens: 100 },
+        { compacted: "summary 7", compactedAt: 7, tokens: 100 },
+        { compacted: "summary 8", compactedAt: 8, tokens: 100 },
+        { compacted: "summary 9", compactedAt: 9, tokens: 100 },
+        { compacted: "summary 10", compactedAt: 10, tokens: 100 },
       ]);
       assert.deepStrictEqual(getState().app.conversation.summaries, [
         { compacted: "summary 1", compactedAt: 1, tokens: 100 },
@@ -1349,6 +1374,11 @@ You have queued messages! Edit them with {"name":"g","ctrl":true} or press enter
         { compacted: "summary 3", compactedAt: 3, tokens: 100 },
         { compacted: "summary 4", compactedAt: 4, tokens: 100 },
         { compacted: "summary 5", compactedAt: 5, tokens: 100 },
+        { compacted: "summary 6", compactedAt: 6, tokens: 100 },
+        { compacted: "summary 7", compactedAt: 7, tokens: 100 },
+        { compacted: "summary 8", compactedAt: 8, tokens: 100 },
+        { compacted: "summary 9", compactedAt: 9, tokens: 100 },
+        { compacted: "summary 10", compactedAt: 10, tokens: 100 },
       ]);
       assert.deepStrictEqual(getState().app.modelUsageForSession, {
         "claude-sonnet-4-20250514": [
@@ -1380,6 +1410,11 @@ You have queued messages! Edit them with {"name":"g","ctrl":true} or press enter
         { compacted: "summary 3", compactedAt: 3, tokens: 100 },
         { compacted: "summary 4", compactedAt: 4, tokens: 100 },
         { compacted: "summary 5", compactedAt: 5, tokens: 100 },
+        { compacted: "summary 6", compactedAt: 6, tokens: 100 },
+        { compacted: "summary 7", compactedAt: 7, tokens: 100 },
+        { compacted: "summary 8", compactedAt: 8, tokens: 100 },
+        { compacted: "summary 9", compactedAt: 9, tokens: 100 },
+        { compacted: "summary 10", compactedAt: 10, tokens: 100 },
       ]);
     });
 
@@ -1418,6 +1453,11 @@ You have queued messages! Edit them with {"name":"g","ctrl":true} or press enter
         { compacted: "summary 3", compactedAt: 3, tokens: 100 },
         { compacted: "summary 4", compactedAt: 4, tokens: 100 },
         { compacted: "summary 5", compactedAt: 5, tokens: 100 },
+        { compacted: "summary 6", compactedAt: 6, tokens: 100 },
+        { compacted: "summary 7", compactedAt: 7, tokens: 100 },
+        { compacted: "summary 8", compactedAt: 8, tokens: 100 },
+        { compacted: "summary 9", compactedAt: 9, tokens: 100 },
+        { compacted: "summary 10", compactedAt: 10, tokens: 100 },
       ]);
     });
     it("falls back to approximated tokens when usage has no outputTokens", async () => {
@@ -1452,6 +1492,11 @@ You have queued messages! Edit them with {"name":"g","ctrl":true} or press enter
         { compacted: "summary 3", compactedAt: 3, tokens: 100 },
         { compacted: "summary 4", compactedAt: 4, tokens: 100 },
         { compacted: "summary 5", compactedAt: 5, tokens: 100 },
+        { compacted: "summary 6", compactedAt: 6, tokens: 100 },
+        { compacted: "summary 7", compactedAt: 7, tokens: 100 },
+        { compacted: "summary 8", compactedAt: 8, tokens: 100 },
+        { compacted: "summary 9", compactedAt: 9, tokens: 100 },
+        { compacted: "summary 10", compactedAt: 10, tokens: 100 },
       ]);
     });
 
@@ -1467,6 +1512,11 @@ You have queued messages! Edit them with {"name":"g","ctrl":true} or press enter
         { compacted: "summary 3", compactedAt: 3, tokens: 100 },
         { compacted: "summary 4", compactedAt: 4, tokens: 100 },
         { compacted: "summary 5", compactedAt: 5, tokens: 100 },
+        { compacted: "summary 6", compactedAt: 6, tokens: 100 },
+        { compacted: "summary 7", compactedAt: 7, tokens: 100 },
+        { compacted: "summary 8", compactedAt: 8, tokens: 100 },
+        { compacted: "summary 9", compactedAt: 9, tokens: 100 },
+        { compacted: "summary 10", compactedAt: 10, tokens: 100 },
       ]);
     });
   });

@@ -46,7 +46,7 @@ import {
   syncSessionFile,
 } from "./log.ts";
 
-const maxNumberSummaries = 5;
+const maxNumberSummaries = 10;
 const maxRatioPerSummary = dedicatedSummaryRatio / maxNumberSummaries;
 
 function getApiStreamAbortSignal() {
