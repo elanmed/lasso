@@ -638,11 +638,11 @@ async function resolveBuiltinSlashCommand(
       return { handled: true, inputFromCommand: null };
     }
     case "skills": {
-      printSkills();
+      pageSkills();
       return { handled: true, inputFromCommand: null };
     }
     case "context": {
-      printAvailableContextFiles();
+      pageAvailableContextFiles();
       return { handled: true, inputFromCommand: null };
     }
     case "commands": {
@@ -1054,9 +1054,11 @@ ${getAvailableCommandsStr()}`;
   });
 }
 
-export function printSkills() {
+export function pageSkills({ isTyped = false }: SpacingOpts = {}) {
   if (getState().app.skills.length === 0) {
-    errorWithSpacing(() => print.doing("No available skills"));
+    streamingSupportedWithSpacing(isTyped, () =>
+      print.doing("No available skills"),
+    );
     return;
   }
 
@@ -1070,15 +1072,20 @@ export function printSkills() {
     )
     .join("\n");
 
-  successWithSpacing(() => {
-    print.doing("Available skills:");
-    print.plain(skillsList);
-  });
+  const initialContentStr = `# Available skills:
+
+${skillsList}`;
+
+  openWithPager({ contentType: "markdown", initialContentStr });
 }
 
-export function printAvailableContextFiles() {
+export function pageAvailableContextFiles({
+  isTyped = false,
+}: SpacingOpts = {}) {
   if (getState().app.contextEntries.length === 0) {
-    errorWithSpacing(() => print.doing("No available context files"));
+    streamingSupportedWithSpacing(isTyped, () =>
+      print.doing("No available context files"),
+    );
     return;
   }
 
@@ -1094,10 +1101,10 @@ export function printAvailableContextFiles() {
 
   const formatted = contextFiles.concat(contextSkillFiles).join("\n");
 
-  successWithSpacing(() => {
-    print.doing("Available context files:");
-    print.plain(formatted);
-  });
+  const initialContentStr = `# Available context files:
+
+${formatted}`;
+  openWithPager({ contentType: "markdown", initialContentStr });
 }
 
 export function resumeWithNoArgs() {

@@ -14,8 +14,8 @@ import {
   setModelCommand,
   clearCommand,
   printTokens,
-  printSkills,
-  printAvailableContextFiles,
+  pageSkills,
+  pageAvailableContextFiles,
   pageCommands,
   pageEditStr,
   spawnAndReadEditorContent,
@@ -1686,13 +1686,15 @@ editor input
     });
   });
 
-  describe("printSkills", () => {
+  describe("pageSkills", () => {
     beforeEach(() => {
       actions.resetState();
       actions.resetStdout();
     });
 
-    it("prints available skills", () => {
+    it("opens available skills in a pager", () => {
+      const { spawned } = mockPagerSpawn();
+      testProcessEnv._set("LASSO_PAGER", "nano __FILE__");
       actions.setSkills([
         {
           name: "test-skill",
@@ -1701,24 +1703,20 @@ editor input
           content: "skill content",
         },
       ]);
-      printSkills();
+
+      pageSkills();
+
+      assert.strictEqual(spawned[0], "nano /tmp/lasso-test-uuid.txt");
       assert.strictEqual(
-        stripAnsi(getCapturedStdout()),
-        `
-Available skills:
+        testFs._files.get("/tmp/lasso-test-uuid.txt"),
+        `# Available skills:
+
 - test-skill: A test skill
   /skills/test-skill
 
 `,
       );
-    });
-
-    it("prints no available skills when skills list is empty", () => {
-      printSkills();
-      assert.strictEqual(
-        stripAnsi(getCapturedStdout()),
-        `No available skills\n\n`,
-      );
+      assert.strictEqual(getCapturedStdout(), "");
     });
 
     it("filters out context file skills", () => {
@@ -1736,48 +1734,72 @@ Available skills:
           content: "skill content",
         },
       ]);
-      printSkills();
+
+      pageSkills();
+
       assert.strictEqual(
-        stripAnsi(getCapturedStdout()),
-        `
-Available skills:
+        testFs._files.get("/tmp/lasso-test-uuid.txt"),
+        `# Available skills:
+
 - real-skill: A real skill
   /skills/real
 
 `,
       );
     });
+
+    it("prints that there are no available skills when skills list is empty", () => {
+      pageSkills({ isTyped: true });
+      assert.strictEqual(
+        stripAnsi(getCapturedStdout()),
+        "No available skills\n\n",
+      );
+      assert.strictEqual(testFs._files.has("/tmp/lasso-test-uuid.txt"), false);
+    });
+
+    it("surrounds the message with blank lines when isTyped is false", () => {
+      pageSkills();
+      assert.strictEqual(
+        stripAnsi(getCapturedStdout()),
+        "\nNo available skills\n\n",
+      );
+    });
+
+    it("does not add spacing when streaming", () => {
+      actions.setApiStreamAbortController(new AbortController());
+      pageSkills();
+      assert.strictEqual(
+        stripAnsi(getCapturedStdout()),
+        "No available skills\n",
+      );
+    });
   });
 
-  describe("printAvailableContextFiles", () => {
+  describe("pageAvailableContextFiles", () => {
     beforeEach(() => {
       actions.resetState();
       actions.resetStdout();
     });
 
-    it("prints available context files", () => {
+    it("opens available context files in a pager", () => {
+      const { spawned } = mockPagerSpawn();
+      testProcessEnv._set("LASSO_PAGER", "nano __FILE__");
       actions.setContextEntries([
         { filePath: "/project/AGENTS.md", content: "context" },
       ]);
-      printAvailableContextFiles();
+
+      pageAvailableContextFiles();
+
+      assert.strictEqual(spawned[0], "nano /tmp/lasso-test-uuid.txt");
       assert.strictEqual(
-        stripAnsi(getCapturedStdout()),
-        `
-Available context files:
+        testFs._files.get("/tmp/lasso-test-uuid.txt"),
+        `# Available context files:
+
 - /project/AGENTS.md
 
 `,
       );
-    });
-
-    it("prints no available context files when entries list is empty", () => {
-      printAvailableContextFiles();
-      assert.strictEqual(
-        stripAnsi(getCapturedStdout()),
-        `No available context files
-
-`,
-      );
+      assert.strictEqual(getCapturedStdout(), "");
     });
 
     it("includes context file skills", () => {
@@ -1798,11 +1820,13 @@ Available context files:
           content: "skill content",
         },
       ]);
-      printAvailableContextFiles();
+
+      pageAvailableContextFiles();
+
       assert.strictEqual(
-        stripAnsi(getCapturedStdout()),
-        `
-Available context files:
+        testFs._files.get("/tmp/lasso-test-uuid.txt"),
+        `# Available context files:
+
 - /project/AGENTS.md
 - /other/AGENTS.md (as a skill)
 
@@ -1810,22 +1834,29 @@ Available context files:
       );
     });
 
-    it("does not add extra spacing when output already ends with a blank line", () => {
-      actions.setContextEntries([
-        { filePath: "/project/AGENTS.md", content: "context" },
-      ]);
-      printAvailableContextFiles();
-      printAvailableContextFiles();
+    it("prints that there are no available context files when entries list is empty", () => {
+      pageAvailableContextFiles({ isTyped: true });
       assert.strictEqual(
         stripAnsi(getCapturedStdout()),
-        `
-Available context files:
-- /project/AGENTS.md
+        "No available context files\n\n",
+      );
+      assert.strictEqual(testFs._files.has("/tmp/lasso-test-uuid.txt"), false);
+    });
 
-Available context files:
-- /project/AGENTS.md
+    it("surrounds the message with blank lines when isTyped is false", () => {
+      pageAvailableContextFiles();
+      assert.strictEqual(
+        stripAnsi(getCapturedStdout()),
+        "\nNo available context files\n\n",
+      );
+    });
 
-`,
+    it("does not add spacing when streaming", () => {
+      actions.setApiStreamAbortController(new AbortController());
+      pageAvailableContextFiles();
+      assert.strictEqual(
+        stripAnsi(getCapturedStdout()),
+        "No available context files\n",
       );
     });
   });
@@ -2464,7 +2495,8 @@ log content
       assert.strictEqual(result, null);
       assert.strictEqual(
         stripAnsi(getCapturedStdout()),
-        `No available skills
+        `
+No available skills
 
 `,
       );
@@ -2476,7 +2508,8 @@ log content
       assert.strictEqual(result, null);
       assert.strictEqual(
         stripAnsi(getCapturedStdout()),
-        `No available context files
+        `
+No available context files
 
 `,
       );
