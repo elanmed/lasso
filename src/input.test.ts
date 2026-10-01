@@ -64,6 +64,12 @@ function getTestRl() {
   return rl;
 }
 
+async function resolveInterruptWithAnswer(answer: string) {
+  actions.setEditorInputValue("queued input");
+  actions.setRl(makeFakeRl({ question: () => Promise.resolve(answer) }));
+  await resolveInterruptWithEditor();
+}
+
 describe("input", () => {
   afterEach(() => {
     mock.restoreAll();
@@ -104,9 +110,26 @@ describe("input", () => {
       );
       assert.equal(
         stripAnsi(getCapturedStdout()),
-        `You have queued messages! Edit them with ${JSON.stringify(getState().config.keymaps.edit)} or press enter to continue\n`,
+        "You have queued messages!\n",
       );
-      assert.deepStrictEqual(prompts, ["Ready? "]);
+      assert.deepStrictEqual(prompts, [
+        'Edit ({"name":"e","ctrl":true}), c(lear), or <CR> to continue: ',
+      ]);
+    });
+
+    it("clears queued editor input when c is entered", async () => {
+      await resolveInterruptWithAnswer("c");
+      assert.strictEqual(getState().app.editorInputValue, null);
+    });
+
+    it("clears queued editor input when clear is entered", async () => {
+      await resolveInterruptWithAnswer("clear");
+      assert.strictEqual(getState().app.editorInputValue, null);
+    });
+
+    it("keeps queued editor input when the answer is not c or clear", async () => {
+      await resolveInterruptWithAnswer("e");
+      assert.strictEqual(getState().app.editorInputValue, "queued input");
     });
 
     it("returns normally when interrupted", async () => {
@@ -3012,7 +3035,7 @@ commands diff
       assert.strictEqual(result, null);
       assert.strictEqual(
         stripAnsi(getCapturedStdout()),
-        "An error occurred when getting the diff: fatal\n",
+        `- Warning: using a default context window of 128,000 tokens because there is no \`contextWindowPerModel\` entry for the current model \`__MISSING__\`\nAn error occurred when getting the diff: fatal\n`,
       );
       assert.strictEqual(
         testFs._files.has("/tmp/lasso-global-before-test-uuid.txt"),

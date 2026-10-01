@@ -136,12 +136,6 @@ export function initStateFromConfig({
     );
   }
 
-  if (defaultedBaseURL !== undefined && defaultedSdkProvider === "anthropic") {
-    print.warning(
-      `The \`baseURL\` option is not used when \`sdkProvider=anthropic\``,
-    );
-  }
-
   actions.setModel(defaultedModel);
   if (defaultedBaseURL !== undefined) actions.setBaseURL(defaultedBaseURL);
   actions.setSdkProvider(defaultedSdkProvider);
@@ -245,7 +239,13 @@ export function initStateFromConfig({
     defaultedPricingPerModel[defaultedModel] === undefined
   ) {
     print.warning(
-      `usage limit disabled: no \`pricingPerModel\` entry for the current model \`${defaultedModel}\``,
+      `- Warning: usage limit is disabled because there is no \`pricingPerModel\` entry for the current model \`${defaultedModel}\``,
+    );
+  }
+
+  if (defaultedContextWindowPerModel[defaultedModel] === undefined) {
+    print.warning(
+      `- Warning: using a default context window of 128,000 tokens because there is no \`contextWindowPerModel\` entry for the current model \`${defaultedModel}\``,
     );
   }
 

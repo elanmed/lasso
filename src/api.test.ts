@@ -233,7 +233,7 @@ web_fetch_json: https://example.com/api
       assert.strictEqual(getState().app.editorInputValue, "queued input");
       assert.strictEqual(
         stripAnsi(getCaptured()),
-        `You have queued messages! Edit them with {"name":"g","ctrl":true} or press enter to continue\n`,
+        "You have queued messages!\n",
       );
     });
 
@@ -881,7 +881,7 @@ web_fetch_json: https://example.com/api
       assert.strictEqual(
         stripAnsi(getCaptured()),
         `Compacting…
-You have queued messages! Edit them with {"name":"g","ctrl":true} or press enter to continue
+You have queued messages!
 `,
       );
     });
@@ -1317,7 +1317,7 @@ You have queued messages! Edit them with {"name":"g","ctrl":true} or press enter
       assert.strictEqual(getState().abortControllers.apiStream, null);
       assert.strictEqual(
         stripAnsi(getCaptured()),
-        `You have queued messages! Edit them with {"name":"g","ctrl":true} or press enter to continue\n`,
+        "You have queued messages!\n",
       );
     });
   });

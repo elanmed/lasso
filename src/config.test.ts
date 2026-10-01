@@ -1074,13 +1074,46 @@ describe("config", () => {
         assert.equal(getState().config.sdkProvider, "anthropic");
       });
 
-      it("warns when baseURL is provided with anthropic sdkProvider", async () => {
+      it("warns when the model has no contextWindowPerModel entry", async () => {
+        testFs._files.set(
+          getGlobalConfigPath(),
+          JSON.stringify({ model: testConfig.model }),
+        );
+
+        const getCaptured = mockStdout();
+        await initState();
+        assert.strictEqual(
+          stripAnsi(getCaptured()),
+          "- Warning: using a default context window of 128,000 tokens because there is no `contextWindowPerModel` entry for the current model `claude-sonnet-4-6`\n" +
+            "Reading context files: 0.0ms\n" +
+            "Reading skills: 0.0ms\n" +
+            "Reading slash commands: 0.0ms\n",
+        );
+      });
+
+      it("does not warn when the model has a contextWindowPerModel entry", async () => {
         testFs._files.set(
           getGlobalConfigPath(),
           JSON.stringify({
             model: testConfig.model,
-            sdkProvider: "anthropic",
-            baseURL: "https://api.example.com",
+            contextWindowPerModel: { "claude-sonnet-4-6": 200_000 },
+            suppressStartupDurations: true,
+          }),
+        );
+
+        const getCaptured = mockStdout();
+        await initState();
+        assert.strictEqual(stripAnsi(getCaptured()), "");
+      });
+
+      it("warns when the usage limit has no pricingPerModel entry for the current model", async () => {
+        testFs._files.set(
+          getGlobalConfigPath(),
+          JSON.stringify({
+            ...testConfig,
+            usageLimit: { duration: "2h", dollarAmount: 10 },
+            contextWindowPerModel: { "claude-sonnet-4-6": 200_000 },
+            suppressStartupDurations: true,
           }),
         );
 
@@ -1088,10 +1121,7 @@ describe("config", () => {
         await initState();
         assert.strictEqual(
           stripAnsi(getCaptured()),
-          "The `baseURL` option is not used when `sdkProvider=anthropic`\n" +
-            "Reading context files: 0.0ms\n" +
-            "Reading skills: 0.0ms\n" +
-            "Reading slash commands: 0.0ms\n",
+          "- Warning: usage limit is disabled because there is no `pricingPerModel` entry for the current model `claude-sonnet-4-6`\n",
         );
       });
 
@@ -1110,7 +1140,7 @@ describe("config", () => {
         await initState();
         assert.deepStrictEqual(
           stripAnsi(getCaptured()),
-          "The `baseURL` option is not used when `sdkProvider=anthropic`\n",
+          "- Warning: using a default context window of 128,000 tokens because there is no `contextWindowPerModel` entry for the current model `claude-sonnet-4-6`\n",
         );
       });
 

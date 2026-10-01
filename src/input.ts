@@ -22,6 +22,7 @@ import {
   getStrFromAssistantContent,
   markdownFence,
   isNullish,
+  safeStringify,
 } from "./utils.ts";
 import { truncate } from "./text.ts";
 import {
@@ -573,20 +574,26 @@ export async function resolveInterruptWithEditor() {
   const abortController =
     getState().abortControllers.interruptWithEditorContent;
   assertAtBuildtime(abortController !== null);
-  print.warning(
-    `You have queued messages! Edit them with ${JSON.stringify(getState().config.keymaps.edit)} or press enter to continue`,
-  );
+  print.warning("You have queued messages!");
   const continueResult = await tryCatchAsync(
-    rl.question("Ready? ", {
-      signal: abortController.signal,
-    }),
+    rl.question(
+      `Edit (${safeStringify(getState().config.keymaps.edit)}), c(lear), or <CR> to continue: `,
+      {
+        signal: abortController.signal,
+      },
+    ),
   );
   actions.setInterruptWithEditorAbortController(null);
 
-  if (continueResult.ok) return;
-  if (isAbortError(continueResult.error)) return;
+  if (!continueResult.ok) {
+    if (isAbortError(continueResult.error)) return;
+    print.error(getMessageFromError(continueResult.error));
+    return;
+  }
 
-  print.error(getMessageFromError(continueResult.error));
+  if (/^c(lear)?$/i.exec(continueResult.value) !== null) {
+    actions.setEditorInputValue(null);
+  }
 }
 
 type ParameterizedBuiltinSlashCommand = "resume" | "model";
