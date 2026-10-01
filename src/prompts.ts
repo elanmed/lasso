@@ -99,7 +99,16 @@ ${readInstructions}
 ${writeInstructions}`;
 };
 
-const plainTextLi = `- Output a plain-text prose summary. Do not repeat the input.`;
+const sharedLis = `- Summarize into exactly two sections: "## Key facts" and "## Everything else".
+- Key facts are details that must survive all future compactions, such as decisions, file paths, task state, and user preferences.
+- Write "## Key facts" as a flat bullet list of short, self-contained facts.
+- When the maximum length is tight, cut from "## Everything else" and never from "## Key facts."
+- Output a plain-text prose summary, not JSON or a code fence.`;
+
+const mergeLis = `- Build "## Key facts" from the union of the key facts in both summaries.
+- Keep every existing key fact: you may deduplicate or reword only when needed, but never change their meaning and never delete one.
+- If a key fact is superseded by a later one, delete the outdated one.`;
+
 const getMaxLenLi = (targetCharLen: number) =>
   `- Output a maximum of ${String(targetCharLen)} characters.`;
 
@@ -113,7 +122,7 @@ export const getConversationSummaryPrompt = ({
   return `## [lasso] Compact conversation
 
 - Compact the following conversation.
-${plainTextLi}
+${sharedLis}
 ${getMaxLenLi(targetCharLen)}
 
 ${conversation}`;
@@ -129,7 +138,8 @@ export const getMergeSummariesPrompt = ({
   return `## [lasso] Compact summaries
 
 - Merge the following two summaries into one.
-${plainTextLi}
+${mergeLis}
+${sharedLis}
 ${getMaxLenLi(targetCharLen)}
 
 ${summaries}`;
