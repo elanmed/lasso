@@ -1113,7 +1113,7 @@ l---
       assert.strictEqual(
         stripAnsi(getCapturedStdout()),
         `
-Token count: 621
+Token count: 621 (0.012% of context window)
 - Chat messages: 11
 - Context files: 3
 - Harness and MCP tools: 4
@@ -1130,7 +1130,7 @@ Token count: 621
       assert.strictEqual(
         stripAnsi(getCapturedStdout()),
         `
-Token count: 62,100
+Token count: 62,100 (1.172% of context window)
 - Chat messages: 1,100
 - Context files: 300
 - Harness and MCP tools: 400

@@ -281,10 +281,11 @@ describe("usage-format", () => {
       setupTestContext();
     });
 
-    it("returns null when the model has no context window configured", () => {
+    it("falls back to the default context window when the model has none configured", () => {
       actions.setModel("unknown-model");
+      actions.setPromptTokens(1_280);
       const result = getPrettyContextWindowUsage();
-      assert.strictEqual(result, null);
+      assert.strictEqual(result, "1% of context window");
     });
 
     it("returns 0% when no tokens are used", () => {

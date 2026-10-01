@@ -227,8 +227,8 @@ export function getPromptOverheadTokensApprox() {
 
 export function warnOnLargePromptOverhead() {
   const { model } = getState().config;
-  const contextWindow = getState().config.contextWindowPerModel[model];
-  if (contextWindow === undefined) return;
+  const contextWindow =
+    getState().config.contextWindowPerModel[model] ?? defaultContextWindow;
 
   const promptOverheadTokensApprox = getPromptOverheadTokensApprox();
 

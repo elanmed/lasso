@@ -40,7 +40,7 @@ describe("fence", () => {
 
       assert.strictEqual(
         stripAnsi(getCaptured()),
-        "\u2501\u2501 Output (500ms) (0 tokens in session) \u2501\u2501\n",
+        "\u2501\u2501 Output (500ms) (0 tokens in session) (0% of context window) \u2501\u2501\n",
       );
     });
 

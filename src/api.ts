@@ -229,9 +229,6 @@ export async function getMergedSummaries() {
   const { model } = getState().config;
   assertAtBuildtime(model !== MISSING);
 
-  const contextWindow = getState().config.contextWindowPerModel[model];
-  assertAtBuildtime(contextWindow !== undefined);
-
   const compactPrompt = getMergeSummariesPrompt({
     targetCharLen: maxCharCountPerSummary,
     summaries: markdownFence(

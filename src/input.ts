@@ -895,13 +895,8 @@ export function printTokens() {
     tokensByArea.basePrompt +
     tokensByArea.skills;
 
-  const contextWindowUsage = (() => {
-    const prettyContextWindowUsageRaw = getPrettyContextWindowUsage();
-    if (prettyContextWindowUsageRaw !== null) {
-      return ` (${prettyContextWindowUsageRaw})`;
-    }
-    return "";
-  })();
+  const prettyContextWindowUsageRaw = getPrettyContextWindowUsage();
+  const contextWindowUsage = ` (${prettyContextWindowUsageRaw})`;
 
   successWithSpacing(() => {
     print.doing(`Token count: ${total.toLocaleString()}${contextWindowUsage}`);

@@ -44,15 +44,12 @@ function getFenceSessionLine(text: string) {
   sessionInfo += prettyTokenUsage;
   accumulatedCol += prettyTokenUsage.length;
 
-  const prettyContextWindowUsageRaw = getPrettyContextWindowUsage();
-  if (prettyContextWindowUsageRaw !== null) {
-    const prettyContextWindowUsage = ` (${prettyContextWindowUsageRaw})`;
-    if (accumulatedCol + prettyContextWindowUsage.length > availCol) {
-      return sessionInfo;
-    }
-    sessionInfo += prettyContextWindowUsage;
-    accumulatedCol += prettyContextWindowUsage.length;
+  const prettyContextWindowUsage = ` (${getPrettyContextWindowUsage()})`;
+  if (accumulatedCol + prettyContextWindowUsage.length > availCol) {
+    return sessionInfo;
   }
+  sessionInfo += prettyContextWindowUsage;
+  accumulatedCol += prettyContextWindowUsage.length;
 
   return sessionInfo;
 }

@@ -909,6 +909,27 @@ You have queued messages! Edit them with {"name":"g","ctrl":true} or press enter
       );
     });
 
+    it("compacts against the default context window when the model has none configured", async () => {
+      actions.setContextWindowPerModel({});
+      actions.setConversationMessages([{ role: "user", content: "hi" }]);
+      actions.setPromptTokens(122_000);
+      mock.method(aiDeps, "generateText", () =>
+        Promise.resolve(
+          makeGenerateTextResult({
+            output: { compacted: "compacted summary" },
+            usage: makeMockUsage(),
+          }),
+        ),
+      );
+      await maybeCompact("hi");
+      assert.deepStrictEqual(getState().app.conversation, {
+        summaries: [
+          { compacted: "compacted summary", compactedAt: 0, tokens: 25_000 },
+        ],
+        messages: [{ role: "assistant", content: "compacted summary" }],
+      });
+    });
+
     it("resets messages before the api call so the summary and new user input are both sent", async () => {
       actions.setConversationMessages([{ role: "user", content: "old" }]);
       actions.setPromptTokens(96_000);
