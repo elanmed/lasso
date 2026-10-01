@@ -15,9 +15,20 @@ import {
 import { actions } from "./state.ts";
 import { processDeps } from "./deps.ts";
 import {
+  BLUE,
+  CLEAR_LINE,
+  CR,
+  DOWN_1,
+  DOWN_2,
+  GREEN,
+  RED,
+  RESET,
+  UP_1,
+  UP_2,
   stripAnsi,
   testProcessEnv,
   mockStdout,
+  mockStdoutWrites,
   mockSetInterval,
   mockClearInterval,
   setupTestContext,
@@ -170,8 +181,8 @@ describe("print", () => {
 
       assert.strictEqual(
         getCaptured(),
-        `\x1b[34mStarting a: \x1b[0m
-\x1b[34mStarting b: \x1b[0m
+        `${BLUE}Starting a: ${RESET}
+${BLUE}Starting b: ${RESET}
 `,
       );
     });
@@ -182,7 +193,7 @@ describe("print", () => {
         logDuration: true,
         labels: ["Starting a: ", "Starting b: "],
       });
-      const getCaptured = mockStdout({ includeSpinnerFrames: true });
+      const getWrites = mockStdoutWrites();
 
       logger.printAllLabels();
       logger.start("Starting a: ");
@@ -192,12 +203,18 @@ describe("print", () => {
       mock.method(process.hrtime, "bigint", () => BigInt(2_234_567_890));
       logger.end("Starting b: ");
 
-      assert.strictEqual(
-        getCaptured(),
-        `\x1b[34mStarting a: \x1b[0m
-\x1b[34mStarting b: \x1b[0m
-\x1b[2A\x1b[2K\r\x1b[34mStarting a: \x1b[0m\x1b[32m234.567ms\x1b[0m\x1b[2B\r\x1b[1A\x1b[2K\r\x1b[34mStarting b: \x1b[0m\x1b[31m1s 0.0ms\x1b[0m\x1b[1B\r`,
-      );
+      assert.deepStrictEqual(getWrites(), [
+        `${BLUE}Starting a: ${RESET}\n`,
+        `${BLUE}Starting b: ${RESET}\n`,
+        `${UP_2}${CLEAR_LINE}${CR}`,
+        `${BLUE}Starting a: ${RESET}`,
+        `${GREEN}234.567ms${RESET}`,
+        `${DOWN_2}${CR}`,
+        `${UP_1}${CLEAR_LINE}${CR}`,
+        `${BLUE}Starting b: ${RESET}`,
+        `${RED}1s 0.0ms${RESET}`,
+        `${DOWN_1}${CR}`,
+      ]);
     });
 
     it("does nothing when logDuration is false", () => {
@@ -239,7 +256,7 @@ describe("print", () => {
     it("keeps color codes around the text without a trailing newline", () => {
       const getCaptured = mockStdout();
       colorPrint("hello", "blue", { appendNewline: false });
-      assert.strictEqual(getCaptured(), "\u001b[34mhello\u001b[0m");
+      assert.strictEqual(getCaptured(), `${BLUE}hello${RESET}`);
     });
   });
 

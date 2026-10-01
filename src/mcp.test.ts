@@ -4,12 +4,21 @@ import type { MCPClient } from "@ai-sdk/mcp";
 import { actions, getState, type MCPToolSet } from "./state.ts";
 import { initMcpState } from "./mcp.ts";
 import {
+  BLUE,
+  CLEAR_LINE,
+  CR,
+  DOWN_1,
+  DOWN_2,
+  GREEN,
+  RED,
+  RESET,
+  UP_1,
+  UP_2,
   makeFakeMcpClient,
   mockMcpClients,
-  mockStdout,
+  mockStdoutWrites,
   setMcps,
   setupTestContext,
-  stripAnsi,
 } from "./test-helpers.ts";
 
 describe("mcp", () => {
@@ -62,46 +71,56 @@ describe("mcp", () => {
     mockMcpClients(new Error("connection refused"));
     setMcps("first");
 
-    const getCaptured = mockStdout();
+    const getWrites = mockStdoutWrites();
     await initMcpState();
 
-    assert.strictEqual(
-      stripAnsi(getCaptured()),
-      `Starting first mcp server: 
-Starting first mcp server: 0.0msFailed to start the first mcp server: connection refused
-`,
-    );
+    assert.deepStrictEqual(getWrites(), [
+      `${BLUE}Starting first mcp server: ${RESET}\n`,
+      `${UP_1}${CLEAR_LINE}${CR}`,
+      `${BLUE}Starting first mcp server: ${RESET}`,
+      `${GREEN}0.0ms${RESET}`,
+      `${DOWN_1}${CR}`,
+      `${RED}Failed to start the first mcp server: connection refused${RESET}\n`,
+    ]);
   });
 
   it("prints all labels upfront and failure messages after every server settles", async () => {
     mockMcpClients(new Error("first error"), new Error("second error"));
     setMcps("first", "second");
 
-    const getCaptured = mockStdout();
+    const getWrites = mockStdoutWrites();
     await initMcpState();
 
-    assert.strictEqual(
-      stripAnsi(getCaptured()),
-      `Starting first mcp server: 
-Starting second mcp server: 
-Starting first mcp server: 0.0msStarting second mcp server: 0.0msFailed to start the first mcp server: first error
-Failed to start the second mcp server: second error
-`,
-    );
+    assert.deepStrictEqual(getWrites(), [
+      `${BLUE}Starting first mcp server: ${RESET}\n`,
+      `${BLUE}Starting second mcp server: ${RESET}\n`,
+      `${UP_2}${CLEAR_LINE}${CR}`,
+      `${BLUE}Starting first mcp server: ${RESET}`,
+      `${GREEN}0.0ms${RESET}`,
+      `${DOWN_2}${CR}`,
+      `${UP_1}${CLEAR_LINE}${CR}`,
+      `${BLUE}Starting second mcp server: ${RESET}`,
+      `${GREEN}0.0ms${RESET}`,
+      `${DOWN_1}${CR}`,
+      `${RED}Failed to start the first mcp server: first error${RESET}\n`,
+      `${RED}Failed to start the second mcp server: second error${RESET}\n`,
+    ]);
   });
 
   it("prints the mcp server start duration when suppressStartupDurations is false", async () => {
     mockMcpClients(makeFakeMcpClient());
     setMcps("first");
 
-    const getCaptured = mockStdout();
+    const getWrites = mockStdoutWrites();
     await initMcpState();
 
-    assert.strictEqual(
-      stripAnsi(getCaptured()),
-      `Starting first mcp server: 
-Starting first mcp server: 0.0ms`,
-    );
+    assert.deepStrictEqual(getWrites(), [
+      `${BLUE}Starting first mcp server: ${RESET}\n`,
+      `${UP_1}${CLEAR_LINE}${CR}`,
+      `${BLUE}Starting first mcp server: ${RESET}`,
+      `${GREEN}0.0ms${RESET}`,
+      `${DOWN_1}${CR}`,
+    ]);
   });
 
   it("hides the mcp server start duration when suppressStartupDurations is true", async () => {
@@ -109,10 +128,10 @@ Starting first mcp server: 0.0ms`,
     actions.setSuppressStartupDurations(true);
     setMcps("first");
 
-    const getCaptured = mockStdout();
+    const getWrites = mockStdoutWrites();
     await initMcpState();
 
-    assert.strictEqual(stripAnsi(getCaptured()), "");
+    assert.deepStrictEqual(getWrites(), []);
   });
 
   it("keeps all clients when one client's tools() call fails", async () => {
@@ -164,14 +183,16 @@ Starting first mcp server: 0.0ms`,
     );
     setMcps("first");
 
-    const getCaptured = mockStdout();
+    const getWrites = mockStdoutWrites();
     await initMcpState();
 
-    assert.strictEqual(
-      stripAnsi(getCaptured()),
-      `Starting first mcp server: 
-Starting first mcp server: 0.0msFailed to import the tools the first mcp server: boom
-`,
-    );
+    assert.deepStrictEqual(getWrites(), [
+      `${BLUE}Starting first mcp server: ${RESET}\n`,
+      `${UP_1}${CLEAR_LINE}${CR}`,
+      `${BLUE}Starting first mcp server: ${RESET}`,
+      `${GREEN}0.0ms${RESET}`,
+      `${DOWN_1}${CR}`,
+      `${RED}Failed to import the tools the first mcp server: boom${RESET}\n`,
+    ]);
   });
 });

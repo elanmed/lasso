@@ -142,6 +142,14 @@ export function mockStdout(opts: { includeSpinnerFrames?: boolean } = {}) {
   return () => captured;
 }
 
+export function mockStdoutWrites() {
+  const writes: string[] = [];
+  mock.method(processDeps.stdout, "write", (out: string) => {
+    writes.push(out);
+  });
+  return () => writes;
+}
+
 export function mockStderr() {
   let captured = "";
   mock.method(processDeps.stderr, "write", (out: string) => {
@@ -197,6 +205,17 @@ const ANSI_ESCAPE_PATTERN =
 export function stripAnsi(str: string): string {
   return str.replace(ANSI_ESCAPE_PATTERN, "");
 }
+
+export const BLUE = "\x1b[34m";
+export const GREEN = "\x1b[32m";
+export const RED = "\x1b[31m";
+export const RESET = "\x1b[0m";
+export const UP_1 = "\x1b[1A";
+export const UP_2 = "\x1b[2A";
+export const DOWN_1 = "\x1b[1B";
+export const DOWN_2 = "\x1b[2B";
+export const CLEAR_LINE = "\x1b[2K";
+export const CR = "\r";
 
 export function makeFakeRl(overrides: object = {}) {
   return {
