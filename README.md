@@ -6,7 +6,7 @@ _A minimal agent harness to rein in your llm_
 
 ## Features
 
-- **Minimal**: ~5,800 lines of source code, ~12,700 lines of tests
+- **Minimal**: ~5,800 lines of source code, ~12,800 lines of tests
   - Responses are piped through `bat` to render markdown
   - Multi-line input is supported by spawning an editor of your choice
   - Messages can be queued by typing a custom delimiter (default `l---`) in the spawned editor
@@ -317,7 +317,7 @@ Slash commands are triggered with `/command` at the prompt.
 | `/paste`        | Call the `paste` keymap                                                       |
 | `/model`        | Switch the model at runtime (e.g. `/model kimi-k2.6`)                         |
 | `/skills`       | List available skills                                                         |
-| `/tools`        | List available harness and MCP tools in a pager                             |
+| `/tools`        | List available harness and MCP tools in a pager                               |
 | `/context`      | List available context files                                                  |
 | `/commands`     | List available slash commands (builtin and custom)                            |
 | `/keymaps`      | List configured keybindings                                                   |

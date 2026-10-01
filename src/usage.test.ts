@@ -8,6 +8,7 @@ import {
   getApproxPromptTokens,
   getCurrentPromptTokens,
   getExpiredTime,
+  getMaxNumberSummaries,
   getPrettyTokensByArea,
   getPromptOverheadTokensApprox,
   getTokensByArea,
@@ -1075,5 +1076,29 @@ describe("warnOnLargePromptOverhead", () => {
       stripAnsi(getCaptured()),
       `The current set of context, skills, and tools is 50% of the 100,000 token context window!\n\nLasso reserves 50% of the context window for compacted summaries with the assumption that at most 45% of the context window will be used for prompt overhead. As is, the prompt overhead is large enough to break this assumption and, along with any user messages, may breach the llm's context window and cause API calls to be rejected. Consider converting some of your context to skills and minimizing MCP servers.\n`,
     );
+  });
+});
+
+describe("getMaxNumberSummaries", () => {
+  beforeEach(() => {
+    setupTestContext({ model: null });
+  });
+
+  it("returns null when the model is missing", () => {
+    const result = getMaxNumberSummaries();
+    assert.strictEqual(result, null);
+  });
+
+  it("uses the configured context window", () => {
+    actions.setModel("test-model");
+    actions.setContextWindowPerModel({ "test-model": 100_000 });
+    const result = getMaxNumberSummaries();
+    assert.strictEqual(result, 5);
+  });
+
+  it("falls back to the default context window", () => {
+    actions.setModel("test-model");
+    const result = getMaxNumberSummaries();
+    assert.strictEqual(result, 6);
   });
 });

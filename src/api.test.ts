@@ -790,7 +790,7 @@ web_fetch_json: https://example.com/api
 - Write "## Key facts" as a flat bullet list of short, self-contained facts.
 - When the maximum length is tight, cut from "## Everything else" and never from "## Key facts."
 - Output a plain-text prose summary, not JSON or a code fence.
-- Output a maximum of 15000 characters.
+- Output a maximum of 30000 characters.
 
 \`\`\`json
 [{"role":"user","content":"hi"}]
@@ -982,7 +982,7 @@ You have queued messages! Edit them with {"name":"g","ctrl":true} or press enter
 - Write "## Key facts" as a flat bullet list of short, self-contained facts.
 - When the maximum length is tight, cut from "## Everything else" and never from "## Key facts."
 - Output a plain-text prose summary, not JSON or a code fence.
-- Output a maximum of 15000 characters.
+- Output a maximum of 30000 characters.
 
 \`\`\`json
 [{"role":"user","content":"old"}]
@@ -1170,7 +1170,7 @@ You have queued messages! Edit them with {"name":"g","ctrl":true} or press enter
 - Write "## Key facts" as a flat bullet list of short, self-contained facts.
 - When the maximum length is tight, cut from "## Everything else" and never from "## Key facts."
 - Output a plain-text prose summary, not JSON or a code fence.
-- Output a maximum of 15000 characters.
+- Output a maximum of 30000 characters.
 
 \`\`\`json
 [{"role":"user","content":"not yet summarized"}]
@@ -1390,7 +1390,7 @@ You have queued messages! Edit them with {"name":"g","ctrl":true} or press enter
 - Write "## Key facts" as a flat bullet list of short, self-contained facts.
 - When the maximum length is tight, cut from "## Everything else" and never from "## Key facts."
 - Output a plain-text prose summary, not JSON or a code fence.
-- Output a maximum of 15000 characters.
+- Output a maximum of 30000 characters.
 
 \`\`\`json
 ["summary 1","summary 2"]
@@ -1430,6 +1430,26 @@ You have queued messages! Edit them with {"name":"g","ctrl":true} or press enter
           },
         ],
       });
+    });
+
+    it("merges when the summaries reach the max for a 40,000 token context window", async () => {
+      actions.setContextWindowPerModel({ "claude-sonnet-4-20250514": 40_000 });
+      actions.setConversationSummaries([
+        { compacted: "summary 1", compactedAt: 1, tokens: 100 },
+        { compacted: "summary 2", compactedAt: 2, tokens: 100 },
+      ]);
+      mock.method(aiDeps, "generateText", () =>
+        Promise.resolve(
+          makeGenerateTextResult({
+            output: { compacted: "merged summary" },
+            usage,
+          }),
+        ),
+      );
+      const result = await getMergedSummaries();
+      assert.deepStrictEqual(result, [
+        { compacted: "merged summary", compactedAt: 42, tokens: 25_000 },
+      ]);
     });
 
     it("does not mutate the existing state summaries when merging", async () => {
