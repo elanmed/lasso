@@ -1,7 +1,7 @@
 import { getState } from "./state.ts";
 import { assertAtBuildtime } from "./assert.ts";
 import { decimalToPercent } from "./utils.ts";
-import { getCurrentPromptTokens } from "./usage.ts";
+import { defaultContextWindow, getCurrentPromptTokens } from "./usage.ts";
 import {
   isUsageLimitDisabled,
   type ModelUsage,
@@ -98,8 +98,8 @@ export function getPrettyTokenUsage() {
 
 export function getPrettyContextWindowUsage() {
   const { model } = getState().config;
-  const contextWindow = getState().config.contextWindowPerModel[model];
-  if (contextWindow === undefined) return null;
+  const contextWindow =
+    getState().config.contextWindowPerModel[model] ?? defaultContextWindow;
 
   const currTokens = getCurrentPromptTokens();
 

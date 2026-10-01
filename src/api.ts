@@ -8,7 +8,6 @@ import {
   getMessageFromError,
   safeStringify,
   strToApproxTokens,
-  approxTokensToCharLen,
   markdownFence,
 } from "./utils.ts";
 import { createToolCallDiffer } from "./differ.ts";
@@ -24,8 +23,10 @@ import {
   getCurrentPromptTokens,
   getPromptOverheadTokensApprox,
   compactTriggerRatio,
-  dedicatedSummaryRatio,
   orApproxTokens,
+  getMaxNumberSummaries,
+  maxCharCountPerSummary,
+  defaultContextWindow,
 } from "./usage.ts";
 import {
   getBaseAgentTools,
@@ -45,9 +46,6 @@ import {
   getAppendedTranscript,
   syncSessionFile,
 } from "./log.ts";
-
-const maxNumberSummaries = 10;
-const maxRatioPerSummary = dedicatedSummaryRatio / maxNumberSummaries;
 
 function getApiStreamAbortSignal() {
   const controller = getState().abortControllers.apiStream;
@@ -193,6 +191,9 @@ export async function resolveApiCall(userInput: string) {
 
 export async function getMergedSummaries() {
   const { summaries } = getState().app.conversation;
+  const maxNumberSummaries = getMaxNumberSummaries();
+  assertAtBuildtime(maxNumberSummaries !== null);
+
   if (summaries.length < maxNumberSummaries) {
     return getState().app.conversation.summaries;
   }
@@ -231,11 +232,8 @@ export async function getMergedSummaries() {
   const contextWindow = getState().config.contextWindowPerModel[model];
   assertAtBuildtime(contextWindow !== undefined);
 
-  const targetTokens = Math.floor(maxRatioPerSummary * contextWindow);
-  const targetCharLen = approxTokensToCharLen(targetTokens);
-
   const compactPrompt = getMergeSummariesPrompt({
-    targetCharLen,
+    targetCharLen: maxCharCountPerSummary,
     summaries: markdownFence(
       "json",
       JSON.stringify(
@@ -249,7 +247,7 @@ export async function getMergedSummaries() {
       return {
         output: Output.object({
           schema: z.object({
-            compacted: z.string().max(targetCharLen),
+            compacted: z.string().max(maxCharCountPerSummary),
           }),
         }),
       };
@@ -306,16 +304,10 @@ export async function getConversationSummary() {
   const { model } = getState().config;
   assertAtBuildtime(model !== MISSING);
 
-  const contextWindow = getState().config.contextWindowPerModel[model];
-  assertAtBuildtime(contextWindow !== undefined);
-
-  const targetTokens = Math.floor(maxRatioPerSummary * contextWindow);
-  const targetCharLen = approxTokensToCharLen(targetTokens);
-
   // messages[0..summaries.length) are re-appended summaries, one per entry,
   // so everything from summaries.length on is not yet summarized
   const compactPrompt = getConversationSummaryPrompt({
-    targetCharLen,
+    targetCharLen: maxCharCountPerSummary,
     conversation: markdownFence(
       "json",
       JSON.stringify(
@@ -334,7 +326,7 @@ export async function getConversationSummary() {
       return {
         output: Output.object({
           schema: z.object({
-            compacted: z.string().max(targetCharLen),
+            compacted: z.string().max(maxCharCountPerSummary),
           }),
         }),
       };
@@ -397,8 +389,8 @@ export async function maybeCompact(userInput: string) {
   const { model } = getState().config;
   if (model === MISSING) return;
 
-  const contextWindow = getState().config.contextWindowPerModel[model];
-  if (contextWindow === undefined) return;
+  const contextWindow =
+    getState().config.contextWindowPerModel[model] ?? defaultContextWindow;
 
   // maybeCompact runs before each api call turn, so we don't know the token
   // count of userInput until after the API call. This can be problematic when the userInput

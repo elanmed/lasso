@@ -11,16 +11,32 @@ import {
   getApproxTokensFromMessages,
   strToApproxTokens,
   decimalToPercent,
+  approxTokensToCharLen,
 } from "./utils.ts";
 import { fsDeps } from "./deps.ts";
 import { getUsageLogLockPath, getUsageLogPath } from "./paths.ts";
 import { print } from "./print.ts";
 import { baseAgentPrompt } from "./prompts.ts";
+import { MISSING } from "./missing.ts";
 
 export const compactTriggerRatio = 0.95;
 export const dedicatedSummaryRatio = 0.5;
 export const dedicatedPromptOverheadRatio =
   compactTriggerRatio - dedicatedSummaryRatio;
+
+export const defaultContextWindow = 128_000;
+const maxTokenCountPerSummary = 10_000;
+export const maxCharCountPerSummary = approxTokensToCharLen(
+  maxTokenCountPerSummary,
+);
+export function getMaxNumberSummaries() {
+  const { model } = getState().config;
+  if (model === MISSING) return null;
+  const contextWindow =
+    getState().config.contextWindowPerModel[model] ?? defaultContextWindow;
+  const allSummariesTokenCount = dedicatedSummaryRatio * contextWindow;
+  return Math.floor(allSummariesTokenCount / maxTokenCountPerSummary);
+}
 
 export const ModelUsageSchema = z.object({
   inputTokens: z.number(),
