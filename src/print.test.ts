@@ -1,6 +1,7 @@
 import { describe, it, beforeEach, afterEach, mock } from "node:test";
 import assert from "node:assert";
 import {
+  createParallelPerformanceLogger,
   createPerformanceLogger,
   startLoadingState,
   stopLoadingState,
@@ -154,6 +155,71 @@ describe("print", () => {
     it("throws when ended without start", () => {
       const logger = createPerformanceLogger({ logDuration: true });
       assert.throws(() => logger.end());
+    });
+  });
+
+  describe("createParallelPerformanceLogger", () => {
+    it("prints every label on its own line upfront", () => {
+      const logger = createParallelPerformanceLogger({
+        logDuration: true,
+        labels: ["Starting a: ", "Starting b: "],
+      });
+      const getCaptured = mockStdout();
+
+      logger.printAllLabels();
+
+      assert.strictEqual(
+        getCaptured(),
+        `\x1b[34mStarting a: \x1b[0m
+\x1b[34mStarting b: \x1b[0m
+`,
+      );
+    });
+
+    it("rewrites each label in place with its duration", () => {
+      mock.method(process.hrtime, "bigint", () => BigInt(1_000_000_000));
+      const logger = createParallelPerformanceLogger({
+        logDuration: true,
+        labels: ["Starting a: ", "Starting b: "],
+      });
+      const getCaptured = mockStdout({ includeSpinnerFrames: true });
+
+      logger.printAllLabels();
+      logger.start("Starting a: ");
+      mock.method(process.hrtime, "bigint", () => BigInt(1_234_567_890));
+      logger.end("Starting a: ");
+      logger.start("Starting b: ");
+      mock.method(process.hrtime, "bigint", () => BigInt(2_234_567_890));
+      logger.end("Starting b: ");
+
+      assert.strictEqual(
+        getCaptured(),
+        `\x1b[34mStarting a: \x1b[0m
+\x1b[34mStarting b: \x1b[0m
+\x1b[2A\x1b[2K\r\x1b[34mStarting a: \x1b[0m\x1b[32m234.567ms\x1b[0m\x1b[2B\r\x1b[1A\x1b[2K\r\x1b[34mStarting b: \x1b[0m\x1b[31m1s 0.0ms\x1b[0m\x1b[1B\r`,
+      );
+    });
+
+    it("does nothing when logDuration is false", () => {
+      const logger = createParallelPerformanceLogger({
+        logDuration: false,
+        labels: ["Starting a: "],
+      });
+      const getCaptured = mockStdout();
+
+      logger.printAllLabels();
+      logger.start("Starting a: ");
+      logger.end("Starting a: ");
+
+      assert.strictEqual(getCaptured(), "");
+    });
+
+    it("throws when ended without start", () => {
+      const logger = createParallelPerformanceLogger({
+        logDuration: true,
+        labels: ["Starting a: "],
+      });
+      assert.throws(() => logger.end("Starting a: "));
     });
   });
 

@@ -11,7 +11,7 @@ import type { MCPClient } from "@ai-sdk/mcp";
 import { aiDeps, fsDeps, mcpDeps, processDeps } from "./deps.ts";
 import { actions, promptDeps, type SessionFile } from "./state.ts";
 import { initKeypress } from "./input.ts";
-import type { Key, SdkProvider } from "./config-types.ts";
+import type { Key, Mcp, SdkProvider } from "./config-types.ts";
 import { baseBatFlags, markdownBatFlags } from "./terminal.ts";
 
 export function makeMcpTool() {
@@ -549,6 +549,14 @@ export function makeFakeMcpClient({
     tools: tools ?? (() => Promise.resolve({})),
     close: close ?? (() => undefined),
   } as unknown as MCPClient;
+}
+
+export function setMcps(...names: string[]) {
+  const mcps: Record<string, Mcp> = {};
+  for (const name of names) {
+    mcps[name] = { type: "http", url: "not-a-url" };
+  }
+  actions.setMcps(mcps);
 }
 
 export function mockMcpClients(...clients: (MCPClient | Error)[]) {

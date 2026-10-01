@@ -7,6 +7,7 @@ import {
   makeFakeMcpClient,
   mockMcpClients,
   mockStdout,
+  setMcps,
   setupTestContext,
   stripAnsi,
 } from "./test-helpers.ts";
@@ -49,10 +50,7 @@ describe("mcp", () => {
 
   it("ignores MCP clients that fail during initialization", async () => {
     mockMcpClients(new Error("connection refused"));
-    actions.setMcps({
-      first: { type: "http", url: "not-a-url" },
-      second: { type: "sse", url: "also-not-a-url" },
-    });
+    setMcps("first", "second");
 
     await initMcpState();
 
@@ -62,40 +60,54 @@ describe("mcp", () => {
 
   it("prints an error when a client fails to start", async () => {
     mockMcpClients(new Error("connection refused"));
-    actions.setMcps({
-      first: { type: "http", url: "not-a-url" },
-    });
+    setMcps("first");
 
     const getCaptured = mockStdout();
     await initMcpState();
 
     assert.strictEqual(
       stripAnsi(getCaptured()),
-      "Starting first mcp server: 0.0ms\nFailed to start the first mcp server: connection refused\n",
+      `Starting first mcp server: 
+Starting first mcp server: 0.0msFailed to start the first mcp server: connection refused
+`,
+    );
+  });
+
+  it("prints all labels upfront and failure messages after every server settles", async () => {
+    mockMcpClients(new Error("first error"), new Error("second error"));
+    setMcps("first", "second");
+
+    const getCaptured = mockStdout();
+    await initMcpState();
+
+    assert.strictEqual(
+      stripAnsi(getCaptured()),
+      `Starting first mcp server: 
+Starting second mcp server: 
+Starting first mcp server: 0.0msStarting second mcp server: 0.0msFailed to start the first mcp server: first error
+Failed to start the second mcp server: second error
+`,
     );
   });
 
   it("prints the mcp server start duration when suppressStartupDurations is false", async () => {
     mockMcpClients(makeFakeMcpClient());
-    actions.setMcps({
-      first: { type: "http", url: "not-a-url" },
-    });
+    setMcps("first");
 
     const getCaptured = mockStdout();
     await initMcpState();
 
     assert.strictEqual(
       stripAnsi(getCaptured()),
-      "Starting first mcp server: 0.0ms\n",
+      `Starting first mcp server: 
+Starting first mcp server: 0.0ms`,
     );
   });
 
   it("hides the mcp server start duration when suppressStartupDurations is true", async () => {
     mockMcpClients(makeFakeMcpClient());
     actions.setSuppressStartupDurations(true);
-    actions.setMcps({
-      first: { type: "http", url: "not-a-url" },
-    });
+    setMcps("first");
 
     const getCaptured = mockStdout();
     await initMcpState();
@@ -112,10 +124,7 @@ describe("mcp", () => {
     });
     const secondClient = makeFakeMcpClient({ close: closeSecond });
     mockMcpClients(firstClient, secondClient);
-    actions.setMcps({
-      first: { type: "http", url: "not-a-url" },
-      second: { type: "sse", url: "also-not-a-url" },
-    });
+    setMcps("first", "second");
 
     await initMcpState();
 
@@ -140,10 +149,7 @@ describe("mcp", () => {
       tools: () => Promise.resolve(tools),
     });
     mockMcpClients(firstClient, secondClient);
-    actions.setMcps({
-      first: { type: "http", url: "not-a-url" },
-      second: { type: "sse", url: "also-not-a-url" },
-    });
+    setMcps("first", "second");
 
     await initMcpState();
 
@@ -156,16 +162,16 @@ describe("mcp", () => {
     mockMcpClients(
       makeFakeMcpClient({ tools: () => Promise.reject(new Error("boom")) }),
     );
-    actions.setMcps({
-      first: { type: "http", url: "not-a-url" },
-    });
+    setMcps("first");
 
     const getCaptured = mockStdout();
     await initMcpState();
 
     assert.strictEqual(
       stripAnsi(getCaptured()),
-      "Starting first mcp server: 0.0ms\nFailed to import the tools the first mcp server: boom\n",
+      `Starting first mcp server: 
+Starting first mcp server: 0.0msFailed to import the tools the first mcp server: boom
+`,
     );
   });
 });
