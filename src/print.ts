@@ -91,6 +91,47 @@ export function createPerformanceLogger({
   return { start, end };
 }
 
+export function createParallelPerformanceLogger({
+  logDuration,
+  labels,
+}: {
+  logDuration: boolean;
+  labels: string[];
+}) {
+  const startTimeByLabel = new Map<string, bigint>();
+
+  function printAllLabels() {
+    if (!logDuration) return;
+    for (const label of labels) {
+      print.doing(label, { appendNewline: true });
+    }
+  }
+
+  function start(label: string) {
+    if (!logDuration) return;
+    startTimeByLabel.set(label, process.hrtime.bigint());
+  }
+
+  function end(label: string) {
+    if (!logDuration) return;
+    const startTime = startTimeByLabel.get(label);
+    assertAtRuntime(startTime !== undefined);
+    const endTime = process.hrtime.bigint();
+    const duration = getPrettyDuration(startTime, endTime, {
+      includeMicroseconds: true,
+    });
+    const linesUp = labels.length - labels.indexOf(label);
+    processDeps.stdout.write(`\x1b[${String(linesUp)}A\x1b[2K\r`);
+    print.doing(label, { appendNewline: false });
+    colorPrint(duration, getDurationColor(startTime, endTime), {
+      appendNewline: false,
+    });
+    processDeps.stdout.write(`\x1b[${String(linesUp)}B\r`);
+  }
+
+  return { printAllLabels, start, end };
+}
+
 export function printNewline() {
   if (getState().app.stdoutTail.endsWith("\n\n")) return;
   colorPrint("", "none");

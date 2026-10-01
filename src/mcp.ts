@@ -3,9 +3,10 @@ import { Experimental_StdioMCPTransport as StdioClientTransport } from "@ai-sdk/
 import type { MCPClient } from "@ai-sdk/mcp";
 import { actions, getState, type MCPToolSet } from "./state.ts";
 import type { Mcp } from "./config-types.ts";
-import { createPerformanceLogger, print } from "./print.ts";
+import { createParallelPerformanceLogger, print } from "./print.ts";
 import { getMessageFromError, tryCatchAsync } from "./utils.ts";
 import { mcpDeps } from "./deps.ts";
+import { assertAtBuildtime } from "./assert.ts";
 
 async function createMcpClient(config: Mcp) {
   switch (config.type) {
@@ -50,23 +51,35 @@ async function createMcpClient(config: Mcp) {
 async function getMcpClients() {
   const mcpClients: Record<string, MCPClient> = {};
 
+  const serverEntries = Object.entries(getState().config.mcps);
+  const labelByName = Object.fromEntries(
+    serverEntries.map(([name]) => [name, `Starting ${name} mcp server: `]),
+  );
+  const performanceLogger = createParallelPerformanceLogger({
+    logDuration: !getState().config.suppressStartupDurations,
+    labels: Object.values(labelByName),
+  });
+  performanceLogger.printAllLabels();
+
+  const failureMessages: string[] = [];
   await Promise.all(
-    Object.entries(getState().config.mcps).map(async ([name, config]) => {
-      const performanceLogger = createPerformanceLogger({
-        logDuration: !getState().config.suppressStartupDurations,
-      });
-      performanceLogger.start(`Starting ${name} mcp server: `);
+    serverEntries.map(async ([name, config]) => {
+      const label = labelByName[name];
+      assertAtBuildtime(label !== undefined);
+
+      performanceLogger.start(label);
       const createMcpResult = await tryCatchAsync(createMcpClient(config));
-      performanceLogger.end();
+      performanceLogger.end(label);
       if (createMcpResult.ok) {
         mcpClients[name] = createMcpResult.value;
       } else {
-        print.error(
+        failureMessages.push(
           `Failed to start the ${name} mcp server: ${getMessageFromError(createMcpResult.error)}`,
         );
       }
     }),
   );
+  failureMessages.forEach((message) => print.error(message));
 
   return mcpClients;
 }
