@@ -44,6 +44,7 @@ The README states approximate source and test line counts. Run `./agent-pnpm-run
 - Prefer `assert.deepStrictEqual` over multiple individual field assertions — check the whole object in one call
 - Never use `content: result.content` in deepStrictEqual assertions — it's a tautology. Inline the actual expected value
 - Inline numbers and strings in test expectations instead of interpolating them from variables or computing them at runtime — the expected value should be written out literally
+- It is fine to interpolate shared ANSI escape sequence constants (e.g. `BLUE`, `UP_1`, `CR`) in test expectations instead of writing the escapes out literally
 - Never use `assert.ok(result.includes(...))` — assert on the whole string with `assert.equal` or `assert.strictEqual`
 - Only use `===` and `!==`; never use `==`, `!=`, or truthy/falsy coercions like `if (obj)` or `if (!obj)`. Use `!` only on boolean expressions
 - For string assertions with newlines: use template literals when the string contains any newline that is not a single trailing one. If it's just a single trailing newline, use `"...\n"` instead
