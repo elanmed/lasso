@@ -25,6 +25,7 @@ import {
   initLocalConfig,
   initGlobalConfig,
   pageSummaries,
+  pageTools,
   pageHistory,
   pageLastMessage,
   pageLastResponse,
@@ -44,6 +45,8 @@ import {
   mockExecCalls,
   mockSpawnSync,
   mockPagerSpawn,
+  makeFakeMcpClient,
+  makeMcpTool,
   batPagerCmd,
   stripAnsi,
   mockStdout,
@@ -1098,7 +1101,7 @@ l---
     beforeEach(() => {
       actions.resetStdout();
       mock.method(promptDeps, "getSystemContent", () => "");
-      actions.setToolsContentStr("123456789012");
+      mock.method(promptDeps, "getToolsContentStr", () => "123456789012");
       actions.setContextStr("123456789");
       actions.setSkillsStr("1234");
       actions.setConversationMessages([{ role: "user", content: "hello" }]);
@@ -1711,7 +1714,7 @@ editor input
         testFs._files.get("/tmp/lasso-test-uuid.txt"),
         `# Available skills:
 
-- test-skill: A test skill
+- **test-skill**: A test skill
   /skills/test-skill
 
 `,
@@ -1741,7 +1744,7 @@ editor input
         testFs._files.get("/tmp/lasso-test-uuid.txt"),
         `# Available skills:
 
-- real-skill: A real skill
+- **real-skill**: A real skill
   /skills/real
 
 `,
@@ -1771,6 +1774,72 @@ editor input
       assert.strictEqual(
         stripAnsi(getCapturedStdout()),
         "No available skills\n",
+      );
+    });
+  });
+
+  describe("pageTools", () => {
+    beforeEach(() => {
+      actions.resetState();
+      actions.resetStdout();
+    });
+
+    it("opens the harness tools in a pager", async () => {
+      const { spawned } = mockPagerSpawn();
+      testProcessEnv._set("LASSO_PAGER", "nano __FILE__");
+
+      await pageTools();
+
+      assert.strictEqual(spawned[0], "nano /tmp/lasso-test-uuid.txt");
+      assert.strictEqual(
+        testFs._files.get("/tmp/lasso-test-uuid.txt"),
+        `# Available tools:
+
+- **[lasso] web_fetch_html**: Fetch a web page by URL and return its readable content, parsed to extract the main article.
+- **[lasso] web_fetch_json**: Fetch a JSON API endpoint by URL and return the parsed JSON response.
+- **[lasso] load_skill**: Load a skill to get specialized instructions
+- **[lasso] bash**: Execute a bash command and return its output.
+- **[lasso] create_subagent**: Launch parallel subagents for independent investigation or implementation. Prefer read-only subagents for parallel work to avoid conflicts. Read-only subagents can fetch web content, inspect files, and load skills; read-write subagents can modify files or execute commands.
+
+`,
+      );
+    });
+
+    it("opens harness and mcp tools in a pager", async () => {
+      const { spawned } = mockPagerSpawn();
+      testProcessEnv._set("LASSO_PAGER", "nano __FILE__");
+      actions.setMcp(
+        {
+          first: makeFakeMcpClient({
+            tools: () =>
+              Promise.resolve({
+                mcp_tool: makeMcpTool(),
+                described_tool: {
+                  ...makeMcpTool(),
+                  description: "A described MCP tool",
+                },
+              }),
+          }),
+        },
+        {},
+      );
+
+      await pageTools();
+
+      assert.strictEqual(spawned[0], "nano /tmp/lasso-test-uuid.txt");
+      assert.strictEqual(
+        testFs._files.get("/tmp/lasso-test-uuid.txt"),
+        `# Available tools:
+
+- **[lasso] web_fetch_html**: Fetch a web page by URL and return its readable content, parsed to extract the main article.
+- **[lasso] web_fetch_json**: Fetch a JSON API endpoint by URL and return the parsed JSON response.
+- **[lasso] load_skill**: Load a skill to get specialized instructions
+- **[lasso] bash**: Execute a bash command and return its output.
+- **[lasso] create_subagent**: Launch parallel subagents for independent investigation or implementation. Prefer read-only subagents for parallel work to avoid conflicts. Read-only subagents can fetch web content, inspect files, and load skills; read-write subagents can modify files or execute commands.
+- **[first mcp] mcp_tool**: [no description available]
+- **[first mcp] described_tool**: A described MCP tool
+
+`,
       );
     });
   });
@@ -1916,6 +1985,7 @@ editor input
 - /lastmessage
 - /lastdiff
 - /summaries
+- /tools
 - /test/.lasso/commands/custom.md
 
 `,
@@ -2248,7 +2318,38 @@ editor input
 - /lastmessage
 - /lastdiff
 - /summaries
+- /tools
 - /test/.lasso/commands/custom.md
+
+`,
+      );
+      assert.strictEqual(getCapturedStdout(), "");
+      assert.deepStrictEqual(prompts, [true]);
+      assert.deepStrictEqual(spawned, ["cat /tmp/lasso-test-uuid.txt"]);
+    });
+
+    it("opens available tools in a pager when tools keymap matches", async () => {
+      const prompts: boolean[] = [];
+      mock.method(harness.rl, "prompt", (arg: boolean) => {
+        prompts.push(arg);
+      });
+      const { spawned } = mockPagerSpawn();
+      testProcessEnv._set("LASSO_PAGER", "cat __FILE__");
+      actions.setKeymaps({
+        ...defaultConfig.keymaps,
+        tools: { name: ".", ctrl: true },
+      });
+      harness.emitKey({ name: ".", ctrl: true });
+      await harness.flush();
+      assert.strictEqual(
+        testFs._files.get("/tmp/lasso-test-uuid.txt"),
+        `# Available tools:
+
+- **[lasso] web_fetch_html**: Fetch a web page by URL and return its readable content, parsed to extract the main article.
+- **[lasso] web_fetch_json**: Fetch a JSON API endpoint by URL and return the parsed JSON response.
+- **[lasso] load_skill**: Load a skill to get specialized instructions
+- **[lasso] bash**: Execute a bash command and return its output.
+- **[lasso] create_subagent**: Launch parallel subagents for independent investigation or implementation. Prefer read-only subagents for parallel work to avoid conflicts. Read-only subagents can fetch web content, inspect files, and load skills; read-write subagents can modify files or execute commands.
 
 `,
       );
@@ -2469,6 +2570,14 @@ log content
       assert.deepStrictEqual(spawned, []);
     });
 
+    it("handles /tools command by opening the tools list in a pager", async () => {
+      const { spawned } = mockPagerSpawn();
+      testProcessEnv._set("LASSO_PAGER", "nano __FILE__");
+      const result = await resolveSlashCommand("/tools");
+      assert.strictEqual(result, null);
+      assert.strictEqual(spawned[0], "nano /tmp/lasso-test-uuid.txt");
+    });
+
     it("handles /model command", async () => {
       actions.setModel("old");
       actions.resetStdout();
@@ -2544,6 +2653,7 @@ No available context files
 - /lastmessage
 - /lastdiff
 - /summaries
+- /tools
 
 `,
       );
@@ -3144,6 +3254,7 @@ Invalid command: /unknown, valid commands:
 - /lastmessage
 - /lastdiff
 - /summaries
+- /tools
 - /test-cwd/.lasso/commands/known.md
 `,
       );

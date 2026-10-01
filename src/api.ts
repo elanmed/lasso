@@ -28,7 +28,7 @@ import {
   orApproxTokens,
 } from "./usage.ts";
 import {
-  getTools,
+  getBaseAgentTools,
   toolPrint,
   bashToolInputSchema,
   webFetchToolSchema,
@@ -77,7 +77,7 @@ export async function resolveApiCall(userInput: string) {
       reasoning: getState().config.reasoning,
       instructions: systemContent,
       messages: [...getState().app.conversation.messages] as ModelMessage[],
-      tools: getTools(),
+      tools: getBaseAgentTools(),
       stopWhen: aiDeps.isLoopFinished(),
       abortSignal: getApiStreamAbortSignal(),
       onToolExecutionStart: ({ toolCall }) => {

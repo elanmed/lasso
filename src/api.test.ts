@@ -9,7 +9,7 @@ import {
   getMergedSummaries,
   resolveApiCall,
 } from "./api.ts";
-import { harnessTools, getTools } from "./tools.ts";
+import { harnessTools, stringifyTools } from "./tools.ts";
 import {
   setupTestContext,
   testFs,
@@ -36,7 +36,7 @@ describe("api", () => {
 
   beforeEach(() => {
     setupTestContext({ model: "claude-sonnet-4-20250514" });
-    actions.setToolsContentStr(safeStringify(getTools()));
+    mock.method(promptDeps, "getToolsContentStr", stringifyTools);
     actions.setBaseURL("https://api.anthropic.com");
     actions.setContextStr("");
     actions.setSkillsStr("");
@@ -709,7 +709,6 @@ web_fetch_json: https://example.com/api
 
     it("includes mcp tools in the tokens after compaction", async () => {
       actions.setMcp({}, { mcp_tool: makeMcpTool() });
-      actions.setToolsContentStr(safeStringify(getTools()));
       actions.setConversationMessages([{ role: "user", content: "hi" }]);
       actions.setPromptTokens(96_000);
       mock.method(aiDeps, "generateText", () =>

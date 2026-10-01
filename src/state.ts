@@ -92,7 +92,6 @@ interface State {
     globalConfigStr: string;
     localConfigStr: string;
     skillsStr: string;
-    toolsContentStr: string;
     skills: Skill[];
     subagentModels: string[];
     toolEditDiffs: ToolEditDiff[];
@@ -138,7 +137,6 @@ const createInitialState = (): State => ({
     globalConfigStr: "",
     localConfigStr: "",
     skillsStr: "",
-    toolsContentStr: "",
     skills: [],
     subagentModels: [],
     toolEditDiffs: [],
@@ -199,6 +197,7 @@ export const promptDeps = {
     [baseAgentPrompt, getState().app.contextStr, getState().app.skillsStr].join(
       "\n\n",
     ),
+  getToolsContentStr: () => "",
 };
 
 const logStateChange = (actionType: string, before: string, after: string) => {
@@ -454,12 +453,6 @@ export const actions = {
       String(before.length),
       String(localConfigStr.length),
     );
-  },
-
-  setToolsContentStr(toolsContentStr: string) {
-    const before = state.app.toolsContentStr;
-    state.app.toolsContentStr = toolsContentStr;
-    logStateChange("set-tools-content-str", before, toolsContentStr);
   },
 
   setSkillsStr(skillsStr: string) {

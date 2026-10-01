@@ -1,7 +1,7 @@
 import { describe, it, beforeEach, afterEach, mock } from "node:test";
 import assert from "node:assert";
 import { dirname } from "node:path";
-import { actions, getState } from "./state.ts";
+import { actions, getState, promptDeps } from "./state.ts";
 import {
   initState,
   initStateFromConfig,
@@ -9,6 +9,7 @@ import {
   initStateRepeatable,
   blockOnMissingConfig,
 } from "./config.ts";
+import { stringifyTools } from "./tools.ts";
 import { defaultConfig, DefaultedConfigSchema } from "./config-types.ts";
 import { MISSING } from "./missing.ts";
 import {
@@ -1651,6 +1652,14 @@ hello
     );
   });
 
+  it("wires the tools content string for token counting", async () => {
+    testFs._files.set(getLocalConfigPath(), JSON.stringify(testConfig));
+
+    await initState();
+
+    assert.strictEqual(promptDeps.getToolsContentStr(), stringifyTools());
+  });
+
   describe("initStateFirst", () => {
     it("sets debug flag when DEBUG=1", () => {
       testProcessEnv._clear();
@@ -1731,6 +1740,14 @@ hello
 
       assert.strictEqual(getState().app.sessionStartDate, sessionStartDate);
       assert.strictEqual(getState().app.debugLogPath, "");
+    });
+
+    it("wires the tools content string for token counting", async () => {
+      testFs._files.set(getGlobalConfigPath(), JSON.stringify(testConfig));
+
+      await initStateRepeatable();
+
+      assert.strictEqual(promptDeps.getToolsContentStr(), stringifyTools());
     });
   });
 

@@ -5,7 +5,7 @@ import { Writable } from "node:stream";
 import { dirname, join } from "node:path";
 import childProcess from "node:child_process";
 import os from "node:os";
-import type { AssistantContent } from "ai";
+import type { AssistantContent, Tool } from "ai";
 import { assertAtBuildtime } from "./assert.ts";
 import {
   isAbortError,
@@ -65,6 +65,7 @@ import {
   resumeFromSessionFile,
   syncSessionFile,
 } from "./log.ts";
+import { harnessTools } from "./tools.ts";
 
 // https://stackoverflow.com/a/33500118
 const mutedStdout = new Writable({
@@ -278,6 +279,11 @@ export function initKeypress() {
           }
           case "commands": {
             pageCommands();
+            redrawPendingQuestion();
+            return;
+          }
+          case "tools": {
+            await pageTools();
             redrawPendingQuestion();
             return;
           }
@@ -712,6 +718,10 @@ async function resolveBuiltinSlashCommand(
       pageSummaries({ isTyped: true });
       return { handled: true, inputFromCommand: null };
     }
+    case "tools": {
+      await pageTools();
+      return { handled: true, inputFromCommand: null };
+    }
     default: {
       command satisfies never;
       return { handled: false, inputFromCommand: null };
@@ -1067,7 +1077,7 @@ export function pageSkills({ isTyped = false }: SpacingOpts = {}) {
       (skill) => !skill.name.startsWith(contextFileSkillNamePrefix),
     )
     .map(
-      (skill) => `- ${skill.name}: ${skill.description}
+      (skill) => `- **${skill.name}**: ${skill.description}
   ${skill.dir}`,
     )
     .join("\n");
@@ -1509,4 +1519,49 @@ export function clearRlLine(): readline.Interface | null {
   rl.write(null, { ctrl: true, name: "e" });
   rl.write(null, { ctrl: true, name: "u" });
   return rl;
+}
+
+export async function pageTools() {
+  function formatTool(
+    [name, tool]: [name: string, tool: Tool],
+    context: { type: "harness" } | { type: "mcp"; name: string },
+  ) {
+    const description =
+      typeof tool.description === "string"
+        ? tool.description
+        : "[no description available]";
+
+    const prefix = context.type === "harness" ? "lasso" : `${context.name} mcp`;
+
+    return `- **[${prefix}] ${name}**: ${description}`;
+  }
+
+  const formattedHarnessTools = Object.entries(harnessTools).map((entry) =>
+    formatTool(entry, { type: "harness" }),
+  );
+
+  const clientToolSets = await Promise.all(
+    Object.entries(getState().mcp.clients).map(
+      async ([clientName, mcpClient]) => ({
+        clientName,
+        mcpToolSet: await mcpClient.tools(),
+      }),
+    ),
+  );
+
+  const formattedMCPTools = clientToolSets.flatMap(
+    ({ clientName, mcpToolSet }) =>
+      Object.entries(mcpToolSet).map((toolEntry) =>
+        formatTool(toolEntry, { type: "mcp", name: clientName }),
+      ),
+  );
+
+  const initialContentStr = `# Available tools:
+
+${formattedHarnessTools.concat(formattedMCPTools).join("\n")}`;
+
+  openWithPager({
+    initialContentStr,
+    contentType: "markdown",
+  });
 }

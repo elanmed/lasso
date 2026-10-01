@@ -11,6 +11,7 @@ import {
   createSubagentTool,
   createSubagentTaskSchema,
   harnessTools,
+  stringifyTools,
   toolPrint,
 } from "./tools.ts";
 import {
@@ -26,6 +27,7 @@ import {
 import { processDeps } from "./deps.ts";
 import { actions } from "./state.ts";
 import { getSubagentPrompt } from "./prompts.ts";
+import { safeStringify } from "./utils.ts";
 
 describe("tools", () => {
   beforeEach(() => {
@@ -493,6 +495,17 @@ describe("tools", () => {
         "bash",
         "create_subagent",
       ]);
+    });
+  });
+
+  describe("stringifyTools", () => {
+    it("returns the harness and mcp tools as compact json", () => {
+      actions.setMcp({}, { mcp_tool: makeMcpTool() });
+
+      assert.strictEqual(
+        stringifyTools(),
+        safeStringify({ ...harnessTools, mcp_tool: makeMcpTool() }),
+      );
     });
   });
 

@@ -10,6 +10,7 @@ import { makeFakeRl, setupTestContext, testFs } from "./test-helpers.ts";
 import { initMcpState } from "./mcp.ts";
 
 const realGetSystemContent = promptDeps.getSystemContent;
+const realGetToolsContentStr = promptDeps.getToolsContentStr;
 
 describe("state", () => {
   afterEach(() => {
@@ -32,6 +33,11 @@ ctx body
 
 skills body`,
     );
+  });
+
+  it("getToolsContentStr returns an empty string by default", () => {
+    mock.method(promptDeps, "getToolsContentStr", realGetToolsContentStr);
+    assert.strictEqual(promptDeps.getToolsContentStr(), "");
   });
 
   it("reset-state writes debug-log entry using pre-reset debug settings", () => {
@@ -67,7 +73,6 @@ skills body`,
       globalConfigStr: "",
       localConfigStr: "",
       skillsStr: "",
-      toolsContentStr: "",
       skills: [],
       subagentModels: [],
       toolEditDiffs: [],
@@ -139,7 +144,6 @@ skills body`,
     actions.setGlobalConfigStr("global");
     actions.setLocalConfigStr("local");
     actions.setSkillsStr("skills");
-    actions.setToolsContentStr("tools");
     actions.setSkills([
       {
         name: "demo",

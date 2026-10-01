@@ -6,6 +6,7 @@ import { assertAtBuildtime } from "./assert.ts";
 import {
   getMessageFromError,
   isAbortError,
+  safeStringify,
   stringify,
   tryCatchAsync,
   execPromise,
@@ -593,6 +594,10 @@ export const harnessTools = {
   ...baseAgentTools,
 };
 
-export function getTools() {
+export function getBaseAgentTools() {
   return { ...harnessTools, ...getState().mcp.tools };
+}
+
+export function stringifyTools() {
+  return safeStringify(getBaseAgentTools());
 }

@@ -247,6 +247,7 @@ export function setupTestContext({
   mock.method(processDeps.env, "get", (key: string) => testProcessEnv.get(key));
   mock.method(processDeps, "cwd", () => testCwd.get());
   mock.method(promptDeps, "getSystemContent", () => "");
+  mock.method(promptDeps, "getToolsContentStr", () => "");
   mock.method(processDeps.stdout, "write", () => true);
   mock.method(processDeps.stdout, "isTTY", () => true);
   mock.method(processDeps.stderr, "write", () => true);

@@ -205,7 +205,7 @@ export function getPromptOverheadTokensApprox() {
   const systemContentTokensApprox = strToApproxTokens(
     promptDeps.getSystemContent(),
   );
-  const toolsTokensApprox = strToApproxTokens(getState().app.toolsContentStr);
+  const toolsTokensApprox = strToApproxTokens(promptDeps.getToolsContentStr());
   return systemContentTokensApprox + toolsTokensApprox;
 }
 
@@ -270,7 +270,7 @@ export function getTokensByArea(): TokensByArea {
   const tokensByAreaApprox: TokensByArea = {
     messages: getApproxTokensFromMessages(getState().app.conversation.messages),
     context: strToApproxTokens(getState().app.contextStr),
-    tools: strToApproxTokens(getState().app.toolsContentStr),
+    tools: strToApproxTokens(promptDeps.getToolsContentStr()),
     basePrompt: strToApproxTokens(baseAgentPrompt),
     skills: strToApproxTokens(getState().app.skillsStr),
   };

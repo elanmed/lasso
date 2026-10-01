@@ -925,7 +925,7 @@ describe("getPromptOverheadTokensApprox", () => {
   beforeEach(() => {
     setupTestContext();
     mock.method(promptDeps, "getSystemContent", () => "abc");
-    actions.setToolsContentStr("defdef");
+    mock.method(promptDeps, "getToolsContentStr", () => "defdef");
   });
 
   it("sums the approx of system content and tools", () => {
@@ -941,7 +941,7 @@ describe("getApproxPromptTokens", () => {
   beforeEach(() => {
     setupTestContext();
     mock.method(promptDeps, "getSystemContent", () => "abc");
-    actions.setToolsContentStr("defdef");
+    mock.method(promptDeps, "getToolsContentStr", () => "defdef");
   });
 
   it("sums messages approx with the system instructions approx", () => {
@@ -954,7 +954,7 @@ describe("getCurrentPromptTokens", () => {
   beforeEach(() => {
     setupTestContext();
     mock.method(promptDeps, "getSystemContent", () => "abc");
-    actions.setToolsContentStr("defdef");
+    mock.method(promptDeps, "getToolsContentStr", () => "defdef");
   });
 
   it("returns the cached prompt tokens when not dirty", () => {
@@ -973,7 +973,7 @@ describe("getTokensByArea", () => {
   beforeEach(() => {
     setupTestContext();
     mock.method(promptDeps, "getSystemContent", () => "");
-    actions.setToolsContentStr("123456789012");
+    mock.method(promptDeps, "getToolsContentStr", () => "123456789012");
     actions.setContextStr("123456789");
     actions.setSkillsStr("1234");
     actions.setConversationMessages([{ role: "user", content: "hello" }]);
@@ -1016,7 +1016,7 @@ describe("getPrettyTokensByArea", () => {
   beforeEach(() => {
     setupTestContext();
     mock.method(promptDeps, "getSystemContent", () => "");
-    actions.setToolsContentStr("123456789012");
+    mock.method(promptDeps, "getToolsContentStr", () => "123456789012");
     actions.setContextStr("123456789");
     actions.setSkillsStr("1234");
     actions.setConversationMessages([{ role: "user", content: "hello" }]);
@@ -1051,7 +1051,6 @@ describe("warnOnLargePromptOverhead", () => {
   beforeEach(() => {
     setupTestContext({ model: "gpt-4" });
     actions.setContextWindowPerModel({ "gpt-4": 100_000 });
-    actions.setToolsContentStr("");
   });
 
   it("returns early without a warning when the model has no context window", () => {

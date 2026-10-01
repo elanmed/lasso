@@ -1,6 +1,6 @@
 import { join } from "node:path";
 import * as YAML from "yaml";
-import { getShortId, safeStringify, stringify, tryCatch } from "./utils.ts";
+import { getShortId, stringify, tryCatch } from "./utils.ts";
 import { getAvailableSlashCommands } from "./slash-commands.ts";
 import {
   getContextEntries,
@@ -8,7 +8,7 @@ import {
   getSkillsStr,
   getSkills,
 } from "./context.ts";
-import { actions, getState } from "./state.ts";
+import { actions, getState, promptDeps } from "./state.ts";
 import {
   ConfigSchema,
   defaultConfig,
@@ -25,7 +25,7 @@ import {
 import { syncInitialModelUsageForLimitWindow } from "./usage.ts";
 import { createPerformanceLogger, print } from "./print.ts";
 import { initMcpState } from "./mcp.ts";
-import { getTools } from "./tools.ts";
+import { stringifyTools } from "./tools.ts";
 
 export function readConfigFileStr(path: string) {
   if (!fsDeps.existsSync(path)) return "{}";
@@ -307,7 +307,7 @@ export async function initStateRepeatable() {
   const { globalConfig, localConfig } = initStateFirst();
   initStateFromConfig({ globalConfig, localConfig });
   await initMcpState();
-  actions.setToolsContentStr(safeStringify(getTools()));
+  promptDeps.getToolsContentStr = stringifyTools;
   await initStateFromFs();
 }
 
@@ -318,6 +318,6 @@ export async function initState() {
 
   initStateFromConfig({ globalConfig, localConfig });
   await initMcpState();
-  actions.setToolsContentStr(safeStringify(getTools()));
+  promptDeps.getToolsContentStr = stringifyTools;
   await initStateFromFs({ logDuration: true });
 }
