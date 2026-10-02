@@ -622,120 +622,126 @@ describe("utils", () => {
         );
       });
 
-      it("creates the lock file with the current pid", async () => {
-        const lockUtils = createLockUtils("/lock");
-        assert.equal(await lockUtils.createLock(), true);
-        assert.equal(testFs._files.get("/lock"), String(process.pid));
-      });
-
-      it("returns false and keeps the file when held by a live process", async () => {
-        testFs._files.set("/lock", "42");
-        mock.method(processDeps, "kill", () => undefined);
-        const timerCallbacks = mockSetTimeout();
-
-        const lockUtils = createLockUtils("/lock");
-        const promise = lockUtils.createLock();
-        await drainTimerCallbacks(timerCallbacks);
-
-        assert.equal(await promise, false);
-        assert.equal(testFs._files.get("/lock"), "42");
-        mock.restoreAll();
-      });
-
-      it("acquires after the holder releases within the retry window", async () => {
-        testFs._files.set("/lock", "42");
-        mock.method(processDeps, "kill", () => undefined);
-        const timerCallbacks = mockSetTimeout();
-
-        const lockUtils = createLockUtils("/lock");
-        const promise = lockUtils.createLock();
-        assert.equal(timerCallbacks.length, 1);
-
-        testFs._files.delete("/lock");
-        const callback = timerCallbacks.shift();
-        assert(callback !== undefined);
-        callback();
-
-        assert.equal(await promise, true);
-        assert.equal(testFs._files.get("/lock"), String(process.pid));
-        mock.restoreAll();
-      });
-
-      it("reports success when the lock is acquired on the final retry", async () => {
-        testFs._files.set("/lock", "42");
-        mock.method(processDeps, "kill", () => undefined);
-        const timerCallbacks = mockSetTimeout();
-
-        const lockUtils = createLockUtils("/lock");
-        const promise = lockUtils.createLock();
-        await drainTimerCallbacks(timerCallbacks, { keep: 1 });
-        testFs._files.delete("/lock");
-        const finalCallback = timerCallbacks.shift();
-        assert(finalCallback !== undefined);
-        finalCallback();
-
-        assert.equal(await promise, true);
-        assert.equal(testFs._files.get("/lock"), String(process.pid));
-        mock.restoreAll();
-      });
-
-      it("steals the lock from a dead process (ESRCH)", async () => {
-        testFs._files.set("/lock", "42");
-        mock.method(processDeps, "kill", () => {
-          throw makeErrnoError("ESRCH", "No such process");
+      describe("acquires the lock", () => {
+        it("creates the lock file with the current pid", async () => {
+          const lockUtils = createLockUtils("/lock");
+          assert.equal(await lockUtils.createLock(), true);
+          assert.equal(testFs._files.get("/lock"), String(process.pid));
         });
 
-        const lockUtils = createLockUtils("/lock");
-        assert.equal(await lockUtils.createLock(), true);
-        assert.equal(testFs._files.get("/lock"), String(process.pid));
-        mock.restoreAll();
-      });
+        it("returns false and keeps the file when held by a live process", async () => {
+          testFs._files.set("/lock", "42");
+          mock.method(processDeps, "kill", () => undefined);
+          const timerCallbacks = mockSetTimeout();
 
-      it("returns false when the holder is alive but not ours (EPERM)", async () => {
-        testFs._files.set("/lock", "42");
-        mock.method(processDeps, "kill", () => {
-          throw makeErrnoError("EPERM", "Operation not permitted");
-        });
-        const timerCallbacks = mockSetTimeout();
+          const lockUtils = createLockUtils("/lock");
+          const promise = lockUtils.createLock();
+          await drainTimerCallbacks(timerCallbacks);
 
-        const lockUtils = createLockUtils("/lock");
-        const promise = lockUtils.createLock();
-        await drainTimerCallbacks(timerCallbacks);
-
-        assert.equal(await promise, false);
-        assert.equal(testFs._files.get("/lock"), "42");
-        mock.restoreAll();
-      });
-
-      it("steals the lock when the file content is not a pid", async () => {
-        testFs._files.set("/lock", "not-a-pid");
-
-        const lockUtils = createLockUtils("/lock");
-        assert.equal(await lockUtils.createLock(), true);
-        assert.equal(testFs._files.get("/lock"), String(process.pid));
-      });
-
-      it("steals the lock when the lock file cannot be read", async () => {
-        testFs._files.set("/lock", "42");
-        mock.method(fsDeps, "readFileSync", () => {
-          throw makeErrnoError("EIO", "I/O error");
+          assert.equal(await promise, false);
+          assert.equal(testFs._files.get("/lock"), "42");
+          mock.restoreAll();
         });
 
-        const lockUtils = createLockUtils("/lock");
-        assert.equal(await lockUtils.createLock(), true);
-        assert.equal(testFs._files.get("/lock"), String(process.pid));
+        it("acquires after the holder releases within the retry window", async () => {
+          testFs._files.set("/lock", "42");
+          mock.method(processDeps, "kill", () => undefined);
+          const timerCallbacks = mockSetTimeout();
+
+          const lockUtils = createLockUtils("/lock");
+          const promise = lockUtils.createLock();
+          assert.equal(timerCallbacks.length, 1);
+
+          testFs._files.delete("/lock");
+          const callback = timerCallbacks.shift();
+          assert(callback !== undefined);
+          callback();
+
+          assert.equal(await promise, true);
+          assert.equal(testFs._files.get("/lock"), String(process.pid));
+          mock.restoreAll();
+        });
+
+        it("reports success when the lock is acquired on the final retry", async () => {
+          testFs._files.set("/lock", "42");
+          mock.method(processDeps, "kill", () => undefined);
+          const timerCallbacks = mockSetTimeout();
+
+          const lockUtils = createLockUtils("/lock");
+          const promise = lockUtils.createLock();
+          await drainTimerCallbacks(timerCallbacks, { keep: 1 });
+          testFs._files.delete("/lock");
+          const finalCallback = timerCallbacks.shift();
+          assert(finalCallback !== undefined);
+          finalCallback();
+
+          assert.equal(await promise, true);
+          assert.equal(testFs._files.get("/lock"), String(process.pid));
+          mock.restoreAll();
+        });
       });
 
-      it("deletes the lock file", () => {
-        testFs._files.set("/lock", String(process.pid));
-        const lockUtils = createLockUtils("/lock");
-        lockUtils.deleteLock();
-        assert.equal(testFs._files.has("/lock"), false);
+      describe("steals the lock", () => {
+        it("steals the lock from a dead process (ESRCH)", async () => {
+          testFs._files.set("/lock", "42");
+          mock.method(processDeps, "kill", () => {
+            throw makeErrnoError("ESRCH", "No such process");
+          });
+
+          const lockUtils = createLockUtils("/lock");
+          assert.equal(await lockUtils.createLock(), true);
+          assert.equal(testFs._files.get("/lock"), String(process.pid));
+          mock.restoreAll();
+        });
+
+        it("returns false when the holder is alive but not ours (EPERM)", async () => {
+          testFs._files.set("/lock", "42");
+          mock.method(processDeps, "kill", () => {
+            throw makeErrnoError("EPERM", "Operation not permitted");
+          });
+          const timerCallbacks = mockSetTimeout();
+
+          const lockUtils = createLockUtils("/lock");
+          const promise = lockUtils.createLock();
+          await drainTimerCallbacks(timerCallbacks);
+
+          assert.equal(await promise, false);
+          assert.equal(testFs._files.get("/lock"), "42");
+          mock.restoreAll();
+        });
+
+        it("steals the lock when the file content is not a pid", async () => {
+          testFs._files.set("/lock", "not-a-pid");
+
+          const lockUtils = createLockUtils("/lock");
+          assert.equal(await lockUtils.createLock(), true);
+          assert.equal(testFs._files.get("/lock"), String(process.pid));
+        });
+
+        it("steals the lock when the lock file cannot be read", async () => {
+          testFs._files.set("/lock", "42");
+          mock.method(fsDeps, "readFileSync", () => {
+            throw makeErrnoError("EIO", "I/O error");
+          });
+
+          const lockUtils = createLockUtils("/lock");
+          assert.equal(await lockUtils.createLock(), true);
+          assert.equal(testFs._files.get("/lock"), String(process.pid));
+        });
       });
 
-      it("tolerates deleting a missing lock file", () => {
-        const lockUtils = createLockUtils("/lock");
-        assert.doesNotThrow(() => lockUtils.deleteLock());
+      describe("deletes the lock", () => {
+        it("deletes the lock file", () => {
+          testFs._files.set("/lock", String(process.pid));
+          const lockUtils = createLockUtils("/lock");
+          lockUtils.deleteLock();
+          assert.equal(testFs._files.has("/lock"), false);
+        });
+
+        it("tolerates deleting a missing lock file", () => {
+          const lockUtils = createLockUtils("/lock");
+          assert.doesNotThrow(() => lockUtils.deleteLock());
+        });
       });
     });
   });

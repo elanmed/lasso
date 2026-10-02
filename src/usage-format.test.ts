@@ -44,235 +44,241 @@ describe("usage-format", () => {
       actions.setUsageLimit({ duration: "60m", dollarAmount: 10 });
     });
 
-    it("known model with no modelUsage returns $0.0000", () => {
-      actions.setModel("claude-haiku-4-5");
-      const result = getPrettyTokenUsage();
-      assert.equal(result, "$0.000 in session, $0.000 of $10 limit");
-    });
+    describe("calculates costs", () => {
+      it("known model with no modelUsage returns $0.0000", () => {
+        actions.setModel("claude-haiku-4-5");
+        const result = getPrettyTokenUsage();
+        assert.equal(result, "$0.000 in session, $0.000 of $10 limit");
+      });
 
-    it("calculates prompt token costs correctly", async () => {
-      // haiku: input=$1/M, 2_000_000 prompt = $2.0000
-      actions.setModel("claude-haiku-4-5");
+      it("calculates prompt token costs correctly", async () => {
+        // haiku: input=$1/M, 2_000_000 prompt = $2.0000
+        actions.setModel("claude-haiku-4-5");
 
-      await appendModelUsage({
-        inputTokens: 2_000_000,
-        outputTokens: 0,
-        inputTokenDetails: {
-          cacheReadTokens: 0,
-          cacheWriteTokens: 0,
-        },
-      } as LanguageModelUsage);
-      const result = getPrettyTokenUsage();
-      assert.equal(result, "$2.000 in session, $2.000 of $10 limit");
-    });
-
-    it("calculates completion token costs correctly", async () => {
-      // haiku: output=$5/M, 600_000 completion = $3.0000
-      actions.setModel("claude-haiku-4-5");
-      await appendModelUsage({
-        inputTokens: 0,
-        outputTokens: 600_000,
-        inputTokenDetails: {
-          cacheReadTokens: 0,
-          cacheWriteTokens: 0,
-        },
-      } as LanguageModelUsage);
-      const result = getPrettyTokenUsage();
-      assert.equal(result, "$3.000 in session, $3.000 of $10 limit");
-    });
-
-    it("calculates cache read token costs correctly", async () => {
-      // haiku: cacheRead=$0.25/M
-      // 1_000_000 input tokens, all cache reads = $0.25
-      actions.setModel("claude-haiku-4-5");
-      await appendModelUsage({
-        inputTokens: 1_000_000,
-        outputTokens: 0,
-        inputTokenDetails: {
-          cacheReadTokens: 1_000_000,
-          cacheWriteTokens: 0,
-        },
-      } as LanguageModelUsage);
-      const result = getPrettyTokenUsage();
-      assert.equal(result, "$0.250 in session, $0.250 of $10 limit");
-    });
-
-    it("calculates cache write token costs correctly", async () => {
-      // haiku: cacheWrite=$1.25/M
-      // 1_000_000 input tokens, all cache writes = $1.25
-      actions.setModel("claude-haiku-4-5");
-      await appendModelUsage({
-        inputTokens: 1_000_000,
-        outputTokens: 0,
-        inputTokenDetails: {
-          cacheReadTokens: 0,
-          cacheWriteTokens: 1_000_000,
-        },
-      } as LanguageModelUsage);
-      const result = getPrettyTokenUsage();
-      assert.equal(result, "$1.250 in session, $1.250 of $10 limit");
-    });
-
-    it("calculates combined input, output, and cache costs correctly", async () => {
-      // haiku: input=$1/M, output=$5/M, cacheRead=$0.25/M, cacheWrite=$1.25/M
-      // 900_000 input (500_000 uncached + 300_000 cacheRead + 100_000 cacheWrite) + 200_000 output
-      // = $0.50 + $1.00 + $0.075 + $0.125 = $1.70
-      actions.setModel("claude-haiku-4-5");
-      await appendModelUsage({
-        inputTokens: 900_000,
-        outputTokens: 200_000,
-        inputTokenDetails: {
-          cacheReadTokens: 300_000,
-          cacheWriteTokens: 100_000,
-        },
-      } as LanguageModelUsage);
-      const result = getPrettyTokenUsage();
-      assert.equal(result, "$1.700 in session, $1.700 of $10 limit");
-    });
-
-    it("shows cost against the dollar limit when configured", async () => {
-      actions.setModel("claude-haiku-4-5");
-      actions.setUsageLimit({ duration: "60m", dollarAmount: 10 });
-      await appendModelUsage({
-        inputTokens: 900_000,
-        outputTokens: 200_000,
-        inputTokenDetails: {
-          cacheReadTokens: 300_000,
-          cacheWriteTokens: 100_000,
-        },
-      } as LanguageModelUsage);
-      const result = getPrettyTokenUsage();
-      assert.equal(result, "$1.700 in session, $1.700 of $10 limit");
-    });
-
-    it("shows session and limit window costs separately when they differ", async () => {
-      actions.setModel("claude-haiku-4-5");
-      await appendModelUsage({
-        inputTokens: 900_000,
-        outputTokens: 200_000,
-        inputTokenDetails: {
-          cacheReadTokens: 300_000,
-          cacheWriteTokens: 100_000,
-        },
-      } as LanguageModelUsage);
-      actions.setModelUsageForLimitWindow({
-        "claude-haiku-4-5": [
-          {
-            inputTokens: 100_000,
-            outputTokens: 0,
+        await appendModelUsage({
+          inputTokens: 2_000_000,
+          outputTokens: 0,
+          inputTokenDetails: {
             cacheReadTokens: 0,
             cacheWriteTokens: 0,
-            date: 1_000,
           },
-        ],
+        } as LanguageModelUsage);
+        const result = getPrettyTokenUsage();
+        assert.equal(result, "$2.000 in session, $2.000 of $10 limit");
       });
-      const result = getPrettyTokenUsage();
-      assert.equal(result, "$1.700 in session, $0.100 of $10 limit");
-    });
 
-    it("shows only session cost when the usage limit is disabled", async () => {
-      actions.setModel("claude-haiku-4-5");
-      actions.setUsageLimit(undefined);
-      await appendModelUsage({
-        inputTokens: 900_000,
-        outputTokens: 200_000,
-        inputTokenDetails: {
-          cacheReadTokens: 300_000,
-          cacheWriteTokens: 100_000,
-        },
-      } as LanguageModelUsage);
-      const result = getPrettyTokenUsage();
-      assert.equal(result, "$1.700 in session");
-    });
-
-    it("accumulates all token types across multiple modelUsage", async () => {
-      // haiku: input=$1/M, output=$5/M, cacheRead=$0.25/M, cacheWrite=$1.25/M
-      // usage1: 800_000 input (200_000 uncached + 400_000 cacheRead + 200_000 cacheWrite) + 100_000 output
-      //   = $0.20 + $0.50 + $0.10 + $0.25 = $1.05
-      // usage2: 1_600_000 input (500_000 uncached + 500_000 cacheRead + 600_000 cacheWrite) + 200_000 output
-      //   = $0.50 + $1.00 + $0.125 + $0.75 = $2.375
-      // total = $3.425
-      actions.setModel("claude-haiku-4-5");
-      await appendModelUsage({
-        inputTokens: 800_000,
-        outputTokens: 100_000,
-        inputTokenDetails: {
-          cacheReadTokens: 400_000,
-          cacheWriteTokens: 200_000,
-        },
-      } as LanguageModelUsage);
-      await appendModelUsage({
-        inputTokens: 1_600_000,
-        outputTokens: 200_000,
-        inputTokenDetails: {
-          cacheReadTokens: 500_000,
-          cacheWriteTokens: 600_000,
-        },
-      } as LanguageModelUsage);
-      const result = getPrettyTokenUsage();
-      assert.equal(result, "$3.425 in session, $3.425 of $10 limit");
-    });
-
-    it("falls back to the input price when cache pricing is omitted", async () => {
-      actions.setPricingPerModel({
-        "test-model": {
-          inputPerMillion: 2,
-          outputPerMillion: 10,
-        },
+      it("calculates completion token costs correctly", async () => {
+        // haiku: output=$5/M, 600_000 completion = $3.0000
+        actions.setModel("claude-haiku-4-5");
+        await appendModelUsage({
+          inputTokens: 0,
+          outputTokens: 600_000,
+          inputTokenDetails: {
+            cacheReadTokens: 0,
+            cacheWriteTokens: 0,
+          },
+        } as LanguageModelUsage);
+        const result = getPrettyTokenUsage();
+        assert.equal(result, "$3.000 in session, $3.000 of $10 limit");
       });
-      actions.setModel("test-model");
-      await appendModelUsage({
-        inputTokens: 2_000_000,
-        outputTokens: 0,
-        inputTokenDetails: {
-          cacheReadTokens: 1_000_000,
-          cacheWriteTokens: 500_000,
-        },
-      } as LanguageModelUsage);
-      const result = getPrettyTokenUsage();
-      assert.equal(result, "$4.000 in session, $4.000 of $10 limit");
+
+      it("calculates cache read token costs correctly", async () => {
+        // haiku: cacheRead=$0.25/M
+        // 1_000_000 input tokens, all cache reads = $0.25
+        actions.setModel("claude-haiku-4-5");
+        await appendModelUsage({
+          inputTokens: 1_000_000,
+          outputTokens: 0,
+          inputTokenDetails: {
+            cacheReadTokens: 1_000_000,
+            cacheWriteTokens: 0,
+          },
+        } as LanguageModelUsage);
+        const result = getPrettyTokenUsage();
+        assert.equal(result, "$0.250 in session, $0.250 of $10 limit");
+      });
+
+      it("calculates cache write token costs correctly", async () => {
+        // haiku: cacheWrite=$1.25/M
+        // 1_000_000 input tokens, all cache writes = $1.25
+        actions.setModel("claude-haiku-4-5");
+        await appendModelUsage({
+          inputTokens: 1_000_000,
+          outputTokens: 0,
+          inputTokenDetails: {
+            cacheReadTokens: 0,
+            cacheWriteTokens: 1_000_000,
+          },
+        } as LanguageModelUsage);
+        const result = getPrettyTokenUsage();
+        assert.equal(result, "$1.250 in session, $1.250 of $10 limit");
+      });
+
+      it("calculates combined input, output, and cache costs correctly", async () => {
+        // haiku: input=$1/M, output=$5/M, cacheRead=$0.25/M, cacheWrite=$1.25/M
+        // 900_000 input (500_000 uncached + 300_000 cacheRead + 100_000 cacheWrite) + 200_000 output
+        // = $0.50 + $1.00 + $0.075 + $0.125 = $1.70
+        actions.setModel("claude-haiku-4-5");
+        await appendModelUsage({
+          inputTokens: 900_000,
+          outputTokens: 200_000,
+          inputTokenDetails: {
+            cacheReadTokens: 300_000,
+            cacheWriteTokens: 100_000,
+          },
+        } as LanguageModelUsage);
+        const result = getPrettyTokenUsage();
+        assert.equal(result, "$1.700 in session, $1.700 of $10 limit");
+      });
     });
 
-    it("formats cost with commas for large totals", async () => {
-      // opus: input=$5/M
-      // 200_000_000 input tokens = (200_000_000 * 5) / 1_000_000 = $1,000.0000
-      actions.setModel("claude-opus-4-6");
-      await appendModelUsage({
-        inputTokens: 200_000_000,
-        outputTokens: 0,
-        inputTokenDetails: {
-          cacheReadTokens: 0,
-          cacheWriteTokens: 0,
-        },
-      } as LanguageModelUsage);
-      const result = getPrettyTokenUsage();
-      assert.equal(result, "$1,000.000 in session, $1,000.000 of $10 limit");
+    describe("usage limits", () => {
+      it("shows cost against the dollar limit when configured", async () => {
+        actions.setModel("claude-haiku-4-5");
+        actions.setUsageLimit({ duration: "60m", dollarAmount: 10 });
+        await appendModelUsage({
+          inputTokens: 900_000,
+          outputTokens: 200_000,
+          inputTokenDetails: {
+            cacheReadTokens: 300_000,
+            cacheWriteTokens: 100_000,
+          },
+        } as LanguageModelUsage);
+        const result = getPrettyTokenUsage();
+        assert.equal(result, "$1.700 in session, $1.700 of $10 limit");
+      });
+
+      it("shows session and limit window costs separately when they differ", async () => {
+        actions.setModel("claude-haiku-4-5");
+        await appendModelUsage({
+          inputTokens: 900_000,
+          outputTokens: 200_000,
+          inputTokenDetails: {
+            cacheReadTokens: 300_000,
+            cacheWriteTokens: 100_000,
+          },
+        } as LanguageModelUsage);
+        actions.setModelUsageForLimitWindow({
+          "claude-haiku-4-5": [
+            {
+              inputTokens: 100_000,
+              outputTokens: 0,
+              cacheReadTokens: 0,
+              cacheWriteTokens: 0,
+              date: 1_000,
+            },
+          ],
+        });
+        const result = getPrettyTokenUsage();
+        assert.equal(result, "$1.700 in session, $0.100 of $10 limit");
+      });
+
+      it("shows only session cost when the usage limit is disabled", async () => {
+        actions.setModel("claude-haiku-4-5");
+        actions.setUsageLimit(undefined);
+        await appendModelUsage({
+          inputTokens: 900_000,
+          outputTokens: 200_000,
+          inputTokenDetails: {
+            cacheReadTokens: 300_000,
+            cacheWriteTokens: 100_000,
+          },
+        } as LanguageModelUsage);
+        const result = getPrettyTokenUsage();
+        assert.equal(result, "$1.700 in session");
+      });
     });
 
-    it("formats cost with commas for very large totals across multiple modelUsage", async () => {
-      // opus: input=$5/M, output=$25/M
-      // usage1: 300_000_000 input + 40_000_000 output = $1,500 + $1,000 = $2,500
-      // usage2: 400_000_000 input + 120_000_000 output = $2,000 + $3,000 = $5,000
-      // total = $7,500.000
-      actions.setModel("claude-opus-4-6");
-      await appendModelUsage({
-        inputTokens: 300_000_000,
-        outputTokens: 40_000_000,
-        inputTokenDetails: {
-          cacheReadTokens: 0,
-          cacheWriteTokens: 0,
-        },
-      } as LanguageModelUsage);
-      await appendModelUsage({
-        inputTokens: 400_000_000,
-        outputTokens: 120_000_000,
-        inputTokenDetails: {
-          cacheReadTokens: 0,
-          cacheWriteTokens: 0,
-        },
-      } as LanguageModelUsage);
-      const result = getPrettyTokenUsage();
-      assert.equal(result, "$7,500.000 in session, $7,500.000 of $10 limit");
+    describe("totals and formatting", () => {
+      it("accumulates all token types across multiple modelUsage", async () => {
+        // haiku: input=$1/M, output=$5/M, cacheRead=$0.25/M, cacheWrite=$1.25/M
+        // usage1: 800_000 input (200_000 uncached + 400_000 cacheRead + 200_000 cacheWrite) + 100_000 output
+        //   = $0.20 + $0.50 + $0.10 + $0.25 = $1.05
+        // usage2: 1_600_000 input (500_000 uncached + 500_000 cacheRead + 600_000 cacheWrite) + 200_000 output
+        //   = $0.50 + $1.00 + $0.125 + $0.75 = $2.375
+        // total = $3.425
+        actions.setModel("claude-haiku-4-5");
+        await appendModelUsage({
+          inputTokens: 800_000,
+          outputTokens: 100_000,
+          inputTokenDetails: {
+            cacheReadTokens: 400_000,
+            cacheWriteTokens: 200_000,
+          },
+        } as LanguageModelUsage);
+        await appendModelUsage({
+          inputTokens: 1_600_000,
+          outputTokens: 200_000,
+          inputTokenDetails: {
+            cacheReadTokens: 500_000,
+            cacheWriteTokens: 600_000,
+          },
+        } as LanguageModelUsage);
+        const result = getPrettyTokenUsage();
+        assert.equal(result, "$3.425 in session, $3.425 of $10 limit");
+      });
+
+      it("falls back to the input price when cache pricing is omitted", async () => {
+        actions.setPricingPerModel({
+          "test-model": {
+            inputPerMillion: 2,
+            outputPerMillion: 10,
+          },
+        });
+        actions.setModel("test-model");
+        await appendModelUsage({
+          inputTokens: 2_000_000,
+          outputTokens: 0,
+          inputTokenDetails: {
+            cacheReadTokens: 1_000_000,
+            cacheWriteTokens: 500_000,
+          },
+        } as LanguageModelUsage);
+        const result = getPrettyTokenUsage();
+        assert.equal(result, "$4.000 in session, $4.000 of $10 limit");
+      });
+
+      it("formats cost with commas for large totals", async () => {
+        // opus: input=$5/M
+        // 200_000_000 input tokens = (200_000_000 * 5) / 1_000_000 = $1,000.0000
+        actions.setModel("claude-opus-4-6");
+        await appendModelUsage({
+          inputTokens: 200_000_000,
+          outputTokens: 0,
+          inputTokenDetails: {
+            cacheReadTokens: 0,
+            cacheWriteTokens: 0,
+          },
+        } as LanguageModelUsage);
+        const result = getPrettyTokenUsage();
+        assert.equal(result, "$1,000.000 in session, $1,000.000 of $10 limit");
+      });
+
+      it("formats cost with commas for very large totals across multiple modelUsage", async () => {
+        // opus: input=$5/M, output=$25/M
+        // usage1: 300_000_000 input + 40_000_000 output = $1,500 + $1,000 = $2,500
+        // usage2: 400_000_000 input + 120_000_000 output = $2,000 + $3,000 = $5,000
+        // total = $7,500.000
+        actions.setModel("claude-opus-4-6");
+        await appendModelUsage({
+          inputTokens: 300_000_000,
+          outputTokens: 40_000_000,
+          inputTokenDetails: {
+            cacheReadTokens: 0,
+            cacheWriteTokens: 0,
+          },
+        } as LanguageModelUsage);
+        await appendModelUsage({
+          inputTokens: 400_000_000,
+          outputTokens: 120_000_000,
+          inputTokenDetails: {
+            cacheReadTokens: 0,
+            cacheWriteTokens: 0,
+          },
+        } as LanguageModelUsage);
+        const result = getPrettyTokenUsage();
+        assert.equal(result, "$7,500.000 in session, $7,500.000 of $10 limit");
+      });
     });
   });
 
@@ -281,65 +287,69 @@ describe("usage-format", () => {
       setupTestContext();
     });
 
-    it("falls back to the default context window when the model has none configured", () => {
-      actions.setModel("unknown-model");
-      actions.setPromptTokens(1_280);
-      const result = getPrettyContextWindowUsage();
-      assert.strictEqual(result, "1% of context window");
+    describe("calculates the percentage", () => {
+      it("falls back to the default context window when the model has none configured", () => {
+        actions.setModel("unknown-model");
+        actions.setPromptTokens(1_280);
+        const result = getPrettyContextWindowUsage();
+        assert.strictEqual(result, "1% of context window");
+      });
+
+      it("returns 0% when no tokens are used", () => {
+        actions.setModel("test-model");
+        actions.setContextWindowPerModel({ "test-model": 10_000 });
+        const result = getPrettyContextWindowUsage();
+        assert.strictEqual(result, "0% of context window");
+      });
+
+      it("returns the percent of the context window used", () => {
+        actions.setModel("test-model");
+        actions.setContextWindowPerModel({ "test-model": 10_000 });
+        actions.setConversationMessages([{ role: "user", content: "hi" }]);
+        actions.setPromptTokens(5_000);
+        const result = getPrettyContextWindowUsage();
+        assert.strictEqual(result, "50% of context window");
+      });
+
+      it("rounds partial percents to 3 decimal places", () => {
+        actions.setModel("test-model");
+        actions.setContextWindowPerModel({ "test-model": 10_000 });
+        actions.setConversationMessages([{ role: "user", content: "hi" }]);
+        actions.setPromptTokens(1_666);
+        const result = getPrettyContextWindowUsage();
+        assert.strictEqual(result, "16.66% of context window");
+      });
+
+      it("returns percents above 100", () => {
+        actions.setModel("test-model");
+        actions.setContextWindowPerModel({ "test-model": 10_000 });
+        actions.setConversationMessages([{ role: "user", content: "hi" }]);
+        actions.setPromptTokens(15_000);
+        const result = getPrettyContextWindowUsage();
+        assert.strictEqual(result, "150% of context window");
+      });
     });
 
-    it("returns 0% when no tokens are used", () => {
-      actions.setModel("test-model");
-      actions.setContextWindowPerModel({ "test-model": 10_000 });
-      const result = getPrettyContextWindowUsage();
-      assert.strictEqual(result, "0% of context window");
-    });
+    describe("token counts", () => {
+      it("uses approximated message tokens when tokens are stale", () => {
+        actions.setModel("test-model");
+        actions.setContextWindowPerModel({ "test-model": 10_000 });
+        actions.setConversationMessages([{ role: "user", content: "hihoho" }]);
+        actions.setPromptTokens(5_000);
+        actions.setPromptTokensDirty(true);
+        const result = getPrettyContextWindowUsage();
+        assert.strictEqual(result, "0.12% of context window");
+      });
 
-    it("returns the percent of the context window used", () => {
-      actions.setModel("test-model");
-      actions.setContextWindowPerModel({ "test-model": 10_000 });
-      actions.setConversationMessages([{ role: "user", content: "hi" }]);
-      actions.setPromptTokens(5_000);
-      const result = getPrettyContextWindowUsage();
-      assert.strictEqual(result, "50% of context window");
-    });
-
-    it("rounds partial percents to 3 decimal places", () => {
-      actions.setModel("test-model");
-      actions.setContextWindowPerModel({ "test-model": 10_000 });
-      actions.setConversationMessages([{ role: "user", content: "hi" }]);
-      actions.setPromptTokens(1_666);
-      const result = getPrettyContextWindowUsage();
-      assert.strictEqual(result, "16.66% of context window");
-    });
-
-    it("returns percents above 100", () => {
-      actions.setModel("test-model");
-      actions.setContextWindowPerModel({ "test-model": 10_000 });
-      actions.setConversationMessages([{ role: "user", content: "hi" }]);
-      actions.setPromptTokens(15_000);
-      const result = getPrettyContextWindowUsage();
-      assert.strictEqual(result, "150% of context window");
-    });
-
-    it("uses approximated message tokens when tokens are stale", () => {
-      actions.setModel("test-model");
-      actions.setContextWindowPerModel({ "test-model": 10_000 });
-      actions.setConversationMessages([{ role: "user", content: "hihoho" }]);
-      actions.setPromptTokens(5_000);
-      actions.setPromptTokensDirty(true);
-      const result = getPrettyContextWindowUsage();
-      assert.strictEqual(result, "0.12% of context window");
-    });
-
-    it("uses the stored token count when tokens are not stale", () => {
-      actions.setModel("test-model");
-      actions.setContextWindowPerModel({ "test-model": 10_000 });
-      actions.setConversationMessages([{ role: "user", content: "hihoho" }]);
-      actions.setPromptTokens(5_000);
-      actions.setPromptTokensDirty(false);
-      const result = getPrettyContextWindowUsage();
-      assert.strictEqual(result, "50% of context window");
+      it("uses the stored token count when tokens are not stale", () => {
+        actions.setModel("test-model");
+        actions.setContextWindowPerModel({ "test-model": 10_000 });
+        actions.setConversationMessages([{ role: "user", content: "hihoho" }]);
+        actions.setPromptTokens(5_000);
+        actions.setPromptTokensDirty(false);
+        const result = getPrettyContextWindowUsage();
+        assert.strictEqual(result, "50% of context window");
+      });
     });
 
     it("ignores terminal width", () => {

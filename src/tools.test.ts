@@ -85,141 +85,147 @@ describe("tools", () => {
   });
 
   describe("toolPrint", () => {
-    it("prints the detail with a labeled prefix on the first line", () => {
-      mock.method(processDeps.stdout, "getColumns", () => 30);
-      const getWrites = mockStdoutWrites();
-      toolPrint("bash", "hello");
-      assert.deepStrictEqual(getWrites(), [
-        `${BLUE}${BOLD}bash${BOLD_RESET}: hello${RESET}
+    describe("prints the detail", () => {
+      it("prints the detail with a labeled prefix on the first line", () => {
+        mock.method(processDeps.stdout, "getColumns", () => 30);
+        const getWrites = mockStdoutWrites();
+        toolPrint("bash", "hello");
+        assert.deepStrictEqual(getWrites(), [
+          `${BLUE}${BOLD}bash${BOLD_RESET}: hello${RESET}
 `,
-      ]);
-    });
+        ]);
+      });
 
-    it("wraps a detail that does not fit within maxLen", () => {
-      mock.method(processDeps.stdout, "getColumns", () => 30);
-      const getWrites = mockStdoutWrites();
-      toolPrint("bash", "abcdefghijklmnopqrstuvwxyz");
-      assert.deepStrictEqual(getWrites(), [
-        `${BLUE}${BOLD}bash${BOLD_RESET}: abcdefghijklmnopqrstuvwx
-       ┊yz${RESET}
-`,
-      ]);
-    });
-
-    it("ignores empty detail lines", () => {
-      mock.method(processDeps.stdout, "getColumns", () => 30);
-      const getWrites = mockStdoutWrites();
-      toolPrint("bash", "one\n\ntwo");
-      assert.deepStrictEqual(getWrites(), [
-        `${BLUE}${BOLD}bash${BOLD_RESET}: one
+      it("ignores empty detail lines", () => {
+        mock.method(processDeps.stdout, "getColumns", () => 30);
+        const getWrites = mockStdoutWrites();
+        toolPrint("bash", "one\n\ntwo");
+        assert.deepStrictEqual(getWrites(), [
+          `${BLUE}${BOLD}bash${BOLD_RESET}: one
        ┊two${RESET}
 `,
-      ]);
-    });
+        ]);
+      });
 
-    it("caps the total output at five lines", () => {
-      mock.method(processDeps.stdout, "getColumns", () => 30);
-      const getWrites = mockStdoutWrites();
-      toolPrint("bash", "a\nb\nc\nd\ne\nf");
-      assert.deepStrictEqual(getWrites(), [
-        `${BLUE}${BOLD}bash${BOLD_RESET}: a
-       ┊b
-       ┊c
-       ┊d
-       ┊e…${RESET}
+      it("does not wrap a detail that fits within the cap", () => {
+        mock.method(processDeps.stdout, "getColumns", () => 30);
+        const getWrites = mockStdoutWrites();
+        toolPrint("bash", "abcd");
+        assert.deepStrictEqual(getWrites(), [
+          `${BLUE}${BOLD}bash${BOLD_RESET}: abcd${RESET}
 `,
-      ]);
+        ]);
+      });
+
+      it("prints nothing but the label prefix when detail is only whitespace lines", () => {
+        mock.method(processDeps.stdout, "getColumns", () => 30);
+        const getWrites = mockStdoutWrites();
+        toolPrint("bash", "\n\n\n");
+        assert.deepStrictEqual(getWrites(), [`${BLUE}${RESET}\n`]);
+      });
     });
 
-    it("does not wrap a detail that fits within the cap", () => {
-      mock.method(processDeps.stdout, "getColumns", () => 30);
-      const getWrites = mockStdoutWrites();
-      toolPrint("bash", "abcd");
-      assert.deepStrictEqual(getWrites(), [
-        `${BLUE}${BOLD}bash${BOLD_RESET}: abcd${RESET}
+    describe("wraps the detail", () => {
+      it("wraps a detail that does not fit within maxLen", () => {
+        mock.method(processDeps.stdout, "getColumns", () => 30);
+        const getWrites = mockStdoutWrites();
+        toolPrint("bash", "abcdefghijklmnopqrstuvwxyz");
+        assert.deepStrictEqual(getWrites(), [
+          `${BLUE}${BOLD}bash${BOLD_RESET}: abcdefghijklmnopqrstuvwx
+       ┊yz${RESET}
 `,
-      ]);
-    });
+        ]);
+      });
 
-    it("wraps without regard to whitespace inside the detail", () => {
-      mock.method(processDeps.stdout, "getColumns", () => 30);
-      const getWrites = mockStdoutWrites();
-      toolPrint("bash", "abc defghijklmnop");
-      assert.deepStrictEqual(getWrites(), [
-        `${BLUE}${BOLD}bash${BOLD_RESET}: abc defghijklmnop${RESET}
+      it("wraps without regard to whitespace inside the detail", () => {
+        mock.method(processDeps.stdout, "getColumns", () => 30);
+        const getWrites = mockStdoutWrites();
+        toolPrint("bash", "abc defghijklmnop");
+        assert.deepStrictEqual(getWrites(), [
+          `${BLUE}${BOLD}bash${BOLD_RESET}: abc defghijklmnop${RESET}
 `,
-      ]);
-    });
+        ]);
+      });
 
-    it("wraps multiple original lines and combines them under the same cap", () => {
-      mock.method(processDeps.stdout, "getColumns", () => 30);
-      const getWrites = mockStdoutWrites();
-      toolPrint("bash", "abcdefghij\nkl");
-      assert.deepStrictEqual(getWrites(), [
-        `${BLUE}${BOLD}bash${BOLD_RESET}: abcdefghij
+      it("wraps multiple original lines and combines them under the same cap", () => {
+        mock.method(processDeps.stdout, "getColumns", () => 30);
+        const getWrites = mockStdoutWrites();
+        toolPrint("bash", "abcdefghij\nkl");
+        assert.deepStrictEqual(getWrites(), [
+          `${BLUE}${BOLD}bash${BOLD_RESET}: abcdefghij
        ┊kl${RESET}
 `,
-      ]);
-    });
+        ]);
+      });
 
-    it("stops mid-wrap once the five line cap is reached, ending with an ellipsis", () => {
-      mock.method(processDeps.stdout, "getColumns", () => 30);
-      const getWrites = mockStdoutWrites();
-      toolPrint("bash", "abcdefghij\nkl\nm\nn\no\np");
-      assert.deepStrictEqual(getWrites(), [
-        `${BLUE}${BOLD}bash${BOLD_RESET}: abcdefghij
-       ┊kl
-       ┊m
-       ┊n
-       ┊o…${RESET}
-`,
-      ]);
-    });
-
-    it("replaces the last char of a full fifth line with an ellipsis", () => {
-      mock.method(processDeps.stdout, "getColumns", () => 30);
-      const getWrites = mockStdoutWrites();
-      toolPrint("bash", "a".repeat(113));
-      assert.deepStrictEqual(getWrites(), [
-        `${BLUE}${BOLD}bash${BOLD_RESET}: ${"a".repeat(24)}
-       ┊${"a".repeat(22)}
-       ┊${"a".repeat(22)}
-       ┊${"a".repeat(22)}
-       ┊${"a".repeat(21)}…${RESET}
-`,
-      ]);
-    });
-
-    it("uses label length plus padding for the maxLen when it exceeds the indent", () => {
-      mock.method(processDeps.stdout, "getColumns", () => 40);
-      const getWrites = mockStdoutWrites();
-      toolPrint("abcdefghijklmnopqrst", "abcdefghijklmnopqrstuvwx");
-      assert.deepStrictEqual(getWrites(), [
-        `${BLUE}${BOLD}abcdefghijklmnopqrst${BOLD_RESET}: abcdefghijklmnopqr
+      it("uses label length plus padding for the maxLen when it exceeds the indent", () => {
+        mock.method(processDeps.stdout, "getColumns", () => 40);
+        const getWrites = mockStdoutWrites();
+        toolPrint("abcdefghijklmnopqrst", "abcdefghijklmnopqrstuvwx");
+        assert.deepStrictEqual(getWrites(), [
+          `${BLUE}${BOLD}abcdefghijklmnopqrst${BOLD_RESET}: abcdefghijklmnopqr
        ┊stuvwx${RESET}
 `,
-      ]);
-    });
+        ]);
+      });
 
-    it("prints nothing but the label prefix when detail is only whitespace lines", () => {
-      mock.method(processDeps.stdout, "getColumns", () => 30);
-      const getWrites = mockStdoutWrites();
-      toolPrint("bash", "\n\n\n");
-      assert.deepStrictEqual(getWrites(), [`${BLUE}${RESET}\n`]);
-    });
-
-    it("falls back to one char per line when the terminal is narrower than the label", () => {
-      mock.method(processDeps.stdout, "getColumns", () => 5);
-      const getWrites = mockStdoutWrites();
-      toolPrint("bash", "abcdefghijklmnopqrstuvwxyz");
-      assert.deepStrictEqual(getWrites(), [
-        `${BLUE}${BOLD}bash${BOLD_RESET}: a
+      it("falls back to one char per line when the terminal is narrower than the label", () => {
+        mock.method(processDeps.stdout, "getColumns", () => 5);
+        const getWrites = mockStdoutWrites();
+        toolPrint("bash", "abcdefghijklmnopqrstuvwxyz");
+        assert.deepStrictEqual(getWrites(), [
+          `${BLUE}${BOLD}bash${BOLD_RESET}: a
        ┊b
        ┊c
        ┊d
        ┊…${RESET}
 `,
-      ]);
+        ]);
+      });
+    });
+
+    describe("caps at five lines", () => {
+      it("caps the total output at five lines", () => {
+        mock.method(processDeps.stdout, "getColumns", () => 30);
+        const getWrites = mockStdoutWrites();
+        toolPrint("bash", "a\nb\nc\nd\ne\nf");
+        assert.deepStrictEqual(getWrites(), [
+          `${BLUE}${BOLD}bash${BOLD_RESET}: a
+       ┊b
+       ┊c
+       ┊d
+       ┊e…${RESET}
+`,
+        ]);
+      });
+
+      it("stops mid-wrap once the five line cap is reached, ending with an ellipsis", () => {
+        mock.method(processDeps.stdout, "getColumns", () => 30);
+        const getWrites = mockStdoutWrites();
+        toolPrint("bash", "abcdefghij\nkl\nm\nn\no\np");
+        assert.deepStrictEqual(getWrites(), [
+          `${BLUE}${BOLD}bash${BOLD_RESET}: abcdefghij
+       ┊kl
+       ┊m
+       ┊n
+       ┊o…${RESET}
+`,
+        ]);
+      });
+
+      it("replaces the last char of a full fifth line with an ellipsis", () => {
+        mock.method(processDeps.stdout, "getColumns", () => 30);
+        const getWrites = mockStdoutWrites();
+        toolPrint("bash", "a".repeat(113));
+        assert.deepStrictEqual(getWrites(), [
+          `${BLUE}${BOLD}bash${BOLD_RESET}: ${"a".repeat(24)}
+       ┊${"a".repeat(22)}
+       ┊${"a".repeat(22)}
+       ┊${"a".repeat(22)}
+       ┊${"a".repeat(21)}…${RESET}
+`,
+        ]);
+      });
     });
   });
 
@@ -637,285 +643,296 @@ describe("tools", () => {
   });
 
   describe("createSubagentTool", () => {
-    it("runs read-only subagents in parallel and returns structured results", async () => {
-      const calls: Record<string, unknown>[] = [];
-      mockGenerateText((options: Record<string, unknown>) => {
-        calls.push(options);
-        return makeGenerateTextResult({
-          text: `result-${String(calls.length)}`,
+    describe("runs subagents", () => {
+      it("runs read-only subagents in parallel and returns structured results", async () => {
+        const calls: Record<string, unknown>[] = [];
+        mockGenerateText((options: Record<string, unknown>) => {
+          calls.push(options);
+          return makeGenerateTextResult({
+            text: `result-${String(calls.length)}`,
+          });
         });
-      });
 
-      const result = await createSubagentTool({
-        tasks: [
-          { prompt: "inspect one", access: "read-only", model: "model-one" },
-          { prompt: "inspect two", access: "read-only", model: "model-two" },
-        ],
-      });
+        const result = await createSubagentTool({
+          tasks: [
+            { prompt: "inspect one", access: "read-only", model: "model-one" },
+            { prompt: "inspect two", access: "read-only", model: "model-two" },
+          ],
+        });
 
-      assert.deepStrictEqual(JSON.parse(result.content), [
-        {
-          model: "model-one",
-          prompt: "inspect one",
-          content: "result-1",
-        },
-        {
-          model: "model-two",
-          prompt: "inspect two",
-          content: "result-2",
-        },
-      ]);
-      const firstCall = calls[0];
-      assert(firstCall !== undefined);
+        assert.deepStrictEqual(JSON.parse(result.content), [
+          {
+            model: "model-one",
+            prompt: "inspect one",
+            content: "result-1",
+          },
+          {
+            model: "model-two",
+            prompt: "inspect two",
+            content: "result-2",
+          },
+        ]);
+        const firstCall = calls[0];
+        assert(firstCall !== undefined);
 
-      const firstTools = firstCall["tools"];
-      const firstMessages = firstCall["messages"] as { role: string }[];
-      assert(firstTools !== undefined && firstTools !== null);
+        const firstTools = firstCall["tools"];
+        const firstMessages = firstCall["messages"] as { role: string }[];
+        assert(firstTools !== undefined && firstTools !== null);
 
-      const firstMessage = firstMessages[0];
-      assert(firstMessage !== undefined);
+        const firstMessage = firstMessages[0];
+        assert(firstMessage !== undefined);
 
-      assert.deepStrictEqual(Object.keys(firstTools), [
-        "web_fetch_html",
-        "web_fetch_json",
-        "load_skill",
-        "bash",
-      ]);
-      assert.strictEqual(firstMessage.role, "user");
-    });
-
-    it("gives read-write subagents write tools and prints file diffs", async () => {
-      const mcpTool = makeMcpTool();
-      actions.setMcp({}, { mcp_tool: mcpTool });
-      const getWrites = mockStdoutWrites();
-      testFs._files.set("/test/file.txt", "original content");
-      mockGenerateText(async (options: Record<string, unknown>) => {
-        const writeTools = options["tools"];
-        assert(writeTools !== undefined && writeTools !== null);
-        assert.deepStrictEqual(Object.keys(writeTools), [
+        assert.deepStrictEqual(Object.keys(firstTools), [
           "web_fetch_html",
           "web_fetch_json",
           "load_skill",
           "bash",
-          "mcp_tool",
         ]);
-        const onStart = options["onToolExecutionStart"] as (
-          arg: Record<string, unknown>,
-        ) => void;
-        const onFinish = options["onToolExecutionEnd"] as (
-          arg: Record<string, unknown>,
-        ) => Promise<void>;
-        assert.strictEqual(typeof onStart, "function");
-        assert.strictEqual(typeof onFinish, "function");
-        onStart({
-          toolCall: {
-            toolName: "bash",
-            toolCallId: "call-1",
-            input: {
-              fileSystemAccessType: "create-update-delete",
-              filePath: "/test/file.txt",
-              command: "write",
+        assert.strictEqual(firstMessage.role, "user");
+      });
+
+      it("gives read-write subagents write tools and prints file diffs", async () => {
+        const mcpTool = makeMcpTool();
+        actions.setMcp({}, { mcp_tool: mcpTool });
+        const getWrites = mockStdoutWrites();
+        testFs._files.set("/test/file.txt", "original content");
+        mockGenerateText(async (options: Record<string, unknown>) => {
+          const writeTools = options["tools"];
+          assert(writeTools !== undefined && writeTools !== null);
+          assert.deepStrictEqual(Object.keys(writeTools), [
+            "web_fetch_html",
+            "web_fetch_json",
+            "load_skill",
+            "bash",
+            "mcp_tool",
+          ]);
+          const onStart = options["onToolExecutionStart"] as (
+            arg: Record<string, unknown>,
+          ) => void;
+          const onFinish = options["onToolExecutionEnd"] as (
+            arg: Record<string, unknown>,
+          ) => Promise<void>;
+          assert.strictEqual(typeof onStart, "function");
+          assert.strictEqual(typeof onFinish, "function");
+          onStart({
+            toolCall: {
+              toolName: "bash",
+              toolCallId: "call-1",
+              input: {
+                fileSystemAccessType: "create-update-delete",
+                filePath: "/test/file.txt",
+                command: "write",
+              },
             },
-          },
-        });
-        testFs._files.set("/test/file.txt", "modified content");
-        mockExec({ stdout: "+modified content" });
-        await onFinish({
-          toolCall: {
-            toolName: "bash",
-            toolCallId: "call-1",
-            input: {
-              fileSystemAccessType: "create-update-delete",
-              filePath: "/test/file.txt",
-              command: "write",
-            },
-          },
-          toolOutput: { type: "tool-result" },
-        });
-        return makeGenerateTextResult({ text: "done" });
-      });
-
-      const result = await createSubagentTool({
-        tasks: [{ prompt: "edit", access: "read-write", model: "main-model" }],
-      });
-
-      assert.deepStrictEqual(JSON.parse(result.content), [
-        { model: "main-model", prompt: "edit", content: "done" },
-      ]);
-      assert.deepStrictEqual(getWrites(), [
-        "\n",
-        `${GREY}━━ ${BOLD}File change: /test/file.txt${BOLD_RESET} ━━${RESET}\n`,
-        "+modified content\n\n",
-      ]);
-    });
-
-    it("uses the configured model when a task model is omitted", async () => {
-      mockGenerateText((options: { model: { modelId: string } }) => {
-        assert.strictEqual(options.model.modelId, "main-model");
-        return Promise.resolve(makeGenerateTextResult({ text: "ok" }));
-      });
-
-      const result = await createSubagentTool({
-        tasks: [
-          { prompt: "inspect", access: "read-only", model: "main-model" },
-        ],
-      });
-
-      assert.deepStrictEqual(JSON.parse(result.content), [
-        { model: "main-model", prompt: "inspect", content: "ok" },
-      ]);
-    });
-
-    it("uses the task model", async () => {
-      mockGenerateText((options: { model: { modelId: string } }) => {
-        assert.strictEqual(options.model.modelId, "main-model");
-        return Promise.resolve(makeGenerateTextResult({ text: "ok" }));
-      });
-
-      const result = await createSubagentTool({
-        tasks: [
-          { prompt: "inspect", access: "read-only", model: "main-model" },
-        ],
-      });
-
-      assert.deepStrictEqual(JSON.parse(result.content), [
-        { model: "main-model", prompt: "inspect", content: "ok" },
-      ]);
-    });
-
-    it("returns errors for failed subagents without hiding successful results", async () => {
-      mockGenerateText((options: { model: { modelId: string } }) => {
-        if (options.model.modelId === "bad-model") {
-          return Promise.reject(new Error("subagent failed"));
-        }
-        return Promise.resolve(makeGenerateTextResult({ text: "ok" }));
-      });
-
-      const result = await createSubagentTool({
-        tasks: [
-          { prompt: "bad", access: "read-only", model: "bad-model" },
-          { prompt: "good", access: "read-only", model: "good-model" },
-        ],
-      });
-
-      assert.strictEqual(result.isError, true);
-      assert.deepStrictEqual(JSON.parse(result.content), [
-        {
-          model: "bad-model",
-          prompt: "bad",
-          isError: true,
-          content: "subagent failed",
-        },
-        { model: "good-model", prompt: "good", content: "ok" },
-      ]);
-    });
-
-    it("returns a timeout error with subagent metadata", async () => {
-      mock.timers.enable({ apis: ["setTimeout"] });
-      let onGenerateTextCalled: () => void = () => undefined;
-      const generateTextCalledPromise = new Promise<void>((resolve) => {
-        onGenerateTextCalled = resolve;
-      });
-      mockGenerateText((options: { abortSignal?: AbortSignal }) => {
-        onGenerateTextCalled();
-        return new Promise((_resolve, reject) => {
-          options.abortSignal?.addEventListener("abort", () => {
-            reject(
-              new DOMException("This operation was aborted", "AbortError"),
-            );
           });
-        });
-      });
-
-      try {
-        const resultPromise = createSubagentTool({
-          tasks: [
-            {
-              prompt: "inspect timeout",
-              access: "read-only",
-              model: "slow-model",
-              timeout: 1_000,
+          testFs._files.set("/test/file.txt", "modified content");
+          mockExec({ stdout: "+modified content" });
+          await onFinish({
+            toolCall: {
+              toolName: "bash",
+              toolCallId: "call-1",
+              input: {
+                fileSystemAccessType: "create-update-delete",
+                filePath: "/test/file.txt",
+                command: "write",
+              },
             },
+            toolOutput: { type: "tool-result" },
+          });
+          return makeGenerateTextResult({ text: "done" });
+        });
+
+        const result = await createSubagentTool({
+          tasks: [
+            { prompt: "edit", access: "read-write", model: "main-model" },
           ],
         });
-        await generateTextCalledPromise;
-        mock.timers.tick(1_000);
-        const result = await resultPromise;
-        assert.strictEqual(result.isError, true);
+
         assert.deepStrictEqual(JSON.parse(result.content), [
-          {
-            model: "slow-model",
-            prompt: "inspect timeout",
-            isError: true,
-            content: "Subagent timed out after 1s",
-          },
+          { model: "main-model", prompt: "edit", content: "done" },
         ]);
-      } finally {
-        mock.timers.reset();
-      }
-    });
-
-    it("rethrows when aborted by the caller and removes the abort listener", async () => {
-      const controller = new AbortController();
-      let onGenerateTextCalled: () => void = () => undefined;
-      const generateTextCalledPromise = new Promise<void>((resolve) => {
-        onGenerateTextCalled = resolve;
+        assert.deepStrictEqual(getWrites(), [
+          "\n",
+          `${GREY}━━ ${BOLD}File change: /test/file.txt${BOLD_RESET} ━━${RESET}\n`,
+          "+modified content\n\n",
+        ]);
       });
-      mockGenerateText((options: { abortSignal?: AbortSignal }) => {
-        onGenerateTextCalled();
-        return new Promise((_resolve, reject) => {
-          options.abortSignal?.addEventListener("abort", () => {
-            reject(
-              new DOMException("This operation was aborted", "AbortError"),
-            );
-          });
+
+      it("builds subagent systemContent from prompt, context, and skills", async () => {
+        actions.setContextStr("ctx body");
+        actions.setSkillsStr("skills body");
+        const calls: Record<string, unknown>[] = [];
+        mockGenerateText((options: Record<string, unknown>) => {
+          calls.push(options);
+          return makeGenerateTextResult({ text: "ok" });
         });
-      });
 
-      const resultPromise = createSubagentTool(
-        {
+        await createSubagentTool({
           tasks: [
-            {
-              prompt: "inspect abort",
-              access: "read-only",
-              model: "main-model",
-            },
+            { prompt: "inspect", access: "read-only", model: "main-model" },
           ],
-        },
-        controller.signal,
-      );
-      await generateTextCalledPromise;
-      controller.abort();
+        });
 
-      await assert.rejects(resultPromise, { name: "AbortError" });
-      assert.deepStrictEqual(getEventListeners(controller.signal, "abort"), []);
-    });
-
-    it("builds subagent systemContent from prompt, context, and skills", async () => {
-      actions.setContextStr("ctx body");
-      actions.setSkillsStr("skills body");
-      const calls: Record<string, unknown>[] = [];
-      mockGenerateText((options: Record<string, unknown>) => {
-        calls.push(options);
-        return makeGenerateTextResult({ text: "ok" });
-      });
-
-      await createSubagentTool({
-        tasks: [
-          { prompt: "inspect", access: "read-only", model: "main-model" },
-        ],
-      });
-
-      const firstCall = calls[0];
-      assert(firstCall !== undefined);
-      assert.strictEqual(
-        firstCall["instructions"],
-        `${getSubagentPrompt("read-only")}
+        const firstCall = calls[0];
+        assert(firstCall !== undefined);
+        assert.strictEqual(
+          firstCall["instructions"],
+          `${getSubagentPrompt("read-only")}
 
 ctx body
 
 skills body`,
-      );
+        );
+      });
+    });
+
+    describe("selects the model", () => {
+      it("uses the configured model when a task model is omitted", async () => {
+        mockGenerateText((options: { model: { modelId: string } }) => {
+          assert.strictEqual(options.model.modelId, "main-model");
+          return Promise.resolve(makeGenerateTextResult({ text: "ok" }));
+        });
+
+        const result = await createSubagentTool({
+          tasks: [
+            { prompt: "inspect", access: "read-only", model: "main-model" },
+          ],
+        });
+
+        assert.deepStrictEqual(JSON.parse(result.content), [
+          { model: "main-model", prompt: "inspect", content: "ok" },
+        ]);
+      });
+
+      it("uses the task model", async () => {
+        mockGenerateText((options: { model: { modelId: string } }) => {
+          assert.strictEqual(options.model.modelId, "main-model");
+          return Promise.resolve(makeGenerateTextResult({ text: "ok" }));
+        });
+
+        const result = await createSubagentTool({
+          tasks: [
+            { prompt: "inspect", access: "read-only", model: "main-model" },
+          ],
+        });
+
+        assert.deepStrictEqual(JSON.parse(result.content), [
+          { model: "main-model", prompt: "inspect", content: "ok" },
+        ]);
+      });
+    });
+
+    describe("handles failures", () => {
+      it("returns errors for failed subagents without hiding successful results", async () => {
+        mockGenerateText((options: { model: { modelId: string } }) => {
+          if (options.model.modelId === "bad-model") {
+            return Promise.reject(new Error("subagent failed"));
+          }
+          return Promise.resolve(makeGenerateTextResult({ text: "ok" }));
+        });
+
+        const result = await createSubagentTool({
+          tasks: [
+            { prompt: "bad", access: "read-only", model: "bad-model" },
+            { prompt: "good", access: "read-only", model: "good-model" },
+          ],
+        });
+
+        assert.strictEqual(result.isError, true);
+        assert.deepStrictEqual(JSON.parse(result.content), [
+          {
+            model: "bad-model",
+            prompt: "bad",
+            isError: true,
+            content: "subagent failed",
+          },
+          { model: "good-model", prompt: "good", content: "ok" },
+        ]);
+      });
+
+      it("returns a timeout error with subagent metadata", async () => {
+        mock.timers.enable({ apis: ["setTimeout"] });
+        let onGenerateTextCalled: () => void = () => undefined;
+        const generateTextCalledPromise = new Promise<void>((resolve) => {
+          onGenerateTextCalled = resolve;
+        });
+        mockGenerateText((options: { abortSignal?: AbortSignal }) => {
+          onGenerateTextCalled();
+          return new Promise((_resolve, reject) => {
+            options.abortSignal?.addEventListener("abort", () => {
+              reject(
+                new DOMException("This operation was aborted", "AbortError"),
+              );
+            });
+          });
+        });
+
+        try {
+          const resultPromise = createSubagentTool({
+            tasks: [
+              {
+                prompt: "inspect timeout",
+                access: "read-only",
+                model: "slow-model",
+                timeout: 1_000,
+              },
+            ],
+          });
+          await generateTextCalledPromise;
+          mock.timers.tick(1_000);
+          const result = await resultPromise;
+          assert.strictEqual(result.isError, true);
+          assert.deepStrictEqual(JSON.parse(result.content), [
+            {
+              model: "slow-model",
+              prompt: "inspect timeout",
+              isError: true,
+              content: "Subagent timed out after 1s",
+            },
+          ]);
+        } finally {
+          mock.timers.reset();
+        }
+      });
+
+      it("rethrows when aborted by the caller and removes the abort listener", async () => {
+        const controller = new AbortController();
+        let onGenerateTextCalled: () => void = () => undefined;
+        const generateTextCalledPromise = new Promise<void>((resolve) => {
+          onGenerateTextCalled = resolve;
+        });
+        mockGenerateText((options: { abortSignal?: AbortSignal }) => {
+          onGenerateTextCalled();
+          return new Promise((_resolve, reject) => {
+            options.abortSignal?.addEventListener("abort", () => {
+              reject(
+                new DOMException("This operation was aborted", "AbortError"),
+              );
+            });
+          });
+        });
+
+        const resultPromise = createSubagentTool(
+          {
+            tasks: [
+              {
+                prompt: "inspect abort",
+                access: "read-only",
+                model: "main-model",
+              },
+            ],
+          },
+          controller.signal,
+        );
+        await generateTextCalledPromise;
+        controller.abort();
+
+        await assert.rejects(resultPromise, { name: "AbortError" });
+        assert.deepStrictEqual(
+          getEventListeners(controller.signal, "abort"),
+          [],
+        );
+      });
     });
   });
 });

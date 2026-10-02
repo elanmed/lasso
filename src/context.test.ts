@@ -140,27 +140,28 @@ global content
   });
 
   describe("getSkillsStr", () => {
-    it("returns empty string when no skills are found", () => {
-      const result = getSkillsStr([]);
-      assert.equal(result, "");
-    });
+    describe("lists and dedupes skills", () => {
+      it("returns empty string when no skills are found", () => {
+        const result = getSkillsStr([]);
+        assert.equal(result, "");
+      });
 
-    it("lists skills found in skill directories", () => {
-      testFs._globResults.set("/fake-home/.config/lasso/skills/**/SKILL.md", [
-        "/fake-home/.config/lasso/skills/my-skill/SKILL.md",
-      ]);
-      testFs._files.set(
-        "/fake-home/.config/lasso/skills/my-skill/SKILL.md",
-        `---
+      it("lists skills found in skill directories", () => {
+        testFs._globResults.set("/fake-home/.config/lasso/skills/**/SKILL.md", [
+          "/fake-home/.config/lasso/skills/my-skill/SKILL.md",
+        ]);
+        testFs._files.set(
+          "/fake-home/.config/lasso/skills/my-skill/SKILL.md",
+          `---
 name: my-skill
 description: A test skill
 ---
 # Body`,
-      );
-      const result = getSkillsStr(getSkills());
-      assert.equal(
-        result,
-        `# [lasso] Skills
+        );
+        const result = getSkillsStr(getSkills());
+        assert.equal(
+          result,
+          `# [lasso] Skills
 
 Use the \`load_skill\` tool to load a skill when the user's request
 would benefit from specialized instructions.
@@ -168,36 +169,36 @@ would benefit from specialized instructions.
 ## Available skills:
 
 - my-skill: A test skill`,
-      );
-    });
+        );
+      });
 
-    it("deduplicates by parsed name, keeping first occurrence", () => {
-      testFs._globResults.set("/test-cwd/.lasso/skills/**/SKILL.md", [
-        "/test-cwd/.lasso/skills/local-skill/SKILL.md",
-      ]);
-      testFs._globResults.set("/fake-home/.config/lasso/skills/**/SKILL.md", [
-        "/fake-home/.config/lasso/skills/global-skill/SKILL.md",
-      ]);
-      testFs._files.set(
-        "/test-cwd/.lasso/skills/local-skill/SKILL.md",
-        `---
+      it("deduplicates by parsed name, keeping first occurrence", () => {
+        testFs._globResults.set("/test-cwd/.lasso/skills/**/SKILL.md", [
+          "/test-cwd/.lasso/skills/local-skill/SKILL.md",
+        ]);
+        testFs._globResults.set("/fake-home/.config/lasso/skills/**/SKILL.md", [
+          "/fake-home/.config/lasso/skills/global-skill/SKILL.md",
+        ]);
+        testFs._files.set(
+          "/test-cwd/.lasso/skills/local-skill/SKILL.md",
+          `---
 name: deploy
 description: Local deploy
 ---
 # Local`,
-      );
-      testFs._files.set(
-        "/fake-home/.config/lasso/skills/global-skill/SKILL.md",
-        `---
+        );
+        testFs._files.set(
+          "/fake-home/.config/lasso/skills/global-skill/SKILL.md",
+          `---
 name: deploy
 description: Global deploy
 ---
 # Global`,
-      );
-      const result = getSkillsStr(getSkills());
-      assert.equal(
-        result,
-        `# [lasso] Skills
+        );
+        const result = getSkillsStr(getSkills());
+        assert.equal(
+          result,
+          `# [lasso] Skills
 
 Use the \`load_skill\` tool to load a skill when the user's request
 would benefit from specialized instructions.
@@ -205,67 +206,67 @@ would benefit from specialized instructions.
 ## Available skills:
 
 - deploy: Local deploy`,
-      );
-    });
+        );
+      });
 
-    it("does not return duplicate skills", () => {
-      testFs._globResults.set("/test-cwd/.lasso/skills/**/SKILL.md", [
-        "/test-cwd/.lasso/skills/a/SKILL.md",
-      ]);
-      testFs._globResults.set("/fake-home/.config/lasso/skills/**/SKILL.md", [
-        "/fake-home/.config/lasso/skills/b/SKILL.md",
-      ]);
-      testFs._files.set(
-        "/test-cwd/.lasso/skills/a/SKILL.md",
-        `---
+      it("does not return duplicate skills", () => {
+        testFs._globResults.set("/test-cwd/.lasso/skills/**/SKILL.md", [
+          "/test-cwd/.lasso/skills/a/SKILL.md",
+        ]);
+        testFs._globResults.set("/fake-home/.config/lasso/skills/**/SKILL.md", [
+          "/fake-home/.config/lasso/skills/b/SKILL.md",
+        ]);
+        testFs._files.set(
+          "/test-cwd/.lasso/skills/a/SKILL.md",
+          `---
 name: deploy
 description: First
 ---
 # A`,
-      );
-      testFs._files.set(
-        "/fake-home/.config/lasso/skills/b/SKILL.md",
-        `---
+        );
+        testFs._files.set(
+          "/fake-home/.config/lasso/skills/b/SKILL.md",
+          `---
 name: deploy
 description: Second
 ---
 # B`,
-      );
-      const result = getSkills();
-      assert.equal(result.length, 1);
-      assert.deepStrictEqual(result[0], {
-        name: "deploy",
-        description: "First",
-        content: "# A",
-        dir: "/test-cwd/.lasso/skills/a",
+        );
+        const result = getSkills();
+        assert.equal(result.length, 1);
+        assert.deepStrictEqual(result[0], {
+          name: "deploy",
+          description: "First",
+          content: "# A",
+          dir: "/test-cwd/.lasso/skills/a",
+        });
       });
-    });
 
-    it("includes skills with different names", () => {
-      testFs._globResults.set("/test-cwd/.lasso/skills/**/SKILL.md", [
-        "/test-cwd/.lasso/skills/a/SKILL.md",
-        "/test-cwd/.lasso/skills/b/SKILL.md",
-      ]);
-      testFs._files.set(
-        "/test-cwd/.lasso/skills/a/SKILL.md",
-        `---
+      it("includes skills with different names", () => {
+        testFs._globResults.set("/test-cwd/.lasso/skills/**/SKILL.md", [
+          "/test-cwd/.lasso/skills/a/SKILL.md",
+          "/test-cwd/.lasso/skills/b/SKILL.md",
+        ]);
+        testFs._files.set(
+          "/test-cwd/.lasso/skills/a/SKILL.md",
+          `---
 name: skill-a
 description: First
 ---
 `,
-      );
-      testFs._files.set(
-        "/test-cwd/.lasso/skills/b/SKILL.md",
-        `---
+        );
+        testFs._files.set(
+          "/test-cwd/.lasso/skills/b/SKILL.md",
+          `---
 name: skill-b
 description: Second
 ---
 `,
-      );
-      const result = getSkillsStr(getSkills());
-      assert.equal(
-        result,
-        `# [lasso] Skills
+        );
+        const result = getSkillsStr(getSkills());
+        assert.equal(
+          result,
+          `# [lasso] Skills
 
 Use the \`load_skill\` tool to load a skill when the user's request
 would benefit from specialized instructions.
@@ -274,25 +275,27 @@ would benefit from specialized instructions.
 
 - skill-a: First
 - skill-b: Second`,
-      );
+        );
+      });
     });
 
-    it("skips non-existent skill directories", () => {
-      testFs._globResults.set("/fake-home/.config/lasso/skills/**/SKILL.md", [
-        "/fake-home/.config/lasso/skills/my-skill/SKILL.md",
-      ]);
-      testFs._files.set(
-        "/fake-home/.config/lasso/skills/my-skill/SKILL.md",
-        `---
+    describe("skips invalid skills", () => {
+      it("skips non-existent skill directories", () => {
+        testFs._globResults.set("/fake-home/.config/lasso/skills/**/SKILL.md", [
+          "/fake-home/.config/lasso/skills/my-skill/SKILL.md",
+        ]);
+        testFs._files.set(
+          "/fake-home/.config/lasso/skills/my-skill/SKILL.md",
+          `---
 name: my-skill
 description: A test skill
 ---
 # Body`,
-      );
-      const result = getSkillsStr(getSkills());
-      assert.equal(
-        result,
-        `# [lasso] Skills
+        );
+        const result = getSkillsStr(getSkills());
+        assert.equal(
+          result,
+          `# [lasso] Skills
 
 Use the \`load_skill\` tool to load a skill when the user's request
 would benefit from specialized instructions.
@@ -300,30 +303,30 @@ would benefit from specialized instructions.
 ## Available skills:
 
 - my-skill: A test skill`,
-      );
-    });
+        );
+      });
 
-    it("skips malformed skill files", () => {
-      testFs._globResults.set("/fake-home/.config/lasso/skills/**/SKILL.md", [
-        "/fake-home/.config/lasso/skills/bad/SKILL.md",
-        "/fake-home/.config/lasso/skills/good/SKILL.md",
-      ]);
-      testFs._files.set(
-        "/fake-home/.config/lasso/skills/bad/SKILL.md",
-        "not front matter",
-      );
-      testFs._files.set(
-        "/fake-home/.config/lasso/skills/good/SKILL.md",
-        `---
+      it("skips malformed skill files", () => {
+        testFs._globResults.set("/fake-home/.config/lasso/skills/**/SKILL.md", [
+          "/fake-home/.config/lasso/skills/bad/SKILL.md",
+          "/fake-home/.config/lasso/skills/good/SKILL.md",
+        ]);
+        testFs._files.set(
+          "/fake-home/.config/lasso/skills/bad/SKILL.md",
+          "not front matter",
+        );
+        testFs._files.set(
+          "/fake-home/.config/lasso/skills/good/SKILL.md",
+          `---
 name: good
 description: Valid
 ---
 `,
-      );
-      const result = getSkillsStr(getSkills());
-      assert.equal(
-        result,
-        `# [lasso] Skills
+        );
+        const result = getSkillsStr(getSkills());
+        assert.equal(
+          result,
+          `# [lasso] Skills
 
 Use the \`load_skill\` tool to load a skill when the user's request
 would benefit from specialized instructions.
@@ -331,26 +334,59 @@ would benefit from specialized instructions.
 ## Available skills:
 
 - good: Valid`,
-      );
+        );
+      });
+
+      it("skips entries where globSync throws", () => {
+        mock.method(fsDeps, "globSync", (pattern: string) => {
+          if (pattern === "/test-cwd/.lasso/skills/**/SKILL.md")
+            throw new Error("glob failed");
+          return testFs.globSync(pattern);
+        });
+        testFs._globResults.set("/fake-home/.config/lasso/skills/**/SKILL.md", [
+          "/fake-home/.config/lasso/skills/ok/SKILL.md",
+        ]);
+        testFs._files.set(
+          "/fake-home/.config/lasso/skills/ok/SKILL.md",
+          `---
+name: ok
+description: Works
+---
+`,
+        );
+        const result = getSkillsStr(getSkills());
+        assert.equal(
+          result,
+          `# [lasso] Skills
+
+Use the \`load_skill\` tool to load a skill when the user's request
+would benefit from specialized instructions.
+
+## Available skills:
+
+- ok: Works`,
+        );
+      });
     });
 
-    it("includes skills from custom skill dirs", () => {
-      actions.setCustomSkillDirs(["/custom/skills"]);
-      testFs._globResults.set("/custom/skills/**/SKILL.md", [
-        "/custom/skills/custom-skill/SKILL.md",
-      ]);
-      testFs._files.set(
-        "/custom/skills/custom-skill/SKILL.md",
-        `---
+    describe("custom skill dirs", () => {
+      it("includes skills from custom skill dirs", () => {
+        actions.setCustomSkillDirs(["/custom/skills"]);
+        testFs._globResults.set("/custom/skills/**/SKILL.md", [
+          "/custom/skills/custom-skill/SKILL.md",
+        ]);
+        testFs._files.set(
+          "/custom/skills/custom-skill/SKILL.md",
+          `---
 name: custom-skill
 description: From custom dir
 ---
 `,
-      );
-      const result = getSkillsStr(getSkills());
-      assert.equal(
-        result,
-        `# [lasso] Skills
+        );
+        const result = getSkillsStr(getSkills());
+        assert.equal(
+          result,
+          `# [lasso] Skills
 
 Use the \`load_skill\` tool to load a skill when the user's request
 would benefit from specialized instructions.
@@ -358,37 +394,37 @@ would benefit from specialized instructions.
 ## Available skills:
 
 - custom-skill: From custom dir`,
-      );
-    });
+        );
+      });
 
-    it("prioritizes custom skill dirs over local and global", () => {
-      actions.setCustomSkillDirs(["/custom/skills"]);
-      testFs._globResults.set("/custom/skills/**/SKILL.md", [
-        "/custom/skills/deploy/SKILL.md",
-      ]);
-      testFs._globResults.set("/test-cwd/.lasso/skills/**/SKILL.md", [
-        "/test-cwd/.lasso/skills/deploy/SKILL.md",
-      ]);
-      testFs._files.set(
-        "/custom/skills/deploy/SKILL.md",
-        `---
+      it("prioritizes custom skill dirs over local and global", () => {
+        actions.setCustomSkillDirs(["/custom/skills"]);
+        testFs._globResults.set("/custom/skills/**/SKILL.md", [
+          "/custom/skills/deploy/SKILL.md",
+        ]);
+        testFs._globResults.set("/test-cwd/.lasso/skills/**/SKILL.md", [
+          "/test-cwd/.lasso/skills/deploy/SKILL.md",
+        ]);
+        testFs._files.set(
+          "/custom/skills/deploy/SKILL.md",
+          `---
 name: deploy
 description: Custom deploy
 ---
 `,
-      );
-      testFs._files.set(
-        "/test-cwd/.lasso/skills/deploy/SKILL.md",
-        `---
+        );
+        testFs._files.set(
+          "/test-cwd/.lasso/skills/deploy/SKILL.md",
+          `---
 name: deploy
 description: Local deploy
 ---
 `,
-      );
-      const result = getSkillsStr(getSkills());
-      assert.equal(
-        result,
-        `# [lasso] Skills
+        );
+        const result = getSkillsStr(getSkills());
+        assert.equal(
+          result,
+          `# [lasso] Skills
 
 Use the \`load_skill\` tool to load a skill when the user's request
 would benefit from specialized instructions.
@@ -396,18 +432,20 @@ would benefit from specialized instructions.
 ## Available skills:
 
 - deploy: Custom deploy`,
-      );
+        );
+      });
     });
 
-    it("includes nested AGENTS.md files as context skills", () => {
-      testFs._gitLsFilesResults.set("**/AGENTS.md", [
-        "/test-cwd/src/AGENTS.md",
-      ]);
-      testFs._files.set("/test-cwd/src/AGENTS.md", "nested content");
-      const result = getSkillsStr(getSkills());
-      assert.equal(
-        result,
-        `# [lasso] Skills
+    describe("context skills", () => {
+      it("includes nested AGENTS.md files as context skills", () => {
+        testFs._gitLsFilesResults.set("**/AGENTS.md", [
+          "/test-cwd/src/AGENTS.md",
+        ]);
+        testFs._files.set("/test-cwd/src/AGENTS.md", "nested content");
+        const result = getSkillsStr(getSkills());
+        assert.equal(
+          result,
+          `# [lasso] Skills
 
 Use the \`load_skill\` tool to load a skill when the user's request
 would benefit from specialized instructions.
@@ -415,20 +453,20 @@ would benefit from specialized instructions.
 ## Available skills:
 
 - __lasso-context-for-/test-cwd/src: Context relevant for /test-cwd/src`,
-      );
-    });
+        );
+      });
 
-    it("excludes the root AGENTS.md from context skills", () => {
-      testFs._gitLsFilesResults.set("**/AGENTS.md", [
-        "AGENTS.md",
-        "/test-cwd/src/AGENTS.md",
-      ]);
-      testFs._files.set("/test-cwd/AGENTS.md", "root content");
-      testFs._files.set("/test-cwd/src/AGENTS.md", "nested content");
-      const result = getSkillsStr(getSkills());
-      assert.equal(
-        result,
-        `# [lasso] Skills
+      it("excludes the root AGENTS.md from context skills", () => {
+        testFs._gitLsFilesResults.set("**/AGENTS.md", [
+          "AGENTS.md",
+          "/test-cwd/src/AGENTS.md",
+        ]);
+        testFs._files.set("/test-cwd/AGENTS.md", "root content");
+        testFs._files.set("/test-cwd/src/AGENTS.md", "nested content");
+        const result = getSkillsStr(getSkills());
+        assert.equal(
+          result,
+          `# [lasso] Skills
 
 Use the \`load_skill\` tool to load a skill when the user's request
 would benefit from specialized instructions.
@@ -436,29 +474,29 @@ would benefit from specialized instructions.
 ## Available skills:
 
 - __lasso-context-for-/test-cwd/src: Context relevant for /test-cwd/src`,
-      );
-    });
+        );
+      });
 
-    it("nested AGENTS.md skills do not collide with regular skills", () => {
-      testFs._globResults.set("/fake-home/.config/lasso/skills/**/SKILL.md", [
-        "/fake-home/.config/lasso/skills/my-skill/SKILL.md",
-      ]);
-      testFs._files.set(
-        "/fake-home/.config/lasso/skills/my-skill/SKILL.md",
-        `---
+      it("nested AGENTS.md skills do not collide with regular skills", () => {
+        testFs._globResults.set("/fake-home/.config/lasso/skills/**/SKILL.md", [
+          "/fake-home/.config/lasso/skills/my-skill/SKILL.md",
+        ]);
+        testFs._files.set(
+          "/fake-home/.config/lasso/skills/my-skill/SKILL.md",
+          `---
 name: my-skill
 description: A test skill
 ---
 # Body`,
-      );
-      testFs._gitLsFilesResults.set("**/AGENTS.md", [
-        "/test-cwd/src/AGENTS.md",
-      ]);
-      testFs._files.set("/test-cwd/src/AGENTS.md", "nested content");
-      const result = getSkillsStr(getSkills());
-      assert.equal(
-        result,
-        `# [lasso] Skills
+        );
+        testFs._gitLsFilesResults.set("**/AGENTS.md", [
+          "/test-cwd/src/AGENTS.md",
+        ]);
+        testFs._files.set("/test-cwd/src/AGENTS.md", "nested content");
+        const result = getSkillsStr(getSkills());
+        assert.equal(
+          result,
+          `# [lasso] Skills
 
 Use the \`load_skill\` tool to load a skill when the user's request
 would benefit from specialized instructions.
@@ -467,38 +505,8 @@ would benefit from specialized instructions.
 
 - my-skill: A test skill
 - __lasso-context-for-/test-cwd/src: Context relevant for /test-cwd/src`,
-      );
-    });
-
-    it("skips entries where globSync throws", () => {
-      mock.method(fsDeps, "globSync", (pattern: string) => {
-        if (pattern === "/test-cwd/.lasso/skills/**/SKILL.md")
-          throw new Error("glob failed");
-        return testFs.globSync(pattern);
+        );
       });
-      testFs._globResults.set("/fake-home/.config/lasso/skills/**/SKILL.md", [
-        "/fake-home/.config/lasso/skills/ok/SKILL.md",
-      ]);
-      testFs._files.set(
-        "/fake-home/.config/lasso/skills/ok/SKILL.md",
-        `---
-name: ok
-description: Works
----
-`,
-      );
-      const result = getSkillsStr(getSkills());
-      assert.equal(
-        result,
-        `# [lasso] Skills
-
-Use the \`load_skill\` tool to load a skill when the user's request
-would benefit from specialized instructions.
-
-## Available skills:
-
-- ok: Works`,
-      );
     });
   });
 
@@ -576,202 +584,206 @@ would benefit from specialized instructions.
   });
 
   describe("getSkills", () => {
-    it("warns when a skill agent file cannot be read", () => {
-      testFs._gitLsFilesResults.set("**/AGENTS.md", ["/repo/src/AGENTS.md"]);
-      const getWrites = mockStdoutWrites();
+    describe("loads and filters skills", () => {
+      it("warns when a skill agent file cannot be read", () => {
+        testFs._gitLsFilesResults.set("**/AGENTS.md", ["/repo/src/AGENTS.md"]);
+        const getWrites = mockStdoutWrites();
 
-      const result = getSkills();
+        const result = getSkills();
 
-      assert.deepStrictEqual(result, []);
-      assert.deepStrictEqual(getWrites(), [
-        `${YELLOW}Failed to read the agent file at /repo/src/AGENTS.md${RESET}\n`,
-      ]);
-    });
+        assert.deepStrictEqual(result, []);
+        assert.deepStrictEqual(getWrites(), [
+          `${YELLOW}Failed to read the agent file at /repo/src/AGENTS.md${RESET}\n`,
+        ]);
+      });
 
-    it("returns skills from skill directories with front matter stripped", () => {
-      testFs._globResults.set("/fake-home/.config/lasso/skills/**/SKILL.md", [
-        "/fake-home/.config/lasso/skills/my-skill/SKILL.md",
-      ]);
-      testFs._files.set(
-        "/fake-home/.config/lasso/skills/my-skill/SKILL.md",
-        `---
+      it("returns skills from skill directories with front matter stripped", () => {
+        testFs._globResults.set("/fake-home/.config/lasso/skills/**/SKILL.md", [
+          "/fake-home/.config/lasso/skills/my-skill/SKILL.md",
+        ]);
+        testFs._files.set(
+          "/fake-home/.config/lasso/skills/my-skill/SKILL.md",
+          `---
 name: my-skill
 description: A test skill
 ---
 # Body`,
-      );
+        );
 
-      const result = getSkills();
+        const result = getSkills();
 
-      assert.deepStrictEqual(result, [
-        {
-          name: "my-skill",
-          description: "A test skill",
-          dir: "/fake-home/.config/lasso/skills/my-skill",
-          content: "# Body",
-        },
-      ]);
-    });
+        assert.deepStrictEqual(result, [
+          {
+            name: "my-skill",
+            description: "A test skill",
+            dir: "/fake-home/.config/lasso/skills/my-skill",
+            content: "# Body",
+          },
+        ]);
+      });
 
-    it("returns skills from custom, local, and global dirs in order", () => {
-      actions.setCustomSkillDirs(["/custom/skills"]);
-      testFs._globResults.set("/custom/skills/**/SKILL.md", [
-        "/custom/skills/custom-skill/SKILL.md",
-      ]);
-      testFs._globResults.set("/test-cwd/.lasso/skills/**/SKILL.md", [
-        "/test-cwd/.lasso/skills/local-skill/SKILL.md",
-      ]);
-      testFs._globResults.set("/fake-home/.config/lasso/skills/**/SKILL.md", [
-        "/fake-home/.config/lasso/skills/global-skill/SKILL.md",
-      ]);
-      testFs._files.set(
-        "/custom/skills/custom-skill/SKILL.md",
-        `---
+      it("returns skills from custom, local, and global dirs in order", () => {
+        actions.setCustomSkillDirs(["/custom/skills"]);
+        testFs._globResults.set("/custom/skills/**/SKILL.md", [
+          "/custom/skills/custom-skill/SKILL.md",
+        ]);
+        testFs._globResults.set("/test-cwd/.lasso/skills/**/SKILL.md", [
+          "/test-cwd/.lasso/skills/local-skill/SKILL.md",
+        ]);
+        testFs._globResults.set("/fake-home/.config/lasso/skills/**/SKILL.md", [
+          "/fake-home/.config/lasso/skills/global-skill/SKILL.md",
+        ]);
+        testFs._files.set(
+          "/custom/skills/custom-skill/SKILL.md",
+          `---
 name: custom-skill
 description: From custom dir
 ---
 `,
-      );
-      testFs._files.set(
-        "/test-cwd/.lasso/skills/local-skill/SKILL.md",
-        `---
+        );
+        testFs._files.set(
+          "/test-cwd/.lasso/skills/local-skill/SKILL.md",
+          `---
 name: local-skill
 description: From local dir
 ---
 `,
-      );
-      testFs._files.set(
-        "/fake-home/.config/lasso/skills/global-skill/SKILL.md",
-        `---
+        );
+        testFs._files.set(
+          "/fake-home/.config/lasso/skills/global-skill/SKILL.md",
+          `---
 name: global-skill
 description: From global dir
 ---
 `,
-      );
+        );
 
-      const result = getSkills();
+        const result = getSkills();
 
-      assert.deepStrictEqual(result, [
-        {
-          name: "custom-skill",
-          description: "From custom dir",
-          dir: "/custom/skills/custom-skill",
-          content: "",
-        },
-        {
-          name: "local-skill",
-          description: "From local dir",
-          dir: "/test-cwd/.lasso/skills/local-skill",
-          content: "",
-        },
-        {
-          name: "global-skill",
-          description: "From global dir",
-          dir: "/fake-home/.config/lasso/skills/global-skill",
-          content: "",
-        },
-      ]);
-    });
+        assert.deepStrictEqual(result, [
+          {
+            name: "custom-skill",
+            description: "From custom dir",
+            dir: "/custom/skills/custom-skill",
+            content: "",
+          },
+          {
+            name: "local-skill",
+            description: "From local dir",
+            dir: "/test-cwd/.lasso/skills/local-skill",
+            content: "",
+          },
+          {
+            name: "global-skill",
+            description: "From global dir",
+            dir: "/fake-home/.config/lasso/skills/global-skill",
+            content: "",
+          },
+        ]);
+      });
 
-    it("deduplicates skills by name keeping the first occurrence", () => {
-      testFs._globResults.set("/test-cwd/.lasso/skills/**/SKILL.md", [
-        "/test-cwd/.lasso/skills/deploy/SKILL.md",
-      ]);
-      testFs._globResults.set("/fake-home/.config/lasso/skills/**/SKILL.md", [
-        "/fake-home/.config/lasso/skills/deploy/SKILL.md",
-      ]);
-      testFs._files.set(
-        "/test-cwd/.lasso/skills/deploy/SKILL.md",
-        `---
+      it("deduplicates skills by name keeping the first occurrence", () => {
+        testFs._globResults.set("/test-cwd/.lasso/skills/**/SKILL.md", [
+          "/test-cwd/.lasso/skills/deploy/SKILL.md",
+        ]);
+        testFs._globResults.set("/fake-home/.config/lasso/skills/**/SKILL.md", [
+          "/fake-home/.config/lasso/skills/deploy/SKILL.md",
+        ]);
+        testFs._files.set(
+          "/test-cwd/.lasso/skills/deploy/SKILL.md",
+          `---
 name: deploy
 description: Local deploy
 ---
 `,
-      );
-      testFs._files.set(
-        "/fake-home/.config/lasso/skills/deploy/SKILL.md",
-        `---
+        );
+        testFs._files.set(
+          "/fake-home/.config/lasso/skills/deploy/SKILL.md",
+          `---
 name: deploy
 description: Global deploy
 ---
 `,
-      );
+        );
 
-      const result = getSkills();
+        const result = getSkills();
 
-      assert.deepStrictEqual(result, [
-        {
-          name: "deploy",
-          description: "Local deploy",
-          dir: "/test-cwd/.lasso/skills/deploy",
-          content: "",
-        },
-      ]);
-    });
+        assert.deepStrictEqual(result, [
+          {
+            name: "deploy",
+            description: "Local deploy",
+            dir: "/test-cwd/.lasso/skills/deploy",
+            content: "",
+          },
+        ]);
+      });
 
-    it("skips malformed skill files", () => {
-      testFs._globResults.set("/test-cwd/.lasso/skills/**/SKILL.md", [
-        "/test-cwd/.lasso/skills/broken/SKILL.md",
-        "/test-cwd/.lasso/skills/valid/SKILL.md",
-      ]);
-      testFs._files.set(
-        "/test-cwd/.lasso/skills/broken/SKILL.md",
-        "no front matter",
-      );
-      testFs._files.set(
-        "/test-cwd/.lasso/skills/valid/SKILL.md",
-        `---
+      it("skips malformed skill files", () => {
+        testFs._globResults.set("/test-cwd/.lasso/skills/**/SKILL.md", [
+          "/test-cwd/.lasso/skills/broken/SKILL.md",
+          "/test-cwd/.lasso/skills/valid/SKILL.md",
+        ]);
+        testFs._files.set(
+          "/test-cwd/.lasso/skills/broken/SKILL.md",
+          "no front matter",
+        );
+        testFs._files.set(
+          "/test-cwd/.lasso/skills/valid/SKILL.md",
+          `---
 name: valid-skill
 description: A valid skill
 ---
 `,
-      );
+        );
 
-      const result = getSkills();
+        const result = getSkills();
 
-      assert.deepStrictEqual(result, [
-        {
-          name: "valid-skill",
-          description: "A valid skill",
-          dir: "/test-cwd/.lasso/skills/valid",
-          content: "",
-        },
-      ]);
+        assert.deepStrictEqual(result, [
+          {
+            name: "valid-skill",
+            description: "A valid skill",
+            dir: "/test-cwd/.lasso/skills/valid",
+            content: "",
+          },
+        ]);
+      });
     });
 
-    it("converts nested git-tracked agent files into context skills", () => {
-      testFs._gitLsFilesResults.set("**/AGENTS.md", ["/repo/src/AGENTS.md"]);
-      testFs._files.set("/repo/src/AGENTS.md", "# Team conventions");
+    describe("context skills", () => {
+      it("converts nested git-tracked agent files into context skills", () => {
+        testFs._gitLsFilesResults.set("**/AGENTS.md", ["/repo/src/AGENTS.md"]);
+        testFs._files.set("/repo/src/AGENTS.md", "# Team conventions");
 
-      const result = getSkills();
+        const result = getSkills();
 
-      assert.deepStrictEqual(result, [
-        {
-          name: "__lasso-context-for-/repo/src",
-          description: "Context relevant for /repo/src",
-          dir: "/repo/src",
-          content: "# Team conventions",
-        },
-      ]);
-    });
+        assert.deepStrictEqual(result, [
+          {
+            name: "__lasso-context-for-/repo/src",
+            description: "Context relevant for /repo/src",
+            dir: "/repo/src",
+            content: "# Team conventions",
+          },
+        ]);
+      });
 
-    it("excludes the root agent file from context skills", () => {
-      testFs._gitLsFilesResults.set("**/AGENTS.md", [
-        "AGENTS.md",
-        "/repo/AGENTS.md",
-      ]);
-      testFs._files.set("/repo/AGENTS.md", "# Repo conventions");
+      it("excludes the root agent file from context skills", () => {
+        testFs._gitLsFilesResults.set("**/AGENTS.md", [
+          "AGENTS.md",
+          "/repo/AGENTS.md",
+        ]);
+        testFs._files.set("/repo/AGENTS.md", "# Repo conventions");
 
-      const result = getSkills();
+        const result = getSkills();
 
-      assert.deepStrictEqual(result, [
-        {
-          name: "__lasso-context-for-/repo",
-          description: "Context relevant for /repo",
-          dir: "/repo",
-          content: "# Repo conventions",
-        },
-      ]);
+        assert.deepStrictEqual(result, [
+          {
+            name: "__lasso-context-for-/repo",
+            description: "Context relevant for /repo",
+            dir: "/repo",
+            content: "# Repo conventions",
+          },
+        ]);
+      });
     });
   });
 
@@ -836,94 +848,100 @@ name: deploy
   });
 
   describe("parseFrontMatter", () => {
-    it("returns null when content does not start with ---\\n", () => {
-      const result = parseFrontMatter("no front matter here");
-      assert.equal(result, null);
-    });
+    describe("returns null for malformed content", () => {
+      it("returns null when content does not start with ---\\n", () => {
+        const result = parseFrontMatter("no front matter here");
+        assert.equal(result, null);
+      });
 
-    it("returns null when content starts with --- but no newline", () => {
-      const result = parseFrontMatter("---foo");
-      assert.equal(result, null);
-    });
+      it("returns null when content starts with --- but no newline", () => {
+        const result = parseFrontMatter("---foo");
+        assert.equal(result, null);
+      });
 
-    it("returns null when no closing delimiter", () => {
-      const result = parseFrontMatter(`---
+      it("returns null when no closing delimiter", () => {
+        const result = parseFrontMatter(`---
 name: test
 `);
-      assert.equal(result, null);
-    });
+        assert.equal(result, null);
+      });
 
-    it("returns null when yaml string is empty", () => {
-      const result = parseFrontMatter(`---
+      it("returns null when yaml string is empty", () => {
+        const result = parseFrontMatter(`---
 ---
 body`);
-      assert.equal(result, null);
+        assert.equal(result, null);
+      });
     });
 
-    it("parses valid front matter with attributes and body", () => {
-      const result = parseFrontMatter(
-        `---
+    describe("parses valid front matter", () => {
+      it("parses valid front matter with attributes and body", () => {
+        const result = parseFrontMatter(
+          `---
 name: my-skill
 description: A skill
 ---
 # Body content`,
-      );
-      assert.deepStrictEqual(result, {
-        data: { name: "my-skill", description: "A skill" },
-        body: "# Body content",
+        );
+        assert.deepStrictEqual(result, {
+          data: { name: "my-skill", description: "A skill" },
+          body: "# Body content",
+        });
       });
-    });
 
-    it("parses front matter with no body", () => {
-      const result = parseFrontMatter(`---
+      it("parses front matter with no body", () => {
+        const result = parseFrontMatter(`---
 name: test
 ---
 `);
-      assert.deepStrictEqual(result, {
-        data: { name: "test" },
-        body: "",
+        assert.deepStrictEqual(result, {
+          data: { name: "test" },
+          body: "",
+        });
       });
-    });
 
-    it("preserves body containing dashes", () => {
-      const result = parseFrontMatter(
-        `---
+      it("preserves body containing dashes", () => {
+        const result = parseFrontMatter(
+          `---
 key: val
 ---
 Body with --- inside
 and more text`,
-      );
-      assert.deepStrictEqual(result, {
-        data: { key: "val" },
-        body: `Body with --- inside
+        );
+        assert.deepStrictEqual(result, {
+          data: { key: "val" },
+          body: `Body with --- inside
 and more text`,
+        });
       });
-    });
 
-    it("parses front matter when closing delimiter lacks trailing newline", () => {
-      const result = parseFrontMatter(`---
+      it("parses front matter when closing delimiter lacks trailing newline", () => {
+        const result = parseFrontMatter(`---
 key: val
 ---`);
-      assert.deepStrictEqual(result, {
-        data: { key: "val" },
-        body: "",
+        assert.deepStrictEqual(result, {
+          data: { key: "val" },
+          body: "",
+        });
       });
     });
 
-    it("returns null on invalid yaml", () => {
-      const result = parseFrontMatter(`---
+    describe("returns null for invalid yaml", () => {
+      it("returns null on invalid yaml", () => {
+        const result = parseFrontMatter(`---
 * invalid
 * ---
 *  body`);
-      assert.equal(result, null);
-    });
+        assert.equal(result, null);
+      });
 
-    it("returns null on unclosed flow sequence in yaml", () => {
-      const result = parseFrontMatter(`---
+      it("returns null on unclosed flow sequence in yaml", () => {
+        const result = parseFrontMatter(`---
 key: [unclosed
 ---
 body`);
-      assert.equal(result, null);
+        assert.equal(result, null);
+      });
     });
   });
 });

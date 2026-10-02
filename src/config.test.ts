@@ -53,1007 +53,16 @@ describe("config", () => {
   });
 
   describe("when local config exists", () => {
-    it("uses its model over the global config, default config", async () => {
-      testFs._files.set(
-        getGlobalConfigPath(),
-        JSON.stringify({
-          ...testConfig,
-        }),
-      );
-      testFs._files.set(
-        getLocalConfigPath(),
-        JSON.stringify({
-          ...testConfig,
-          model: "claude-haiku-4-5",
-        }),
-      );
-
-      await initState();
-
-      assert.equal(getState().config.model, "claude-haiku-4-5");
-    });
-
-    it("uses its subagentModels over the global config, default config", async () => {
-      testFs._files.set(
-        getGlobalConfigPath(),
-        JSON.stringify({
-          ...testConfig,
-          subagentModels: ["global-model"],
-        }),
-      );
-      testFs._files.set(
-        getLocalConfigPath(),
-        JSON.stringify({
-          ...testConfig,
-          subagentModels: ["local-model"],
-        }),
-      );
-
-      await initState();
-
-      assert.deepStrictEqual(getState().config.subagentModels, ["local-model"]);
-    });
-
-    it("uses its sdkProvider over the global config, default config", async () => {
-      testFs._files.set(
-        getGlobalConfigPath(),
-        JSON.stringify({
-          model: testConfig.model,
-          sdkProvider: "openai-compatible",
-        }),
-      );
-      testFs._files.set(
-        getLocalConfigPath(),
-        JSON.stringify({
-          model: testConfig.model,
-          sdkProvider: "anthropic",
-        }),
-      );
-
-      await initState();
-
-      assert.equal(getState().config.sdkProvider, "anthropic");
-    });
-
-    it("uses its gateway over the default config", async () => {
-      testFs._files.set(
-        getLocalConfigPath(),
-        JSON.stringify({
-          ...testConfig,
-          gateway: "opencode",
-        }),
-      );
-
-      await initState();
-
-      assert.equal(getState().config.gateway, "opencode");
-    });
-
-    it("leaves gateway undefined when not configured", async () => {
-      testFs._files.set(getLocalConfigPath(), JSON.stringify(testConfig));
-
-      await initState();
-
-      assert.equal(getState().config.gateway, undefined);
-    });
-
-    it("merges its mcps with the global and default config", () => {
-      testFs._files.set(
-        getGlobalConfigPath(),
-        JSON.stringify({
-          ...testConfig,
-          mcps: {
-            global: { type: "stdio", command: "global-mcp" },
-            http: { type: "http", url: "https://global.example.com" },
-          },
-        }),
-      );
-      testFs._files.set(
-        getLocalConfigPath(),
-        JSON.stringify({
-          ...testConfig,
-          mcps: {
-            http: {
-              type: "http",
-              url: "https://mcp.example.com",
-              protocolVersion: "2025-03-26",
-              headers: { Authorization: "Bearer token" },
-            },
-            sse: {
-              type: "sse",
-              url: "https://sse.example.com",
-              protocolVersion: "2024-11-05",
-            },
-            stdio: {
-              type: "stdio",
-              command: "local-mcp",
-              args: ["--debug"],
-            },
-          },
-        }),
-      );
-
-      const { globalConfig, localConfig } = initStateFirst();
-      initStateFromConfig({ globalConfig, localConfig });
-
-      assert.deepStrictEqual(getState().config.mcps, {
-        global: { type: "stdio", command: "global-mcp" },
-        http: {
-          type: "http",
-          url: "https://mcp.example.com",
-          protocolVersion: "2025-03-26",
-          headers: { Authorization: "Bearer token" },
-        },
-        sse: {
-          type: "sse",
-          url: "https://sse.example.com",
-          protocolVersion: "2024-11-05",
-        },
-        stdio: {
-          type: "stdio",
-          command: "local-mcp",
-          args: ["--debug"],
-        },
-      });
-    });
-
-    it("defaults mcps to an empty object", async () => {
-      testFs._files.set(getLocalConfigPath(), JSON.stringify(testConfig));
-
-      await initState();
-
-      assert.deepStrictEqual(getState().config.mcps, {});
-    });
-
-    it("uses minimal local config without model over the global config", async () => {
-      testFs._files.set(
-        getGlobalConfigPath(),
-        JSON.stringify({
-          ...testConfig,
-        }),
-      );
-      testFs._files.set(
-        getLocalConfigPath(),
-        JSON.stringify({
-          promptPrefix: ">>> ",
-        }),
-      );
-
-      await initState();
-
-      assert.equal(getState().config.model, testConfig.model);
-      assert.equal(getState().config.promptPrefix, ">>> ");
-    });
-
-    it("merges pricingPerModel per model, local overriding global", async () => {
-      testFs._files.set(
-        getGlobalConfigPath(),
-        JSON.stringify({
-          ...testConfig,
-          model: "test-model",
-          pricingPerModel: {
-            "global-model": {
-              inputPerMillion: 1,
-              outputPerMillion: 2,
-            },
-            "shared-model": {
-              inputPerMillion: 10,
-              outputPerMillion: 20,
-            },
-          },
-        }),
-      );
-      testFs._files.set(
-        getLocalConfigPath(),
-        JSON.stringify({
-          ...testConfig,
-          model: "test-model",
-          pricingPerModel: {
-            "local-model": {
-              inputPerMillion: 3,
-              outputPerMillion: 4,
-            },
-            "shared-model": {
-              inputPerMillion: 30,
-              outputPerMillion: 40,
-            },
-          },
-        }),
-      );
-
-      await initState();
-
-      assert.deepEqual(getState().config.pricingPerModel, {
-        "global-model": {
-          inputPerMillion: 1,
-          outputPerMillion: 2,
-        },
-        "shared-model": {
-          inputPerMillion: 30,
-          outputPerMillion: 40,
-        },
-        "local-model": {
-          inputPerMillion: 3,
-          outputPerMillion: 4,
-        },
-      });
-    });
-    it("removes pricingPerModel entries set to null in the local config", async () => {
-      testFs._files.set(
-        getGlobalConfigPath(),
-        JSON.stringify({
-          ...testConfig,
-          pricingPerModel: {
-            "kept-model": {
-              inputPerMillion: 1,
-              outputPerMillion: 2,
-            },
-            "cancelled-model": {
-              inputPerMillion: 3,
-              outputPerMillion: 4,
-            },
-          },
-        }),
-      );
-      testFs._files.set(
-        getLocalConfigPath(),
-        JSON.stringify({
-          ...testConfig,
-          pricingPerModel: {
-            "cancelled-model": null,
-          },
-        }),
-      );
-
-      await initState();
-
-      assert.deepEqual(getState().config.pricingPerModel, {
-        "kept-model": {
-          inputPerMillion: 1,
-          outputPerMillion: 2,
-        },
-      });
-    });
-
-    it("merges contextWindowPerModel per model, local overriding global", async () => {
-      testFs._files.set(
-        getGlobalConfigPath(),
-        JSON.stringify({
-          ...testConfig,
-          contextWindowPerModel: {
-            "global-model": 100_000,
-            "shared-model": 200_000,
-          },
-        }),
-      );
-      testFs._files.set(
-        getLocalConfigPath(),
-        JSON.stringify({
-          ...testConfig,
-          contextWindowPerModel: {
-            "local-model": 300_000,
-            "shared-model": 400_000,
-          },
-        }),
-      );
-
-      await initState();
-
-      assert.deepEqual(getState().config.contextWindowPerModel, {
-        "global-model": 100_000,
-        "shared-model": 400_000,
-        "local-model": 300_000,
-      });
-    });
-
-    it("removes contextWindowPerModel entries set to null in the local config", async () => {
-      testFs._files.set(
-        getGlobalConfigPath(),
-        JSON.stringify({
-          ...testConfig,
-          contextWindowPerModel: {
-            "kept-model": 100_000,
-            "cancelled-model": 200_000,
-          },
-        }),
-      );
-      testFs._files.set(
-        getLocalConfigPath(),
-        JSON.stringify({
-          ...testConfig,
-          contextWindowPerModel: {
-            "cancelled-model": null,
-          },
-        }),
-      );
-
-      await initState();
-
-      assert.deepEqual(getState().config.contextWindowPerModel, {
-        "kept-model": 100_000,
-      });
-    });
-
-    it("uses its keymaps over the global config, default config", async () => {
-      testFs._files.set(
-        getGlobalConfigPath(),
-        JSON.stringify({
-          ...testConfig,
-          keymaps: {
-            edit: { name: "v", ctrl: false, meta: false, shift: false },
-            history: { name: "o", ctrl: false, meta: false, shift: false },
-            clear: { name: "j", ctrl: false, meta: false, shift: false },
-          },
-        }),
-      );
-      testFs._files.set(
-        getLocalConfigPath(),
-        JSON.stringify({
-          ...testConfig,
-          keymaps: {
-            edit: { name: "e", ctrl: true, meta: false, shift: false },
-            history: { name: "l", ctrl: true, meta: false, shift: false },
-            clear: { name: "k", ctrl: true, meta: false, shift: false },
-            skills: { name: "s", ctrl: true, meta: false, shift: false },
-          },
-        }),
-      );
-
-      await initState();
-
-      assert.deepEqual(getState().config.keymaps.edit, {
-        name: "e",
-        ctrl: true,
-        meta: false,
-        shift: false,
-      });
-      assert.deepEqual(getState().config.keymaps["history"], {
-        name: "l",
-        ctrl: true,
-        meta: false,
-        shift: false,
-      });
-      assert.deepEqual(getState().config.keymaps["clear"], {
-        name: "k",
-        ctrl: true,
-        meta: false,
-        shift: false,
-      });
-      assert.deepEqual(getState().config.keymaps["skills"], {
-        name: "s",
-        ctrl: true,
-        meta: false,
-        shift: false,
-      });
-    });
-
-    it("uses its customSlashCommandDirs over the global config, default config", async () => {
-      testFs._files.set(
-        getGlobalConfigPath(),
-        JSON.stringify({
-          ...testConfig,
-          customSlashCommandDirs: ["/global-dir"],
-        }),
-      );
-      testFs._files.set(
-        getLocalConfigPath(),
-        JSON.stringify({
-          ...testConfig,
-          customSlashCommandDirs: ["/local-dir"],
-        }),
-      );
-
-      await initState();
-
-      assert.deepStrictEqual(getState().config.customSlashCommandDirs, [
-        "/local-dir",
-      ]);
-    });
-
-    it("uses its customSkillDirs over the global config, default config", async () => {
-      testFs._files.set(
-        getGlobalConfigPath(),
-        JSON.stringify({
-          ...testConfig,
-          customSkillDirs: ["/global-skills"],
-        }),
-      );
-      testFs._files.set(
-        getLocalConfigPath(),
-        JSON.stringify({
-          ...testConfig,
-          customSkillDirs: ["/local-skills"],
-        }),
-      );
-
-      await initState();
-
-      assert.deepStrictEqual(getState().config.customSkillDirs, [
-        "/local-skills",
-      ]);
-    });
-
-    it("uses its loadingStateFrames over the global config, default config", async () => {
-      testFs._files.set(
-        getGlobalConfigPath(),
-        JSON.stringify({
-          ...testConfig,
-          loadingStateFrames: ["⣾", "⣽", "⣻", "⢿"],
-        }),
-      );
-      testFs._files.set(
-        getLocalConfigPath(),
-        JSON.stringify({
-          ...testConfig,
-          loadingStateFrames: ["⠋", "⠙", "⠹", "⠸"],
-        }),
-      );
-
-      await initState();
-
-      assert.deepStrictEqual(getState().config.loadingStateFrames, [
-        "⠋",
-        "⠙",
-        "⠹",
-        "⠸",
-      ]);
-    });
-
-    it("uses its loadingStateFrameDuration over the global config, default config", async () => {
-      testFs._files.set(
-        getGlobalConfigPath(),
-        JSON.stringify({
-          ...testConfig,
-          loadingStateFrameDuration: 100,
-        }),
-      );
-      testFs._files.set(
-        getLocalConfigPath(),
-        JSON.stringify({
-          ...testConfig,
-          loadingStateFrameDuration: 200,
-        }),
-      );
-
-      await initState();
-
-      assert.strictEqual(getState().config.loadingStateFrameDuration, 200);
-    });
-
-    it("uses its promptPrefix over the global config, default config", async () => {
-      testFs._files.set(
-        getGlobalConfigPath(),
-        JSON.stringify({
-          ...testConfig,
-          promptPrefix: "> ",
-        }),
-      );
-      testFs._files.set(
-        getLocalConfigPath(),
-        JSON.stringify({
-          ...testConfig,
-          promptPrefix: "🤖 ",
-        }),
-      );
-
-      await initState();
-
-      assert.strictEqual(getState().config.promptPrefix, "🤖 ");
-    });
-
-    it("uses its suppressStartupDurations over the global config, default config", async () => {
-      testFs._files.set(
-        getGlobalConfigPath(),
-        JSON.stringify({
-          ...testConfig,
-          suppressStartupDurations: true,
-        }),
-      );
-      testFs._files.set(
-        getLocalConfigPath(),
-        JSON.stringify({
-          ...testConfig,
-          suppressStartupDurations: false,
-        }),
-      );
-
-      await initState();
-
-      assert.strictEqual(getState().config.suppressStartupDurations, false);
-    });
-
-    it("uses its suppressBatUnavailableWarning over the global config, default config", async () => {
-      testFs._files.set(
-        getGlobalConfigPath(),
-        JSON.stringify({
-          ...testConfig,
-          suppressBatUnavailableWarning: true,
-        }),
-      );
-      testFs._files.set(
-        getLocalConfigPath(),
-        JSON.stringify({
-          ...testConfig,
-          suppressBatUnavailableWarning: false,
-        }),
-      );
-
-      await initState();
-
-      assert.strictEqual(
-        getState().config.suppressBatUnavailableWarning,
-        false,
-      );
-    });
-
-    it("uses its suppressToolEditDiffs over the global config, default config", async () => {
-      testFs._files.set(
-        getGlobalConfigPath(),
-        JSON.stringify({
-          ...testConfig,
-          suppressToolEditDiffs: true,
-        }),
-      );
-      testFs._files.set(
-        getLocalConfigPath(),
-        JSON.stringify({
-          ...testConfig,
-          suppressToolEditDiffs: false,
-        }),
-      );
-
-      await initState();
-
-      assert.strictEqual(getState().config.suppressToolEditDiffs, false);
-    });
-
-    it("uses its messageQueueDelimiter over the global config, default config", async () => {
-      testFs._files.set(
-        getGlobalConfigPath(),
-        JSON.stringify({
-          ...testConfig,
-          messageQueueDelimiter: "g---\n",
-        }),
-      );
-      testFs._files.set(
-        getLocalConfigPath(),
-        JSON.stringify({
-          ...testConfig,
-          messageQueueDelimiter: "L---\n",
-        }),
-      );
-
-      await initState();
-
-      assert.strictEqual(getState().config.messageQueueDelimiter, "L---\n");
-    });
-
-    it("uses its asciiOnly over the global config, default config", async () => {
-      testFs._files.set(
-        getGlobalConfigPath(),
-        JSON.stringify({
-          ...testConfig,
-          asciiOnly: true,
-        }),
-      );
-      testFs._files.set(
-        getLocalConfigPath(),
-        JSON.stringify({
-          ...testConfig,
-          asciiOnly: false,
-        }),
-      );
-
-      await initState();
-
-      assert.strictEqual(getState().config.asciiOnly, false);
-    });
-
-    it("uses its compactWithStructuredOutput over the global config, default config", async () => {
-      testFs._files.set(
-        getGlobalConfigPath(),
-        JSON.stringify({
-          ...testConfig,
-          compactWithStructuredOutput: false,
-        }),
-      );
-      testFs._files.set(
-        getLocalConfigPath(),
-        JSON.stringify({
-          ...testConfig,
-          compactWithStructuredOutput: true,
-        }),
-      );
-
-      await initState();
-
-      assert.strictEqual(getState().config.compactWithStructuredOutput, true);
-    });
-
-    it("uses its reasoning over the global config, default config", async () => {
-      testFs._files.set(
-        getGlobalConfigPath(),
-        JSON.stringify({
-          ...testConfig,
-          reasoning: "low",
-        }),
-      );
-      testFs._files.set(
-        getLocalConfigPath(),
-        JSON.stringify({
-          ...testConfig,
-          reasoning: "high",
-        }),
-      );
-
-      await initState();
-
-      assert.strictEqual(getState().config.reasoning, "high");
-    });
-
-    it("rejects an invalid reasoning", async () => {
-      testFs._files.set(
-        getGlobalConfigPath(),
-        JSON.stringify({
-          ...testConfig,
-          reasoning: "maximum",
-        }),
-      );
-
-      await assert.rejects(initState(), /Invalid option/);
-    });
-
-    it("rejects an empty messageQueueDelimiter", async () => {
-      testFs._files.set(
-        getGlobalConfigPath(),
-        JSON.stringify({
-          ...testConfig,
-          messageQueueDelimiter: "",
-        }),
-      );
-      testFs._files.set(
-        getLocalConfigPath(),
-        JSON.stringify({
-          ...testConfig,
-        }),
-      );
-
-      await assert.rejects(
-        initState(),
-        /Invalid string: must end with \\"\\n\\"/,
-      );
-    });
-
-    it("rejects a messageQueueDelimiter not ending with a newline", async () => {
-      testFs._files.set(
-        getGlobalConfigPath(),
-        JSON.stringify({
-          ...testConfig,
-          messageQueueDelimiter: "g---",
-        }),
-      );
-      testFs._files.set(
-        getLocalConfigPath(),
-        JSON.stringify({
-          ...testConfig,
-        }),
-      );
-
-      await assert.rejects(
-        initState(),
-        /Invalid string: must end with \\"\\n\\"/,
-      );
-    });
-
-    it("uses its usageLimit over the global config, default config", async () => {
-      testFs._files.set(
-        getGlobalConfigPath(),
-        JSON.stringify({
-          ...testConfig,
-          usageLimit: { duration: "2h", dollarAmount: 10 },
-        }),
-      );
-      testFs._files.set(
-        getLocalConfigPath(),
-        JSON.stringify({
-          ...testConfig,
-          usageLimit: { duration: "60m", dollarAmount: 20 },
-        }),
-      );
-
-      await initState();
-
-      assert.deepStrictEqual(getState().config.usageLimit, {
-        duration: "60m",
-        dollarAmount: 20,
-      });
-    });
-
-    it("falls back to global usageLimit when local omits it", async () => {
-      testFs._files.set(
-        getGlobalConfigPath(),
-        JSON.stringify({
-          ...testConfig,
-          usageLimit: { duration: "2h", dollarAmount: 10 },
-        }),
-      );
-      testFs._files.set(
-        getLocalConfigPath(),
-        JSON.stringify({
-          ...testConfig,
-        }),
-      );
-
-      await initState();
-
-      assert.deepStrictEqual(getState().config.usageLimit, {
-        duration: "2h",
-        dollarAmount: 10,
-      });
-    });
-
-    it("rejects config with an unknown key", async () => {
-      testFs._files.set(
-        getGlobalConfigPath(),
-        JSON.stringify({
-          ...testConfig,
-          contextPerModel: { "deepseek-v4-flash-free": 4000 },
-        }),
-      );
-      testFs._files.set(
-        getLocalConfigPath(),
-        JSON.stringify({
-          ...testConfig,
-        }),
-      );
-
-      await assert.rejects(initState(), /Unrecognized key/);
-    });
-
-    it("rejects usageLimit without duration", async () => {
-      testFs._files.set(
-        getGlobalConfigPath(),
-        JSON.stringify({
-          ...testConfig,
-          usageLimit: { dollarAmount: 10 },
-        }),
-      );
-      testFs._files.set(
-        getLocalConfigPath(),
-        JSON.stringify({
-          ...testConfig,
-        }),
-      );
-
-      await assert.rejects(initState(), /Invalid input: expected string/);
-    });
-
-    it("rejects usageLimit without dollarAmount", async () => {
-      testFs._files.set(
-        getGlobalConfigPath(),
-        JSON.stringify({
-          ...testConfig,
-          usageLimit: { duration: "2h" },
-        }),
-      );
-      testFs._files.set(
-        getLocalConfigPath(),
-        JSON.stringify({
-          ...testConfig,
-        }),
-      );
-
-      await assert.rejects(initState(), /Invalid input: expected number/);
-    });
-
-    it("rejects non-string usageLimit.duration", async () => {
-      testFs._files.set(
-        getGlobalConfigPath(),
-        JSON.stringify({
-          ...testConfig,
-          usageLimit: { duration: 3_600_000, dollarAmount: 10 },
-        }),
-      );
-
-      await assert.rejects(initState(), /Invalid input: expected string/);
-    });
-
-    it("rejects usageLimit.duration with an invalid suffix", async () => {
-      testFs._files.set(
-        getGlobalConfigPath(),
-        JSON.stringify({
-          ...testConfig,
-          usageLimit: { duration: "10x", dollarAmount: 10 },
-        }),
-      );
-
-      await assert.rejects(
-        initState(),
-        /usageLimit\.duration must be of the format/,
-      );
-    });
-
-    it("rejects usageLimit.duration without a suffix", async () => {
-      testFs._files.set(
-        getGlobalConfigPath(),
-        JSON.stringify({
-          ...testConfig,
-          usageLimit: { duration: "3600000", dollarAmount: 10 },
-        }),
-      );
-
-      await assert.rejects(
-        initState(),
-        /usageLimit\.duration must be of the format/,
-      );
-    });
-
-    it("rejects usageLimit.duration with a non-numeric prefix", async () => {
-      testFs._files.set(
-        getGlobalConfigPath(),
-        JSON.stringify({
-          ...testConfig,
-          usageLimit: { duration: "abch", dollarAmount: 10 },
-        }),
-      );
-
-      await assert.rejects(
-        initState(),
-        /usageLimit\.duration must be of the format/,
-      );
-    });
-
-    it("rejects usageLimit.duration with a negative prefix", async () => {
-      testFs._files.set(
-        getGlobalConfigPath(),
-        JSON.stringify({
-          ...testConfig,
-          usageLimit: { duration: "-2h", dollarAmount: 10 },
-        }),
-      );
-
-      await assert.rejects(
-        initState(),
-        /usageLimit\.duration must be of the format/,
-      );
-    });
-
-    it("rejects non-number usageLimit.dollarAmount", async () => {
-      testFs._files.set(
-        getGlobalConfigPath(),
-        JSON.stringify({
-          ...testConfig,
-          usageLimit: { duration: "2h", dollarAmount: "five" },
-        }),
-      );
-
-      await assert.rejects(initState(), /Invalid input: expected number/);
-    });
-
-    it("rejects non-boolean asciiOnly", async () => {
-      testFs._files.set(
-        getGlobalConfigPath(),
-        JSON.stringify({
-          ...testConfig,
-          asciiOnly: "yes",
-        }),
-      );
-
-      await assert.rejects(initState(), /Invalid input: expected boolean/);
-    });
-
-    it("rejects non-boolean suppressStartupDurations", async () => {
-      testFs._files.set(
-        getGlobalConfigPath(),
-        JSON.stringify({
-          ...testConfig,
-          suppressStartupDurations: "yes",
-        }),
-      );
-
-      await assert.rejects(initState(), /Invalid input: expected boolean/);
-    });
-
-    it("rejects non-boolean compactWithStructuredOutput", async () => {
-      testFs._files.set(
-        getGlobalConfigPath(),
-        JSON.stringify({
-          ...testConfig,
-          compactWithStructuredOutput: "yes",
-        }),
-      );
-
-      await assert.rejects(initState(), /Invalid input: expected boolean/);
-    });
-
-    it("rejects non-boolean suppressToolEditDiffs", async () => {
-      testFs._files.set(
-        getGlobalConfigPath(),
-        JSON.stringify({
-          ...testConfig,
-          suppressToolEditDiffs: "yes",
-        }),
-      );
-
-      await assert.rejects(initState(), /Invalid input: expected boolean/);
-    });
-
-    it("rejects non-boolean suppressBatUnavailableWarning", async () => {
-      testFs._files.set(
-        getGlobalConfigPath(),
-        JSON.stringify({
-          ...testConfig,
-          suppressBatUnavailableWarning: "yes",
-        }),
-      );
-
-      await assert.rejects(initState(), /Invalid input: expected boolean/);
-    });
-
-    it("merges partial keymaps with defaults", async () => {
-      testFs._files.set(
-        getLocalConfigPath(),
-        JSON.stringify({
-          ...testConfig,
-          keymaps: {
-            edit: { name: "v", ctrl: false, meta: false, shift: false },
-          },
-        }),
-      );
-
-      await initState();
-
-      assert.deepEqual(getState().config.keymaps.edit, {
-        name: "v",
-        ctrl: false,
-        meta: false,
-        shift: false,
-      });
-      assert.strictEqual(getState().config.keymaps["history"], undefined);
-      assert.strictEqual(getState().config.keymaps["clear"], undefined);
-    });
-
-    it("rejects keymap bindings shared with the default config", async () => {
-      testFs._files.set(
-        getLocalConfigPath(),
-        JSON.stringify({
-          ...testConfig,
-          keymaps: {
-            clear: { name: "g", ctrl: true },
-          },
-        }),
-      );
-
-      await assert.rejects(
-        initState(),
-        /keymaps must be unique: `edit` and `clear` are both bound to/,
-      );
-    });
-
-    it("rejects duplicate keymap bindings within the same config", async () => {
-      testFs._files.set(
-        getLocalConfigPath(),
-        JSON.stringify({
-          ...testConfig,
-          keymaps: {
-            clear: { name: "x", ctrl: true },
-            history: { name: "x", ctrl: true },
-          },
-        }),
-      );
-
-      await assert.rejects(
-        initState(),
-        /keymaps must be unique: `clear` and `history` are both bound to/,
-      );
-    });
-  });
-
-  describe("when local config does not exist", () => {
-    describe("when the global config exists", () => {
-      it("uses its model over the default config", async () => {
+    describe("model and provider settings", () => {
+      it("uses its model over the global config, default config", async () => {
         testFs._files.set(
           getGlobalConfigPath(),
+          JSON.stringify({
+            ...testConfig,
+          }),
+        );
+        testFs._files.set(
+          getLocalConfigPath(),
           JSON.stringify({
             ...testConfig,
             model: "claude-haiku-4-5",
@@ -1061,129 +70,380 @@ describe("config", () => {
         );
 
         await initState();
+
         assert.equal(getState().config.model, "claude-haiku-4-5");
       });
 
-      it("uses its sdkProvider over the default config", async () => {
-        testFs._files.set(
-          getGlobalConfigPath(),
-          JSON.stringify({
-            model: testConfig.model,
-            sdkProvider: "anthropic",
-          }),
-        );
-
-        await initState();
-        assert.equal(getState().config.sdkProvider, "anthropic");
-      });
-
-      it("warns when the model has no contextWindowPerModel entry", async () => {
-        testFs._files.set(
-          getGlobalConfigPath(),
-          JSON.stringify({ model: testConfig.model }),
-        );
-
-        const getWrites = mockStdoutWrites();
-        await initState();
-        assert.deepStrictEqual(getWrites(), [
-          `${YELLOW}- Warning: using a default context window of 128,000 tokens because there is no \`contextWindowPerModel\` entry for the current model \`claude-sonnet-4-6\`${RESET}\n`,
-          `${BLUE}Reading context files: ${RESET}`,
-          `${GREEN}0.0ms${RESET}\n`,
-          `${BLUE}Reading skills: ${RESET}`,
-          `${GREEN}0.0ms${RESET}\n`,
-          `${BLUE}Reading slash commands: ${RESET}`,
-          `${GREEN}0.0ms${RESET}\n`,
-        ]);
-      });
-
-      it("does not warn when the model has a contextWindowPerModel entry", async () => {
-        testFs._files.set(
-          getGlobalConfigPath(),
-          JSON.stringify({
-            model: testConfig.model,
-            contextWindowPerModel: { "claude-sonnet-4-6": 200_000 },
-            suppressStartupDurations: true,
-          }),
-        );
-
-        const getWrites = mockStdoutWrites();
-        await initState();
-        assert.deepStrictEqual(getWrites(), []);
-      });
-
-      it("warns when the usage limit has no pricingPerModel entry for the current model", async () => {
+      it("uses its subagentModels over the global config, default config", async () => {
         testFs._files.set(
           getGlobalConfigPath(),
           JSON.stringify({
             ...testConfig,
-            usageLimit: { duration: "2h", dollarAmount: 10 },
-            contextWindowPerModel: { "claude-sonnet-4-6": 200_000 },
-            suppressStartupDurations: true,
+            subagentModels: ["global-model"],
+          }),
+        );
+        testFs._files.set(
+          getLocalConfigPath(),
+          JSON.stringify({
+            ...testConfig,
+            subagentModels: ["local-model"],
           }),
         );
 
-        const getWrites = mockStdoutWrites();
         await initState();
-        assert.deepStrictEqual(getWrites(), [
-          `${YELLOW}- Warning: usage limit is disabled because there is no \`pricingPerModel\` entry for the current model \`claude-sonnet-4-6\`${RESET}\n`,
+
+        assert.deepStrictEqual(getState().config.subagentModels, [
+          "local-model",
         ]);
       });
 
-      it("hides startup durations when suppressStartupDurations is true", async () => {
+      it("uses its sdkProvider over the global config, default config", async () => {
         testFs._files.set(
           getGlobalConfigPath(),
           JSON.stringify({
             model: testConfig.model,
+            sdkProvider: "openai-compatible",
+          }),
+        );
+        testFs._files.set(
+          getLocalConfigPath(),
+          JSON.stringify({
+            model: testConfig.model,
             sdkProvider: "anthropic",
-            suppressStartupDurations: true,
-            baseURL: "https://api.example.com",
           }),
         );
 
-        const getWrites = mockStdoutWrites();
         await initState();
-        assert.deepStrictEqual(getWrites(), [
-          `${YELLOW}- Warning: using a default context window of 128,000 tokens because there is no \`contextWindowPerModel\` entry for the current model \`claude-sonnet-4-6\`${RESET}\n`,
-        ]);
+
+        assert.equal(getState().config.sdkProvider, "anthropic");
       });
 
-      it("uses its pricingPerModel over the default config", async () => {
-        const globalPricing = structuredClone(defaultConfig.pricingPerModel);
-        globalPricing["test-model"] = {
-          inputPerMillion: 999,
-          outputPerMillion: 0,
-          cacheReadPerMillion: 0,
-          cacheWritePerMillion: 0,
-        };
+      it("uses minimal local config without model over the global config", async () => {
+        testFs._files.set(
+          getGlobalConfigPath(),
+          JSON.stringify({
+            ...testConfig,
+          }),
+        );
+        testFs._files.set(
+          getLocalConfigPath(),
+          JSON.stringify({
+            promptPrefix: ">>> ",
+          }),
+        );
 
+        await initState();
+
+        assert.equal(getState().config.model, testConfig.model);
+        assert.equal(getState().config.promptPrefix, ">>> ");
+      });
+    });
+
+    describe("gateway and mcps", () => {
+      it("uses its gateway over the default config", async () => {
+        testFs._files.set(
+          getLocalConfigPath(),
+          JSON.stringify({
+            ...testConfig,
+            gateway: "opencode",
+          }),
+        );
+
+        await initState();
+
+        assert.equal(getState().config.gateway, "opencode");
+      });
+
+      it("leaves gateway undefined when not configured", async () => {
+        testFs._files.set(getLocalConfigPath(), JSON.stringify(testConfig));
+
+        await initState();
+
+        assert.equal(getState().config.gateway, undefined);
+      });
+
+      it("merges its mcps with the global and default config", () => {
+        testFs._files.set(
+          getGlobalConfigPath(),
+          JSON.stringify({
+            ...testConfig,
+            mcps: {
+              global: { type: "stdio", command: "global-mcp" },
+              http: { type: "http", url: "https://global.example.com" },
+            },
+          }),
+        );
+        testFs._files.set(
+          getLocalConfigPath(),
+          JSON.stringify({
+            ...testConfig,
+            mcps: {
+              http: {
+                type: "http",
+                url: "https://mcp.example.com",
+                protocolVersion: "2025-03-26",
+                headers: { Authorization: "Bearer token" },
+              },
+              sse: {
+                type: "sse",
+                url: "https://sse.example.com",
+                protocolVersion: "2024-11-05",
+              },
+              stdio: {
+                type: "stdio",
+                command: "local-mcp",
+                args: ["--debug"],
+              },
+            },
+          }),
+        );
+
+        const { globalConfig, localConfig } = initStateFirst();
+        initStateFromConfig({ globalConfig, localConfig });
+
+        assert.deepStrictEqual(getState().config.mcps, {
+          global: { type: "stdio", command: "global-mcp" },
+          http: {
+            type: "http",
+            url: "https://mcp.example.com",
+            protocolVersion: "2025-03-26",
+            headers: { Authorization: "Bearer token" },
+          },
+          sse: {
+            type: "sse",
+            url: "https://sse.example.com",
+            protocolVersion: "2024-11-05",
+          },
+          stdio: {
+            type: "stdio",
+            command: "local-mcp",
+            args: ["--debug"],
+          },
+        });
+      });
+
+      it("defaults mcps to an empty object", async () => {
+        testFs._files.set(getLocalConfigPath(), JSON.stringify(testConfig));
+
+        await initState();
+
+        assert.deepStrictEqual(getState().config.mcps, {});
+      });
+    });
+
+    describe("pricing and context windows", () => {
+      it("merges pricingPerModel per model, local overriding global", async () => {
         testFs._files.set(
           getGlobalConfigPath(),
           JSON.stringify({
             ...testConfig,
             model: "test-model",
-            pricingPerModel: globalPricing,
-            usageLimit: { duration: "60m", dollarAmount: 10 },
+            pricingPerModel: {
+              "global-model": {
+                inputPerMillion: 1,
+                outputPerMillion: 2,
+              },
+              "shared-model": {
+                inputPerMillion: 10,
+                outputPerMillion: 20,
+              },
+            },
+          }),
+        );
+        testFs._files.set(
+          getLocalConfigPath(),
+          JSON.stringify({
+            ...testConfig,
+            model: "test-model",
+            pricingPerModel: {
+              "local-model": {
+                inputPerMillion: 3,
+                outputPerMillion: 4,
+              },
+              "shared-model": {
+                inputPerMillion: 30,
+                outputPerMillion: 40,
+              },
+            },
           }),
         );
 
         await initState();
-        assert.deepEqual(getState().config.pricingPerModel, globalPricing);
+
+        assert.deepEqual(getState().config.pricingPerModel, {
+          "global-model": {
+            inputPerMillion: 1,
+            outputPerMillion: 2,
+          },
+          "shared-model": {
+            inputPerMillion: 30,
+            outputPerMillion: 40,
+          },
+          "local-model": {
+            inputPerMillion: 3,
+            outputPerMillion: 4,
+          },
+        });
       });
 
-      it("uses its keymaps over the default config", async () => {
+      it("removes pricingPerModel entries set to null in the local config", async () => {
+        testFs._files.set(
+          getGlobalConfigPath(),
+          JSON.stringify({
+            ...testConfig,
+            pricingPerModel: {
+              "kept-model": {
+                inputPerMillion: 1,
+                outputPerMillion: 2,
+              },
+              "cancelled-model": {
+                inputPerMillion: 3,
+                outputPerMillion: 4,
+              },
+            },
+          }),
+        );
+        testFs._files.set(
+          getLocalConfigPath(),
+          JSON.stringify({
+            ...testConfig,
+            pricingPerModel: {
+              "cancelled-model": null,
+            },
+          }),
+        );
+
+        await initState();
+
+        assert.deepEqual(getState().config.pricingPerModel, {
+          "kept-model": {
+            inputPerMillion: 1,
+            outputPerMillion: 2,
+          },
+        });
+      });
+
+      it("merges contextWindowPerModel per model, local overriding global", async () => {
+        testFs._files.set(
+          getGlobalConfigPath(),
+          JSON.stringify({
+            ...testConfig,
+            contextWindowPerModel: {
+              "global-model": 100_000,
+              "shared-model": 200_000,
+            },
+          }),
+        );
+        testFs._files.set(
+          getLocalConfigPath(),
+          JSON.stringify({
+            ...testConfig,
+            contextWindowPerModel: {
+              "local-model": 300_000,
+              "shared-model": 400_000,
+            },
+          }),
+        );
+
+        await initState();
+
+        assert.deepEqual(getState().config.contextWindowPerModel, {
+          "global-model": 100_000,
+          "shared-model": 400_000,
+          "local-model": 300_000,
+        });
+      });
+
+      it("removes contextWindowPerModel entries set to null in the local config", async () => {
+        testFs._files.set(
+          getGlobalConfigPath(),
+          JSON.stringify({
+            ...testConfig,
+            contextWindowPerModel: {
+              "kept-model": 100_000,
+              "cancelled-model": 200_000,
+            },
+          }),
+        );
+        testFs._files.set(
+          getLocalConfigPath(),
+          JSON.stringify({
+            ...testConfig,
+            contextWindowPerModel: {
+              "cancelled-model": null,
+            },
+          }),
+        );
+
+        await initState();
+
+        assert.deepEqual(getState().config.contextWindowPerModel, {
+          "kept-model": 100_000,
+        });
+      });
+    });
+
+    describe("keymaps", () => {
+      it("uses its keymaps over the global config, default config", async () => {
         testFs._files.set(
           getGlobalConfigPath(),
           JSON.stringify({
             ...testConfig,
             keymaps: {
               edit: { name: "v", ctrl: false, meta: false, shift: false },
-              history: {
-                name: "o",
-                ctrl: false,
-                meta: false,
-                shift: false,
-              },
+              history: { name: "o", ctrl: false, meta: false, shift: false },
               clear: { name: "j", ctrl: false, meta: false, shift: false },
+            },
+          }),
+        );
+        testFs._files.set(
+          getLocalConfigPath(),
+          JSON.stringify({
+            ...testConfig,
+            keymaps: {
+              edit: { name: "e", ctrl: true, meta: false, shift: false },
+              history: { name: "l", ctrl: true, meta: false, shift: false },
+              clear: { name: "k", ctrl: true, meta: false, shift: false },
+              skills: { name: "s", ctrl: true, meta: false, shift: false },
+            },
+          }),
+        );
+
+        await initState();
+
+        assert.deepEqual(getState().config.keymaps.edit, {
+          name: "e",
+          ctrl: true,
+          meta: false,
+          shift: false,
+        });
+        assert.deepEqual(getState().config.keymaps["history"], {
+          name: "l",
+          ctrl: true,
+          meta: false,
+          shift: false,
+        });
+        assert.deepEqual(getState().config.keymaps["clear"], {
+          name: "k",
+          ctrl: true,
+          meta: false,
+          shift: false,
+        });
+        assert.deepEqual(getState().config.keymaps["skills"], {
+          name: "s",
+          ctrl: true,
+          meta: false,
+          shift: false,
+        });
+      });
+
+      it("merges partial keymaps with defaults", async () => {
+        testFs._files.set(
+          getLocalConfigPath(),
+          JSON.stringify({
+            ...testConfig,
+            keymaps: {
+              edit: { name: "v", ctrl: false, meta: false, shift: false },
             },
           }),
         );
@@ -1196,174 +456,71 @@ describe("config", () => {
           meta: false,
           shift: false,
         });
-        assert.deepEqual(getState().config.keymaps["history"], {
-          name: "o",
-          ctrl: false,
-          meta: false,
-          shift: false,
-        });
-        assert.deepEqual(getState().config.keymaps["clear"], {
-          name: "j",
-          ctrl: false,
-          meta: false,
-          shift: false,
-        });
+        assert.strictEqual(getState().config.keymaps["history"], undefined);
+        assert.strictEqual(getState().config.keymaps["clear"], undefined);
       });
 
-      it("uses its loadingStateFrames over the default config", async () => {
+      it("rejects keymap bindings shared with the default config", async () => {
+        testFs._files.set(
+          getLocalConfigPath(),
+          JSON.stringify({
+            ...testConfig,
+            keymaps: {
+              clear: { name: "g", ctrl: true },
+            },
+          }),
+        );
+
+        await assert.rejects(
+          initState(),
+          /keymaps must be unique: `edit` and `clear` are both bound to/,
+        );
+      });
+
+      it("rejects duplicate keymap bindings within the same config", async () => {
+        testFs._files.set(
+          getLocalConfigPath(),
+          JSON.stringify({
+            ...testConfig,
+            keymaps: {
+              clear: { name: "x", ctrl: true },
+              history: { name: "x", ctrl: true },
+            },
+          }),
+        );
+
+        await assert.rejects(
+          initState(),
+          /keymaps must be unique: `clear` and `history` are both bound to/,
+        );
+      });
+    });
+
+    describe("directories and loading state", () => {
+      it("uses its customSlashCommandDirs over the global config, default config", async () => {
         testFs._files.set(
           getGlobalConfigPath(),
           JSON.stringify({
             ...testConfig,
-            loadingStateFrames: ["⣾", "⣽", "⣻", "⢿"],
+            customSlashCommandDirs: ["/global-dir"],
+          }),
+        );
+        testFs._files.set(
+          getLocalConfigPath(),
+          JSON.stringify({
+            ...testConfig,
+            customSlashCommandDirs: ["/local-dir"],
           }),
         );
 
         await initState();
 
-        assert.deepStrictEqual(getState().config.loadingStateFrames, [
-          "⣾",
-          "⣽",
-          "⣻",
-          "⢿",
+        assert.deepStrictEqual(getState().config.customSlashCommandDirs, [
+          "/local-dir",
         ]);
       });
 
-      it("uses its loadingStateFrameDuration over the default config", async () => {
-        testFs._files.set(
-          getGlobalConfigPath(),
-          JSON.stringify({
-            ...testConfig,
-            loadingStateFrameDuration: 150,
-          }),
-        );
-
-        await initState();
-
-        assert.strictEqual(getState().config.loadingStateFrameDuration, 150);
-      });
-
-      it("uses its promptPrefix over the default config", async () => {
-        testFs._files.set(
-          getGlobalConfigPath(),
-          JSON.stringify({
-            ...testConfig,
-            promptPrefix: "❯ ",
-          }),
-        );
-
-        await initState();
-
-        assert.strictEqual(getState().config.promptPrefix, "❯ ");
-      });
-
-      it("uses its suppressStartupDurations over the default config", async () => {
-        testFs._files.set(
-          getGlobalConfigPath(),
-          JSON.stringify({
-            ...testConfig,
-            suppressStartupDurations: true,
-          }),
-        );
-
-        await initState();
-
-        assert.strictEqual(getState().config.suppressStartupDurations, true);
-      });
-
-      it("uses its suppressBatUnavailableWarning over the default config", async () => {
-        testFs._files.set(
-          getGlobalConfigPath(),
-          JSON.stringify({
-            ...testConfig,
-            suppressBatUnavailableWarning: true,
-          }),
-        );
-
-        await initState();
-
-        assert.strictEqual(
-          getState().config.suppressBatUnavailableWarning,
-          true,
-        );
-      });
-
-      it("uses its asciiOnly over the default config", async () => {
-        testFs._files.set(
-          getGlobalConfigPath(),
-          JSON.stringify({
-            ...testConfig,
-            asciiOnly: true,
-          }),
-        );
-
-        await initState();
-
-        assert.strictEqual(getState().config.asciiOnly, true);
-      });
-
-      it("uses its compactWithStructuredOutput over the default config", async () => {
-        testFs._files.set(
-          getGlobalConfigPath(),
-          JSON.stringify({
-            ...testConfig,
-            compactWithStructuredOutput: false,
-          }),
-        );
-
-        await initState();
-
-        assert.strictEqual(
-          getState().config.compactWithStructuredOutput,
-          false,
-        );
-      });
-
-      it("uses its reasoning over the default config", async () => {
-        testFs._files.set(
-          getGlobalConfigPath(),
-          JSON.stringify({
-            ...testConfig,
-            reasoning: "medium",
-          }),
-        );
-
-        await initState();
-
-        assert.strictEqual(getState().config.reasoning, "medium");
-      });
-
-      it("uses its usageLimit over the default config", async () => {
-        testFs._files.set(
-          getGlobalConfigPath(),
-          JSON.stringify({
-            ...testConfig,
-            usageLimit: { duration: "2h", dollarAmount: 20 },
-          }),
-        );
-
-        await initState();
-
-        assert.deepStrictEqual(getState().config.usageLimit, {
-          duration: "2h",
-          dollarAmount: 20,
-        });
-      });
-
-      it("uses undefined usageLimit when global config omits it", async () => {
-        testFs._files.set(
-          getGlobalConfigPath(),
-          JSON.stringify({
-            ...testConfig,
-          }),
-        );
-
-        await initState();
-
-        assert.strictEqual(getState().config.usageLimit, undefined);
-      });
-
-      it("uses its customSkillDirs over the default config", async () => {
+      it("uses its customSkillDirs over the global config, default config", async () => {
         testFs._files.set(
           getGlobalConfigPath(),
           JSON.stringify({
@@ -1371,12 +528,886 @@ describe("config", () => {
             customSkillDirs: ["/global-skills"],
           }),
         );
+        testFs._files.set(
+          getLocalConfigPath(),
+          JSON.stringify({
+            ...testConfig,
+            customSkillDirs: ["/local-skills"],
+          }),
+        );
 
         await initState();
 
         assert.deepStrictEqual(getState().config.customSkillDirs, [
-          "/global-skills",
+          "/local-skills",
         ]);
+      });
+
+      it("uses its loadingStateFrames over the global config, default config", async () => {
+        testFs._files.set(
+          getGlobalConfigPath(),
+          JSON.stringify({
+            ...testConfig,
+            loadingStateFrames: ["⣾", "⣽", "⣻", "⢿"],
+          }),
+        );
+        testFs._files.set(
+          getLocalConfigPath(),
+          JSON.stringify({
+            ...testConfig,
+            loadingStateFrames: ["⠋", "⠙", "⠹", "⠸"],
+          }),
+        );
+
+        await initState();
+
+        assert.deepStrictEqual(getState().config.loadingStateFrames, [
+          "⠋",
+          "⠙",
+          "⠹",
+          "⠸",
+        ]);
+      });
+
+      it("uses its loadingStateFrameDuration over the global config, default config", async () => {
+        testFs._files.set(
+          getGlobalConfigPath(),
+          JSON.stringify({
+            ...testConfig,
+            loadingStateFrameDuration: 100,
+          }),
+        );
+        testFs._files.set(
+          getLocalConfigPath(),
+          JSON.stringify({
+            ...testConfig,
+            loadingStateFrameDuration: 200,
+          }),
+        );
+
+        await initState();
+
+        assert.strictEqual(getState().config.loadingStateFrameDuration, 200);
+      });
+    });
+
+    describe("settings overrides", () => {
+      it("uses its promptPrefix over the global config, default config", async () => {
+        testFs._files.set(
+          getGlobalConfigPath(),
+          JSON.stringify({
+            ...testConfig,
+            promptPrefix: "> ",
+          }),
+        );
+        testFs._files.set(
+          getLocalConfigPath(),
+          JSON.stringify({
+            ...testConfig,
+            promptPrefix: "🤖 ",
+          }),
+        );
+
+        await initState();
+
+        assert.strictEqual(getState().config.promptPrefix, "🤖 ");
+      });
+
+      it("uses its suppressStartupDurations over the global config, default config", async () => {
+        testFs._files.set(
+          getGlobalConfigPath(),
+          JSON.stringify({
+            ...testConfig,
+            suppressStartupDurations: true,
+          }),
+        );
+        testFs._files.set(
+          getLocalConfigPath(),
+          JSON.stringify({
+            ...testConfig,
+            suppressStartupDurations: false,
+          }),
+        );
+
+        await initState();
+
+        assert.strictEqual(getState().config.suppressStartupDurations, false);
+      });
+
+      it("uses its suppressBatUnavailableWarning over the global config, default config", async () => {
+        testFs._files.set(
+          getGlobalConfigPath(),
+          JSON.stringify({
+            ...testConfig,
+            suppressBatUnavailableWarning: true,
+          }),
+        );
+        testFs._files.set(
+          getLocalConfigPath(),
+          JSON.stringify({
+            ...testConfig,
+            suppressBatUnavailableWarning: false,
+          }),
+        );
+
+        await initState();
+
+        assert.strictEqual(
+          getState().config.suppressBatUnavailableWarning,
+          false,
+        );
+      });
+
+      it("uses its suppressToolEditDiffs over the global config, default config", async () => {
+        testFs._files.set(
+          getGlobalConfigPath(),
+          JSON.stringify({
+            ...testConfig,
+            suppressToolEditDiffs: true,
+          }),
+        );
+        testFs._files.set(
+          getLocalConfigPath(),
+          JSON.stringify({
+            ...testConfig,
+            suppressToolEditDiffs: false,
+          }),
+        );
+
+        await initState();
+
+        assert.strictEqual(getState().config.suppressToolEditDiffs, false);
+      });
+
+      it("uses its messageQueueDelimiter over the global config, default config", async () => {
+        testFs._files.set(
+          getGlobalConfigPath(),
+          JSON.stringify({
+            ...testConfig,
+            messageQueueDelimiter: "g---\n",
+          }),
+        );
+        testFs._files.set(
+          getLocalConfigPath(),
+          JSON.stringify({
+            ...testConfig,
+            messageQueueDelimiter: "L---\n",
+          }),
+        );
+
+        await initState();
+
+        assert.strictEqual(getState().config.messageQueueDelimiter, "L---\n");
+      });
+
+      it("uses its asciiOnly over the global config, default config", async () => {
+        testFs._files.set(
+          getGlobalConfigPath(),
+          JSON.stringify({
+            ...testConfig,
+            asciiOnly: true,
+          }),
+        );
+        testFs._files.set(
+          getLocalConfigPath(),
+          JSON.stringify({
+            ...testConfig,
+            asciiOnly: false,
+          }),
+        );
+
+        await initState();
+
+        assert.strictEqual(getState().config.asciiOnly, false);
+      });
+
+      it("uses its compactWithStructuredOutput over the global config, default config", async () => {
+        testFs._files.set(
+          getGlobalConfigPath(),
+          JSON.stringify({
+            ...testConfig,
+            compactWithStructuredOutput: false,
+          }),
+        );
+        testFs._files.set(
+          getLocalConfigPath(),
+          JSON.stringify({
+            ...testConfig,
+            compactWithStructuredOutput: true,
+          }),
+        );
+
+        await initState();
+
+        assert.strictEqual(getState().config.compactWithStructuredOutput, true);
+      });
+
+      it("uses its reasoning over the global config, default config", async () => {
+        testFs._files.set(
+          getGlobalConfigPath(),
+          JSON.stringify({
+            ...testConfig,
+            reasoning: "low",
+          }),
+        );
+        testFs._files.set(
+          getLocalConfigPath(),
+          JSON.stringify({
+            ...testConfig,
+            reasoning: "high",
+          }),
+        );
+
+        await initState();
+
+        assert.strictEqual(getState().config.reasoning, "high");
+      });
+    });
+
+    describe("rejects invalid values", () => {
+      it("rejects an invalid reasoning", async () => {
+        testFs._files.set(
+          getGlobalConfigPath(),
+          JSON.stringify({
+            ...testConfig,
+            reasoning: "maximum",
+          }),
+        );
+
+        await assert.rejects(initState(), /Invalid option/);
+      });
+
+      it("rejects an empty messageQueueDelimiter", async () => {
+        testFs._files.set(
+          getGlobalConfigPath(),
+          JSON.stringify({
+            ...testConfig,
+            messageQueueDelimiter: "",
+          }),
+        );
+        testFs._files.set(
+          getLocalConfigPath(),
+          JSON.stringify({
+            ...testConfig,
+          }),
+        );
+
+        await assert.rejects(
+          initState(),
+          /Invalid string: must end with \\"\\n\\"/,
+        );
+      });
+
+      it("rejects a messageQueueDelimiter not ending with a newline", async () => {
+        testFs._files.set(
+          getGlobalConfigPath(),
+          JSON.stringify({
+            ...testConfig,
+            messageQueueDelimiter: "g---",
+          }),
+        );
+        testFs._files.set(
+          getLocalConfigPath(),
+          JSON.stringify({
+            ...testConfig,
+          }),
+        );
+
+        await assert.rejects(
+          initState(),
+          /Invalid string: must end with \\"\\n\\"/,
+        );
+      });
+
+      it("rejects config with an unknown key", async () => {
+        testFs._files.set(
+          getGlobalConfigPath(),
+          JSON.stringify({
+            ...testConfig,
+            contextPerModel: { "deepseek-v4-flash-free": 4000 },
+          }),
+        );
+        testFs._files.set(
+          getLocalConfigPath(),
+          JSON.stringify({
+            ...testConfig,
+          }),
+        );
+
+        await assert.rejects(initState(), /Unrecognized key/);
+      });
+    });
+
+    describe("usage limit settings", () => {
+      it("uses its usageLimit over the global config, default config", async () => {
+        testFs._files.set(
+          getGlobalConfigPath(),
+          JSON.stringify({
+            ...testConfig,
+            usageLimit: { duration: "2h", dollarAmount: 10 },
+          }),
+        );
+        testFs._files.set(
+          getLocalConfigPath(),
+          JSON.stringify({
+            ...testConfig,
+            usageLimit: { duration: "60m", dollarAmount: 20 },
+          }),
+        );
+
+        await initState();
+
+        assert.deepStrictEqual(getState().config.usageLimit, {
+          duration: "60m",
+          dollarAmount: 20,
+        });
+      });
+
+      it("falls back to global usageLimit when local omits it", async () => {
+        testFs._files.set(
+          getGlobalConfigPath(),
+          JSON.stringify({
+            ...testConfig,
+            usageLimit: { duration: "2h", dollarAmount: 10 },
+          }),
+        );
+        testFs._files.set(
+          getLocalConfigPath(),
+          JSON.stringify({
+            ...testConfig,
+          }),
+        );
+
+        await initState();
+
+        assert.deepStrictEqual(getState().config.usageLimit, {
+          duration: "2h",
+          dollarAmount: 10,
+        });
+      });
+
+      it("rejects usageLimit without duration", async () => {
+        testFs._files.set(
+          getGlobalConfigPath(),
+          JSON.stringify({
+            ...testConfig,
+            usageLimit: { dollarAmount: 10 },
+          }),
+        );
+        testFs._files.set(
+          getLocalConfigPath(),
+          JSON.stringify({
+            ...testConfig,
+          }),
+        );
+
+        await assert.rejects(initState(), /Invalid input: expected string/);
+      });
+
+      it("rejects usageLimit without dollarAmount", async () => {
+        testFs._files.set(
+          getGlobalConfigPath(),
+          JSON.stringify({
+            ...testConfig,
+            usageLimit: { duration: "2h" },
+          }),
+        );
+        testFs._files.set(
+          getLocalConfigPath(),
+          JSON.stringify({
+            ...testConfig,
+          }),
+        );
+
+        await assert.rejects(initState(), /Invalid input: expected number/);
+      });
+    });
+
+    describe("rejects invalid usage limits", () => {
+      it("rejects non-string usageLimit.duration", async () => {
+        testFs._files.set(
+          getGlobalConfigPath(),
+          JSON.stringify({
+            ...testConfig,
+            usageLimit: { duration: 3_600_000, dollarAmount: 10 },
+          }),
+        );
+
+        await assert.rejects(initState(), /Invalid input: expected string/);
+      });
+
+      it("rejects usageLimit.duration with an invalid suffix", async () => {
+        testFs._files.set(
+          getGlobalConfigPath(),
+          JSON.stringify({
+            ...testConfig,
+            usageLimit: { duration: "10x", dollarAmount: 10 },
+          }),
+        );
+
+        await assert.rejects(
+          initState(),
+          /usageLimit\.duration must be of the format/,
+        );
+      });
+
+      it("rejects usageLimit.duration without a suffix", async () => {
+        testFs._files.set(
+          getGlobalConfigPath(),
+          JSON.stringify({
+            ...testConfig,
+            usageLimit: { duration: "3600000", dollarAmount: 10 },
+          }),
+        );
+
+        await assert.rejects(
+          initState(),
+          /usageLimit\.duration must be of the format/,
+        );
+      });
+
+      it("rejects usageLimit.duration with a non-numeric prefix", async () => {
+        testFs._files.set(
+          getGlobalConfigPath(),
+          JSON.stringify({
+            ...testConfig,
+            usageLimit: { duration: "abch", dollarAmount: 10 },
+          }),
+        );
+
+        await assert.rejects(
+          initState(),
+          /usageLimit\.duration must be of the format/,
+        );
+      });
+
+      it("rejects usageLimit.duration with a negative prefix", async () => {
+        testFs._files.set(
+          getGlobalConfigPath(),
+          JSON.stringify({
+            ...testConfig,
+            usageLimit: { duration: "-2h", dollarAmount: 10 },
+          }),
+        );
+
+        await assert.rejects(
+          initState(),
+          /usageLimit\.duration must be of the format/,
+        );
+      });
+
+      it("rejects non-number usageLimit.dollarAmount", async () => {
+        testFs._files.set(
+          getGlobalConfigPath(),
+          JSON.stringify({
+            ...testConfig,
+            usageLimit: { duration: "2h", dollarAmount: "five" },
+          }),
+        );
+
+        await assert.rejects(initState(), /Invalid input: expected number/);
+      });
+    });
+
+    describe("rejects non-boolean values", () => {
+      it("rejects non-boolean asciiOnly", async () => {
+        testFs._files.set(
+          getGlobalConfigPath(),
+          JSON.stringify({
+            ...testConfig,
+            asciiOnly: "yes",
+          }),
+        );
+
+        await assert.rejects(initState(), /Invalid input: expected boolean/);
+      });
+
+      it("rejects non-boolean suppressStartupDurations", async () => {
+        testFs._files.set(
+          getGlobalConfigPath(),
+          JSON.stringify({
+            ...testConfig,
+            suppressStartupDurations: "yes",
+          }),
+        );
+
+        await assert.rejects(initState(), /Invalid input: expected boolean/);
+      });
+
+      it("rejects non-boolean compactWithStructuredOutput", async () => {
+        testFs._files.set(
+          getGlobalConfigPath(),
+          JSON.stringify({
+            ...testConfig,
+            compactWithStructuredOutput: "yes",
+          }),
+        );
+
+        await assert.rejects(initState(), /Invalid input: expected boolean/);
+      });
+
+      it("rejects non-boolean suppressToolEditDiffs", async () => {
+        testFs._files.set(
+          getGlobalConfigPath(),
+          JSON.stringify({
+            ...testConfig,
+            suppressToolEditDiffs: "yes",
+          }),
+        );
+
+        await assert.rejects(initState(), /Invalid input: expected boolean/);
+      });
+
+      it("rejects non-boolean suppressBatUnavailableWarning", async () => {
+        testFs._files.set(
+          getGlobalConfigPath(),
+          JSON.stringify({
+            ...testConfig,
+            suppressBatUnavailableWarning: "yes",
+          }),
+        );
+
+        await assert.rejects(initState(), /Invalid input: expected boolean/);
+      });
+    });
+  });
+
+  describe("when local config does not exist", () => {
+    describe("when the global config exists", () => {
+      describe("model, pricing, and warnings", () => {
+        it("uses its model over the default config", async () => {
+          testFs._files.set(
+            getGlobalConfigPath(),
+            JSON.stringify({
+              ...testConfig,
+              model: "claude-haiku-4-5",
+            }),
+          );
+
+          await initState();
+          assert.equal(getState().config.model, "claude-haiku-4-5");
+        });
+
+        it("uses its sdkProvider over the default config", async () => {
+          testFs._files.set(
+            getGlobalConfigPath(),
+            JSON.stringify({
+              model: testConfig.model,
+              sdkProvider: "anthropic",
+            }),
+          );
+
+          await initState();
+          assert.equal(getState().config.sdkProvider, "anthropic");
+        });
+
+        it("warns when the model has no contextWindowPerModel entry", async () => {
+          testFs._files.set(
+            getGlobalConfigPath(),
+            JSON.stringify({ model: testConfig.model }),
+          );
+
+          const getWrites = mockStdoutWrites();
+          await initState();
+          assert.deepStrictEqual(getWrites(), [
+            `${YELLOW}- Warning: using a default context window of 128,000 tokens because there is no \`contextWindowPerModel\` entry for the current model \`claude-sonnet-4-6\`${RESET}\n`,
+            `${BLUE}Reading context files: ${RESET}`,
+            `${GREEN}0.0ms${RESET}\n`,
+            `${BLUE}Reading skills: ${RESET}`,
+            `${GREEN}0.0ms${RESET}\n`,
+            `${BLUE}Reading slash commands: ${RESET}`,
+            `${GREEN}0.0ms${RESET}\n`,
+          ]);
+        });
+
+        it("does not warn when the model has a contextWindowPerModel entry", async () => {
+          testFs._files.set(
+            getGlobalConfigPath(),
+            JSON.stringify({
+              model: testConfig.model,
+              contextWindowPerModel: { "claude-sonnet-4-6": 200_000 },
+              suppressStartupDurations: true,
+            }),
+          );
+
+          const getWrites = mockStdoutWrites();
+          await initState();
+          assert.deepStrictEqual(getWrites(), []);
+        });
+
+        it("warns when the usage limit has no pricingPerModel entry for the current model", async () => {
+          testFs._files.set(
+            getGlobalConfigPath(),
+            JSON.stringify({
+              ...testConfig,
+              usageLimit: { duration: "2h", dollarAmount: 10 },
+              contextWindowPerModel: { "claude-sonnet-4-6": 200_000 },
+              suppressStartupDurations: true,
+            }),
+          );
+
+          const getWrites = mockStdoutWrites();
+          await initState();
+          assert.deepStrictEqual(getWrites(), [
+            `${YELLOW}- Warning: usage limit is disabled because there is no \`pricingPerModel\` entry for the current model \`claude-sonnet-4-6\`${RESET}\n`,
+          ]);
+        });
+
+        it("uses its pricingPerModel over the default config", async () => {
+          const globalPricing = structuredClone(defaultConfig.pricingPerModel);
+          globalPricing["test-model"] = {
+            inputPerMillion: 999,
+            outputPerMillion: 0,
+            cacheReadPerMillion: 0,
+            cacheWritePerMillion: 0,
+          };
+
+          testFs._files.set(
+            getGlobalConfigPath(),
+            JSON.stringify({
+              ...testConfig,
+              model: "test-model",
+              pricingPerModel: globalPricing,
+              usageLimit: { duration: "60m", dollarAmount: 10 },
+            }),
+          );
+
+          await initState();
+          assert.deepEqual(getState().config.pricingPerModel, globalPricing);
+        });
+      });
+
+      describe("keymaps and loading state", () => {
+        it("uses its keymaps over the default config", async () => {
+          testFs._files.set(
+            getGlobalConfigPath(),
+            JSON.stringify({
+              ...testConfig,
+              keymaps: {
+                edit: { name: "v", ctrl: false, meta: false, shift: false },
+                history: {
+                  name: "o",
+                  ctrl: false,
+                  meta: false,
+                  shift: false,
+                },
+                clear: { name: "j", ctrl: false, meta: false, shift: false },
+              },
+            }),
+          );
+
+          await initState();
+
+          assert.deepEqual(getState().config.keymaps.edit, {
+            name: "v",
+            ctrl: false,
+            meta: false,
+            shift: false,
+          });
+          assert.deepEqual(getState().config.keymaps["history"], {
+            name: "o",
+            ctrl: false,
+            meta: false,
+            shift: false,
+          });
+          assert.deepEqual(getState().config.keymaps["clear"], {
+            name: "j",
+            ctrl: false,
+            meta: false,
+            shift: false,
+          });
+        });
+
+        it("uses its loadingStateFrames over the default config", async () => {
+          testFs._files.set(
+            getGlobalConfigPath(),
+            JSON.stringify({
+              ...testConfig,
+              loadingStateFrames: ["⣾", "⣽", "⣻", "⢿"],
+            }),
+          );
+
+          await initState();
+
+          assert.deepStrictEqual(getState().config.loadingStateFrames, [
+            "⣾",
+            "⣽",
+            "⣻",
+            "⢿",
+          ]);
+        });
+
+        it("uses its loadingStateFrameDuration over the default config", async () => {
+          testFs._files.set(
+            getGlobalConfigPath(),
+            JSON.stringify({
+              ...testConfig,
+              loadingStateFrameDuration: 150,
+            }),
+          );
+
+          await initState();
+
+          assert.strictEqual(getState().config.loadingStateFrameDuration, 150);
+        });
+      });
+
+      describe("settings overrides", () => {
+        it("hides startup durations when suppressStartupDurations is true", async () => {
+          testFs._files.set(
+            getGlobalConfigPath(),
+            JSON.stringify({
+              model: testConfig.model,
+              sdkProvider: "anthropic",
+              suppressStartupDurations: true,
+              baseURL: "https://api.example.com",
+            }),
+          );
+
+          const getWrites = mockStdoutWrites();
+          await initState();
+          assert.deepStrictEqual(getWrites(), [
+            `${YELLOW}- Warning: using a default context window of 128,000 tokens because there is no \`contextWindowPerModel\` entry for the current model \`claude-sonnet-4-6\`${RESET}\n`,
+          ]);
+        });
+
+        it("uses its promptPrefix over the default config", async () => {
+          testFs._files.set(
+            getGlobalConfigPath(),
+            JSON.stringify({
+              ...testConfig,
+              promptPrefix: "❯ ",
+            }),
+          );
+
+          await initState();
+
+          assert.strictEqual(getState().config.promptPrefix, "❯ ");
+        });
+
+        it("uses its suppressStartupDurations over the default config", async () => {
+          testFs._files.set(
+            getGlobalConfigPath(),
+            JSON.stringify({
+              ...testConfig,
+              suppressStartupDurations: true,
+            }),
+          );
+
+          await initState();
+
+          assert.strictEqual(getState().config.suppressStartupDurations, true);
+        });
+
+        it("uses its suppressBatUnavailableWarning over the default config", async () => {
+          testFs._files.set(
+            getGlobalConfigPath(),
+            JSON.stringify({
+              ...testConfig,
+              suppressBatUnavailableWarning: true,
+            }),
+          );
+
+          await initState();
+
+          assert.strictEqual(
+            getState().config.suppressBatUnavailableWarning,
+            true,
+          );
+        });
+
+        it("uses its asciiOnly over the default config", async () => {
+          testFs._files.set(
+            getGlobalConfigPath(),
+            JSON.stringify({
+              ...testConfig,
+              asciiOnly: true,
+            }),
+          );
+
+          await initState();
+
+          assert.strictEqual(getState().config.asciiOnly, true);
+        });
+
+        it("uses its compactWithStructuredOutput over the default config", async () => {
+          testFs._files.set(
+            getGlobalConfigPath(),
+            JSON.stringify({
+              ...testConfig,
+              compactWithStructuredOutput: false,
+            }),
+          );
+
+          await initState();
+
+          assert.strictEqual(
+            getState().config.compactWithStructuredOutput,
+            false,
+          );
+        });
+
+        it("uses its reasoning over the default config", async () => {
+          testFs._files.set(
+            getGlobalConfigPath(),
+            JSON.stringify({
+              ...testConfig,
+              reasoning: "medium",
+            }),
+          );
+
+          await initState();
+
+          assert.strictEqual(getState().config.reasoning, "medium");
+        });
+
+        it("uses its customSkillDirs over the default config", async () => {
+          testFs._files.set(
+            getGlobalConfigPath(),
+            JSON.stringify({
+              ...testConfig,
+              customSkillDirs: ["/global-skills"],
+            }),
+          );
+
+          await initState();
+
+          assert.deepStrictEqual(getState().config.customSkillDirs, [
+            "/global-skills",
+          ]);
+        });
+      });
+
+      describe("usage limits", () => {
+        it("uses its usageLimit over the default config", async () => {
+          testFs._files.set(
+            getGlobalConfigPath(),
+            JSON.stringify({
+              ...testConfig,
+              usageLimit: { duration: "2h", dollarAmount: 20 },
+            }),
+          );
+
+          await initState();
+
+          assert.deepStrictEqual(getState().config.usageLimit, {
+            duration: "2h",
+            dollarAmount: 20,
+          });
+        });
+
+        it("uses undefined usageLimit when global config omits it", async () => {
+          testFs._files.set(
+            getGlobalConfigPath(),
+            JSON.stringify({
+              ...testConfig,
+            }),
+          );
+
+          await initState();
+
+          assert.strictEqual(getState().config.usageLimit, undefined);
+        });
       });
     });
 
@@ -1406,291 +1437,299 @@ describe("config", () => {
     });
   });
 
-  it("throws when loadingStateFrames have unequal lengths", async () => {
-    testFs._files.set(
-      getGlobalConfigPath(),
-      JSON.stringify({
-        ...testConfig,
-        loadingStateFrames: ["..", "...", ".."],
-      }),
-    );
+  describe("validates loadingStateFrames", () => {
+    it("throws when loadingStateFrames have unequal lengths", async () => {
+      testFs._files.set(
+        getGlobalConfigPath(),
+        JSON.stringify({
+          ...testConfig,
+          loadingStateFrames: ["..", "...", ".."],
+        }),
+      );
 
-    await assert.rejects(
-      initState(),
-      /All loadingStateFrames strings must be the same length/,
-    );
+      await assert.rejects(
+        initState(),
+        /All loadingStateFrames strings must be the same length/,
+      );
+    });
+
+    it("throws when loadingStateFrames has fewer than 2 entries", async () => {
+      testFs._files.set(
+        getGlobalConfigPath(),
+        JSON.stringify({
+          ...testConfig,
+          loadingStateFrames: [".."],
+        }),
+      );
+
+      await assert.rejects(
+        initState(),
+        /loadingStateFrames must be at least length 2/,
+      );
+    });
+
+    it("throws when loadingStateFrames is empty", async () => {
+      testFs._files.set(
+        getGlobalConfigPath(),
+        JSON.stringify({
+          ...testConfig,
+          loadingStateFrames: [],
+        }),
+      );
+
+      await assert.rejects(
+        initState(),
+        /loadingStateFrames must be at least length 2/,
+      );
+    });
+
+    it("accepts loadingStateFrames with equal-length entries", async () => {
+      testFs._files.set(
+        getGlobalConfigPath(),
+        JSON.stringify({
+          ...testConfig,
+          loadingStateFrames: ["..", "..", ".."],
+        }),
+      );
+
+      await initState();
+      assert.deepStrictEqual(getState().config.loadingStateFrames, [
+        "..",
+        "..",
+        "..",
+      ]);
+    });
   });
 
-  it("throws when loadingStateFrames has fewer than 2 entries", async () => {
-    testFs._files.set(
-      getGlobalConfigPath(),
-      JSON.stringify({
-        ...testConfig,
-        loadingStateFrames: [".."],
-      }),
-    );
+  describe("throws on invalid config", () => {
+    it("throws on invalid YAML in global config", async () => {
+      testFs._files.set(getGlobalConfigPath(), "key: [unclosed");
 
-    await assert.rejects(
-      initState(),
-      /loadingStateFrames must be at least length 2/,
-    );
+      await assert.rejects(
+        initState(),
+        /`\/fake-home\/\.config\/lasso\/settings\.yaml` is invalid YAML!/,
+      );
+    });
+
+    it("throws on invalid YAML in local config", async () => {
+      testFs._files.set(getLocalConfigPath(), "key: [unclosed");
+
+      await assert.rejects(
+        initState(),
+        /`\/test-cwd\/\.lasso\/settings\.yaml` is invalid YAML!/,
+      );
+    });
+
+    it("throws on invalid global config option", async () => {
+      testFs._files.set(
+        getGlobalConfigPath(),
+        JSON.stringify({
+          ...testConfig,
+          invalidOption: true,
+        }),
+      );
+
+      await assert.rejects(
+        initState(),
+        /Config at `\/fake-home\/\.config\/lasso\/settings\.yaml` has an invalid option!/,
+      );
+    });
+
+    it("throws on invalid local config option", async () => {
+      testFs._files.set(
+        getLocalConfigPath(),
+        JSON.stringify({
+          ...testConfig,
+          invalidOption: true,
+        }),
+      );
+
+      await assert.rejects(
+        initState(),
+        /Config at `\/test-cwd\/\.lasso\/settings\.yaml` has an invalid option!/,
+      );
+    });
   });
 
-  it("throws when loadingStateFrames is empty", async () => {
-    testFs._files.set(
-      getGlobalConfigPath(),
-      JSON.stringify({
-        ...testConfig,
-        loadingStateFrames: [],
-      }),
-    );
+  describe("initializes state", () => {
+    it("sets debug from DEBUG env var", async () => {
+      testProcessEnv._clear();
+      testProcessEnv._set("DEBUG", "1");
+      testFs._files.set(
+        getGlobalConfigPath(),
+        JSON.stringify({
+          ...testConfig,
+        }),
+      );
 
-    await assert.rejects(
-      initState(),
-      /loadingStateFrames must be at least length 2/,
-    );
-  });
+      await initState();
+      assert.equal(getState().app.debugLog, true);
+    });
 
-  it("accepts loadingStateFrames with equal-length entries", async () => {
-    testFs._files.set(
-      getGlobalConfigPath(),
-      JSON.stringify({
-        ...testConfig,
-        loadingStateFrames: ["..", "..", ".."],
-      }),
-    );
+    it("sets contextStr from dep", async () => {
+      testFs._dirs.add(getGlobalContextDir());
+      testFs._gitLsFilesResults.set("**/AGENTS.md", [
+        "/fake-home/.config/lasso/context/AGENTS.md",
+      ]);
+      testFs._files.set("/fake-home/.config/lasso/context/AGENTS.md", "hello");
+      testFs._files.set(
+        getGlobalConfigPath(),
+        JSON.stringify({
+          ...testConfig,
+        }),
+      );
 
-    await initState();
-    assert.deepStrictEqual(getState().config.loadingStateFrames, [
-      "..",
-      "..",
-      "..",
-    ]);
-  });
-
-  it("throws on invalid YAML in global config", async () => {
-    testFs._files.set(getGlobalConfigPath(), "key: [unclosed");
-
-    await assert.rejects(
-      initState(),
-      /`\/fake-home\/\.config\/lasso\/settings\.yaml` is invalid YAML!/,
-    );
-  });
-
-  it("throws on invalid YAML in local config", async () => {
-    testFs._files.set(getLocalConfigPath(), "key: [unclosed");
-
-    await assert.rejects(
-      initState(),
-      /`\/test-cwd\/\.lasso\/settings\.yaml` is invalid YAML!/,
-    );
-  });
-
-  it("throws on invalid global config option", async () => {
-    testFs._files.set(
-      getGlobalConfigPath(),
-      JSON.stringify({
-        ...testConfig,
-        invalidOption: true,
-      }),
-    );
-
-    await assert.rejects(
-      initState(),
-      /Config at `\/fake-home\/\.config\/lasso\/settings\.yaml` has an invalid option!/,
-    );
-  });
-
-  it("throws on invalid local config option", async () => {
-    testFs._files.set(
-      getLocalConfigPath(),
-      JSON.stringify({
-        ...testConfig,
-        invalidOption: true,
-      }),
-    );
-
-    await assert.rejects(
-      initState(),
-      /Config at `\/test-cwd\/\.lasso\/settings\.yaml` has an invalid option!/,
-    );
-  });
-
-  it("sets debug from DEBUG env var", async () => {
-    testProcessEnv._clear();
-    testProcessEnv._set("DEBUG", "1");
-    testFs._files.set(
-      getGlobalConfigPath(),
-      JSON.stringify({
-        ...testConfig,
-      }),
-    );
-
-    await initState();
-    assert.equal(getState().app.debugLog, true);
-  });
-
-  it("sets contextStr from dep", async () => {
-    testFs._dirs.add(getGlobalContextDir());
-    testFs._gitLsFilesResults.set("**/AGENTS.md", [
-      "/fake-home/.config/lasso/context/AGENTS.md",
-    ]);
-    testFs._files.set("/fake-home/.config/lasso/context/AGENTS.md", "hello");
-    testFs._files.set(
-      getGlobalConfigPath(),
-      JSON.stringify({
-        ...testConfig,
-      }),
-    );
-
-    await initState();
-    assert.equal(
-      getState().app.contextStr,
-      `# [lasso] AGENTS.md context files
+      await initState();
+      assert.equal(
+        getState().app.contextStr,
+        `# [lasso] AGENTS.md context files
 
 ## Path: /fake-home/.config/lasso/context/AGENTS.md
 
 hello
 `,
-    );
-  });
+      );
+    });
 
-  it("sets local and global config strings from dep", async () => {
-    testFs._files.set(
-      getGlobalConfigPath(),
-      JSON.stringify({ model: "gpt-4" }),
-    );
-    testFs._files.set(
-      getLocalConfigPath(),
-      JSON.stringify({ model: "gpt-4", sdkProvider: "anthropic" }),
-    );
+    it("sets local and global config strings from dep", async () => {
+      testFs._files.set(
+        getGlobalConfigPath(),
+        JSON.stringify({ model: "gpt-4" }),
+      );
+      testFs._files.set(
+        getLocalConfigPath(),
+        JSON.stringify({ model: "gpt-4", sdkProvider: "anthropic" }),
+      );
 
-    await initState();
-    assert.equal(
-      getState().app.globalConfigStr,
-      JSON.stringify({ model: "gpt-4" }),
-    );
-    assert.equal(
-      getState().app.localConfigStr,
-      JSON.stringify({ model: "gpt-4", sdkProvider: "anthropic" }),
-    );
-  });
+      await initState();
+      assert.equal(
+        getState().app.globalConfigStr,
+        JSON.stringify({ model: "gpt-4" }),
+      );
+      assert.equal(
+        getState().app.localConfigStr,
+        JSON.stringify({ model: "gpt-4", sdkProvider: "anthropic" }),
+      );
+    });
 
-  it("sets missing local config string from dep to {}", async () => {
-    testFs._files.set(
-      getGlobalConfigPath(),
-      JSON.stringify({
-        ...testConfig,
-      }),
-    );
+    it("sets missing local config string from dep to {}", async () => {
+      testFs._files.set(
+        getGlobalConfigPath(),
+        JSON.stringify({
+          ...testConfig,
+        }),
+      );
 
-    await initState();
-    assert.equal(getState().app.localConfigStr, "{}");
-  });
+      await initState();
+      assert.equal(getState().app.localConfigStr, "{}");
+    });
 
-  it("sets skillsStr from dep", async () => {
-    testFs._files.set(
-      getGlobalConfigPath(),
-      JSON.stringify({
-        ...testConfig,
-      }),
-    );
+    it("sets skillsStr from dep", async () => {
+      testFs._files.set(
+        getGlobalConfigPath(),
+        JSON.stringify({
+          ...testConfig,
+        }),
+      );
 
-    await initState();
-    assert.equal(getState().app.skillsStr, "");
-  });
+      await initState();
+      assert.equal(getState().app.skillsStr, "");
+    });
 
-  it("sets modelUsageForLimitWindow to an empty object", async () => {
-    testFs._files.set(
-      getGlobalConfigPath(),
-      JSON.stringify({
-        ...testConfig,
-      }),
-    );
+    it("preserves the initialized sessionStartDate", async () => {
+      const sessionStartDate = getState().app.sessionStartDate;
+      testFs._files.set(
+        getGlobalConfigPath(),
+        JSON.stringify({
+          ...testConfig,
+        }),
+      );
 
-    await initState();
-    assert.deepStrictEqual(getState().app.modelUsageForLimitWindow, {});
-    assert.deepStrictEqual(getState().app.modelUsageForSession, {});
-  });
+      await initState();
+      assert.strictEqual(getState().app.sessionStartDate, sessionStartDate);
+    });
 
-  it("loads recent model usages from the usage log", async () => {
-    const recent = {
-      inputTokens: 10,
-      outputTokens: 5,
-      cacheReadTokens: 1,
-      cacheWriteTokens: 0,
-      date: 500_000,
-    };
-    const expired = {
-      inputTokens: 5,
-      outputTokens: 2,
-      cacheReadTokens: 0,
-      cacheWriteTokens: 0,
-      date: 300_000,
-    };
-    testFs._dirs.add(dirname(getUsageLogPath()));
-    testFs._files.set(
-      getUsageLogPath(),
-      JSON.stringify({ "gpt-4": [recent, expired] }),
-    );
-    testFs._files.set(
-      getGlobalConfigPath(),
-      JSON.stringify({
-        ...testConfig,
-        usageLimit: { duration: "60m", dollarAmount: 10 },
-        pricingPerModel: {
-          "claude-sonnet-4-6": {
-            inputPerMillion: 3,
-            outputPerMillion: 15,
-            cacheReadPerMillion: 0.75,
-            cacheWritePerMillion: 3.75,
-          },
-        },
-      }),
-    );
-    mock.method(Date, "now", () => 4_000_000);
+    it("sets debug log path", async () => {
+      testFs._files.set(
+        getGlobalConfigPath(),
+        JSON.stringify({
+          ...testConfig,
+        }),
+      );
 
-    await initState();
+      await initState();
+      assert.strictEqual(
+        getState().app.debugLogPath,
+        "/fake-home/.local/state/lasso/debug/debug-test-uuid.log",
+      );
+    });
 
-    assert.deepStrictEqual(getState().app.modelUsageForLimitWindow, {
-      "gpt-4": [recent],
+    it("wires the tools content string for token counting", async () => {
+      testFs._files.set(getLocalConfigPath(), JSON.stringify(testConfig));
+
+      await initState();
+
+      assert.strictEqual(promptDeps.getToolsContentStr(), stringifyTools());
     });
   });
 
-  it("preserves the initialized sessionStartDate", async () => {
-    const sessionStartDate = getState().app.sessionStartDate;
-    testFs._files.set(
-      getGlobalConfigPath(),
-      JSON.stringify({
-        ...testConfig,
-      }),
-    );
+  describe("loads usage from the log", () => {
+    it("sets modelUsageForLimitWindow to an empty object", async () => {
+      testFs._files.set(
+        getGlobalConfigPath(),
+        JSON.stringify({
+          ...testConfig,
+        }),
+      );
 
-    await initState();
-    assert.strictEqual(getState().app.sessionStartDate, sessionStartDate);
-  });
+      await initState();
+      assert.deepStrictEqual(getState().app.modelUsageForLimitWindow, {});
+      assert.deepStrictEqual(getState().app.modelUsageForSession, {});
+    });
 
-  it("sets debug log path", async () => {
-    testFs._files.set(
-      getGlobalConfigPath(),
-      JSON.stringify({
-        ...testConfig,
-      }),
-    );
+    it("loads recent model usages from the usage log", async () => {
+      const recent = {
+        inputTokens: 10,
+        outputTokens: 5,
+        cacheReadTokens: 1,
+        cacheWriteTokens: 0,
+        date: 500_000,
+      };
+      const expired = {
+        inputTokens: 5,
+        outputTokens: 2,
+        cacheReadTokens: 0,
+        cacheWriteTokens: 0,
+        date: 300_000,
+      };
+      testFs._dirs.add(dirname(getUsageLogPath()));
+      testFs._files.set(
+        getUsageLogPath(),
+        JSON.stringify({ "gpt-4": [recent, expired] }),
+      );
+      testFs._files.set(
+        getGlobalConfigPath(),
+        JSON.stringify({
+          ...testConfig,
+          usageLimit: { duration: "60m", dollarAmount: 10 },
+          pricingPerModel: {
+            "claude-sonnet-4-6": {
+              inputPerMillion: 3,
+              outputPerMillion: 15,
+              cacheReadPerMillion: 0.75,
+              cacheWritePerMillion: 3.75,
+            },
+          },
+        }),
+      );
+      mock.method(Date, "now", () => 4_000_000);
 
-    await initState();
-    assert.strictEqual(
-      getState().app.debugLogPath,
-      "/fake-home/.local/state/lasso/debug/debug-test-uuid.log",
-    );
-  });
+      await initState();
 
-  it("wires the tools content string for token counting", async () => {
-    testFs._files.set(getLocalConfigPath(), JSON.stringify(testConfig));
-
-    await initState();
-
-    assert.strictEqual(promptDeps.getToolsContentStr(), stringifyTools());
+      assert.deepStrictEqual(getState().app.modelUsageForLimitWindow, {
+        "gpt-4": [recent],
+      });
+    });
   });
 
   describe("initStateFirst", () => {
