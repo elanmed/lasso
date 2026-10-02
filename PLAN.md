@@ -24,7 +24,7 @@ Convert every test file that still uses `mockStdout()` to `mockStdoutWrites()`.
 - Import shared constants from `./test-helpers.ts` instead of literal escapes: `BLUE`, `GREEN`, `RED`, `RESET`, `UP_1`, `UP_2`, `DOWN_1`, `DOWN_2`, `CLEAR_LINE`, `CR`. Interpolating these constants in expectations is allowed (see AGENTS.md).
 - For assertions that only check that nothing was printed, use `assert.deepStrictEqual(getWrites(), [])`. With the default filtering this means no non-`\r` writes; if the test must also prove there were no spinner/rewrite writes, use `mockStdoutWrites({ includeSpinnerFrames: true })` and assert `[]`.
 - Drop `mockStdout` from the import once no longer referenced. `mockStdout({ includeSpinnerFrames: true })` call sites may stay as-is only if genuinely needed; prefer converting them too.
-- Converted already: `src/api.test.ts`, `src/config.test.ts`, `src/context.test.ts`, `src/differ.test.ts`, `src/fence.test.ts`, `src/input.test.ts`, `src/log.test.ts`, `src/mcp.test.ts`, `src/print.test.ts`, and `src/slash-commands.test.ts` use `mockStdoutWrites({ includeSpinnerFrames: true })` where they assert rewrite sequences.
+- Every file in the list below is converted; use `mockStdoutWrites({ includeSpinnerFrames: true })` where a test asserts rewrite sequences.
 - Preserve existing expectations' values — this is a capture-mechanism change, not a behavior change. If a test fails, the old assertion was probably hiding writes (`\r`) that must now appear in the array.
 - Remove `stripAnsi` from assertions you convert; raw writes with color codes are now asserted explicitly.
 - `setupTestContext()` mocks `setInterval`/`clearInterval` by default, so the spinner interval never fires mid-test. Only call `mockSetInterval()` yourself when a test needs to read or tick the callbacks manually (the default mock returns no callbacks).
@@ -40,9 +40,9 @@ Convert every test file that still uses `mockStdout()` to `mockStdoutWrites()`.
 - [x] `src/log.test.ts` (7)
 - [x] `src/print.test.ts` (18)
 - [x] `src/slash-commands.test.ts` (2)
-- [ ] `src/terminal.test.ts` (11)
-- [ ] `src/tools.test.ts` (13)
-- [ ] `src/usage.test.ts` (4)
+- [x] `src/terminal.test.ts` (11)
+- [x] `src/tools.test.ts` (13)
+- [x] `src/usage.test.ts` (4)
 
 Done: `src/mcp.test.ts` (already converted).
 

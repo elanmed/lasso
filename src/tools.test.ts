@@ -19,10 +19,14 @@ import {
   setupTestContext,
   mockExec,
   mockGenerateText,
-  stripAnsi,
-  mockStdout,
+  mockStdoutWrites,
   makeGenerateTextResult,
   makeMcpTool,
+  BLUE,
+  BOLD,
+  BOLD_RESET,
+  GREY,
+  RESET,
 } from "./test-helpers.ts";
 import { processDeps } from "./deps.ts";
 import { actions } from "./state.ts";
@@ -83,154 +87,139 @@ describe("tools", () => {
   describe("toolPrint", () => {
     it("prints the detail with a labeled prefix on the first line", () => {
       mock.method(processDeps.stdout, "getColumns", () => 30);
-      const getCaptured = mockStdout();
+      const getWrites = mockStdoutWrites();
       toolPrint("bash", "hello");
-      assert.strictEqual(
-        stripAnsi(getCaptured()),
-        `bash: hello
+      assert.deepStrictEqual(getWrites(), [
+        `${BLUE}${BOLD}bash${BOLD_RESET}: hello${RESET}
 `,
-      );
+      ]);
     });
 
     it("wraps a detail that does not fit within maxLen", () => {
       mock.method(processDeps.stdout, "getColumns", () => 30);
-      const getCaptured = mockStdout();
+      const getWrites = mockStdoutWrites();
       toolPrint("bash", "abcdefghijklmnopqrstuvwxyz");
-      assert.strictEqual(
-        stripAnsi(getCaptured()),
-        `bash: abcdefghijklmnopqrstuvwx
-       ┊yz
+      assert.deepStrictEqual(getWrites(), [
+        `${BLUE}${BOLD}bash${BOLD_RESET}: abcdefghijklmnopqrstuvwx
+       ┊yz${RESET}
 `,
-      );
+      ]);
     });
 
     it("ignores empty detail lines", () => {
       mock.method(processDeps.stdout, "getColumns", () => 30);
-      const getCaptured = mockStdout();
+      const getWrites = mockStdoutWrites();
       toolPrint("bash", "one\n\ntwo");
-      assert.strictEqual(
-        stripAnsi(getCaptured()),
-        `bash: one
-       ┊two
+      assert.deepStrictEqual(getWrites(), [
+        `${BLUE}${BOLD}bash${BOLD_RESET}: one
+       ┊two${RESET}
 `,
-      );
+      ]);
     });
 
     it("caps the total output at five lines", () => {
       mock.method(processDeps.stdout, "getColumns", () => 30);
-      const getCaptured = mockStdout();
+      const getWrites = mockStdoutWrites();
       toolPrint("bash", "a\nb\nc\nd\ne\nf");
-      assert.strictEqual(
-        stripAnsi(getCaptured()),
-        `bash: a
+      assert.deepStrictEqual(getWrites(), [
+        `${BLUE}${BOLD}bash${BOLD_RESET}: a
        ┊b
        ┊c
        ┊d
-       ┊e…
+       ┊e…${RESET}
 `,
-      );
+      ]);
     });
 
     it("does not wrap a detail that fits within the cap", () => {
       mock.method(processDeps.stdout, "getColumns", () => 30);
-      const getCaptured = mockStdout();
+      const getWrites = mockStdoutWrites();
       toolPrint("bash", "abcd");
-      assert.strictEqual(
-        stripAnsi(getCaptured()),
-        `bash: abcd
+      assert.deepStrictEqual(getWrites(), [
+        `${BLUE}${BOLD}bash${BOLD_RESET}: abcd${RESET}
 `,
-      );
+      ]);
     });
 
     it("wraps without regard to whitespace inside the detail", () => {
       mock.method(processDeps.stdout, "getColumns", () => 30);
-      const getCaptured = mockStdout();
+      const getWrites = mockStdoutWrites();
       toolPrint("bash", "abc defghijklmnop");
-      assert.strictEqual(
-        stripAnsi(getCaptured()),
-        `bash: abc defghijklmnop
+      assert.deepStrictEqual(getWrites(), [
+        `${BLUE}${BOLD}bash${BOLD_RESET}: abc defghijklmnop${RESET}
 `,
-      );
+      ]);
     });
 
     it("wraps multiple original lines and combines them under the same cap", () => {
       mock.method(processDeps.stdout, "getColumns", () => 30);
-      const getCaptured = mockStdout();
+      const getWrites = mockStdoutWrites();
       toolPrint("bash", "abcdefghij\nkl");
-      assert.strictEqual(
-        stripAnsi(getCaptured()),
-        `bash: abcdefghij
-       ┊kl
+      assert.deepStrictEqual(getWrites(), [
+        `${BLUE}${BOLD}bash${BOLD_RESET}: abcdefghij
+       ┊kl${RESET}
 `,
-      );
+      ]);
     });
 
     it("stops mid-wrap once the five line cap is reached, ending with an ellipsis", () => {
       mock.method(processDeps.stdout, "getColumns", () => 30);
-      const getCaptured = mockStdout();
+      const getWrites = mockStdoutWrites();
       toolPrint("bash", "abcdefghij\nkl\nm\nn\no\np");
-      assert.strictEqual(
-        stripAnsi(getCaptured()),
-        `bash: abcdefghij
+      assert.deepStrictEqual(getWrites(), [
+        `${BLUE}${BOLD}bash${BOLD_RESET}: abcdefghij
        ┊kl
        ┊m
        ┊n
-       ┊o…
+       ┊o…${RESET}
 `,
-      );
+      ]);
     });
 
     it("replaces the last char of a full fifth line with an ellipsis", () => {
       mock.method(processDeps.stdout, "getColumns", () => 30);
-      const getCaptured = mockStdout();
+      const getWrites = mockStdoutWrites();
       toolPrint("bash", "a".repeat(113));
-      assert.strictEqual(
-        stripAnsi(getCaptured()),
-        `bash: ${"a".repeat(24)}
+      assert.deepStrictEqual(getWrites(), [
+        `${BLUE}${BOLD}bash${BOLD_RESET}: ${"a".repeat(24)}
        ┊${"a".repeat(22)}
        ┊${"a".repeat(22)}
        ┊${"a".repeat(22)}
-       ┊${"a".repeat(21)}…
+       ┊${"a".repeat(21)}…${RESET}
 `,
-      );
+      ]);
     });
 
     it("uses label length plus padding for the maxLen when it exceeds the indent", () => {
       mock.method(processDeps.stdout, "getColumns", () => 40);
-      const getCaptured = mockStdout();
+      const getWrites = mockStdoutWrites();
       toolPrint("abcdefghijklmnopqrst", "abcdefghijklmnopqrstuvwx");
-      assert.strictEqual(
-        stripAnsi(getCaptured()),
-        `abcdefghijklmnopqrst: abcdefghijklmnopqr
-       ┊stuvwx
+      assert.deepStrictEqual(getWrites(), [
+        `${BLUE}${BOLD}abcdefghijklmnopqrst${BOLD_RESET}: abcdefghijklmnopqr
+       ┊stuvwx${RESET}
 `,
-      );
+      ]);
     });
 
     it("prints nothing but the label prefix when detail is only whitespace lines", () => {
       mock.method(processDeps.stdout, "getColumns", () => 30);
-      const getCaptured = mockStdout();
+      const getWrites = mockStdoutWrites();
       toolPrint("bash", "\n\n\n");
-      assert.strictEqual(
-        stripAnsi(getCaptured()),
-        `
-`,
-      );
+      assert.deepStrictEqual(getWrites(), [`${BLUE}${RESET}\n`]);
     });
 
     it("falls back to one char per line when the terminal is narrower than the label", () => {
       mock.method(processDeps.stdout, "getColumns", () => 5);
-      const getCaptured = mockStdout();
+      const getWrites = mockStdoutWrites();
       toolPrint("bash", "abcdefghijklmnopqrstuvwxyz");
-      assert.strictEqual(
-        stripAnsi(getCaptured()),
-        `bash: a
+      assert.deepStrictEqual(getWrites(), [
+        `${BLUE}${BOLD}bash${BOLD_RESET}: a
        ┊b
        ┊c
        ┊d
-       ┊…
+       ┊…${RESET}
 `,
-      );
+      ]);
     });
   });
 
@@ -698,7 +687,7 @@ describe("tools", () => {
     it("gives read-write subagents write tools and prints file diffs", async () => {
       const mcpTool = makeMcpTool();
       actions.setMcp({}, { mcp_tool: mcpTool });
-      const getCaptured = mockStdout();
+      const getWrites = mockStdoutWrites();
       testFs._files.set("/test/file.txt", "original content");
       mockGenerateText(async (options: Record<string, unknown>) => {
         const writeTools = options["tools"];
@@ -753,14 +742,11 @@ describe("tools", () => {
       assert.deepStrictEqual(JSON.parse(result.content), [
         { model: "main-model", prompt: "edit", content: "done" },
       ]);
-      assert.strictEqual(
-        stripAnsi(getCaptured()),
-        `
-━━ File change: /test/file.txt ━━
-+modified content
-
-`,
-      );
+      assert.deepStrictEqual(getWrites(), [
+        "\n",
+        `${GREY}━━ ${BOLD}File change: /test/file.txt${BOLD_RESET} ━━${RESET}\n`,
+        "+modified content\n\n",
+      ]);
     });
 
     it("uses the configured model when a task model is omitted", async () => {

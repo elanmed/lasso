@@ -2,6 +2,7 @@ import { describe, it, beforeEach, afterEach, mock } from "node:test";
 import assert from "node:assert";
 import childProcess from "node:child_process";
 import { fsDeps } from "./deps.ts";
+import { getGlobalConfigPath, getLocalConfigPath } from "./paths.ts";
 import { actions, getState } from "./state.ts";
 import {
   executeBat,
@@ -13,12 +14,14 @@ import {
   batPagerCmd,
   mockExec,
   mockSpawnSync,
-  mockStdout,
+  mockStdoutWrites,
   mockPagerSpawn,
   setupTestContext,
-  stripAnsi,
   testFs,
   testProcessEnv,
+  YELLOW,
+  RED,
+  RESET,
 } from "./test-helpers.ts";
 
 describe("terminal", () => {
@@ -163,14 +166,13 @@ describe("terminal", () => {
     });
 
     it("returns original content and warns when formatting fails", async () => {
-      const getCaptured = mockStdout();
+      const getWrites = mockStdoutWrites();
       const invalid = null as unknown as string;
       const result = await formatMarkdown(invalid);
       assert.equal(result, invalid);
-      assert.strictEqual(
-        stripAnsi(getCaptured()),
-        "Outputting raw content, markdown formatting failed: Cannot read properties of null (reading 'length')\n",
-      );
+      assert.deepStrictEqual(getWrites(), [
+        `${YELLOW}Outputting raw content, markdown formatting failed: Cannot read properties of null (reading 'length')${RESET}\n`,
+      ]);
     });
   });
 
@@ -185,38 +187,35 @@ describe("terminal", () => {
       actions.setBatAvailable(true);
       mockSpawnSync({ echoInput: true });
 
-      const getCaptured = mockStdout();
+      const getWrites = mockStdoutWrites();
 
       await executeBat("# Hello\n");
 
-      assert.strictEqual(stripAnsi(getCaptured()), "# Hello\n\n");
+      assert.deepStrictEqual(getWrites(), ["# Hello\n\n"]);
     });
 
     it("falls back to plain text when bat is not available", async () => {
       actions.setBatAvailable(false);
 
-      const getCaptured = mockStdout();
+      const getWrites = mockStdoutWrites();
 
       await executeBat("test content\n");
 
-      assert.strictEqual(stripAnsi(getCaptured()), "test content\n\n");
+      assert.deepStrictEqual(getWrites(), ["test content\n\n"]);
     });
 
     it("falls back to plain text when bat spawn fails", async () => {
       actions.setBatAvailable(true);
       mockSpawnSync({ error: new Error("spawn failed") });
 
-      const getCaptured = mockStdout();
+      const getWrites = mockStdoutWrites();
 
       await executeBat("test content\n");
 
-      assert.strictEqual(
-        stripAnsi(getCaptured()),
-        `Falling back to plain text rendering, an error occurred when spawning \`bat\`: spawn failed
-test content
-
-`,
-      );
+      assert.deepStrictEqual(getWrites(), [
+        `${RED}Falling back to plain text rendering, an error occurred when spawning \`bat\`: spawn failed${RESET}\n`,
+        "test content\n\n",
+      ]);
     });
 
     it("falls back to plain text when bat exits with non-zero status", async () => {
@@ -225,17 +224,14 @@ test content
         result: { status: 1, stdout: "bat-rendered\n", stderr: "bat error" },
       });
 
-      const getCaptured = mockStdout();
+      const getWrites = mockStdoutWrites();
 
       await executeBat("test content\n");
 
-      assert.strictEqual(
-        stripAnsi(getCaptured()),
-        `Falling back to plain text rendering, an error occurred when spawning \`bat\`: \`bat\` returned code 1
-test content
-
-`,
-      );
+      assert.deepStrictEqual(getWrites(), [
+        `${RED}Falling back to plain text rendering, an error occurred when spawning \`bat\`: \`bat\` returned code 1${RESET}\n`,
+        "test content\n\n",
+      ]);
     });
 
     it("prints bat stdout when status is null", async () => {
@@ -244,11 +240,11 @@ test content
         result: { status: null, stdout: "bat-rendered\n", stderr: "" },
       });
 
-      const getCaptured = mockStdout();
+      const getWrites = mockStdoutWrites();
 
       await executeBat("test content\n");
 
-      assert.strictEqual(stripAnsi(getCaptured()), "bat-rendered\n\n");
+      assert.deepStrictEqual(getWrites(), ["bat-rendered\n\n"]);
     });
 
     it("prints bat stdout when stderr is empty", async () => {
@@ -257,11 +253,11 @@ test content
         result: { status: 0, stdout: "bat-rendered\n", stderr: "" },
       });
 
-      const getCaptured = mockStdout();
+      const getWrites = mockStdoutWrites();
 
       await executeBat("test content\n");
 
-      assert.strictEqual(stripAnsi(getCaptured()), "bat-rendered\n\n");
+      assert.deepStrictEqual(getWrites(), ["bat-rendered\n\n"]);
     });
 
     it("falls back to plain text when bat writes stderr", async () => {
@@ -270,17 +266,14 @@ test content
         result: { status: 0, stdout: "bat-rendered\n", stderr: "bat warning" },
       });
 
-      const getCaptured = mockStdout();
+      const getWrites = mockStdoutWrites();
 
       await executeBat("test content\n");
 
-      assert.strictEqual(
-        stripAnsi(getCaptured()),
-        `Falling back to plain text rendering, an error occurred when spawning \`bat\`: bat warning
-test content
-
-`,
-      );
+      assert.deepStrictEqual(getWrites(), [
+        `${RED}Falling back to plain text rendering, an error occurred when spawning \`bat\`: bat warning${RESET}\n`,
+        "test content\n\n",
+      ]);
     });
   });
 
@@ -293,38 +286,37 @@ test content
     it("warns when bat is not available", async () => {
       mockExec({ stdout: "", error: new Error("not found") });
 
-      const getCaptured = mockStdout();
+      const getWrites = mockStdoutWrites();
 
       await warnOnMissingBat();
 
       assert.strictEqual(getState().app.batAvailable, false);
-      assert.match(
-        stripAnsi(getCaptured()),
-        /`bat` is not available, consider installing it to properly render markdown responses in the terminal\. Suppress this warning with `suppressBatUnavailableWarning: true` in /,
-      );
+      assert.deepStrictEqual(getWrites(), [
+        `${YELLOW}\`bat\` is not available, consider installing it to properly render markdown responses in the terminal. Suppress this warning with \`suppressBatUnavailableWarning: true\` in ${getGlobalConfigPath()} or ${getLocalConfigPath()}${RESET}\n`,
+      ]);
     });
 
     it("does not warn when bat is available", async () => {
       mockExec({ stdout: "bat 0.25.0" });
 
-      const getCaptured = mockStdout();
+      const getWrites = mockStdoutWrites();
 
       await warnOnMissingBat();
 
       assert.strictEqual(getState().app.batAvailable, true);
-      assert.strictEqual(getCaptured(), "");
+      assert.deepStrictEqual(getWrites(), []);
     });
 
     it("does not warn when bat is unavailable and the warning is suppressed", async () => {
       mockExec({ stdout: "", error: new Error("not found") });
       actions.setSuppressBatUnavailableWarning(true);
 
-      const getCaptured = mockStdout();
+      const getWrites = mockStdoutWrites();
 
       await warnOnMissingBat();
 
       assert.strictEqual(getState().app.batAvailable, false);
-      assert.strictEqual(getCaptured(), "");
+      assert.deepStrictEqual(getWrites(), []);
     });
   });
 });

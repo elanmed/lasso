@@ -2949,9 +2949,16 @@ commands diff
       const result = await resolveSlashCommand("/reload");
 
       assert.strictEqual(result, null);
+      const writes = getWrites();
+      assert.deepStrictEqual(
+        writes[0],
+        `${PURPLE}No diff from reload${RESET}\n`,
+      );
+      const warningWrite = writes[1];
+      assert(warningWrite !== undefined);
       assert.ok(
-        stripAnsi(getWrites().join("")).startsWith(
-          "No diff from reload\nThe current set of context, skills, and tools is 51.09% of the 100,000 token context window!",
+        warningWrite.startsWith(
+          `${YELLOW}The current set of context, skills, and tools is 51.09% of the 100,000 token context window!`,
         ),
       );
     });

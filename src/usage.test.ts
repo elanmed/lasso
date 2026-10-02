@@ -22,10 +22,11 @@ import { actions, getState, promptDeps } from "./state.ts";
 import { fsDeps } from "./deps.ts";
 import {
   makeErrnoError,
-  mockStdout,
+  mockStdoutWrites,
   setupTestContext,
-  stripAnsi,
   testFs,
+  YELLOW,
+  RESET,
 } from "./test-helpers.ts";
 import { getUsageLogLockPath, getUsageLogPath } from "./paths.ts";
 
@@ -298,7 +299,7 @@ describe("usage", () => {
       mock.method(fsDeps, "mkdirSync", () => {
         throw new Error("Permission denied");
       });
-      const getCaptured = mockStdout();
+      const getWrites = mockStdoutWrites();
       const usage = {
         inputTokens: 10,
         outputTokens: 5,
@@ -309,10 +310,9 @@ describe("usage", () => {
 
       await syncNewModelUsageForLimitWindow("gpt-4", usage);
 
-      assert.strictEqual(
-        stripAnsi(getCaptured()),
-        `Failed to create the directory: ${dirname(getUsageLogPath())}\n`,
-      );
+      assert.deepStrictEqual(getWrites(), [
+        `${YELLOW}Failed to create the directory: ${dirname(getUsageLogPath())}${RESET}\n`,
+      ]);
       assert.deepStrictEqual(getState().app.modelUsageForLimitWindow, {});
       assert.strictEqual(testFs._files.has(getUsageLogPath()), false);
     });
@@ -1056,26 +1056,25 @@ describe("warnOnLargePromptOverhead", () => {
 
   it("returns early without a warning when the model has no context window", () => {
     actions.setContextWindowPerModel({});
-    const getCaptured = mockStdout();
+    const getWrites = mockStdoutWrites();
     warnOnLargePromptOverhead();
-    assert.strictEqual(stripAnsi(getCaptured()), "");
+    assert.deepStrictEqual(getWrites(), []);
   });
 
   it("does not warn when prompt overhead is below the dedicated share", () => {
     mock.method(promptDeps, "getSystemContent", () => "s".repeat(30_000));
-    const getCaptured = mockStdout();
+    const getWrites = mockStdoutWrites();
     warnOnLargePromptOverhead();
-    assert.strictEqual(stripAnsi(getCaptured()), "");
+    assert.deepStrictEqual(getWrites(), []);
   });
 
   it("warns when prompt overhead reaches the dedicated share", () => {
     mock.method(promptDeps, "getSystemContent", () => "s".repeat(150_000));
-    const getCaptured = mockStdout();
+    const getWrites = mockStdoutWrites();
     warnOnLargePromptOverhead();
-    assert.strictEqual(
-      stripAnsi(getCaptured()),
-      `The current set of context, skills, and tools is 50% of the 100,000 token context window!\n\nLasso reserves 50% of the context window for compacted summaries with the assumption that at most 45% of the context window will be used for prompt overhead. As is, the prompt overhead is large enough to break this assumption and, along with any user messages, may breach the llm's context window and cause API calls to be rejected. Consider converting some of your context to skills and minimizing MCP servers.\n`,
-    );
+    assert.deepStrictEqual(getWrites(), [
+      `${YELLOW}The current set of context, skills, and tools is 50% of the 100,000 token context window!\n\nLasso reserves 50% of the context window for compacted summaries with the assumption that at most 45% of the context window will be used for prompt overhead. As is, the prompt overhead is large enough to break this assumption and, along with any user messages, may breach the llm's context window and cause API calls to be rejected. Consider converting some of your context to skills and minimizing MCP servers.${RESET}\n`,
+    ]);
   });
 });
 
