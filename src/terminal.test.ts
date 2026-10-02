@@ -45,108 +45,112 @@ describe("terminal", () => {
       actions.setBatAvailable(true);
     });
 
-    it("ignores per-view pager env vars in favor of LASSO_PAGER", () => {
-      testProcessEnv._set("LASSO_PAGER_HISTORY", "nano __FILE__");
-      testProcessEnv._set("LASSO_PAGER", "bat __FILE__");
-      openWithPager({
-        initialContentStr: "",
-        contentType: "markdown",
+    describe("selects the pager", () => {
+      it("ignores per-view pager env vars in favor of LASSO_PAGER", () => {
+        testProcessEnv._set("LASSO_PAGER_HISTORY", "nano __FILE__");
+        testProcessEnv._set("LASSO_PAGER", "bat __FILE__");
+        openWithPager({
+          initialContentStr: "",
+          contentType: "markdown",
+        });
+        assert.strictEqual(spawned[0], "bat /tmp/lasso-test-uuid.txt");
       });
-      assert.strictEqual(spawned[0], "bat /tmp/lasso-test-uuid.txt");
+
+      it("falls back to LASSO_PAGER env var", () => {
+        testProcessEnv._set("LASSO_PAGER", "bat __FILE__");
+        openWithPager({
+          initialContentStr: "",
+          contentType: "markdown",
+        });
+        assert.strictEqual(spawned[0], "bat /tmp/lasso-test-uuid.txt");
+      });
+
+      it("falls back to PAGER env var with quoted temp file", () => {
+        testProcessEnv._set("PAGER", "more");
+        openWithPager({
+          initialContentStr: "",
+          contentType: "markdown",
+        });
+        assert.strictEqual(spawned[0], `more "/tmp/lasso-test-uuid.txt"`);
+      });
+
+      it("falls back to bat", () => {
+        openWithPager({
+          initialContentStr: "",
+          contentType: "markdown",
+        });
+        assert.strictEqual(spawned[0], batPagerCmd("/tmp/lasso-test-uuid.txt"));
+      });
+
+      it("falls back to less when bat is unavailable", () => {
+        actions.setBatAvailable(false);
+        openWithPager({
+          initialContentStr: "",
+          contentType: "markdown",
+        });
+        assert.strictEqual(spawned[0], `less "/tmp/lasso-test-uuid.txt"`);
+      });
     });
 
-    it("falls back to LASSO_PAGER env var", () => {
-      testProcessEnv._set("LASSO_PAGER", "bat __FILE__");
-      openWithPager({
-        initialContentStr: "",
-        contentType: "markdown",
+    describe("spawns the pager", () => {
+      it("uses base bat flags without markdown flags for diff contentType", () => {
+        openWithPager({
+          initialContentStr: "",
+          contentType: "diff",
+        });
+        assert.strictEqual(
+          spawned[0],
+          batPagerCmd("/tmp/lasso-test-uuid.txt", "diff"),
+        );
       });
-      assert.strictEqual(spawned[0], "bat /tmp/lasso-test-uuid.txt");
-    });
 
-    it("falls back to PAGER env var with quoted temp file", () => {
-      testProcessEnv._set("PAGER", "more");
-      openWithPager({
-        initialContentStr: "",
-        contentType: "markdown",
+      it("spawns pager with shell and inherit stdio", () => {
+        let spawnArgs: unknown[] = [];
+        mock.method(childProcess, "spawnSync", (...args: unknown[]) => {
+          spawnArgs = args;
+        });
+        openWithPager({
+          initialContentStr: "",
+          contentType: "markdown",
+        });
+        assert.deepStrictEqual(spawnArgs, [
+          batPagerCmd("/tmp/lasso-test-uuid.txt"),
+          { shell: true, stdio: "inherit" },
+        ]);
       });
-      assert.strictEqual(spawned[0], `more "/tmp/lasso-test-uuid.txt"`);
-    });
 
-    it("falls back to bat", () => {
-      openWithPager({
-        initialContentStr: "",
-        contentType: "markdown",
+      it("writes initialContentStr into the temp file", () => {
+        openWithPager({
+          initialContentStr: "string content",
+          contentType: "markdown",
+        });
+        assert.strictEqual(
+          testFs._files.get("/tmp/lasso-test-uuid.txt"),
+          "string content\n\n",
+        );
       });
-      assert.strictEqual(spawned[0], batPagerCmd("/tmp/lasso-test-uuid.txt"));
-    });
 
-    it("uses base bat flags without markdown flags for diff contentType", () => {
-      openWithPager({
-        initialContentStr: "",
-        contentType: "diff",
+      it("trims trailing newlines before appending exactly two", () => {
+        openWithPager({
+          initialContentStr: "content\n\n\n\n",
+          contentType: "markdown",
+        });
+        assert.strictEqual(
+          testFs._files.get("/tmp/lasso-test-uuid.txt"),
+          "content\n\n",
+        );
       });
-      assert.strictEqual(
-        spawned[0],
-        batPagerCmd("/tmp/lasso-test-uuid.txt", "diff"),
-      );
-    });
 
-    it("spawns pager with shell and inherit stdio", () => {
-      let spawnArgs: unknown[] = [];
-      mock.method(childProcess, "spawnSync", (...args: unknown[]) => {
-        spawnArgs = args;
+      it("does not spawn a pager when the temp file cannot be created", () => {
+        mock.method(fsDeps, "writeFileSync", () => {
+          throw new Error("write failed");
+        });
+        openWithPager({
+          initialContentStr: "content",
+          contentType: "markdown",
+        });
+        assert.deepStrictEqual(spawned, []);
       });
-      openWithPager({
-        initialContentStr: "",
-        contentType: "markdown",
-      });
-      assert.deepStrictEqual(spawnArgs, [
-        batPagerCmd("/tmp/lasso-test-uuid.txt"),
-        { shell: true, stdio: "inherit" },
-      ]);
-    });
-
-    it("writes initialContentStr into the temp file", () => {
-      openWithPager({
-        initialContentStr: "string content",
-        contentType: "markdown",
-      });
-      assert.strictEqual(
-        testFs._files.get("/tmp/lasso-test-uuid.txt"),
-        "string content\n\n",
-      );
-    });
-
-    it("trims trailing newlines before appending exactly two", () => {
-      openWithPager({
-        initialContentStr: "content\n\n\n\n",
-        contentType: "markdown",
-      });
-      assert.strictEqual(
-        testFs._files.get("/tmp/lasso-test-uuid.txt"),
-        "content\n\n",
-      );
-    });
-
-    it("falls back to less when bat is unavailable", () => {
-      actions.setBatAvailable(false);
-      openWithPager({
-        initialContentStr: "",
-        contentType: "markdown",
-      });
-      assert.strictEqual(spawned[0], `less "/tmp/lasso-test-uuid.txt"`);
-    });
-
-    it("does not spawn a pager when the temp file cannot be created", () => {
-      mock.method(fsDeps, "writeFileSync", () => {
-        throw new Error("write failed");
-      });
-      openWithPager({
-        initialContentStr: "content",
-        contentType: "markdown",
-      });
-      assert.deepStrictEqual(spawned, []);
     });
   });
 
@@ -183,97 +187,105 @@ describe("terminal", () => {
       actions.setModel("test-model");
     });
 
-    it("formats markdown and outputs the content through bat when available", async () => {
-      actions.setBatAvailable(true);
-      mockSpawnSync({ echoInput: true });
+    describe("uses the bat output", () => {
+      it("formats markdown and outputs the content through bat when available", async () => {
+        actions.setBatAvailable(true);
+        mockSpawnSync({ echoInput: true });
 
-      const getWrites = mockStdoutWrites();
+        const getWrites = mockStdoutWrites();
 
-      await executeBat("# Hello\n");
+        await executeBat("# Hello\n");
 
-      assert.deepStrictEqual(getWrites(), ["# Hello\n\n"]);
-    });
-
-    it("falls back to plain text when bat is not available", async () => {
-      actions.setBatAvailable(false);
-
-      const getWrites = mockStdoutWrites();
-
-      await executeBat("test content\n");
-
-      assert.deepStrictEqual(getWrites(), ["test content\n\n"]);
-    });
-
-    it("falls back to plain text when bat spawn fails", async () => {
-      actions.setBatAvailable(true);
-      mockSpawnSync({ error: new Error("spawn failed") });
-
-      const getWrites = mockStdoutWrites();
-
-      await executeBat("test content\n");
-
-      assert.deepStrictEqual(getWrites(), [
-        `${RED}Falling back to plain text rendering, an error occurred when spawning \`bat\`: spawn failed${RESET}\n`,
-        "test content\n\n",
-      ]);
-    });
-
-    it("falls back to plain text when bat exits with non-zero status", async () => {
-      actions.setBatAvailable(true);
-      mockSpawnSync({
-        result: { status: 1, stdout: "bat-rendered\n", stderr: "bat error" },
+        assert.deepStrictEqual(getWrites(), ["# Hello\n\n"]);
       });
 
-      const getWrites = mockStdoutWrites();
+      it("prints bat stdout when status is null", async () => {
+        actions.setBatAvailable(true);
+        mockSpawnSync({
+          result: { status: null, stdout: "bat-rendered\n", stderr: "" },
+        });
 
-      await executeBat("test content\n");
+        const getWrites = mockStdoutWrites();
 
-      assert.deepStrictEqual(getWrites(), [
-        `${RED}Falling back to plain text rendering, an error occurred when spawning \`bat\`: \`bat\` returned code 1${RESET}\n`,
-        "test content\n\n",
-      ]);
-    });
+        await executeBat("test content\n");
 
-    it("prints bat stdout when status is null", async () => {
-      actions.setBatAvailable(true);
-      mockSpawnSync({
-        result: { status: null, stdout: "bat-rendered\n", stderr: "" },
+        assert.deepStrictEqual(getWrites(), ["bat-rendered\n\n"]);
       });
 
-      const getWrites = mockStdoutWrites();
+      it("prints bat stdout when stderr is empty", async () => {
+        actions.setBatAvailable(true);
+        mockSpawnSync({
+          result: { status: 0, stdout: "bat-rendered\n", stderr: "" },
+        });
 
-      await executeBat("test content\n");
+        const getWrites = mockStdoutWrites();
 
-      assert.deepStrictEqual(getWrites(), ["bat-rendered\n\n"]);
+        await executeBat("test content\n");
+
+        assert.deepStrictEqual(getWrites(), ["bat-rendered\n\n"]);
+      });
     });
 
-    it("prints bat stdout when stderr is empty", async () => {
-      actions.setBatAvailable(true);
-      mockSpawnSync({
-        result: { status: 0, stdout: "bat-rendered\n", stderr: "" },
+    describe("falls back to plain text", () => {
+      it("falls back to plain text when bat is not available", async () => {
+        actions.setBatAvailable(false);
+
+        const getWrites = mockStdoutWrites();
+
+        await executeBat("test content\n");
+
+        assert.deepStrictEqual(getWrites(), ["test content\n\n"]);
       });
 
-      const getWrites = mockStdoutWrites();
+      it("falls back to plain text when bat spawn fails", async () => {
+        actions.setBatAvailable(true);
+        mockSpawnSync({ error: new Error("spawn failed") });
 
-      await executeBat("test content\n");
+        const getWrites = mockStdoutWrites();
 
-      assert.deepStrictEqual(getWrites(), ["bat-rendered\n\n"]);
-    });
+        await executeBat("test content\n");
 
-    it("falls back to plain text when bat writes stderr", async () => {
-      actions.setBatAvailable(true);
-      mockSpawnSync({
-        result: { status: 0, stdout: "bat-rendered\n", stderr: "bat warning" },
+        assert.deepStrictEqual(getWrites(), [
+          `${RED}Falling back to plain text rendering, an error occurred when spawning \`bat\`: spawn failed${RESET}\n`,
+          "test content\n\n",
+        ]);
       });
 
-      const getWrites = mockStdoutWrites();
+      it("falls back to plain text when bat exits with non-zero status", async () => {
+        actions.setBatAvailable(true);
+        mockSpawnSync({
+          result: { status: 1, stdout: "bat-rendered\n", stderr: "bat error" },
+        });
 
-      await executeBat("test content\n");
+        const getWrites = mockStdoutWrites();
 
-      assert.deepStrictEqual(getWrites(), [
-        `${RED}Falling back to plain text rendering, an error occurred when spawning \`bat\`: bat warning${RESET}\n`,
-        "test content\n\n",
-      ]);
+        await executeBat("test content\n");
+
+        assert.deepStrictEqual(getWrites(), [
+          `${RED}Falling back to plain text rendering, an error occurred when spawning \`bat\`: \`bat\` returned code 1${RESET}\n`,
+          "test content\n\n",
+        ]);
+      });
+
+      it("falls back to plain text when bat writes stderr", async () => {
+        actions.setBatAvailable(true);
+        mockSpawnSync({
+          result: {
+            status: 0,
+            stdout: "bat-rendered\n",
+            stderr: "bat warning",
+          },
+        });
+
+        const getWrites = mockStdoutWrites();
+
+        await executeBat("test content\n");
+
+        assert.deepStrictEqual(getWrites(), [
+          `${RED}Falling back to plain text rendering, an error occurred when spawning \`bat\`: bat warning${RESET}\n`,
+          "test content\n\n",
+        ]);
+      });
     });
   });
 

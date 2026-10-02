@@ -24,215 +24,236 @@ describe("differ", () => {
       setupTestContext();
     });
 
-    it("creates and cleans up a tool call snapshot", () => {
-      testFs._files.set("/source/file.txt", "original content");
-      const differ = createToolCallDiffer();
+    describe("snapshots", () => {
+      it("creates and cleans up a tool call snapshot", () => {
+        testFs._files.set("/source/file.txt", "original content");
+        const differ = createToolCallDiffer();
 
-      differ.setTempFileBefore("call-1", "/source/file.txt");
+        differ.setTempFileBefore("call-1", "/source/file.txt");
 
-      assert.strictEqual(
-        testFs._files.get("/tmp/lasso-test-uuid.txt"),
-        "original content",
-      );
-      assert.strictEqual(
-        differ.getTempFileBefore("call-1"),
-        "/tmp/lasso-test-uuid.txt",
-      );
+        assert.strictEqual(
+          testFs._files.get("/tmp/lasso-test-uuid.txt"),
+          "original content",
+        );
+        assert.strictEqual(
+          differ.getTempFileBefore("call-1"),
+          "/tmp/lasso-test-uuid.txt",
+        );
 
-      differ.cleanupTempFileBefore("call-1");
+        differ.cleanupTempFileBefore("call-1");
 
-      assert.strictEqual(testFs._files.has("/tmp/lasso-test-uuid.txt"), false);
-      assert.strictEqual(
-        differ.toolCallIdToTempFileBefore.has("call-1"),
-        false,
-      );
+        assert.strictEqual(
+          testFs._files.has("/tmp/lasso-test-uuid.txt"),
+          false,
+        );
+        assert.strictEqual(
+          differ.toolCallIdToTempFileBefore.has("call-1"),
+          false,
+        );
+      });
+
+      it("registers an empty snapshot when the source file does not exist", () => {
+        const differ = createToolCallDiffer();
+
+        differ.setTempFileBefore("call-1", "/missing/file.txt");
+
+        assert.equal(testFs._files.get("/tmp/lasso-test-uuid.txt"), "");
+        assert.equal(
+          differ.toolCallIdToTempFileBefore.get("call-1"),
+          "/tmp/lasso-test-uuid.txt",
+        );
+      });
+
+      it("cleans up an empty snapshot", () => {
+        const differ = createToolCallDiffer();
+
+        differ.setTempFileBefore("call-1", "/missing/file.txt");
+        differ.cleanupTempFileBefore("call-1");
+
+        assert.equal(testFs._files.has("/tmp/lasso-test-uuid.txt"), false);
+        assert.equal(differ.toolCallIdToTempFileBefore.has("call-1"), false);
+      });
+
+      it("cleans up all empty snapshots", () => {
+        const differ = createToolCallDiffer();
+
+        differ.setTempFileBefore("call-1", "/missing/a.txt");
+        differ.setTempFileBefore("call-2", "/missing/b.txt");
+        differ.cleanupAllTempFileBefore();
+
+        assert.deepStrictEqual(
+          [...differ.toolCallIdToTempFileBefore.keys()],
+          [],
+        );
+        assert.equal(testFs._files.has("/tmp/lasso-test-uuid.txt"), false);
+      });
+
+      it("cleans up all outstanding tool call snapshots", () => {
+        const differ = createToolCallDiffer();
+        differ.setTempFileBefore("call-1", "/a");
+        differ.setTempFileBefore("call-2", "/b");
+
+        differ.cleanupAllTempFileBefore();
+
+        assert.strictEqual(
+          testFs._files.has("/tmp/lasso-test-uuid.txt"),
+          false,
+        );
+        assert.strictEqual(
+          differ.toolCallIdToTempFileBefore.has("call-1"),
+          false,
+        );
+        assert.strictEqual(
+          differ.toolCallIdToTempFileBefore.has("call-2"),
+          false,
+        );
+      });
     });
 
-    it("registers an empty snapshot when the source file does not exist", () => {
-      const differ = createToolCallDiffer();
+    describe("ignored paths", () => {
+      it("does not snapshot ignores-path files", () => {
+        testFs._files.set("/tmp/file.txt", "original content");
+        const differ = createToolCallDiffer();
 
-      differ.setTempFileBefore("call-1", "/missing/file.txt");
+        differ.setTempFileBefore("call-1", "/tmp/file.txt");
 
-      assert.equal(testFs._files.get("/tmp/lasso-test-uuid.txt"), "");
-      assert.equal(
-        differ.toolCallIdToTempFileBefore.get("call-1"),
-        "/tmp/lasso-test-uuid.txt",
-      );
+        assert.equal(testFs._files.has("/tmp/lasso-test-uuid.txt"), false);
+        assert.equal(differ.toolCallIdToTempFileBefore.has("call-1"), false);
+      });
+
+      it("does not diff and cleans up the after file for ignored paths", async () => {
+        const commands: string[] = [];
+        const getWrites = mockStdoutWrites();
+        const differ = createToolCallDiffer();
+        mockExecCalls([], commands);
+
+        differ.setTempFileBefore("call-1", "/tmp/file.txt");
+        testFs._files.set("/tmp/file.txt", "new content");
+        await differ.diffAndCleanup("call-1", "/tmp/file.txt");
+
+        assert.equal(commands.length, 0);
+        assert.deepStrictEqual(getWrites(), []);
+        assert.deepStrictEqual(getState().app.toolEditDiffs, []);
+      });
     });
 
-    it("cleans up an empty snapshot", () => {
-      const differ = createToolCallDiffer();
+    describe("diffs", () => {
+      it("prints and records the diff for a newly-created file", async () => {
+        const commands: string[] = [];
+        const getWrites = mockStdoutWrites();
+        const differ = createToolCallDiffer();
+        mockExecCalls(
+          [{ stdout: "delta 0.18.2" }, { stdout: "+created content\n" }],
+          commands,
+        );
 
-      differ.setTempFileBefore("call-1", "/missing/file.txt");
-      differ.cleanupTempFileBefore("call-1");
+        differ.setTempFileBefore("call-1", "/test/new-file.txt");
+        testFs._files.set("/test/new-file.txt", "created content");
+        await differ.diffAndCleanup("call-1", "/test/new-file.txt");
 
-      assert.equal(testFs._files.has("/tmp/lasso-test-uuid.txt"), false);
-      assert.equal(differ.toolCallIdToTempFileBefore.has("call-1"), false);
-    });
+        assert.equal(commands.length, 2);
+        assert.deepStrictEqual(getWrites(), [
+          "\n",
+          `${GREY}━━ ${BOLD}File change: /test/new-file.txt${BOLD_RESET} ━━${RESET}\n`,
+          "+created content\n\n",
+        ]);
+        assert.deepStrictEqual(getState().app.toolEditDiffs, [
+          { fileName: "/test/new-file.txt", diffStdout: "+created content\n" },
+        ]);
+        assert.equal(testFs._files.has("/tmp/lasso-test-uuid.txt"), false);
+        assert.equal(differ.toolCallIdToTempFileBefore.has("call-1"), false);
+      });
 
-    it("cleans up all empty snapshots", () => {
-      const differ = createToolCallDiffer();
+      it("suppresses printing, continues recording tool edit diffs", async () => {
+        const commands: string[] = [];
+        const getWrites = mockStdoutWrites();
+        const differ = createToolCallDiffer();
+        mockExecCalls(
+          [{ stdout: "delta 0.18.2" }, { stdout: "+created content\n" }],
+          commands,
+        );
+        actions.setSuppressToolEditDiffs(true);
 
-      differ.setTempFileBefore("call-1", "/missing/a.txt");
-      differ.setTempFileBefore("call-2", "/missing/b.txt");
-      differ.cleanupAllTempFileBefore();
+        differ.setTempFileBefore("call-1", "/test/new-file.txt");
+        testFs._files.set("/test/new-file.txt", "created content");
+        await differ.diffAndCleanup("call-1", "/test/new-file.txt");
 
-      assert.deepStrictEqual([...differ.toolCallIdToTempFileBefore.keys()], []);
-      assert.equal(testFs._files.has("/tmp/lasso-test-uuid.txt"), false);
-    });
+        assert.equal(commands.length, 2);
+        assert.deepStrictEqual(getWrites(), []);
+        assert.deepStrictEqual(getState().app.toolEditDiffs, [
+          { fileName: "/test/new-file.txt", diffStdout: "+created content\n" },
+        ]);
+        assert.equal(testFs._files.has("/tmp/lasso-test-uuid.txt"), false);
+        assert.equal(differ.toolCallIdToTempFileBefore.has("call-1"), false);
+      });
 
-    it("does not snapshot ignores-path files", () => {
-      testFs._files.set("/tmp/file.txt", "original content");
-      const differ = createToolCallDiffer();
+      it("diffs a deleted file against an empty after snapshot", async () => {
+        testFs._files.set("/source/file.txt", "original content");
+        const commands: string[] = [];
+        const differ = createToolCallDiffer();
+        mockExecCalls(
+          [{ stdout: "delta 0.18.2" }, { stdout: "diff output" }],
+          commands,
+        );
 
-      differ.setTempFileBefore("call-1", "/tmp/file.txt");
+        differ.setTempFileBefore("call-1", "/source/file.txt");
+        await differ.diffAndCleanup("call-1", "/missing/after.txt");
 
-      assert.equal(testFs._files.has("/tmp/lasso-test-uuid.txt"), false);
-      assert.equal(differ.toolCallIdToTempFileBefore.has("call-1"), false);
-    });
+        assert.equal(commands.length, 2);
+        assert.deepStrictEqual(getState().app.toolEditDiffs, [
+          { fileName: "/missing/after.txt", diffStdout: "diff output" },
+        ]);
+        assert.equal(testFs._files.has("/tmp/lasso-test-uuid.txt"), false);
+        assert.equal(differ.toolCallIdToTempFileBefore.has("call-1"), false);
+      });
 
-    it("does not diff and cleans up the after file for ignored paths", async () => {
-      const commands: string[] = [];
-      const getWrites = mockStdoutWrites();
-      const differ = createToolCallDiffer();
-      mockExecCalls([], commands);
+      it("diffs and cleans up a successful tool call", async () => {
+        testFs._files.set("/test/file.txt", "original content");
+        const commands: string[] = [];
+        const differ = createToolCallDiffer();
+        mockExecCalls(
+          [{ stdout: "delta 0.18.2" }, { stdout: "diff output" }],
+          commands,
+        );
 
-      differ.setTempFileBefore("call-1", "/tmp/file.txt");
-      testFs._files.set("/tmp/file.txt", "new content");
-      await differ.diffAndCleanup("call-1", "/tmp/file.txt");
+        differ.setTempFileBefore("call-1", "/test/file.txt");
+        await differ.diffAndCleanup("call-1", "/test/file.txt");
 
-      assert.equal(commands.length, 0);
-      assert.deepStrictEqual(getWrites(), []);
-      assert.deepStrictEqual(getState().app.toolEditDiffs, []);
-    });
+        assert.strictEqual(
+          commands[1],
+          "git diff --no-index --color=always -U3 /tmp/lasso-test-uuid.txt /tmp/lasso-test-uuid.txt | delta --paging=never --line-numbers --hunk-header-style=omit --file-style=omit",
+        );
+        assert.strictEqual(
+          testFs._files.has("/tmp/lasso-test-uuid.txt"),
+          false,
+        );
+        assert.strictEqual(
+          differ.toolCallIdToTempFileBefore.has("call-1"),
+          false,
+        );
+        assert.deepStrictEqual(getState().app.toolEditDiffs, [
+          { fileName: "/test/file.txt", diffStdout: "diff output" },
+        ]);
+      });
 
-    it("prints and records the diff for a newly-created file", async () => {
-      const commands: string[] = [];
-      const getWrites = mockStdoutWrites();
-      const differ = createToolCallDiffer();
-      mockExecCalls(
-        [{ stdout: "delta 0.18.2" }, { stdout: "+created content\n" }],
-        commands,
-      );
+      it("appends the diff to state and does not print an error when the diff command succeeds", async () => {
+        testFs._files.set("/test/file.txt", "original content");
+        const getWrites = mockStdoutWrites();
+        const differ = createToolCallDiffer();
+        mockExecCalls([
+          { stdout: "delta 0.18.2" },
+          { stdout: "+added line\n" },
+        ]);
 
-      differ.setTempFileBefore("call-1", "/test/new-file.txt");
-      testFs._files.set("/test/new-file.txt", "created content");
-      await differ.diffAndCleanup("call-1", "/test/new-file.txt");
+        differ.setTempFileBefore("call-1", "/test/file.txt");
+        await differ.diffAndCleanup("call-1", "/test/file.txt");
 
-      assert.equal(commands.length, 2);
-      assert.deepStrictEqual(getWrites(), [
-        "\n",
-        `${GREY}━━ ${BOLD}File change: /test/new-file.txt${BOLD_RESET} ━━${RESET}\n`,
-        "+created content\n\n",
-      ]);
-      assert.deepStrictEqual(getState().app.toolEditDiffs, [
-        { fileName: "/test/new-file.txt", diffStdout: "+created content\n" },
-      ]);
-      assert.equal(testFs._files.has("/tmp/lasso-test-uuid.txt"), false);
-      assert.equal(differ.toolCallIdToTempFileBefore.has("call-1"), false);
-    });
-
-    it("suppresses printing, continues recording tool edit diffs", async () => {
-      const commands: string[] = [];
-      const getWrites = mockStdoutWrites();
-      const differ = createToolCallDiffer();
-      mockExecCalls(
-        [{ stdout: "delta 0.18.2" }, { stdout: "+created content\n" }],
-        commands,
-      );
-      actions.setSuppressToolEditDiffs(true);
-
-      differ.setTempFileBefore("call-1", "/test/new-file.txt");
-      testFs._files.set("/test/new-file.txt", "created content");
-      await differ.diffAndCleanup("call-1", "/test/new-file.txt");
-
-      assert.equal(commands.length, 2);
-      assert.deepStrictEqual(getWrites(), []);
-      assert.deepStrictEqual(getState().app.toolEditDiffs, [
-        { fileName: "/test/new-file.txt", diffStdout: "+created content\n" },
-      ]);
-      assert.equal(testFs._files.has("/tmp/lasso-test-uuid.txt"), false);
-      assert.equal(differ.toolCallIdToTempFileBefore.has("call-1"), false);
-    });
-
-    it("diffs a deleted file against an empty after snapshot", async () => {
-      testFs._files.set("/source/file.txt", "original content");
-      const commands: string[] = [];
-      const differ = createToolCallDiffer();
-      mockExecCalls(
-        [{ stdout: "delta 0.18.2" }, { stdout: "diff output" }],
-        commands,
-      );
-
-      differ.setTempFileBefore("call-1", "/source/file.txt");
-      await differ.diffAndCleanup("call-1", "/missing/after.txt");
-
-      assert.equal(commands.length, 2);
-      assert.deepStrictEqual(getState().app.toolEditDiffs, [
-        { fileName: "/missing/after.txt", diffStdout: "diff output" },
-      ]);
-      assert.equal(testFs._files.has("/tmp/lasso-test-uuid.txt"), false);
-      assert.equal(differ.toolCallIdToTempFileBefore.has("call-1"), false);
-    });
-
-    it("diffs and cleans up a successful tool call", async () => {
-      testFs._files.set("/test/file.txt", "original content");
-      const commands: string[] = [];
-      const differ = createToolCallDiffer();
-      mockExecCalls(
-        [{ stdout: "delta 0.18.2" }, { stdout: "diff output" }],
-        commands,
-      );
-
-      differ.setTempFileBefore("call-1", "/test/file.txt");
-      await differ.diffAndCleanup("call-1", "/test/file.txt");
-
-      assert.strictEqual(
-        commands[1],
-        "git diff --no-index --color=always -U3 /tmp/lasso-test-uuid.txt /tmp/lasso-test-uuid.txt | delta --paging=never --line-numbers --hunk-header-style=omit --file-style=omit",
-      );
-      assert.strictEqual(testFs._files.has("/tmp/lasso-test-uuid.txt"), false);
-      assert.strictEqual(
-        differ.toolCallIdToTempFileBefore.has("call-1"),
-        false,
-      );
-      assert.deepStrictEqual(getState().app.toolEditDiffs, [
-        { fileName: "/test/file.txt", diffStdout: "diff output" },
-      ]);
-    });
-
-    it("appends the diff to state and does not print an error when the diff command succeeds", async () => {
-      testFs._files.set("/test/file.txt", "original content");
-      const getWrites = mockStdoutWrites();
-      const differ = createToolCallDiffer();
-      mockExecCalls([{ stdout: "delta 0.18.2" }, { stdout: "+added line\n" }]);
-
-      differ.setTempFileBefore("call-1", "/test/file.txt");
-      await differ.diffAndCleanup("call-1", "/test/file.txt");
-
-      assert.deepStrictEqual(getWrites(), [
-        "\n",
-        `${GREY}━━ ${BOLD}File change: /test/file.txt${BOLD_RESET} ━━${RESET}\n`,
-        "+added line\n\n",
-      ]);
-    });
-
-    it("cleans up all outstanding tool call snapshots", () => {
-      const differ = createToolCallDiffer();
-      differ.setTempFileBefore("call-1", "/a");
-      differ.setTempFileBefore("call-2", "/b");
-
-      differ.cleanupAllTempFileBefore();
-
-      assert.strictEqual(testFs._files.has("/tmp/lasso-test-uuid.txt"), false);
-      assert.strictEqual(
-        differ.toolCallIdToTempFileBefore.has("call-1"),
-        false,
-      );
-      assert.strictEqual(
-        differ.toolCallIdToTempFileBefore.has("call-2"),
-        false,
-      );
+        assert.deepStrictEqual(getWrites(), [
+          "\n",
+          `${GREY}━━ ${BOLD}File change: /test/file.txt${BOLD_RESET} ━━${RESET}\n`,
+          "+added line\n\n",
+        ]);
+      });
     });
   });
 
@@ -241,145 +262,151 @@ describe("differ", () => {
       setupTestContext();
     });
 
-    it("uses delta and three context lines by default", async () => {
-      const commands: string[] = [];
-      mockExecCalls(
-        [{ stdout: "delta 0.18.2" }, { stdout: "diff output" }],
-        commands,
-      );
-      const result = await execGitDiff({
-        tempFileBeforePath: "a",
-        tempFileAfterPath: "b",
+    describe("uses delta", () => {
+      it("uses delta and three context lines by default", async () => {
+        const commands: string[] = [];
+        mockExecCalls(
+          [{ stdout: "delta 0.18.2" }, { stdout: "diff output" }],
+          commands,
+        );
+        const result = await execGitDiff({
+          tempFileBeforePath: "a",
+          tempFileAfterPath: "b",
+        });
+        assert.deepStrictEqual(result, { stdout: "diff output", stderr: "" });
+        assert.deepStrictEqual(commands, [
+          "delta --version",
+          "git diff --no-index --color=always -U3 a b | delta --paging=never --line-numbers --hunk-header-style=omit --file-style=omit",
+        ]);
       });
-      assert.deepStrictEqual(result, { stdout: "diff output", stderr: "" });
-      assert.deepStrictEqual(commands, [
-        "delta --version",
-        "git diff --no-index --color=always -U3 a b | delta --paging=never --line-numbers --hunk-header-style=omit --file-style=omit",
-      ]);
-    });
 
-    it("includes the filename when requested", async () => {
-      const commands: string[] = [];
-      mockExecCalls(
-        [{ stdout: "delta 0.18.2" }, { stdout: "diff output" }],
-        commands,
-      );
-      await execGitDiff({
-        tempFileBeforePath: "a",
-        tempFileAfterPath: "b",
-        includeFilename: true,
+      it("includes the filename when requested", async () => {
+        const commands: string[] = [];
+        mockExecCalls(
+          [{ stdout: "delta 0.18.2" }, { stdout: "diff output" }],
+          commands,
+        );
+        await execGitDiff({
+          tempFileBeforePath: "a",
+          tempFileAfterPath: "b",
+          includeFilename: true,
+        });
+        assert.strictEqual(
+          commands[1],
+          "git diff --no-index --color=always -U3 a b | delta --paging=never --line-numbers --hunk-header-style=omit --file-style=normal",
+        );
       });
-      assert.strictEqual(
-        commands[1],
-        "git diff --no-index --color=always -U3 a b | delta --paging=never --line-numbers --hunk-header-style=omit --file-style=normal",
-      );
-    });
 
-    it("resolves when delta exits with code 1 (differences found)", async () => {
-      const err = new Error("diff failed") as Error & { code: number };
-      err.code = 1;
-      mockExecCalls([{ stdout: "delta 0.18.2" }, { stdout: "", error: err }]);
-      const result = await execGitDiff({
-        tempFileBeforePath: "a",
-        tempFileAfterPath: "b",
+      it("resolves when delta exits with code 1 (differences found)", async () => {
+        const err = new Error("diff failed") as Error & { code: number };
+        err.code = 1;
+        mockExecCalls([{ stdout: "delta 0.18.2" }, { stdout: "", error: err }]);
+        const result = await execGitDiff({
+          tempFileBeforePath: "a",
+          tempFileAfterPath: "b",
+        });
+        assert.deepStrictEqual(result, { stdout: "", stderr: "" });
       });
-      assert.deepStrictEqual(result, { stdout: "", stderr: "" });
     });
 
-    it("falls back to plain git diff when delta is not available", async () => {
-      mockExecCalls([
-        { stdout: "", error: new Error("not found") },
-        { stdout: "plain diff" },
-      ]);
-      const result = await execGitDiff({
-        tempFileBeforePath: "a",
-        tempFileAfterPath: "b",
+    describe("plain git diff", () => {
+      it("falls back to plain git diff when delta is not available", async () => {
+        mockExecCalls([
+          { stdout: "", error: new Error("not found") },
+          { stdout: "plain diff" },
+        ]);
+        const result = await execGitDiff({
+          tempFileBeforePath: "a",
+          tempFileAfterPath: "b",
+        });
+        assert.deepStrictEqual(result, { stdout: "plain diff", stderr: "" });
       });
-      assert.deepStrictEqual(result, { stdout: "plain diff", stderr: "" });
-    });
 
-    it("resolves when plain git diff exits with code 1 (differences found)", async () => {
-      const err = new Error("diff failed") as Error & { code: number };
-      err.code = 1;
-      mockExecCalls([
-        { stdout: "", error: new Error("not found") },
-        { stdout: "", error: err },
-      ]);
-      const result = await execGitDiff({
-        tempFileBeforePath: "a",
-        tempFileAfterPath: "b",
+      it("resolves when plain git diff exits with code 1 (differences found)", async () => {
+        const err = new Error("diff failed") as Error & { code: number };
+        err.code = 1;
+        mockExecCalls([
+          { stdout: "", error: new Error("not found") },
+          { stdout: "", error: err },
+        ]);
+        const result = await execGitDiff({
+          tempFileBeforePath: "a",
+          tempFileAfterPath: "b",
+        });
+        assert.deepStrictEqual(result, { stdout: "", stderr: "" });
       });
-      assert.deepStrictEqual(result, { stdout: "", stderr: "" });
-    });
 
-    it("resolves on plain git diff error with an unexpected low exit code", async () => {
-      const err = new Error("unexpected failure") as Error & {
-        code: number;
-      };
-      err.code = 3;
-      mockExecCalls([
-        { stdout: "", error: new Error("not found") },
-        { stdout: "", error: err },
-      ]);
-      const result = await execGitDiff({
-        tempFileBeforePath: "a",
-        tempFileAfterPath: "b",
+      it("resolves on plain git diff error with an unexpected low exit code", async () => {
+        const err = new Error("unexpected failure") as Error & {
+          code: number;
+        };
+        err.code = 3;
+        mockExecCalls([
+          { stdout: "", error: new Error("not found") },
+          { stdout: "", error: err },
+        ]);
+        const result = await execGitDiff({
+          tempFileBeforePath: "a",
+          tempFileAfterPath: "b",
+        });
+        assert.deepStrictEqual(result, { stdout: "", stderr: "" });
       });
-      assert.deepStrictEqual(result, { stdout: "", stderr: "" });
     });
 
-    it("rejects when plain git diff exits with code 2 (usage error)", async () => {
-      const err = new Error("usage error") as Error & { code: number };
-      err.code = 2;
-      mockExecCalls([
-        { stdout: "", error: new Error("not found") },
-        { stdout: "", error: err },
-      ]);
-      await assert.rejects(
-        execGitDiff({ tempFileBeforePath: "a", tempFileAfterPath: "b" }),
-        /usage error/,
-      );
-    });
+    describe("rejects on errors", () => {
+      it("rejects when plain git diff exits with code 2 (usage error)", async () => {
+        const err = new Error("usage error") as Error & { code: number };
+        err.code = 2;
+        mockExecCalls([
+          { stdout: "", error: new Error("not found") },
+          { stdout: "", error: err },
+        ]);
+        await assert.rejects(
+          execGitDiff({ tempFileBeforePath: "a", tempFileAfterPath: "b" }),
+          /usage error/,
+        );
+      });
 
-    it("rejects when git is not installed (plain git diff exit code 127)", async () => {
-      const err = new Error("git: command not found") as Error & {
-        code: number;
-      };
-      err.code = 127;
-      mockExecCalls([
-        { stdout: "", error: new Error("not found") },
-        { stdout: "", error: err },
-      ]);
-      await assert.rejects(
-        execGitDiff({ tempFileBeforePath: "a", tempFileAfterPath: "b" }),
-        /command not found/,
-      );
-    });
+      it("rejects when git is not installed (plain git diff exit code 127)", async () => {
+        const err = new Error("git: command not found") as Error & {
+          code: number;
+        };
+        err.code = 127;
+        mockExecCalls([
+          { stdout: "", error: new Error("not found") },
+          { stdout: "", error: err },
+        ]);
+        await assert.rejects(
+          execGitDiff({ tempFileBeforePath: "a", tempFileAfterPath: "b" }),
+          /command not found/,
+        );
+      });
 
-    it("rejects when plain git diff is killed by a signal (141)", async () => {
-      const err = new Error("killed") as Error & { code: number };
-      err.code = 141;
-      mockExecCalls([
-        { stdout: "", error: new Error("not found") },
-        { stdout: "", error: err },
-      ]);
-      await assert.rejects(
-        execGitDiff({ tempFileBeforePath: "a", tempFileAfterPath: "b" }),
-        /killed/,
-      );
-    });
+      it("rejects when plain git diff is killed by a signal (141)", async () => {
+        const err = new Error("killed") as Error & { code: number };
+        err.code = 141;
+        mockExecCalls([
+          { stdout: "", error: new Error("not found") },
+          { stdout: "", error: err },
+        ]);
+        await assert.rejects(
+          execGitDiff({ tempFileBeforePath: "a", tempFileAfterPath: "b" }),
+          /killed/,
+        );
+      });
 
-    it("rejects on fatal plain git diff error", async () => {
-      const err = new Error("fatal") as Error & { code: number };
-      err.code = 128;
-      mockExecCalls([
-        { stdout: "", error: new Error("not found") },
-        { stdout: "", error: err },
-      ]);
-      await assert.rejects(
-        execGitDiff({ tempFileBeforePath: "a", tempFileAfterPath: "b" }),
-        /fatal/,
-      );
+      it("rejects on fatal plain git diff error", async () => {
+        const err = new Error("fatal") as Error & { code: number };
+        err.code = 128;
+        mockExecCalls([
+          { stdout: "", error: new Error("not found") },
+          { stdout: "", error: err },
+        ]);
+        await assert.rejects(
+          execGitDiff({ tempFileBeforePath: "a", tempFileAfterPath: "b" }),
+          /fatal/,
+        );
+      });
     });
   });
 

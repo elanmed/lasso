@@ -22,36 +22,40 @@ describe("text", () => {
       mock.method(processDeps.stdout, "getColumns", () => MAX_LEN);
     });
 
-    it("returns empty string unchanged", () => {
-      assert.equal(truncate(""), "");
+    describe("returns unchanged", () => {
+      it("returns empty string unchanged", () => {
+        assert.equal(truncate(""), "");
+      });
+
+      it("returns strings within the max length unchanged", () => {
+        assert.equal(truncate("a".repeat(MAX_LEN)), "a".repeat(MAX_LEN));
+      });
     });
 
-    it("returns strings within the max length unchanged", () => {
-      assert.equal(truncate("a".repeat(MAX_LEN)), "a".repeat(MAX_LEN));
-    });
+    describe("truncates with an ellipsis", () => {
+      it("truncates longer strings to the max length with an ellipsis", () => {
+        assert.equal(
+          truncate("a".repeat(MAX_LEN + 10)),
+          `${"a".repeat(MAX_LEN - 1)}…`,
+        );
+      });
 
-    it("truncates longer strings to the max length with an ellipsis", () => {
-      assert.equal(
-        truncate("a".repeat(MAX_LEN + 10)),
-        `${"a".repeat(MAX_LEN - 1)}…`,
-      );
-    });
+      it("returns the first line with an ellipsis for multiline input", () => {
+        assert.equal(truncate("short\nsecond line"), "short…");
+      });
 
-    it("returns the first line with an ellipsis for multiline input", () => {
-      assert.equal(truncate("short\nsecond line"), "short…");
-    });
+      it("truncates a long first line to the max length with an ellipsis", () => {
+        assert.equal(
+          truncate(`${"a".repeat(MAX_LEN + 10)}\nrest`),
+          `${"a".repeat(MAX_LEN - 1)}…`,
+        );
+      });
 
-    it("truncates a long first line to the max length with an ellipsis", () => {
-      assert.equal(
-        truncate(`${"a".repeat(MAX_LEN + 10)}\nrest`),
-        `${"a".repeat(MAX_LEN - 1)}…`,
-      );
-    });
-
-    it("truncates with a three-char ellipsis when asciiOnly is set", () => {
-      actions.setAsciiOnly(true);
-      assert.equal(truncate("a".repeat(MAX_LEN + 10)), `${"a".repeat(99)}~`);
-      assert.equal(truncate("short\nsecond line"), "short~");
+      it("truncates with a three-char ellipsis when asciiOnly is set", () => {
+        actions.setAsciiOnly(true);
+        assert.equal(truncate("a".repeat(MAX_LEN + 10)), `${"a".repeat(99)}~`);
+        assert.equal(truncate("short\nsecond line"), "short~");
+      });
     });
 
     it("falls back to 80 columns when stdout columns are undefined", () => {
