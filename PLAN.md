@@ -6,29 +6,32 @@ Convert every test file that still uses `mockStdout()` to `mockStdoutWrites()`.
 
 ## Guide
 
-- `mockStdout()` concatenates every write into one string and silently drops any write containing `\r` (unless `includeSpinnerFrames: true`), so cursor-movement sequences are invisible to assertions.
-- `mockStdoutWrites()` returns `() => string[]` — the raw sequence of `process.stdout.write` calls, unfiltered. Assert on that array in one call:
+- `mockStdoutWrites(opts)` takes the same opts as `mockStdout(opts)`: `{ includeSpinnerFrames?: boolean } = {}`. By default it drops any write containing `\r` (spinner frames, cursor-movement rewrites) because those are too noisy for ordinary assertions. It returns `() => string[]` — the sequence of kept `process.stdout.write` calls. Assert on that array in one call:
   ```ts
   const getWrites = mockStdoutWrites();
   ...
   assert.deepStrictEqual(getWrites(), [
     `${BLUE}Starting a: ${RESET}\n`,
-    `${UP_1}${CLEAR_LINE}${CR}`,
     `${GREEN}0.0ms${RESET}`,
-    `${DOWN_1}${CR}`,
   ]);
+  ```
+- Only pass `mockStdoutWrites({ includeSpinnerFrames: true })` when the test actually asserts `\r`-bearing writes (spinner frames, cursor up/down rewrites such as `${UP_1}${CLEAR_LINE}${CR}`):
+  ```ts
+  const getWrites = mockStdoutWrites({ includeSpinnerFrames: true });
   ```
 - Rename the capture variable from `getCaptured` to `getWrites`, and `assert.equal`/`assert.strictEqual`/`assert.ok` on the whole string to a single `assert.deepStrictEqual(getWrites(), [...])`.
 - One array element per terminal write. A `"\n"` ends an element; if the code writes text and newline together it is one element (`...\n`), if separately it is two.
 - Import shared constants from `./test-helpers.ts` instead of literal escapes: `BLUE`, `GREEN`, `RED`, `RESET`, `UP_1`, `UP_2`, `DOWN_1`, `DOWN_2`, `CLEAR_LINE`, `CR`. Interpolating these constants in expectations is allowed (see AGENTS.md).
-- For assertions that only check that nothing was printed, use `assert.deepStrictEqual(getWrites(), [])`.
+- For assertions that only check that nothing was printed, use `assert.deepStrictEqual(getWrites(), [])`. With the default filtering this means no non-`\r` writes; if the test must also prove there were no spinner/rewrite writes, use `mockStdoutWrites({ includeSpinnerFrames: true })` and assert `[]`.
 - Drop `mockStdout` from the import once no longer referenced. `mockStdout({ includeSpinnerFrames: true })` call sites may stay as-is only if genuinely needed; prefer converting them too.
+- Converted already: `src/api.test.ts`, `src/mcp.test.ts`, and `src/print.test.ts` use `mockStdoutWrites({ includeSpinnerFrames: true })` where they assert rewrite sequences.
 - Preserve existing expectations' values — this is a capture-mechanism change, not a behavior change. If a test fails, the old assertion was probably hiding writes (`\r`) that must now appear in the array.
 - Remove `stripAnsi` from assertions you convert; raw writes with color codes are now asserted explicitly.
+- `setupTestContext()` mocks `setInterval`/`clearInterval` by default, so the spinner interval never fires mid-test. Only call `mockSetInterval()` yourself when a test needs to read or tick the callbacks manually (the default mock returns no callbacks).
 
 ## Files
 
-- [ ] `src/api.test.ts` (10 call sites)
+- [x] `src/api.test.ts` (10 call sites)
 - [ ] `src/config.test.ts` (7)
 - [ ] `src/context.test.ts` (3)
 - [ ] `src/differ.test.ts` (6)

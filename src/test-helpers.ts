@@ -142,9 +142,13 @@ export function mockStdout(opts: { includeSpinnerFrames?: boolean } = {}) {
   return () => captured;
 }
 
-export function mockStdoutWrites() {
+export function mockStdoutWrites(
+  opts: { includeSpinnerFrames?: boolean } = {},
+) {
+  const { includeSpinnerFrames = false } = opts;
   const writes: string[] = [];
   mock.method(processDeps.stdout, "write", (out: string) => {
+    if (!includeSpinnerFrames && out.includes("\r")) return;
     writes.push(out);
   });
   return () => writes;
@@ -216,6 +220,10 @@ export const DOWN_1 = "\x1b[1B";
 export const DOWN_2 = "\x1b[2B";
 export const CLEAR_LINE = "\x1b[2K";
 export const CR = "\r";
+export const YELLOW = "\x1b[33m";
+export const GREY = "\x1b[90m";
+export const BOLD = "\x1b[1m";
+export const BOLD_RESET = "\x1b[22m";
 
 export function makeFakeRl(overrides: object = {}) {
   return {
@@ -282,6 +290,12 @@ export function setupTestContext({
   );
   mock.method(Date, "now", () => now);
   mock.method(process.hrtime, "bigint", () => BigInt(0));
+  mock.method(
+    globalThis,
+    "setInterval",
+    () => 0 as unknown as ReturnType<typeof setInterval>,
+  );
+  mock.method(globalThis, "clearInterval", () => undefined);
   actions.resetState();
   if (apiKey !== null) {
     testProcessEnv._set("LASSO_API_KEY", apiKey);

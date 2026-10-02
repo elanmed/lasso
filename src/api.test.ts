@@ -14,8 +14,13 @@ import {
   setupTestContext,
   testFs,
   mockExec,
-  mockStdout,
-  stripAnsi,
+  mockStdoutWrites,
+  BLUE,
+  RESET,
+  YELLOW,
+  GREY,
+  BOLD,
+  BOLD_RESET,
   makeGenerateTextResult,
   mockGenerateText,
   makeMcpTool,
@@ -109,7 +114,7 @@ describe("api", () => {
     });
 
     it("prints the [mcp] prefix on mcp tool call start", async () => {
-      const getCaptured = mockStdout();
+      const getWrites = mockStdoutWrites();
       actions.setMcp({}, { mcp_tool: makeMcpTool() });
       mockGenerateText((options: Record<string, unknown>) => {
         const onStart = options["onToolExecutionStart"] as (
@@ -125,11 +130,13 @@ describe("api", () => {
         return Promise.resolve(makeGenerateTextResult());
       });
       await resolveApiCall("hello");
-      assert.strictEqual(stripAnsi(getCaptured()), `[mcp] mcp_tool: {"a":1}\n`);
+      assert.deepStrictEqual(getWrites(), [
+        `${BLUE}${BOLD}[mcp] mcp_tool${BOLD_RESET}: {"a":1}${RESET}\n`,
+      ]);
     });
 
     it("prints load_skill details on tool call start", async () => {
-      const getCaptured = mockStdout();
+      const getWrites = mockStdoutWrites();
       mockGenerateText((options: Record<string, unknown>) => {
         const onStart = options["onToolExecutionStart"] as (
           arg: Record<string, unknown>,
@@ -144,11 +151,13 @@ describe("api", () => {
         return Promise.resolve(makeGenerateTextResult());
       });
       await resolveApiCall("hello");
-      assert.strictEqual(stripAnsi(getCaptured()), `load_skill: demo\n`);
+      assert.deepStrictEqual(getWrites(), [
+        `${BLUE}${BOLD}load_skill${BOLD_RESET}: demo${RESET}\n`,
+      ]);
     });
 
     it("prints web_fetch_html and web_fetch_json details on tool call start", async () => {
-      const getCaptured = mockStdout();
+      const getWrites = mockStdoutWrites();
       mockGenerateText((options: Record<string, unknown>) => {
         const onStart = options["onToolExecutionStart"] as (
           arg: Record<string, unknown>,
@@ -170,16 +179,14 @@ describe("api", () => {
         return Promise.resolve(makeGenerateTextResult());
       });
       await resolveApiCall("hello");
-      assert.strictEqual(
-        stripAnsi(getCaptured()),
-        `web_fetch_html: https://example.com
-web_fetch_json: https://example.com/api
-`,
-      );
+      assert.deepStrictEqual(getWrites(), [
+        `${BLUE}${BOLD}web_fetch_html${BOLD_RESET}: https://example.com${RESET}\n`,
+        `${BLUE}${BOLD}web_fetch_json${BOLD_RESET}: https://example.com/api${RESET}\n`,
+      ]);
     });
 
     it("prints one indented line per subagent task on tool call start", async () => {
-      const getCaptured = mockStdout();
+      const getWrites = mockStdoutWrites();
       mockGenerateText((options: Record<string, unknown>) => {
         const onStart = options["onToolExecutionStart"] as (
           arg: Record<string, unknown>,
@@ -207,19 +214,10 @@ web_fetch_json: https://example.com/api
         return Promise.resolve(makeGenerateTextResult());
       });
       await resolveApiCall("hello");
-      const lines = stripAnsi(getCaptured()).trimEnd().split("\n");
-      const firstLine = lines[0];
-      const secondLine = lines[1];
-      assert(firstLine !== undefined);
-      assert(secondLine !== undefined);
-      assert.strictEqual(
-        firstLine,
-        "   create_subagent: [claude-sonnet-4-20250514] investigate tests",
-      );
-      assert.strictEqual(
-        secondLine,
-        "   create_subagent: [claude-sonnet-4-20250514] write code",
-      );
+      assert.deepStrictEqual(getWrites(), [
+        `${BLUE}${BOLD}   create_subagent${BOLD_RESET}: [claude-sonnet-4-20250514] investigate tests${RESET}\n`,
+        `${BLUE}${BOLD}   create_subagent${BOLD_RESET}: [claude-sonnet-4-20250514] write code${RESET}\n`,
+      ]);
     });
 
     it("resolves the queued editor input when the api call is interrupted", async () => {
@@ -227,14 +225,13 @@ web_fetch_json: https://example.com/api
       actions.setEditorInputValue("queued input");
       const err = makeAbortError();
       mock.method(aiDeps, "generateText", () => Promise.reject(err));
-      const getCaptured = mockStdout();
+      const getWrites = mockStdoutWrites();
       const result = await resolveApiCall("hello");
       assert.strictEqual(result, null);
       assert.strictEqual(getState().app.editorInputValue, "queued input");
-      assert.strictEqual(
-        stripAnsi(getCaptured()),
-        "You have queued messages!\n",
-      );
+      assert.deepStrictEqual(getWrites(), [
+        `${YELLOW}You have queued messages!${RESET}\n`,
+      ]);
     });
 
     it("returns null on abort error", async () => {
@@ -418,7 +415,7 @@ web_fetch_json: https://example.com/api
     });
 
     it("prints diff and cleans up on tool call finish success", async () => {
-      const getCaptured = mockStdout();
+      const getWrites = mockStdoutWrites();
       testFs._files.set("/test/file.txt", "modified content");
       mock.method(
         aiDeps,
@@ -458,15 +455,12 @@ web_fetch_json: https://example.com/api
       );
       mockExec({ stdout: "+added line" });
       await resolveApiCall("edit file");
-      assert.strictEqual(
-        stripAnsi(getCaptured()),
-        `bash: write
-
-━━ File change: /test/file.txt ━━
-+added line
-
-`,
-      );
+      assert.deepStrictEqual(getWrites(), [
+        `${BLUE}${BOLD}bash${BOLD_RESET}: write${RESET}\n`,
+        "\n",
+        `${GREY}━━ ${BOLD}File change: /test/file.txt${BOLD_RESET} ━━${RESET}\n`,
+        `+added line\n\n`,
+      ]);
       assert.strictEqual(testFs._files.has("/tmp/lasso-test-uuid.txt"), false);
     });
 
@@ -868,7 +862,7 @@ web_fetch_json: https://example.com/api
     });
 
     it("resolves the queued editor input when compaction is aborted", async () => {
-      const getCaptured = mockStdout();
+      const getWrites = mockStdoutWrites();
       actions.setConversationMessages([{ role: "user", content: "hi" }]);
       actions.setPromptTokens(96_000);
       actions.setRl(makeFakeRl());
@@ -878,16 +872,14 @@ web_fetch_json: https://example.com/api
       await maybeCompact("hi");
       assert.strictEqual(getState().abortControllers.apiStream, null);
       assert.strictEqual(getState().app.editorInputValue, "queued input");
-      assert.strictEqual(
-        stripAnsi(getCaptured()),
-        `Compacting…
-You have queued messages!
-`,
-      );
+      assert.deepStrictEqual(getWrites(), [
+        `${BLUE}Compacting…${RESET}\n`,
+        `${YELLOW}You have queued messages!${RESET}\n`,
+      ]);
     });
 
     it("keeps messages on abort error during compaction", async () => {
-      const getCaptured = mockStdout();
+      const getWrites = mockStdoutWrites();
       actions.setConversationMessages([{ role: "user", content: "hi" }]);
       actions.setPromptTokens(96_000);
       const err = makeAbortError();
@@ -902,11 +894,7 @@ You have queued messages!
         value: 96_000,
         dirty: false,
       });
-      assert.strictEqual(
-        stripAnsi(getCaptured()),
-        `Compacting…
-`,
-      );
+      assert.deepStrictEqual(getWrites(), [`${BLUE}Compacting…${RESET}\n`]);
     });
 
     it("compacts against the default context window when the model has none configured", async () => {
@@ -1283,7 +1271,7 @@ You have queued messages!
     });
 
     it("returns null and does not touch messages on abort error", async () => {
-      const getCaptured = mockStdout();
+      const getWrites = mockStdoutWrites();
       seedConversation();
       const err = makeAbortError();
       mock.method(aiDeps, "generateText", () => Promise.reject(err));
@@ -1301,24 +1289,23 @@ You have queued messages!
         value: 85_000,
         dirty: false,
       });
-      assert.strictEqual(stripAnsi(getCaptured()), "");
+      assert.deepStrictEqual(getWrites(), []);
     });
 
     it("resolves the queued editor input on abort error", async () => {
       seedConversation();
       actions.setRl(makeFakeRl());
       actions.setEditorInputValue("queued input");
-      const getCaptured = mockStdout();
+      const getWrites = mockStdoutWrites();
       const err = makeAbortError();
       mock.method(aiDeps, "generateText", () => Promise.reject(err));
       const result = await getConversationSummary();
       assert.strictEqual(result, null);
       assert.strictEqual(getState().app.editorInputValue, "queued input");
       assert.strictEqual(getState().abortControllers.apiStream, null);
-      assert.strictEqual(
-        stripAnsi(getCaptured()),
-        "You have queued messages!\n",
-      );
+      assert.deepStrictEqual(getWrites(), [
+        `${YELLOW}You have queued messages!${RESET}\n`,
+      ]);
     });
   });
 
