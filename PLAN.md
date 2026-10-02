@@ -4,7 +4,7 @@ The test files are too flat: long runs of `it` blocks sit directly inside the fi
 
 This is a pure reorganization: **no `it` title or body may change**, and no new `beforeEach`/`afterEach`.
 
-**Do only one file at a time.** After each file: run `./agent-pnpm-run.sh format` (fixes indentation) then `./agent-pnpm-run.sh ci`, and only then move to the next bullet. Never edit two files in one pass.
+**Do only one file at a time.** After each file: run `./agent-pnpm-run.sh prettier-format` (fixes indentation) then `./agent-pnpm-run.sh ci`, and only then move to the next bullet. Never edit two files in one pass.
 
 ## Rules
 
@@ -23,9 +23,9 @@ This is a pure reorganization: **no `it` title or body may change**, and no new 
 
 Ordered smallest / flattest first. Counts are `total its` and the biggest flat runs needing groups.
 
-- [ ] `src/prompts.test.ts` (5 its, 0 describes — group by prompt: base agent, subagents, summaries)
-- [ ] `src/paths.test.ts` (6, 0 — group by directory: config, state, data, local)
-- [ ] `src/debug-log.test.ts` (6, 0 — group: disabled/skipped, writes)
+- [x] `src/prompts.test.ts` (5 its, 0 describes — group by prompt: base agent, subagents, summaries)
+- [x] `src/paths.test.ts` (6, 0 — group by directory: config, state, data, local)
+- [x] `src/debug-log.test.ts` (6, 0 — group: disabled/skipped, writes)
 - [ ] `src/mcp.test.ts` (10, 0 — group: init, failures, startup printing)
 - [ ] `src/config-types.test.ts` (7 — root `it` + `isSameKey` (6))
 - [ ] `src/slash-commands.test.ts` (10 across 2 root describes — `getAvailableSlashCommands` has 9 flat)
