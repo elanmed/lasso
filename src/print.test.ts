@@ -193,7 +193,7 @@ ${BLUE}Starting b: ${RESET}
         logDuration: true,
         labels: ["Starting a: ", "Starting b: "],
       });
-      const getWrites = mockStdoutWrites();
+      const getWrites = mockStdoutWrites({ includeSpinnerFrames: true });
 
       logger.printAllLabels();
       logger.start("Starting a: ");

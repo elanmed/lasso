@@ -71,7 +71,7 @@ describe("mcp", () => {
     mockMcpClients(new Error("connection refused"));
     setMcps("first");
 
-    const getWrites = mockStdoutWrites();
+    const getWrites = mockStdoutWrites({ includeSpinnerFrames: true });
     await initMcpState();
 
     assert.deepStrictEqual(getWrites(), [
@@ -88,7 +88,7 @@ describe("mcp", () => {
     mockMcpClients(new Error("first error"), new Error("second error"));
     setMcps("first", "second");
 
-    const getWrites = mockStdoutWrites();
+    const getWrites = mockStdoutWrites({ includeSpinnerFrames: true });
     await initMcpState();
 
     assert.deepStrictEqual(getWrites(), [
@@ -111,7 +111,7 @@ describe("mcp", () => {
     mockMcpClients(makeFakeMcpClient());
     setMcps("first");
 
-    const getWrites = mockStdoutWrites();
+    const getWrites = mockStdoutWrites({ includeSpinnerFrames: true });
     await initMcpState();
 
     assert.deepStrictEqual(getWrites(), [
@@ -128,7 +128,7 @@ describe("mcp", () => {
     actions.setSuppressStartupDurations(true);
     setMcps("first");
 
-    const getWrites = mockStdoutWrites();
+    const getWrites = mockStdoutWrites({ includeSpinnerFrames: true });
     await initMcpState();
 
     assert.deepStrictEqual(getWrites(), []);
@@ -183,7 +183,7 @@ describe("mcp", () => {
     );
     setMcps("first");
 
-    const getWrites = mockStdoutWrites();
+    const getWrites = mockStdoutWrites({ includeSpinnerFrames: true });
     await initMcpState();
 
     assert.deepStrictEqual(getWrites(), [
