@@ -1,49 +1,48 @@
-# Plan: convert stdout tests to mockStdoutWrites
+# Plan: group flat tests into nested describe blocks
 
-Convert every test file that still uses `mockStdout()` to `mockStdoutWrites()`.
+The test files are too flat: long runs of `it` blocks sit directly inside the file-level `describe` (or inside one big mid-level `describe`), which makes them hard to read. Add `describe` blocks to group related tests.
 
-**Do only one file at a time.** After each file: run `./agent-pnpm-run.sh ci`, fix any failures, and only then move to the next bullet. Never edit two files in one pass.
+This is a pure reorganization: **no `it` title or body may change**, and no new `beforeEach`/`afterEach`.
 
-## Guide
+**Do only one file at a time.** After each file: run `./agent-pnpm-run.sh format` (fixes indentation) then `./agent-pnpm-run.sh ci`, and only then move to the next bullet. Never edit two files in one pass.
 
-- `mockStdoutWrites(opts)` takes the same opts as `mockStdout(opts)`: `{ includeSpinnerFrames?: boolean } = {}`. By default it drops any write containing `\r` (spinner frames, cursor-movement rewrites) because those are too noisy for ordinary assertions. It returns `() => string[]` — the sequence of kept `process.stdout.write` calls. Assert on that array in one call:
-  ```ts
-  const getWrites = mockStdoutWrites();
-  ...
-  assert.deepStrictEqual(getWrites(), [
-    `${BLUE}Starting a: ${RESET}\n`,
-    `${GREEN}0.0ms${RESET}`,
-  ]);
-  ```
-- Only pass `mockStdoutWrites({ includeSpinnerFrames: true })` when the test actually asserts `\r`-bearing writes (spinner frames, cursor up/down rewrites such as `${UP_1}${CLEAR_LINE}${CR}`):
-  ```ts
-  const getWrites = mockStdoutWrites({ includeSpinnerFrames: true });
-  ```
-- Rename the capture variable from `getCaptured` to `getWrites`, and `assert.equal`/`assert.strictEqual`/`assert.ok` on the whole string to a single `assert.deepStrictEqual(getWrites(), [...])`.
-- One array element per terminal write. A `"\n"` ends an element; if the code writes text and newline together it is one element (`...\n`), if separately it is two.
-- Import shared constants from `./test-helpers.ts` instead of literal escapes: `BLUE`, `GREEN`, `RED`, `RESET`, `UP_1`, `UP_2`, `DOWN_1`, `DOWN_2`, `CLEAR_LINE`, `CR`. Interpolating these constants in expectations is allowed (see AGENTS.md).
-- For assertions that only check that nothing was printed, use `assert.deepStrictEqual(getWrites(), [])`. With the default filtering this means no non-`\r` writes; if the test must also prove there were no spinner/rewrite writes, use `mockStdoutWrites({ includeSpinnerFrames: true })` and assert `[]`.
-- Drop `mockStdout` from the import once no longer referenced. `mockStdout({ includeSpinnerFrames: true })` call sites may stay as-is only if genuinely needed; prefer converting them too.
-- Every file in the list below is converted; use `mockStdoutWrites({ includeSpinnerFrames: true })` where a test asserts rewrite sequences.
-- Preserve existing expectations' values — this is a capture-mechanism change, not a behavior change. If a test fails, the old assertion was probably hiding writes (`\r`) that must now appear in the array.
-- Remove `stripAnsi` from assertions you convert; raw writes with color codes are now asserted explicitly.
-- `setupTestContext()` mocks `setInterval`/`clearInterval` by default, so the spinner interval never fires mid-test. Only call `mockSetInterval()` yourself when a test needs to read or tick the callbacks manually (the default mock returns no callbacks).
+## Rules
+
+- Only add `describe(...)` blocks and move whole `it(...)` blocks into them. Touch nothing inside an `it` — not the title, not the body, not its assertions or comments.
+- Do not add `beforeEach`/`afterEach` unless a test genuinely cannot work otherwise (it should be able to). Existing hooks must keep running for exactly the tests they run for today: a test may only move _deeper_ inside the `describe` that owns its hooks (or stay under the same ancestors), never up to the file level or sideways out of a hooked `describe`.
+- Keep the file-level `describe` name as-is. Keep describes that already group well; only split the flat runs inside them.
+- Group by subject or scenario, taking the cue from the `it` titles: one group per function under test (`resolveApiCall`), per behavior (`resets state`, `prints warnings`), or per scenario (`when the global config exists`).
+- Target roughly 4–8 `it` blocks per `describe`. Never create a `describe` holding a single `it` — leave that test where it is.
+- Prefer two levels (file → subject → its); add a third level only for real scenarios (`describe("when local config exists")` → `describe("when the model is unknown")`).
+- Keep the relative order of tests inside a group; when regrouping, move blocks without reordering them.
+- Match existing naming style: bare function names for function tests, `when ...` for scenario branches (see `describe("resolveApiCall")`, `describe("when local config exists")`).
+- `describe` is already imported everywhere it is needed; this should not change any import.
+- The test count must not change (currently 846) — only the nesting in the reporter output.
 
 ## Files
 
-- [x] `src/api.test.ts` (10 call sites)
-- [x] `src/config.test.ts` (7)
-- [x] `src/context.test.ts` (3)
-- [x] `src/differ.test.ts` (6)
-- [x] `src/fence.test.ts` (7)
-- [x] `src/input.test.ts` (5)
-- [x] `src/log.test.ts` (7)
-- [x] `src/print.test.ts` (18)
-- [x] `src/slash-commands.test.ts` (2)
-- [x] `src/terminal.test.ts` (11)
-- [x] `src/tools.test.ts` (13)
-- [x] `src/usage.test.ts` (4)
+Ordered smallest / flattest first. Counts are `total its` and the biggest flat runs needing groups.
 
-Done: `src/mcp.test.ts` (already converted).
+- [ ] `src/prompts.test.ts` (5 its, 0 describes — group by prompt: base agent, subagents, summaries)
+- [ ] `src/paths.test.ts` (6, 0 — group by directory: config, state, data, local)
+- [ ] `src/debug-log.test.ts` (6, 0 — group: disabled/skipped, writes)
+- [ ] `src/mcp.test.ts` (10, 0 — group: init, failures, startup printing)
+- [ ] `src/config-types.test.ts` (7 — root `it` + `isSameKey` (6))
+- [ ] `src/slash-commands.test.ts` (10 across 2 root describes — `getAvailableSlashCommands` has 9 flat)
+- [ ] `src/state.test.ts` (68; 30 flat at root, `append-stdout-tail` (20), `SessionFileSchema` (7))
+- [ ] `src/usage.test.ts` (52; 18 flat at root, `syncNewModelUsageForLimitWindow` (11))
+- [ ] `src/fence.test.ts` (14 — `fencePrint` (7), `getPrettyApiDuration` (7))
+- [ ] `src/text.test.ts` (10 — `truncate` (7))
+- [ ] `src/log.test.ts` (19)
+- [ ] `src/print.test.ts` (24)
+- [ ] `src/terminal.test.ts` (22 — `openWithPager` (10), `executeBat` (7))
+- [ ] `src/differ.test.ts` (24 — `createToolCallDiffer` (12), `execGitDiff` (10))
+- [ ] `src/usage-format.test.ts` (32 — `getPrettyTokenUsage` (13), `getPrettyContextWindowUsage` (8))
+- [ ] `src/tools.test.ts` (47 — `toolPrint` (12), `createSubagentTool` (8))
+- [ ] `src/context.test.ts` (47 — `getSkillsStr` (13), `parseFrontMatter` (10), `getSkills` (7))
+- [ ] `src/api.test.ts` (54 — `resolveApiCall` (21), `maybeCompact` (16), `getMergedSummaries` (9), `getConversationSummary` (8))
+- [ ] `src/utils.test.ts` (80 — `createLockUtils` (10), `getTempFileName` (8), `normalizeNewline` (6))
+- [ ] `src/config.test.ts` (96 — `when local config exists` (47) including `when the global config ...` (20/19))
+- [ ] `src/input.test.ts` (196 — `resolveSlashCommand` (35), `initKeypress` (22), `spawnAndReadEditorContent` (17), `resolveUserInput` (14), `shouldResolveSlashCommand` (13), `parseInputFromEditor` (11), `initSigInt` (8), `resume` (8))
 
 After the last file: run `./agent-pnpm-run.sh cloc` and update README counts if they crossed a nearest-100 boundary.
