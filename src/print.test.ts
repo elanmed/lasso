@@ -21,13 +21,12 @@ import {
   DOWN_1,
   DOWN_2,
   GREEN,
+  PURPLE,
   RED,
   RESET,
   UP_1,
   UP_2,
-  stripAnsi,
   testProcessEnv,
-  mockStdout,
   mockStdoutWrites,
   mockSetInterval,
   mockClearInterval,
@@ -50,7 +49,7 @@ describe("print", () => {
       mockClearInterval(callbacks);
       actions.setLoadingStateFrames(["a", "b", "c"]);
 
-      const getCaptured = mockStdout({ includeSpinnerFrames: true });
+      const getWrites = mockStdoutWrites({ includeSpinnerFrames: true });
 
       startLoadingState();
       callbacks.forEach((cb) => cb());
@@ -59,7 +58,14 @@ describe("print", () => {
       callbacks.forEach((cb) => cb());
       stopLoadingState();
 
-      assert.strictEqual(getCaptured(), "\ra\rb\rc\ra\rb\r \r");
+      assert.deepStrictEqual(getWrites(), [
+        "\ra",
+        "\rb",
+        "\rc",
+        "\ra",
+        "\rb",
+        "\r \r",
+      ]);
     });
 
     it("uses default loadingStateFrames when none set", () => {
@@ -67,21 +73,21 @@ describe("print", () => {
       const callbacks = mockSetInterval();
       mockClearInterval(callbacks);
 
-      const getCaptured = mockStdout({ includeSpinnerFrames: true });
+      const getWrites = mockStdoutWrites({ includeSpinnerFrames: true });
 
       startLoadingState();
       callbacks.forEach((cb) => cb());
       callbacks.forEach((cb) => cb());
       stopLoadingState();
 
-      assert.strictEqual(getCaptured(), "\r|\r/\r-\r \r");
+      assert.deepStrictEqual(getWrites(), ["\r|", "\r/", "\r-", "\r \r"]);
     });
 
     it("stopLoadingState gracefully handles multiple calls", () => {
       actions.resetState();
       const callbacks = mockSetInterval();
       mockClearInterval(callbacks);
-      mockStdout();
+      mockStdoutWrites();
       actions.setLoadingStateFrames(["a", "b", "c"]);
 
       startLoadingState();
@@ -96,7 +102,7 @@ describe("print", () => {
       actions.resetState();
       const callbacks = mockSetInterval();
       mockClearInterval(callbacks);
-      const getCaptured = mockStdout();
+      const getWrites = mockStdoutWrites();
       actions.setLoadingStateFrames(["a", "b", "c"]);
 
       startLoadingState();
@@ -108,7 +114,7 @@ describe("print", () => {
 
       await Promise.resolve();
 
-      assert.strictEqual(stripAnsi(getCaptured()), "X\nY\nZ\n");
+      assert.deepStrictEqual(getWrites(), ["X\n", "Y\n", "Z\n"]);
     });
   });
 
@@ -116,17 +122,19 @@ describe("print", () => {
     it("prints the label when starting and the colored duration when ending", () => {
       mock.method(process.hrtime, "bigint", () => BigInt(1_000_000_000));
       const logger = createPerformanceLogger({ logDuration: true });
-      const getCaptured = mockStdout();
+      const getWrites = mockStdoutWrites();
       logger.start("Reading context files: ");
-      assert.strictEqual(stripAnsi(getCaptured()), "Reading context files: ");
+      assert.deepStrictEqual(getWrites(), [
+        `${BLUE}Reading context files: ${RESET}`,
+      ]);
       mock.method(process.hrtime, "bigint", () => BigInt(1_234_567_890));
 
       logger.end();
 
-      assert.strictEqual(
-        stripAnsi(getCaptured()),
-        "Reading context files: 234.567ms\n",
-      );
+      assert.deepStrictEqual(getWrites(), [
+        `${BLUE}Reading context files: ${RESET}`,
+        `${GREEN}234.567ms${RESET}\n`,
+      ]);
     });
 
     it("can start again after end", () => {
@@ -138,23 +146,28 @@ describe("print", () => {
         BigInt(values[callIdx++] ?? 0),
       );
       const logger = createPerformanceLogger({ logDuration: true });
-      const getCaptured = mockStdout();
+      const getWrites = mockStdoutWrites();
 
       logger.start("a: ");
       logger.end();
       logger.start("a: ");
       logger.end();
 
-      assert.strictEqual(stripAnsi(getCaptured()), "a: 0.0ms\na: 1s 0.0ms\n");
+      assert.deepStrictEqual(getWrites(), [
+        `${BLUE}a: ${RESET}`,
+        `${GREEN}0.0ms${RESET}\n`,
+        `${BLUE}a: ${RESET}`,
+        `${RED}1s 0.0ms${RESET}\n`,
+      ]);
     });
 
     it("does nothing when logDuration is false", () => {
       mock.method(process.hrtime, "bigint", () => BigInt(1_000_000_000));
       const logger = createPerformanceLogger({ logDuration: false });
-      const getCaptured = mockStdout();
+      const getWrites = mockStdoutWrites();
       logger.start("a: ");
       logger.end();
-      assert.strictEqual(getCaptured(), "");
+      assert.deepStrictEqual(getWrites(), []);
     });
 
     it("throws when started twice", () => {
@@ -175,16 +188,14 @@ describe("print", () => {
         logDuration: true,
         labels: ["Starting a: ", "Starting b: "],
       });
-      const getCaptured = mockStdout();
+      const getWrites = mockStdoutWrites();
 
       logger.printAllLabels();
 
-      assert.strictEqual(
-        getCaptured(),
-        `${BLUE}Starting a: ${RESET}
-${BLUE}Starting b: ${RESET}
-`,
-      );
+      assert.deepStrictEqual(getWrites(), [
+        `${BLUE}Starting a: ${RESET}\n`,
+        `${BLUE}Starting b: ${RESET}\n`,
+      ]);
     });
 
     it("rewrites each label in place with its duration", () => {
@@ -222,13 +233,13 @@ ${BLUE}Starting b: ${RESET}
         logDuration: false,
         labels: ["Starting a: "],
       });
-      const getCaptured = mockStdout();
+      const getWrites = mockStdoutWrites();
 
       logger.printAllLabels();
       logger.start("Starting a: ");
       logger.end("Starting a: ");
 
-      assert.strictEqual(getCaptured(), "");
+      assert.deepStrictEqual(getWrites(), []);
     });
 
     it("throws when ended without start", () => {
@@ -242,78 +253,77 @@ ${BLUE}Starting b: ${RESET}
 
   describe("appendNewline", () => {
     it("appends a newline by default", () => {
-      const getCaptured = mockStdout();
+      const getWrites = mockStdoutWrites();
       colorPrint("hello", "none");
-      assert.strictEqual(getCaptured(), "hello\n");
+      assert.deepStrictEqual(getWrites(), ["hello\n"]);
     });
 
     it("omits the newline when appendNewline is false", () => {
-      const getCaptured = mockStdout();
+      const getWrites = mockStdoutWrites();
       colorPrint("hello", "none", { appendNewline: false });
-      assert.strictEqual(getCaptured(), "hello");
+      assert.deepStrictEqual(getWrites(), ["hello"]);
     });
 
     it("keeps color codes around the text without a trailing newline", () => {
-      const getCaptured = mockStdout();
+      const getWrites = mockStdoutWrites();
       colorPrint("hello", "blue", { appendNewline: false });
-      assert.strictEqual(getCaptured(), `${BLUE}hello${RESET}`);
+      assert.deepStrictEqual(getWrites(), [`${BLUE}hello${RESET}`]);
     });
   });
 
   describe("color disabled", () => {
     it("omits ansi codes when NO_COLOR is set", () => {
       testProcessEnv._set("NO_COLOR", "1");
-      const getCaptured = mockStdout();
+      const getWrites = mockStdoutWrites();
       colorPrint("hello", "blue");
-      const out = getCaptured();
-      assert.equal(out, "hello\n");
+      assert.deepStrictEqual(getWrites(), ["hello\n"]);
       assert.equal(bold("hello"), "hello");
     });
 
     it("omits ansi codes when stdout is not a tty", () => {
       mock.method(processDeps.stdout, "isTTY", () => false);
-      const getCaptured = mockStdout();
+      const getWrites = mockStdoutWrites();
       colorPrint("hello", "blue");
-      assert.equal(getCaptured(), "hello\n");
+      assert.deepStrictEqual(getWrites(), ["hello\n"]);
     });
   });
 
   describe("printNewline", () => {
     it("prints nothing when stdoutTail already ends with two newlines", () => {
-      const getCaptured = mockStdout();
+      const getWrites = mockStdoutWrites();
       actions.appendStdoutTail("\n\n");
       printNewline();
-      assert.strictEqual(getCaptured(), "");
+      assert.deepStrictEqual(getWrites(), []);
     });
 
     it("appends a newline when stdoutTail does not end with two newlines", () => {
-      const getCaptured = mockStdout();
+      const getWrites = mockStdoutWrites();
       colorPrint("a", "none", { appendNewline: false });
       printNewline();
-      assert.strictEqual(getCaptured(), "a\n");
+      assert.deepStrictEqual(getWrites(), ["a", "\n"]);
     });
   });
 
   describe("successWithSpacing", () => {
     it("surrounds the callback output with blank lines", () => {
-      const getCaptured = mockStdout();
+      const getWrites = mockStdoutWrites();
       successWithSpacing(() => colorPrint("hello", "none"));
-      assert.strictEqual(getCaptured(), "\nhello\n\n");
+      assert.deepStrictEqual(getWrites(), ["\n", "hello\n", "\n"]);
     });
   });
 
   describe("errorWithSpacing", () => {
     it("prints the callback output followed by a blank line", () => {
-      const getCaptured = mockStdout();
+      const getWrites = mockStdoutWrites();
       errorWithSpacing(() => colorPrint("hello", "none"));
-      assert.strictEqual(getCaptured(), "hello\n\n");
+      assert.deepStrictEqual(getWrites(), ["hello\n", "\n"]);
     });
 
     it("does not reduce the blank lines between messages", () => {
-      const getCaptured = mockStdout();
+      const getWrites = mockStdoutWrites();
       successWithSpacing(() => colorPrint("a", "none"));
       errorWithSpacing(() => colorPrint("b", "none"));
-      assert.strictEqual(getCaptured(), "\na\n\nb\n\n");
+      assert.deepStrictEqual(getWrites(), ["\n", "a\n", "\n", "b\n", "\n"]);
     });
   });
 
@@ -326,12 +336,11 @@ ${BLUE}Starting b: ${RESET}
     it("prints the session start date", () => {
       mock.restoreAll();
       setupTestContext({ now: 42_000 });
-      const getCaptured = mockStdout();
+      const getWrites = mockStdoutWrites();
       printSessionStartDate();
-      assert.strictEqual(
-        stripAnsi(getCaptured()),
-        "Resume this session with /resume 42000\n",
-      );
+      assert.deepStrictEqual(getWrites(), [
+        `${PURPLE}Resume this session with /resume 42000${RESET}\n`,
+      ]);
     });
   });
 });

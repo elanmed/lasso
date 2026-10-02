@@ -8,10 +8,11 @@ import {
 import { actions } from "./state.ts";
 import { fsDeps } from "./deps.ts";
 import {
-  mockStdout,
+  mockStdoutWrites,
+  RESET,
   setupTestContext,
-  stripAnsi,
   testFs,
+  YELLOW,
 } from "./test-helpers.ts";
 
 describe("getAvailableSlashCommands", () => {
@@ -130,17 +131,15 @@ describe("getAvailableSlashCommands", () => {
     mock.method(fsDeps, "globSync", () => {
       throw new Error("permission denied");
     });
-    const getCaptured = mockStdout();
+    const getWrites = mockStdoutWrites();
 
     const result = getAvailableSlashCommands();
 
     assert.deepStrictEqual(result, []);
-    assert.strictEqual(
-      stripAnsi(getCaptured()),
-      `Failed to list the slash command files in /test-cwd/.lasso/commands
-Failed to list the slash command files in /fake-home/.config/lasso/commands
-`,
-    );
+    assert.deepStrictEqual(getWrites(), [
+      `${YELLOW}Failed to list the slash command files in /test-cwd/.lasso/commands${RESET}\n`,
+      `${YELLOW}Failed to list the slash command files in /fake-home/.config/lasso/commands${RESET}\n`,
+    ]);
   });
 
   it("warns when a slash command file cannot be read", () => {
@@ -151,15 +150,14 @@ Failed to list the slash command files in /fake-home/.config/lasso/commands
     testFs._globResults.set("/test-cwd/.lasso/commands/**/*.md", [
       "/test-cwd/.lasso/commands/bad.md",
     ]);
-    const getCaptured = mockStdout();
+    const getWrites = mockStdoutWrites();
 
     const result = getAvailableSlashCommands();
 
     assert.deepStrictEqual(result, []);
-    assert.strictEqual(
-      stripAnsi(getCaptured()),
-      "Failed to read the slash command file at /test-cwd/.lasso/commands/bad.md\n",
-    );
+    assert.deepStrictEqual(getWrites(), [
+      `${YELLOW}Failed to read the slash command file at /test-cwd/.lasso/commands/bad.md${RESET}\n`,
+    ]);
   });
 });
 

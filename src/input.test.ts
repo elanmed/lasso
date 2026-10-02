@@ -49,7 +49,15 @@ import {
   makeMcpTool,
   batPagerCmd,
   stripAnsi,
-  mockStdout,
+  mockStdoutWrites,
+  BLUE,
+  BOLD,
+  BOLD_RESET,
+  GREY,
+  PURPLE,
+  RED,
+  RESET,
+  YELLOW,
   makeAbortError,
   makeErrnoError,
   mockProcessExit,
@@ -75,11 +83,11 @@ describe("input", () => {
     mock.restoreAll();
   });
 
-  let getCapturedStdout: () => string;
+  let getWrites: () => string[];
 
   beforeEach(() => {
     setupTestContext();
-    getCapturedStdout = mockStdout();
+    getWrites = mockStdoutWrites();
   });
 
   describe("resolveInterruptWithEditor", () => {
@@ -108,10 +116,9 @@ describe("input", () => {
         getState().abortControllers.interruptWithEditorContent,
         null,
       );
-      assert.equal(
-        stripAnsi(getCapturedStdout()),
-        "You have queued messages!\n",
-      );
+      assert.deepStrictEqual(getWrites(), [
+        `${YELLOW}You have queued messages!${RESET}\n`,
+      ]);
       assert.deepStrictEqual(prompts, [
         'Edit ({"name":"e","ctrl":true}), c(lear), or <CR> to continue: ',
       ]);
@@ -323,15 +330,14 @@ describe("input", () => {
       mock.method(fsDeps, "writeFileSync", () => {
         throw new Error("write failed");
       });
-      const getCaptured = mockStdout();
+      const getWrites = mockStdoutWrites();
 
       const result = await spawnAndReadEditorContent();
 
       assert.strictEqual(result, null);
-      assert.strictEqual(
-        stripAnsi(getCaptured()),
-        "Failed to create a temp file\n",
-      );
+      assert.deepStrictEqual(getWrites(), [
+        `${RED}Failed to create a temp file${RESET}\n`,
+      ]);
     });
 
     it("returns null and cleans up when readFile fails", async () => {
@@ -515,7 +521,10 @@ describe("input", () => {
       mock.method(getTestRl(), "question", () => Promise.resolve("  hello  "));
       const result = await resolveUserInput({ isFirstInput: false });
       assert.strictEqual(result, "hello");
-      assert.strictEqual(stripAnsi(getCapturedStdout()), "\n━━ Input ━━\n");
+      assert.deepStrictEqual(getWrites(), [
+        "\n",
+        `${YELLOW}━━ ${BOLD}Input${BOLD_RESET} ━━${RESET}\n`,
+      ]);
       assert.deepStrictEqual(getState().app.transcript, [
         { timestamp: 0, role: "user", message: "  hello  " },
       ]);
@@ -541,13 +550,11 @@ describe("input", () => {
       );
       const result = await resolveUserInput({ isFirstInput: false });
       assert.strictEqual(result, null);
-      assert.strictEqual(
-        stripAnsi(getCapturedStdout()),
-        `
-━━ Input ━━
-read failed
-`,
-      );
+      assert.deepStrictEqual(getWrites(), [
+        "\n",
+        `${YELLOW}━━ ${BOLD}Input${BOLD_RESET} ━━${RESET}\n`,
+        `${RED}read failed${RESET}\n`,
+      ]);
     });
 
     it("returns editor value when aborted by editor", async () => {
@@ -605,7 +612,7 @@ read failed
     it("prints session start date when exiting", async () => {
       mock.restoreAll();
       setupTestContext({ now: 42_000 });
-      getCapturedStdout = mockStdout();
+      getWrites = mockStdoutWrites();
       mockProcessExit();
       actions.setRl(makeFakeRl());
       actions.resetStdout();
@@ -618,19 +625,17 @@ read failed
         resolveUserInput({ isFirstInput: false }),
         /process.exit called/,
       );
-      assert.strictEqual(
-        stripAnsi(getCapturedStdout()),
-        `
-━━ Input ━━
-Resume this session with /resume 42000
-`,
-      );
+      assert.deepStrictEqual(getWrites(), [
+        "\n",
+        `${YELLOW}━━ ${BOLD}Input${BOLD_RESET} ━━${RESET}\n`,
+        `${PURPLE}Resume this session with /resume 42000${RESET}\n`,
+      ]);
     });
 
     it("exits on ctrl-d when readline closes", async () => {
       mock.restoreAll();
       setupTestContext({ now: 42_000 });
-      getCapturedStdout = mockStdout();
+      getWrites = mockStdoutWrites();
       mockProcessExit();
       actions.setRl(makeFakeRl());
       actions.resetStdout();
@@ -649,19 +654,17 @@ Resume this session with /resume 42000
       );
 
       assert.strictEqual(questionMock.mock.callCount(), 2);
-      assert.strictEqual(
-        stripAnsi(getCapturedStdout()),
-        `
-━━ Input ━━
-Resume this session with /resume 42000
-`,
-      );
+      assert.deepStrictEqual(getWrites(), [
+        "\n",
+        `${YELLOW}━━ ${BOLD}Input${BOLD_RESET} ━━${RESET}\n`,
+        `${PURPLE}Resume this session with /resume 42000${RESET}\n`,
+      ]);
     });
 
     it("exits when the prompt fails after readline closed", async () => {
       mock.restoreAll();
       setupTestContext({ now: 42_000 });
-      getCapturedStdout = mockStdout();
+      getWrites = mockStdoutWrites();
       mockProcessExit();
       actions.setRl(makeFakeRl());
       actions.resetStdout();
@@ -677,13 +680,11 @@ Resume this session with /resume 42000
       );
 
       assert.strictEqual(questionMock.mock.callCount(), 1);
-      assert.strictEqual(
-        stripAnsi(getCapturedStdout()),
-        `
-━━ Input ━━
-Resume this session with /resume 42000
-`,
-      );
+      assert.deepStrictEqual(getWrites(), [
+        "\n",
+        `${YELLOW}━━ ${BOLD}Input${BOLD_RESET} ━━${RESET}\n`,
+        `${PURPLE}Resume this session with /resume 42000${RESET}\n`,
+      ]);
     });
 
     it("returns the first queued editor message and keeps the rest for the next iteration", async () => {
@@ -1018,40 +1019,36 @@ l---
       setModelCommand("/model new-model");
       assert.strictEqual(getState().config.model, "new-model");
       assert.strictEqual(getState().app.promptTokens.dirty, true);
-      assert.strictEqual(
-        stripAnsi(getCapturedStdout()),
-        "Model updated from `old-model` to `new-model`\n",
-      );
+      assert.deepStrictEqual(getWrites(), [
+        `${BLUE}Model updated from \`old-model\` to \`new-model\`${RESET}\n`,
+      ]);
     });
 
     it("prints red error when input has too many parts", () => {
       actions.setModel("old-model");
       setModelCommand("/model new-model extra");
       assert.strictEqual(getState().config.model, "old-model");
-      assert.strictEqual(
-        stripAnsi(getCapturedStdout()),
-        "Usage: /model [model]?\n",
-      );
+      assert.deepStrictEqual(getWrites(), [
+        `${RED}Usage: /model [model]?${RESET}\n`,
+      ]);
     });
 
     it("prints red error when input has only the command", () => {
       actions.setModel("old-model");
       setModelCommand("/model");
       assert.strictEqual(getState().config.model, "old-model");
-      assert.strictEqual(
-        stripAnsi(getCapturedStdout()),
-        "Usage: /model [model]?\n",
-      );
+      assert.deepStrictEqual(getWrites(), [
+        `${RED}Usage: /model [model]?${RESET}\n`,
+      ]);
     });
 
     it("handles model name with slashes", () => {
       actions.setModel("old");
       setModelCommand("/model provider/new-model");
       assert.strictEqual(getState().config.model, "provider/new-model");
-      assert.strictEqual(
-        stripAnsi(getCapturedStdout()),
-        "Model updated from `old` to `provider/new-model`\n",
-      );
+      assert.deepStrictEqual(getWrites(), [
+        `${BLUE}Model updated from \`old\` to \`provider/new-model\`${RESET}\n`,
+      ]);
     });
 
     it("handles input with multiple spaces", () => {
@@ -1072,11 +1069,12 @@ l---
 
       setModelCommand("/model new-model");
 
-      assert.strictEqual(
-        stripAnsi(getCapturedStdout()).includes(
-          "The current set of context, skills, and tools is 50% of the 100,000 token context window!",
+      assert.ok(
+        getWrites().some((w) =>
+          w.includes(
+            "The current set of context, skills, and tools is 50% of the 100,000 token context window!",
+          ),
         ),
-        true,
       );
     });
   });
@@ -1089,7 +1087,7 @@ l---
     it("prints current model", () => {
       actions.setModel("gpt-4");
       getModel();
-      assert.strictEqual(stripAnsi(getCapturedStdout()), "gpt-4\n");
+      assert.deepStrictEqual(getWrites(), [`${BLUE}gpt-4${RESET}\n`]);
     });
   });
 
@@ -1113,10 +1111,9 @@ l---
         value: strToApproxTokens("abc"),
         dirty: false,
       });
-      assert.strictEqual(
-        stripAnsi(getCapturedStdout()),
-        "Context cleared (0 tokens in session)\n",
-      );
+      assert.deepStrictEqual(getWrites(), [
+        `${GREY}Context cleared (0 tokens in session)${RESET}\n`,
+      ]);
     });
   });
 
@@ -1133,53 +1130,35 @@ l---
     it("prints the total and each area with its approx count when the cache is dirty", () => {
       actions.setPromptTokensDirty(true);
       printTokens();
-      assert.strictEqual(
-        stripAnsi(getCapturedStdout()),
-        `
-Token count: 621 (0.012% of context window)
-- Chat messages: 11
-- Context files: 3
-- Harness and MCP tools: 4
-- Base system prompt: 602
-- Skill descriptions: 1
-
-`,
-      );
+      assert.deepStrictEqual(getWrites(), [
+        "\n",
+        `${BLUE}Token count: 621 (0.012% of context window)${RESET}\n`,
+        "- Chat messages: 11\n- Context files: 3\n- Harness and MCP tools: 4\n- Base system prompt: 602\n- Skill descriptions: 1\n",
+        "\n",
+      ]);
     });
 
     it("prints the total scaled to the cached token count when clean", () => {
       actions.setPromptTokens(1500);
       printTokens();
-      assert.strictEqual(
-        stripAnsi(getCapturedStdout()),
-        `
-Token count: 62,100 (1.172% of context window)
-- Chat messages: 1,100
-- Context files: 300
-- Harness and MCP tools: 400
-- Base system prompt: 60,200
-- Skill descriptions: 100
-
-`,
-      );
+      assert.deepStrictEqual(getWrites(), [
+        "\n",
+        `${BLUE}Token count: 62,100 (1.172% of context window)${RESET}\n`,
+        "- Chat messages: 1,100\n- Context files: 300\n- Harness and MCP tools: 400\n- Base system prompt: 60,200\n- Skill descriptions: 100\n",
+        "\n",
+      ]);
     });
 
     it("includes the context window usage when configured", () => {
       actions.setModel("test-model");
       actions.setContextWindowPerModel({ "test-model": 10_000 });
       printTokens();
-      assert.strictEqual(
-        stripAnsi(getCapturedStdout()),
-        `
-Token count: 621 (0% of context window)
-- Chat messages: 11
-- Context files: 3
-- Harness and MCP tools: 4
-- Base system prompt: 602
-- Skill descriptions: 1
-
-`,
-      );
+      assert.deepStrictEqual(getWrites(), [
+        "\n",
+        `${BLUE}Token count: 621 (0% of context window)${RESET}\n`,
+        "- Chat messages: 11\n- Context files: 3\n- Harness and MCP tools: 4\n- Base system prompt: 602\n- Skill descriptions: 1\n",
+        "\n",
+      ]);
     });
   });
 
@@ -1191,37 +1170,34 @@ Token count: 621 (0% of context window)
     it("prints usage error when no session start date is provided", () => {
       const result = resume("/resume");
       assert.strictEqual(result, null);
-      assert.strictEqual(
-        stripAnsi(getCapturedStdout()),
-        "Usage: /resume [session start date]\n",
-      );
+      assert.deepStrictEqual(getWrites(), [
+        `${RED}Usage: /resume [session start date]${RESET}\n`,
+      ]);
     });
 
     it("prints usage error when too many parts are provided", () => {
       const result = resume("/resume 123 456");
       assert.strictEqual(result, null);
-      assert.strictEqual(
-        stripAnsi(getCapturedStdout()),
-        "Usage: /resume [session start date]\n",
-      );
+      assert.deepStrictEqual(getWrites(), [
+        `${RED}Usage: /resume [session start date]${RESET}\n`,
+      ]);
     });
 
     it("prints usage error when session start date is not a number", () => {
       const result = resume("/resume abc");
       assert.strictEqual(result, null);
-      assert.strictEqual(
-        stripAnsi(getCapturedStdout()),
-        "Usage: /resume [session start date]\n",
-      );
+      assert.deepStrictEqual(getWrites(), [
+        `${RED}Usage: /resume [session start date]${RESET}\n`,
+      ]);
     });
 
     it("prints error when sessions directory does not exist", () => {
       const result = resume("/resume 1234567890000");
       assert.strictEqual(result, null);
-      assert.strictEqual(
-        stripAnsi(getCapturedStdout()),
-        "No conversation found with session start date: 1234567890000\n\n",
-      );
+      assert.deepStrictEqual(getWrites(), [
+        `${RED}No conversation found with session start date: 1234567890000${RESET}\n`,
+        "\n",
+      ]);
     });
 
     it("loads the session and returns continue when the date matches", () => {
@@ -1258,10 +1234,10 @@ Token count: 621 (0% of context window)
       );
       const result = resume("/resume 1234567890000");
       assert.strictEqual(result, null);
-      assert.strictEqual(
-        stripAnsi(getCapturedStdout()),
-        "No conversation found with session start date: 1234567890000\n\n",
-      );
+      assert.deepStrictEqual(getWrites(), [
+        `${RED}No conversation found with session start date: 1234567890000${RESET}\n`,
+        "\n",
+      ]);
     });
 
     it("prints an error and returns null when the session file cannot be parsed", () => {
@@ -1272,10 +1248,10 @@ Token count: 621 (0% of context window)
       );
       const result = resume("/resume 1234567890000");
       assert.strictEqual(result, null);
-      assert.strictEqual(
-        stripAnsi(getCapturedStdout()),
-        "Failed to parse the session file at /fake-home/.local/state/lasso/sessions/session-1234567890000.json\n\n",
-      );
+      assert.deepStrictEqual(getWrites(), [
+        `${RED}Failed to parse the session file at /fake-home/.local/state/lasso/sessions/session-1234567890000.json${RESET}\n`,
+        "\n",
+      ]);
     });
 
     it("skips files that do not match the session format", () => {
@@ -1286,10 +1262,10 @@ Token count: 621 (0% of context window)
       );
       const result = resume("/resume 1234567890000");
       assert.strictEqual(result, null);
-      assert.strictEqual(
-        stripAnsi(getCapturedStdout()),
-        "No conversation found with session start date: 1234567890000\n\n",
-      );
+      assert.deepStrictEqual(getWrites(), [
+        `${RED}No conversation found with session start date: 1234567890000${RESET}\n`,
+        "\n",
+      ]);
     });
   });
 
@@ -1301,10 +1277,10 @@ Token count: 621 (0% of context window)
     it("prints an error when there are no sessions to resume", () => {
       const result = resumeWithNoArgs();
       assert.strictEqual(result, null);
-      assert.strictEqual(
-        stripAnsi(getCapturedStdout()),
-        "No sessions to resume\n\n",
-      );
+      assert.deepStrictEqual(getWrites(), [
+        `${RED}No sessions to resume${RESET}\n`,
+        "\n",
+      ]);
     });
 
     it("resumes the most recent session", () => {
@@ -1374,10 +1350,10 @@ Token count: 621 (0% of context window)
       const result = resumeWithNoArgs();
 
       assert.strictEqual(result, null);
-      assert.strictEqual(
-        stripAnsi(getCapturedStdout()),
-        "No sessions to resume\n\n",
-      );
+      assert.deepStrictEqual(getWrites(), [
+        `${RED}No sessions to resume${RESET}\n`,
+        "\n",
+      ]);
     });
   });
 
@@ -1389,21 +1365,25 @@ Token count: 621 (0% of context window)
 
     it("prints that history is empty when the transcript is empty", () => {
       pageHistory({ isTyped: true });
-      assert.strictEqual(stripAnsi(getCapturedStdout()), "No chat history\n\n");
+      assert.deepStrictEqual(getWrites(), [
+        `${BLUE}No chat history${RESET}\n`,
+        "\n",
+      ]);
     });
 
     it("surrounds the message with blank lines when isTyped is false", () => {
       pageHistory();
-      assert.strictEqual(
-        stripAnsi(getCapturedStdout()),
-        "\nNo chat history\n\n",
-      );
+      assert.deepStrictEqual(getWrites(), [
+        "\n",
+        `${BLUE}No chat history${RESET}\n`,
+        "\n",
+      ]);
     });
 
     it("does not add spacing when streaming", () => {
       actions.setApiStreamAbortController(new AbortController());
       pageHistory();
-      assert.strictEqual(stripAnsi(getCapturedStdout()), "No chat history\n");
+      assert.deepStrictEqual(getWrites(), [`${BLUE}No chat history${RESET}\n`]);
     });
 
     it("opens the chat history in a pager with a heading prepended", () => {
@@ -1438,21 +1418,25 @@ log content
 
     it("prints no messages when there is no assistant response", async () => {
       await pageLastResponse({ isTyped: true });
-      assert.strictEqual(stripAnsi(getCapturedStdout()), "No llm messages\n\n");
+      assert.deepStrictEqual(getWrites(), [
+        `${BLUE}No llm messages${RESET}\n`,
+        "\n",
+      ]);
     });
 
     it("surrounds the message with blank lines when isTyped is false", async () => {
       await pageLastResponse();
-      assert.strictEqual(
-        stripAnsi(getCapturedStdout()),
-        "\nNo llm messages\n\n",
-      );
+      assert.deepStrictEqual(getWrites(), [
+        "\n",
+        `${BLUE}No llm messages${RESET}\n`,
+        "\n",
+      ]);
     });
 
     it("does not add spacing when streaming", async () => {
       actions.setApiStreamAbortController(new AbortController());
       await pageLastResponse();
-      assert.strictEqual(stripAnsi(getCapturedStdout()), "No llm messages\n");
+      assert.deepStrictEqual(getWrites(), [`${BLUE}No llm messages${RESET}\n`]);
     });
 
     it("opens the latest assistant response in a pager", async () => {
@@ -1495,24 +1479,27 @@ second
 
     it("prints no messages when there is no user message", () => {
       pageLastMessage({ isTyped: true });
-      assert.strictEqual(
-        stripAnsi(getCapturedStdout()),
-        "No user messages\n\n",
-      );
+      assert.deepStrictEqual(getWrites(), [
+        `${BLUE}No user messages${RESET}\n`,
+        "\n",
+      ]);
     });
 
     it("surrounds the message with blank lines when isTyped is false", () => {
       pageLastMessage();
-      assert.strictEqual(
-        stripAnsi(getCapturedStdout()),
-        "\nNo user messages\n\n",
-      );
+      assert.deepStrictEqual(getWrites(), [
+        "\n",
+        `${BLUE}No user messages${RESET}\n`,
+        "\n",
+      ]);
     });
 
     it("does not add spacing when streaming", () => {
       actions.setApiStreamAbortController(new AbortController());
       pageLastMessage();
-      assert.strictEqual(stripAnsi(getCapturedStdout()), "No user messages\n");
+      assert.deepStrictEqual(getWrites(), [
+        `${BLUE}No user messages${RESET}\n`,
+      ]);
     });
 
     it("opens the latest user message in a pager", () => {
@@ -1552,27 +1539,27 @@ latest question
 
     it("prints no diffs when there are no diffs", () => {
       pageLastDiff({ isTyped: true });
-      assert.strictEqual(
-        stripAnsi(getCapturedStdout()),
-        "No diffs from the last turn\n\n",
-      );
+      assert.deepStrictEqual(getWrites(), [
+        `${BLUE}No diffs from the last turn${RESET}\n`,
+        "\n",
+      ]);
     });
 
     it("surrounds the message with blank lines when isTyped is false", () => {
       pageLastDiff();
-      assert.strictEqual(
-        stripAnsi(getCapturedStdout()),
-        "\nNo diffs from the last turn\n\n",
-      );
+      assert.deepStrictEqual(getWrites(), [
+        "\n",
+        `${BLUE}No diffs from the last turn${RESET}\n`,
+        "\n",
+      ]);
     });
 
     it("does not add spacing when streaming", () => {
       actions.setApiStreamAbortController(new AbortController());
       pageLastDiff();
-      assert.strictEqual(
-        stripAnsi(getCapturedStdout()),
-        "No diffs from the last turn\n",
-      );
+      assert.deepStrictEqual(getWrites(), [
+        `${BLUE}No diffs from the last turn${RESET}\n`,
+      ]);
     });
 
     it("opens the diffs in a pager with a fence per file", () => {
@@ -1643,28 +1630,28 @@ older summary
     it("prints a message when there are no conversation summaries", () => {
       pageSummaries({ isTyped: true });
 
-      assert.strictEqual(
-        stripAnsi(getCapturedStdout()),
-        "No conversation summaries\n\n",
-      );
+      assert.deepStrictEqual(getWrites(), [
+        `${BLUE}No conversation summaries${RESET}\n`,
+        "\n",
+      ]);
       assert.strictEqual(testFs._files.has("/tmp/lasso-test-uuid.txt"), false);
     });
 
     it("surrounds the message with blank lines when isTyped is false", () => {
       pageSummaries();
-      assert.strictEqual(
-        stripAnsi(getCapturedStdout()),
-        "\nNo conversation summaries\n\n",
-      );
+      assert.deepStrictEqual(getWrites(), [
+        "\n",
+        `${BLUE}No conversation summaries${RESET}\n`,
+        "\n",
+      ]);
     });
 
     it("does not add spacing when streaming", () => {
       actions.setApiStreamAbortController(new AbortController());
       pageSummaries();
-      assert.strictEqual(
-        stripAnsi(getCapturedStdout()),
-        "No conversation summaries\n",
-      );
+      assert.deepStrictEqual(getWrites(), [
+        `${BLUE}No conversation summaries${RESET}\n`,
+      ]);
     });
   });
 
@@ -1676,21 +1663,25 @@ older summary
 
     it("prints that the editor is empty when editor input is null", () => {
       pageEditStr({ isTyped: true });
-      assert.strictEqual(stripAnsi(getCapturedStdout()), "Editor is empty\n\n");
+      assert.deepStrictEqual(getWrites(), [
+        `${BLUE}Editor is empty${RESET}\n`,
+        "\n",
+      ]);
     });
 
     it("surrounds the message with blank lines when isTyped is false", () => {
       pageEditStr();
-      assert.strictEqual(
-        stripAnsi(getCapturedStdout()),
-        "\nEditor is empty\n\n",
-      );
+      assert.deepStrictEqual(getWrites(), [
+        "\n",
+        `${BLUE}Editor is empty${RESET}\n`,
+        "\n",
+      ]);
     });
 
     it("does not add spacing when streaming", () => {
       actions.setApiStreamAbortController(new AbortController());
       pageEditStr();
-      assert.strictEqual(stripAnsi(getCapturedStdout()), "Editor is empty\n");
+      assert.deepStrictEqual(getWrites(), [`${BLUE}Editor is empty${RESET}\n`]);
     });
 
     it("opens the editor input in a pager with a header", () => {
@@ -1742,7 +1733,7 @@ editor input
 
 `,
       );
-      assert.strictEqual(getCapturedStdout(), "");
+      assert.deepStrictEqual(getWrites(), []);
     });
 
     it("filters out context file skills", () => {
@@ -1776,28 +1767,28 @@ editor input
 
     it("prints that there are no available skills when skills list is empty", () => {
       pageSkills({ isTyped: true });
-      assert.strictEqual(
-        stripAnsi(getCapturedStdout()),
-        "No available skills\n\n",
-      );
+      assert.deepStrictEqual(getWrites(), [
+        `${BLUE}No available skills${RESET}\n`,
+        "\n",
+      ]);
       assert.strictEqual(testFs._files.has("/tmp/lasso-test-uuid.txt"), false);
     });
 
     it("surrounds the message with blank lines when isTyped is false", () => {
       pageSkills();
-      assert.strictEqual(
-        stripAnsi(getCapturedStdout()),
-        "\nNo available skills\n\n",
-      );
+      assert.deepStrictEqual(getWrites(), [
+        "\n",
+        `${BLUE}No available skills${RESET}\n`,
+        "\n",
+      ]);
     });
 
     it("does not add spacing when streaming", () => {
       actions.setApiStreamAbortController(new AbortController());
       pageSkills();
-      assert.strictEqual(
-        stripAnsi(getCapturedStdout()),
-        "No available skills\n",
-      );
+      assert.deepStrictEqual(getWrites(), [
+        `${BLUE}No available skills${RESET}\n`,
+      ]);
     });
   });
 
@@ -1891,7 +1882,7 @@ editor input
 
 `,
       );
-      assert.strictEqual(getCapturedStdout(), "");
+      assert.deepStrictEqual(getWrites(), []);
     });
 
     it("includes context file skills", () => {
@@ -1928,28 +1919,28 @@ editor input
 
     it("prints that there are no available context files when entries list is empty", () => {
       pageAvailableContextFiles({ isTyped: true });
-      assert.strictEqual(
-        stripAnsi(getCapturedStdout()),
-        "No available context files\n\n",
-      );
+      assert.deepStrictEqual(getWrites(), [
+        `${BLUE}No available context files${RESET}\n`,
+        "\n",
+      ]);
       assert.strictEqual(testFs._files.has("/tmp/lasso-test-uuid.txt"), false);
     });
 
     it("surrounds the message with blank lines when isTyped is false", () => {
       pageAvailableContextFiles();
-      assert.strictEqual(
-        stripAnsi(getCapturedStdout()),
-        "\nNo available context files\n\n",
-      );
+      assert.deepStrictEqual(getWrites(), [
+        "\n",
+        `${BLUE}No available context files${RESET}\n`,
+        "\n",
+      ]);
     });
 
     it("does not add spacing when streaming", () => {
       actions.setApiStreamAbortController(new AbortController());
       pageAvailableContextFiles();
-      assert.strictEqual(
-        stripAnsi(getCapturedStdout()),
-        "No available context files\n",
-      );
+      assert.deepStrictEqual(getWrites(), [
+        `${BLUE}No available context files${RESET}\n`,
+      ]);
     });
   });
 
@@ -1961,10 +1952,12 @@ editor input
 
     it("prints the keymap list", () => {
       printKeymaps();
-      assert.strictEqual(
-        stripAnsi(getCapturedStdout()),
-        `\nKeymaps:\n- edit: {"name":"g","ctrl":true}\n\n`,
-      );
+      assert.deepStrictEqual(getWrites(), [
+        "\n",
+        `${BLUE}Keymaps:${RESET}\n`,
+        '- edit: {"name":"g","ctrl":true}\n',
+        "\n",
+      ]);
     });
   });
 
@@ -2013,7 +2006,7 @@ editor input
 
 `,
       );
-      assert.strictEqual(getCapturedStdout(), "");
+      assert.deepStrictEqual(getWrites(), []);
     });
 
     it("opens commands in a pager via LASSO_PAGER", () => {
@@ -2142,7 +2135,7 @@ log content
 
 `,
       );
-      assert.strictEqual(getCapturedStdout(), "");
+      assert.deepStrictEqual(getWrites(), []);
       assert.deepStrictEqual(prompts, [true]);
     });
 
@@ -2276,7 +2269,7 @@ editor input
 
 `,
       );
-      assert.strictEqual(getCapturedStdout(), "");
+      assert.deepStrictEqual(getWrites(), []);
       assert.deepStrictEqual(prompts, [true]);
       assert.deepStrictEqual(spawned, ["cat /tmp/lasso-test-uuid.txt"]);
     });
@@ -2298,7 +2291,7 @@ editor input
         testFs._files.get("/tmp/lasso-test-uuid.txt") ?? "",
         /# Applied config/,
       );
-      assert.strictEqual(getCapturedStdout(), "");
+      assert.deepStrictEqual(getWrites(), []);
       assert.deepStrictEqual(prompts, [true]);
       assert.deepStrictEqual(spawned, ["cat /tmp/lasso-test-uuid.txt"]);
     });
@@ -2346,7 +2339,7 @@ editor input
 
 `,
       );
-      assert.strictEqual(getCapturedStdout(), "");
+      assert.deepStrictEqual(getWrites(), []);
       assert.deepStrictEqual(prompts, [true]);
       assert.deepStrictEqual(spawned, ["cat /tmp/lasso-test-uuid.txt"]);
     });
@@ -2376,7 +2369,7 @@ editor input
 
 `,
       );
-      assert.strictEqual(getCapturedStdout(), "");
+      assert.deepStrictEqual(getWrites(), []);
       assert.deepStrictEqual(prompts, [true]);
       assert.deepStrictEqual(spawned, ["cat /tmp/lasso-test-uuid.txt"]);
     });
@@ -2442,7 +2435,7 @@ editor input
       assert.deepStrictEqual(harness.writes, [
         { chunk: null, key: { ctrl: true, name: "u" } },
       ]);
-      assert.strictEqual(getCapturedStdout(), "");
+      assert.deepStrictEqual(getWrites(), []);
     });
 
     it("types keymap command while loading when a question is pending", () => {
@@ -2465,7 +2458,7 @@ editor input
       actions.setQuestionAbortController(null);
       actions.setLoadingStateTimeout({} as NodeJS.Timeout);
       harness.emitKey({ name: "k", ctrl: true });
-      assert.strictEqual(getCapturedStdout(), "");
+      assert.deepStrictEqual(getWrites(), []);
       assert.deepStrictEqual(harness.writes, []);
     });
   });
@@ -2586,10 +2579,10 @@ log content
       const { spawned } = mockPagerSpawn();
       const result = await resolveSlashCommand("/lastdiff");
       assert.strictEqual(result, null);
-      assert.strictEqual(
-        stripAnsi(getCapturedStdout()),
-        "No diffs from the last turn\n\n",
-      );
+      assert.deepStrictEqual(getWrites(), [
+        `${BLUE}No diffs from the last turn${RESET}\n`,
+        "\n",
+      ]);
       assert.deepStrictEqual(spawned, []);
     });
 
@@ -2607,10 +2600,9 @@ log content
       const result = await resolveSlashCommand("/model new-model");
       assert.strictEqual(result, null);
       assert.strictEqual(getState().config.model, "new-model");
-      assert.strictEqual(
-        stripAnsi(getCapturedStdout()),
-        "Model updated from `old` to `new-model`\n",
-      );
+      assert.deepStrictEqual(getWrites(), [
+        `${BLUE}Model updated from \`old\` to \`new-model\`${RESET}\n`,
+      ]);
     });
 
     it("handles /model without args", async () => {
@@ -2618,33 +2610,29 @@ log content
       actions.resetStdout();
       const result = await resolveSlashCommand("/model");
       assert.strictEqual(result, null);
-      assert.strictEqual(stripAnsi(getCapturedStdout()), "gpt-4\n");
+      assert.deepStrictEqual(getWrites(), [`${BLUE}gpt-4${RESET}\n`]);
     });
 
     it("handles /skills command", async () => {
       actions.resetStdout();
       const result = await resolveSlashCommand("/skills");
       assert.strictEqual(result, null);
-      assert.strictEqual(
-        stripAnsi(getCapturedStdout()),
-        `
-No available skills
-
-`,
-      );
+      assert.deepStrictEqual(getWrites(), [
+        "\n",
+        `${BLUE}No available skills${RESET}\n`,
+        "\n",
+      ]);
     });
 
     it("handles /context command", async () => {
       actions.resetStdout();
       const result = await resolveSlashCommand("/context");
       assert.strictEqual(result, null);
-      assert.strictEqual(
-        stripAnsi(getCapturedStdout()),
-        `
-No available context files
-
-`,
-      );
+      assert.deepStrictEqual(getWrites(), [
+        "\n",
+        `${BLUE}No available context files${RESET}\n`,
+        "\n",
+      ]);
     });
 
     it("handles /commands command by opening commands in a pager", async () => {
@@ -2687,7 +2675,7 @@ No available context files
       actions.resetStdout();
       const result = await resolveSlashCommand("/config");
       assert.strictEqual(result, null);
-      assert.strictEqual(stripAnsi(getCapturedStdout()), "");
+      assert.deepStrictEqual(getWrites(), []);
       const tempContent = testFs._files.get("/tmp/lasso-test-uuid.txt");
       assert.ok(tempContent !== undefined);
       assert.match(tempContent, /^# Global config from path: /);
@@ -2699,14 +2687,12 @@ No available context files
       actions.resetStdout();
       const result = await resolveSlashCommand("/keymaps");
       assert.strictEqual(result, null);
-      assert.strictEqual(
-        stripAnsi(getCapturedStdout()),
-        `
-Keymaps:
-- edit: {"name":"g","ctrl":true}
-
-`,
-      );
+      assert.deepStrictEqual(getWrites(), [
+        "\n",
+        `${BLUE}Keymaps:${RESET}\n`,
+        '- edit: {"name":"g","ctrl":true}\n',
+        "\n",
+      ]);
     });
 
     it("handles /usage command", async () => {
@@ -2714,10 +2700,12 @@ Keymaps:
       actions.setModel("unknown-model");
       const result = await resolveSlashCommand("/usage");
       assert.strictEqual(result, null);
-      assert.strictEqual(
-        stripAnsi(getCapturedStdout()),
-        `\nUsage:\n- Session: 0 tokens\n\n`,
-      );
+      assert.deepStrictEqual(getWrites(), [
+        "\n",
+        `${BLUE}Usage:${RESET}\n`,
+        "- Session: 0 tokens\n",
+        "\n",
+      ]);
     });
 
     it("handles /usage command with a usage limit", async () => {
@@ -2734,10 +2722,13 @@ Keymaps:
       actions.setUsageLimit({ duration: "60m", dollarAmount: 10 });
       const result = await resolveSlashCommand("/usage");
       assert.strictEqual(result, null);
-      assert.strictEqual(
-        stripAnsi(getCapturedStdout()),
-        `\nUsage:\n- Session: 0 tokens, $0.000\n- 60m window: $0.000 of $10.000 limit\n\n`,
-      );
+      assert.deepStrictEqual(getWrites(), [
+        "\n",
+        `${BLUE}Usage:${RESET}\n`,
+        "- Session: 0 tokens, $0.000\n",
+        "- 60m window: $0.000 of $10.000 limit\n",
+        "\n",
+      ]);
     });
 
     it("handles /usage command with usage and a usage limit", async () => {
@@ -2776,10 +2767,13 @@ Keymaps:
       actions.setUsageLimit({ duration: "60m", dollarAmount: 1234.5 });
       const result = await resolveSlashCommand("/usage");
       assert.strictEqual(result, null);
-      assert.strictEqual(
-        stripAnsi(getCapturedStdout()),
-        `\nUsage:\n- Session: 3,100,000 tokens, $2.750\n- 60m window: $1.350 of $1,234.500 limit\n\n`,
-      );
+      assert.deepStrictEqual(getWrites(), [
+        "\n",
+        `${BLUE}Usage:${RESET}\n`,
+        "- Session: 3,100,000 tokens, $2.750\n",
+        "- 60m window: $1.350 of $1,234.500 limit\n",
+        "\n",
+      ]);
     });
 
     it("handles /tokens command", async () => {
@@ -2788,18 +2782,12 @@ Keymaps:
       actions.setContextWindowPerModel({ "test-model": 10_000 });
       const result = await resolveSlashCommand("/tokens");
       assert.strictEqual(result, null);
-      assert.strictEqual(
-        stripAnsi(getCapturedStdout()),
-        `
-Token count: 602 (0% of context window)
-- Chat messages: 0
-- Context files: 0
-- Harness and MCP tools: 0
-- Base system prompt: 602
-- Skill descriptions: 0
-
-`,
-      );
+      assert.deepStrictEqual(getWrites(), [
+        "\n",
+        `${BLUE}Token count: 602 (0% of context window)${RESET}\n`,
+        "- Chat messages: 0\n- Context files: 0\n- Harness and MCP tools: 0\n- Base system prompt: 602\n- Skill descriptions: 0\n",
+        "\n",
+      ]);
     });
 
     it("handles /resume without args", async () => {
@@ -2961,11 +2949,10 @@ commands diff
       const result = await resolveSlashCommand("/reload");
 
       assert.strictEqual(result, null);
-      assert.strictEqual(
-        stripAnsi(getCapturedStdout()).startsWith(
+      assert.ok(
+        stripAnsi(getWrites().join("")).startsWith(
           "No diff from reload\nThe current set of context, skills, and tools is 51.09% of the 100,000 token context window!",
         ),
-        true,
       );
     });
 
@@ -3019,11 +3006,12 @@ commands diff
 
 `,
       );
-      assert.strictEqual(
-        stripAnsi(getCapturedStdout()).includes(
-          "The current set of context, skills, and tools is 51.09% of the 100,000 token context window!",
+      assert.ok(
+        getWrites().some((w) =>
+          w.includes(
+            "The current set of context, skills, and tools is 51.09% of the 100,000 token context window!",
+          ),
         ),
-        true,
       );
     });
 
@@ -3033,10 +3021,10 @@ commands diff
       mockExecCalls([{ stdout: "delta 0.18.2" }, { stdout: "", error: err }]);
       const result = await resolveSlashCommand("/reload");
       assert.strictEqual(result, null);
-      assert.strictEqual(
-        stripAnsi(getCapturedStdout()),
-        `- Warning: using a default context window of 128,000 tokens because there is no \`contextWindowPerModel\` entry for the current model \`__MISSING__\`\nAn error occurred when getting the diff: fatal\n`,
-      );
+      assert.deepStrictEqual(getWrites(), [
+        `${YELLOW}- Warning: using a default context window of 128,000 tokens because there is no \`contextWindowPerModel\` entry for the current model \`__MISSING__\`${RESET}\n`,
+        `${RED}An error occurred when getting the diff: fatal${RESET}\n`,
+      ]);
       assert.strictEqual(
         testFs._files.has("/tmp/lasso-global-before-test-uuid.txt"),
         false,
@@ -3181,10 +3169,9 @@ hello
       ]);
       const result = await resolveSlashCommand("/custom");
       assert.strictEqual(result, "custom command content");
-      assert.strictEqual(
-        stripAnsi(getCapturedStdout()),
-        "Executing custom slash command: custom\n",
-      );
+      assert.deepStrictEqual(getWrites(), [
+        `${GREY}Executing custom slash command: custom${RESET}\n`,
+      ]);
     });
 
     it("appends context after custom slash command content", async () => {
@@ -3252,35 +3239,11 @@ custom command content`,
       actions.resetStdout();
       const result = await resolveSlashCommand("/unknown");
       assert.strictEqual(result, null);
-      assert.strictEqual(
-        stripAnsi(getCapturedStdout()),
-        `
-Invalid command: /unknown, valid commands:
-- /edit
-- /editpage
-- /history
-- /clear
-- /paste
-- /model
-- /skills
-- /context
-- /commands
-- /keymaps
-- /usage
-- /tokens
-- /resume
-- /config
-- /reload
-- /initlocal
-- /initglobal
-- /lastresponse
-- /lastmessage
-- /lastdiff
-- /summaries
-- /tools
-- /test-cwd/.lasso/commands/known.md
-`,
-      );
+      assert.deepStrictEqual(getWrites(), [
+        "\n",
+        `${RED}Invalid command: /unknown, valid commands:${RESET}\n`,
+        "- /edit\n- /editpage\n- /history\n- /clear\n- /paste\n- /model\n- /skills\n- /context\n- /commands\n- /keymaps\n- /usage\n- /tokens\n- /resume\n- /config\n- /reload\n- /initlocal\n- /initglobal\n- /lastresponse\n- /lastmessage\n- /lastdiff\n- /summaries\n- /tools\n- /test-cwd/.lasso/commands/known.md\n",
+      ]);
     });
   });
 
@@ -3288,10 +3251,9 @@ Invalid command: /unknown, valid commands:
     it("creates the local config in .lasso/settings.yaml", () => {
       actions.resetStdout();
       initLocalConfig();
-      assert.strictEqual(
-        stripAnsi(getCapturedStdout()),
-        "Created the local config at /test-cwd/.lasso/settings.yaml\n",
-      );
+      assert.deepStrictEqual(getWrites(), [
+        `${PURPLE}Created the local config at /test-cwd/.lasso/settings.yaml${RESET}\n`,
+      ]);
       assert.strictEqual(
         testFs._files.get("/test-cwd/.lasso/settings.yaml"),
         `# This config was auto-generated by the /initlocal command
@@ -3306,10 +3268,9 @@ baseURL: https://opencode.ai/zen/v1
       testFs._files.set("/test-cwd/.lasso/settings.yaml", "existing config");
       actions.resetStdout();
       initLocalConfig();
-      assert.strictEqual(
-        stripAnsi(getCapturedStdout()),
-        "The local config already exists at /test-cwd/.lasso/settings.yaml\n",
-      );
+      assert.deepStrictEqual(getWrites(), [
+        `${YELLOW}The local config already exists at /test-cwd/.lasso/settings.yaml${RESET}\n`,
+      ]);
       assert.strictEqual(
         testFs._files.get("/test-cwd/.lasso/settings.yaml"),
         "existing config",
@@ -3322,19 +3283,17 @@ baseURL: https://opencode.ai/zen/v1
       });
       actions.resetStdout();
       initLocalConfig();
-      assert.strictEqual(
-        stripAnsi(getCapturedStdout()),
-        "Failed to write the config to /test-cwd/.lasso/settings.yaml\n",
-      );
+      assert.deepStrictEqual(getWrites(), [
+        `${RED}Failed to write the config to /test-cwd/.lasso/settings.yaml${RESET}\n`,
+      ]);
     });
 
     it("creates the global config in ~/.config/lasso/settings.yaml", () => {
       actions.resetStdout();
       initGlobalConfig();
-      assert.strictEqual(
-        stripAnsi(getCapturedStdout()),
-        "Created the global config at /fake-home/.config/lasso/settings.yaml\n",
-      );
+      assert.deepStrictEqual(getWrites(), [
+        `${PURPLE}Created the global config at /fake-home/.config/lasso/settings.yaml${RESET}\n`,
+      ]);
       assert.strictEqual(
         testFs._files.get("/fake-home/.config/lasso/settings.yaml"),
         `# This config was auto-generated by the /initglobal command
@@ -3352,10 +3311,9 @@ baseURL: https://opencode.ai/zen/v1
       );
       actions.resetStdout();
       initGlobalConfig();
-      assert.strictEqual(
-        stripAnsi(getCapturedStdout()),
-        "The global config already exists at /fake-home/.config/lasso/settings.yaml\n",
-      );
+      assert.deepStrictEqual(getWrites(), [
+        `${YELLOW}The global config already exists at /fake-home/.config/lasso/settings.yaml${RESET}\n`,
+      ]);
       assert.strictEqual(
         testFs._files.get("/fake-home/.config/lasso/settings.yaml"),
         "existing config",
@@ -3368,10 +3326,9 @@ baseURL: https://opencode.ai/zen/v1
       });
       actions.resetStdout();
       initGlobalConfig();
-      assert.strictEqual(
-        stripAnsi(getCapturedStdout()),
-        "Failed to write the config to /fake-home/.config/lasso/settings.yaml\n",
-      );
+      assert.deepStrictEqual(getWrites(), [
+        `${RED}Failed to write the config to /fake-home/.config/lasso/settings.yaml${RESET}\n`,
+      ]);
     });
 
     it("warns when the config directory cannot be created", () => {
@@ -3380,10 +3337,9 @@ baseURL: https://opencode.ai/zen/v1
       });
       actions.resetStdout();
       initLocalConfig();
-      assert.strictEqual(
-        stripAnsi(getCapturedStdout()),
-        "Failed to create the directory: /test-cwd/.lasso\n",
-      );
+      assert.deepStrictEqual(getWrites(), [
+        `${RED}Failed to create the directory: /test-cwd/.lasso${RESET}\n`,
+      ]);
     });
   });
 });

@@ -10,10 +10,12 @@ import {
 } from "./log.ts";
 import { actions, getState } from "./state.ts";
 import {
-  mockStdout,
+  mockStdoutWrites,
+  RED,
+  RESET,
   setupTestContext,
-  stripAnsi,
   testFs,
+  YELLOW,
 } from "./test-helpers.ts";
 import { fsDeps } from "./deps.ts";
 
@@ -55,14 +57,13 @@ describe("log", () => {
       mock.method(fsDeps, "mkdirSync", () => {
         throw new Error("Permission denied");
       });
-      const getCaptured = mockStdout();
+      const getWrites = mockStdoutWrites();
 
       initSessionFile();
 
-      assert.equal(
-        stripAnsi(getCaptured()),
-        "Failed to create the directory: /fake-home/.local/state/lasso/sessions\n",
-      );
+      assert.deepStrictEqual(getWrites(), [
+        `${YELLOW}Failed to create the directory: /fake-home/.local/state/lasso/sessions${RESET}\n`,
+      ]);
       assert.equal(getState().app.sessionFilePath, "");
     });
 
@@ -70,14 +71,13 @@ describe("log", () => {
       mock.method(fsDeps, "writeFileSync", () => {
         throw new Error("Permission denied");
       });
-      const getCaptured = mockStdout();
+      const getWrites = mockStdoutWrites();
 
       initSessionFile();
 
-      assert.equal(
-        stripAnsi(getCaptured()),
-        "Failed to write the session file to /fake-home/.local/state/lasso/sessions/session-1234567890000.json\n",
-      );
+      assert.deepStrictEqual(getWrites(), [
+        `${YELLOW}Failed to write the session file to /fake-home/.local/state/lasso/sessions/session-1234567890000.json${RESET}\n`,
+      ]);
     });
 
     it("generates correct log path with session start date", () => {
@@ -275,14 +275,13 @@ describe("log", () => {
       mock.method(fsDeps, "writeFileSync", () => {
         throw new Error("Permission denied");
       });
-      const getCaptured = mockStdout();
+      const getWrites = mockStdoutWrites();
 
       syncSessionFile();
 
-      assert.equal(
-        stripAnsi(getCaptured()),
-        "Failed to write the session file to /fake-home/.local/state/lasso/sessions/session-1234567890000.json\n",
-      );
+      assert.deepStrictEqual(getWrites(), [
+        `${YELLOW}Failed to write the session file to /fake-home/.local/state/lasso/sessions/session-1234567890000.json${RESET}\n`,
+      ]);
       assert.deepStrictEqual(getState().app.conversation.messages, []);
     });
 
@@ -290,15 +289,14 @@ describe("log", () => {
       const circularContent: { self?: unknown } = {};
       circularContent.self = circularContent;
 
-      const getCaptured = mockStdout();
+      const getWrites = mockStdoutWrites();
       syncSessionFile({
         messages: [{ role: "user", content: circularContent }],
       });
 
-      assert.equal(
-        stripAnsi(getCaptured()),
-        "Failed to stringify the session file\n",
-      );
+      assert.deepStrictEqual(getWrites(), [
+        `${YELLOW}Failed to stringify the session file${RESET}\n`,
+      ]);
       assert.equal(
         testFs._files.has(
           "/fake-home/.local/state/lasso/sessions/session-1234567890000.json",
@@ -347,41 +345,41 @@ describe("log", () => {
     });
 
     it("prints an error and returns false when the session file cannot be read", () => {
-      const getCaptured = mockStdout();
+      const getWrites = mockStdoutWrites();
 
       const result = resumeFromSessionFile("/test/missing.json");
 
       assert.equal(result, false);
-      assert.equal(
-        stripAnsi(getCaptured()),
-        "Failed to read the session file at /test/missing.json\n\n",
-      );
+      assert.deepStrictEqual(getWrites(), [
+        `${RED}Failed to read the session file at /test/missing.json${RESET}\n`,
+        "\n",
+      ]);
     });
 
     it("prints an error and returns false when the session file is not valid json", () => {
       testFs._files.set("/test/broken.json", "not json");
-      const getCaptured = mockStdout();
+      const getWrites = mockStdoutWrites();
 
       const result = resumeFromSessionFile("/test/broken.json");
 
       assert.equal(result, false);
-      assert.equal(
-        stripAnsi(getCaptured()),
-        "Failed to parse the session file at /test/broken.json\n\n",
-      );
+      assert.deepStrictEqual(getWrites(), [
+        `${RED}Failed to parse the session file at /test/broken.json${RESET}\n`,
+        "\n",
+      ]);
     });
 
     it("prints an error and returns false when the session file fails validation", () => {
       testFs._files.set("/test/invalid.json", "{}");
-      const getCaptured = mockStdout();
+      const getWrites = mockStdoutWrites();
 
       const result = resumeFromSessionFile("/test/invalid.json");
 
       assert.equal(result, false);
-      assert.equal(
-        stripAnsi(getCaptured()),
-        "Failed to validate the session file at /test/invalid.json\n\n",
-      );
+      assert.deepStrictEqual(getWrites(), [
+        `${RED}Failed to validate the session file at /test/invalid.json${RESET}\n`,
+        "\n",
+      ]);
     });
   });
 });

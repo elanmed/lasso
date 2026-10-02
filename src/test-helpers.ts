@@ -224,6 +224,7 @@ export const YELLOW = "\x1b[33m";
 export const GREY = "\x1b[90m";
 export const BOLD = "\x1b[1m";
 export const BOLD_RESET = "\x1b[22m";
+export const PURPLE = "\x1b[35m";
 
 export function makeFakeRl(overrides: object = {}) {
   return {
