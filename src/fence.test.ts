@@ -3,7 +3,14 @@ import assert from "node:assert";
 import { fencePrint, getPrettyApiDuration } from "./fence.ts";
 import { actions } from "./state.ts";
 import { processDeps } from "./deps.ts";
-import { stripAnsi, mockStdout, setupTestContext } from "./test-helpers.ts";
+import {
+  BOLD,
+  BOLD_RESET,
+  GREY,
+  mockStdoutWrites,
+  RESET,
+  setupTestContext,
+} from "./test-helpers.ts";
 
 describe("fence", () => {
   afterEach(() => {
@@ -21,16 +28,15 @@ describe("fence", () => {
     });
 
     it("prints the text in a fence without session info", () => {
-      const getCaptured = mockStdout();
+      const getWrites = mockStdoutWrites();
       fencePrint("Output");
-      assert.strictEqual(
-        stripAnsi(getCaptured()),
-        "\u2501\u2501 Output \u2501\u2501\n",
-      );
+      assert.deepStrictEqual(getWrites(), [
+        `${GREY}━━ ${BOLD}Output${BOLD_RESET} ━━${RESET}\n`,
+      ]);
     });
 
     it("prints duration and token usage when showSessionInfo is set", () => {
-      const getCaptured = mockStdout();
+      const getWrites = mockStdoutWrites();
       mock.method(process.hrtime, "bigint", () => BigInt(1_000_000_000));
       actions.setApiStartTime();
       mock.method(process.hrtime, "bigint", () => BigInt(1_500_000_000));
@@ -38,14 +44,13 @@ describe("fence", () => {
 
       fencePrint("Output", { showSessionInfo: true });
 
-      assert.strictEqual(
-        stripAnsi(getCaptured()),
-        "\u2501\u2501 Output (500ms) (0 tokens in session) (0% of context window) \u2501\u2501\n",
-      );
+      assert.deepStrictEqual(getWrites(), [
+        `${GREY}━━ ${BOLD}Output${BOLD_RESET} (500ms) (0 tokens in session) (0% of context window) ━━${RESET}\n`,
+      ]);
     });
 
     it("includes context window usage when configured", () => {
-      const getCaptured = mockStdout();
+      const getWrites = mockStdoutWrites();
       mock.method(process.hrtime, "bigint", () => BigInt(1_000_000_000));
       actions.setApiStartTime();
       mock.method(process.hrtime, "bigint", () => BigInt(1_500_000_000));
@@ -57,15 +62,14 @@ describe("fence", () => {
 
       fencePrint("Output", { showSessionInfo: true });
 
-      assert.strictEqual(
-        stripAnsi(getCaptured()),
-        "\u2501\u2501 Output (500ms) (0 tokens in session) (50% of context window) \u2501\u2501\n",
-      );
+      assert.deepStrictEqual(getWrites(), [
+        `${GREY}━━ ${BOLD}Output${BOLD_RESET} (500ms) (0 tokens in session) (50% of context window) ━━${RESET}\n`,
+      ]);
     });
 
     it("drops usage when there is not enough room", () => {
       mock.method(processDeps.stdout, "getColumns", () => 20);
-      const getCaptured = mockStdout();
+      const getWrites = mockStdoutWrites();
       mock.method(process.hrtime, "bigint", () => BigInt(1_000_000_000));
       actions.setApiStartTime();
       mock.method(process.hrtime, "bigint", () => BigInt(1_500_000_000));
@@ -74,15 +78,14 @@ describe("fence", () => {
 
       fencePrint("Output", { showSessionInfo: true });
 
-      assert.strictEqual(
-        stripAnsi(getCaptured()),
-        "\u2501\u2501 Output (500ms) \u2501\u2501\n",
-      );
+      assert.deepStrictEqual(getWrites(), [
+        `${GREY}━━ ${BOLD}Output${BOLD_RESET} (500ms) ━━${RESET}\n`,
+      ]);
     });
 
     it("drops duration and usage when there is not enough room", () => {
       mock.method(processDeps.stdout, "getColumns", () => 19);
-      const getCaptured = mockStdout();
+      const getWrites = mockStdoutWrites();
       mock.method(process.hrtime, "bigint", () => BigInt(1_000_000_000));
       actions.setApiStartTime();
       mock.method(process.hrtime, "bigint", () => BigInt(1_500_000_000));
@@ -90,26 +93,24 @@ describe("fence", () => {
 
       fencePrint("Output", { showSessionInfo: true });
 
-      assert.strictEqual(
-        stripAnsi(getCaptured()),
-        "\u2501\u2501 Output \u2501\u2501\n",
-      );
+      assert.deepStrictEqual(getWrites(), [
+        `${GREY}━━ ${BOLD}Output${BOLD_RESET} ━━${RESET}\n`,
+      ]);
     });
 
     it("drops the header when it does not fit", () => {
       const longHeader = "a".repeat(100);
-      const getCaptured = mockStdout();
+      const getWrites = mockStdoutWrites();
       fencePrint(longHeader);
 
-      assert.strictEqual(
-        stripAnsi(getCaptured()),
-        `\u2501\u2501 ${longHeader.substring(0, 73)}\u2026 \u2501\u2501\n`,
-      );
+      assert.deepStrictEqual(getWrites(), [
+        `${GREY}━━ ${BOLD}${longHeader.substring(0, 73)}…${BOLD_RESET} ━━${RESET}\n`,
+      ]);
     });
 
     it("truncates the header instead of dropping when showSessionInfo is set", () => {
       const longHeader = "b".repeat(100);
-      const getCaptured = mockStdout();
+      const getWrites = mockStdoutWrites();
       mock.method(process.hrtime, "bigint", () => BigInt(1_000_000_000));
       actions.setApiStartTime();
       mock.method(process.hrtime, "bigint", () => BigInt(1_500_000_000));
@@ -117,10 +118,9 @@ describe("fence", () => {
 
       fencePrint(longHeader, { showSessionInfo: true });
 
-      assert.strictEqual(
-        stripAnsi(getCaptured()),
-        `\u2501\u2501 ${longHeader.substring(0, 73)}\u2026 \u2501\u2501\n`,
-      );
+      assert.deepStrictEqual(getWrites(), [
+        `${GREY}━━ ${BOLD}${longHeader.substring(0, 73)}…${BOLD_RESET} ━━${RESET}\n`,
+      ]);
     });
   });
 

@@ -3,10 +3,14 @@ import assert from "node:assert";
 import { createToolCallDiffer, execGitDiff } from "./differ.ts";
 import { actions, getState } from "./state.ts";
 import {
+  BOLD,
+  BOLD_RESET,
+  GREY,
   mockExecCalls,
-  mockStdout,
+  mockStdoutWrites,
+  RED,
+  RESET,
   setupTestContext,
-  stripAnsi,
   testFs,
 } from "./test-helpers.ts";
 
@@ -89,7 +93,7 @@ describe("differ", () => {
 
     it("does not diff and cleans up the after file for ignored paths", async () => {
       const commands: string[] = [];
-      const getCaptured = mockStdout();
+      const getWrites = mockStdoutWrites();
       const differ = createToolCallDiffer();
       mockExecCalls([], commands);
 
@@ -98,13 +102,13 @@ describe("differ", () => {
       await differ.diffAndCleanup("call-1", "/tmp/file.txt");
 
       assert.equal(commands.length, 0);
-      assert.equal(getCaptured().length, 0);
+      assert.deepStrictEqual(getWrites(), []);
       assert.deepStrictEqual(getState().app.toolEditDiffs, []);
     });
 
     it("prints and records the diff for a newly-created file", async () => {
       const commands: string[] = [];
-      const getCaptured = mockStdout();
+      const getWrites = mockStdoutWrites();
       const differ = createToolCallDiffer();
       mockExecCalls(
         [{ stdout: "delta 0.18.2" }, { stdout: "+created content\n" }],
@@ -116,10 +120,11 @@ describe("differ", () => {
       await differ.diffAndCleanup("call-1", "/test/new-file.txt");
 
       assert.equal(commands.length, 2);
-      assert.strictEqual(
-        stripAnsi(getCaptured()),
-        `\n━━ File change: /test/new-file.txt ━━\n+created content\n\n`,
-      );
+      assert.deepStrictEqual(getWrites(), [
+        "\n",
+        `${GREY}━━ ${BOLD}File change: /test/new-file.txt${BOLD_RESET} ━━${RESET}\n`,
+        "+created content\n\n",
+      ]);
       assert.deepStrictEqual(getState().app.toolEditDiffs, [
         { fileName: "/test/new-file.txt", diffStdout: "+created content\n" },
       ]);
@@ -129,7 +134,7 @@ describe("differ", () => {
 
     it("suppresses printing, continues recording tool edit diffs", async () => {
       const commands: string[] = [];
-      const getCaptured = mockStdout();
+      const getWrites = mockStdoutWrites();
       const differ = createToolCallDiffer();
       mockExecCalls(
         [{ stdout: "delta 0.18.2" }, { stdout: "+created content\n" }],
@@ -142,7 +147,7 @@ describe("differ", () => {
       await differ.diffAndCleanup("call-1", "/test/new-file.txt");
 
       assert.equal(commands.length, 2);
-      assert.strictEqual(stripAnsi(getCaptured()), "");
+      assert.deepStrictEqual(getWrites(), []);
       assert.deepStrictEqual(getState().app.toolEditDiffs, [
         { fileName: "/test/new-file.txt", diffStdout: "+created content\n" },
       ]);
@@ -198,21 +203,18 @@ describe("differ", () => {
 
     it("appends the diff to state and does not print an error when the diff command succeeds", async () => {
       testFs._files.set("/test/file.txt", "original content");
-      const getCaptured = mockStdout();
+      const getWrites = mockStdoutWrites();
       const differ = createToolCallDiffer();
       mockExecCalls([{ stdout: "delta 0.18.2" }, { stdout: "+added line\n" }]);
 
       differ.setTempFileBefore("call-1", "/test/file.txt");
       await differ.diffAndCleanup("call-1", "/test/file.txt");
 
-      assert.strictEqual(
-        stripAnsi(getCaptured()),
-        `
-━━ File change: /test/file.txt ━━
-+added line
-
-`,
-      );
+      assert.deepStrictEqual(getWrites(), [
+        "\n",
+        `${GREY}━━ ${BOLD}File change: /test/file.txt${BOLD_RESET} ━━${RESET}\n`,
+        "+added line\n\n",
+      ]);
     });
 
     it("cleans up all outstanding tool call snapshots", () => {
@@ -387,7 +389,7 @@ describe("differ", () => {
     });
 
     it("prints an error and skips appending when the diff command fails", async () => {
-      const getCaptured = mockStdout();
+      const getWrites = mockStdoutWrites();
       const err = new Error("fatal") as Error & { code: number };
       err.code = 128;
       mockExecCalls([{ stdout: "delta 0.18.2" }, { stdout: "", error: err }]);
@@ -395,21 +397,20 @@ describe("differ", () => {
       testFs._files.set("/test/file.txt", "original content");
       differ.setTempFileBefore("call-1", "/test/file.txt");
       await differ.diffAndCleanup("call-1", "/test/file.txt");
-      assert.strictEqual(
-        stripAnsi(getCaptured()),
-        "An error occurred when getting the diff for /test/file.txt: fatal\n",
-      );
+      assert.deepStrictEqual(getWrites(), [
+        `${RED}An error occurred when getting the diff for /test/file.txt: fatal${RESET}\n`,
+      ]);
       assert.deepStrictEqual(getState().app.toolEditDiffs, []);
     });
 
     it("does not append or print when the diff stdout is empty", async () => {
-      const getCaptured = mockStdout();
+      const getWrites = mockStdoutWrites();
       testFs._files.set("/test/file.txt", "original content");
       mockExecCalls([{ stdout: "delta 0.18.2" }, { stdout: "" }]);
       const differ = createToolCallDiffer();
       differ.setTempFileBefore("call-1", "/test/file.txt");
       await differ.diffAndCleanup("call-1", "/test/file.txt");
-      assert.strictEqual(stripAnsi(getCaptured()), "");
+      assert.deepStrictEqual(getWrites(), []);
       assert.deepStrictEqual(getState().app.toolEditDiffs, []);
     });
   });
