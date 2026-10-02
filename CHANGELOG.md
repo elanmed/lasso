@@ -1,5 +1,19 @@
 # Changelog
 
+## v0.10.0 - 2026-10-02
+
+- Show chat history newest first in the pager
+- Add the `/tools` command to list available harness and MCP tools in a pager
+- Open the skills and context file lists in a pager with spacing options
+- Remove the `/contextpage`, `/commandspage`, and `/messages` commands
+- Rewrite summary prompts as two sections that preserve key facts and delete superseded facts
+- Size conversation summaries dynamically from `contextWindowPerModel`: target 5,000 tokens per summary and reserve up to 25% of the context window for summary history
+- Pretty-print dollar amounts in `/usage` session and usage-limit lines
+- Fall back to the default context window when warning on large prompt overhead, and show context window usage unconditionally in fence and token prints
+- Fix newlines for keymaps that support streaming, and print early-return messages without a leading blank line
+- Clean up warning messages, and allow clearing the editor when interrupting
+- Log MCP initialization through the parallel logger
+
 ## v0.9.0 - 2026-09-28
 
 - Resume the most recent session from `/resume` without args
