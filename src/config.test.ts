@@ -22,8 +22,11 @@ import {
   testFs,
   testProcessEnv,
   setupTestContext,
-  mockStdout,
-  stripAnsi,
+  BLUE,
+  GREEN,
+  mockStdoutWrites,
+  RESET,
+  YELLOW,
 } from "./test-helpers.ts";
 import { fsDeps } from "./deps.ts";
 
@@ -1080,15 +1083,17 @@ describe("config", () => {
           JSON.stringify({ model: testConfig.model }),
         );
 
-        const getCaptured = mockStdout();
+        const getWrites = mockStdoutWrites();
         await initState();
-        assert.strictEqual(
-          stripAnsi(getCaptured()),
-          "- Warning: using a default context window of 128,000 tokens because there is no `contextWindowPerModel` entry for the current model `claude-sonnet-4-6`\n" +
-            "Reading context files: 0.0ms\n" +
-            "Reading skills: 0.0ms\n" +
-            "Reading slash commands: 0.0ms\n",
-        );
+        assert.deepStrictEqual(getWrites(), [
+          `${YELLOW}- Warning: using a default context window of 128,000 tokens because there is no \`contextWindowPerModel\` entry for the current model \`claude-sonnet-4-6\`${RESET}\n`,
+          `${BLUE}Reading context files: ${RESET}`,
+          `${GREEN}0.0ms${RESET}\n`,
+          `${BLUE}Reading skills: ${RESET}`,
+          `${GREEN}0.0ms${RESET}\n`,
+          `${BLUE}Reading slash commands: ${RESET}`,
+          `${GREEN}0.0ms${RESET}\n`,
+        ]);
       });
 
       it("does not warn when the model has a contextWindowPerModel entry", async () => {
@@ -1101,9 +1106,9 @@ describe("config", () => {
           }),
         );
 
-        const getCaptured = mockStdout();
+        const getWrites = mockStdoutWrites();
         await initState();
-        assert.strictEqual(stripAnsi(getCaptured()), "");
+        assert.deepStrictEqual(getWrites(), []);
       });
 
       it("warns when the usage limit has no pricingPerModel entry for the current model", async () => {
@@ -1117,12 +1122,11 @@ describe("config", () => {
           }),
         );
 
-        const getCaptured = mockStdout();
+        const getWrites = mockStdoutWrites();
         await initState();
-        assert.strictEqual(
-          stripAnsi(getCaptured()),
-          "- Warning: usage limit is disabled because there is no `pricingPerModel` entry for the current model `claude-sonnet-4-6`\n",
-        );
+        assert.deepStrictEqual(getWrites(), [
+          `${YELLOW}- Warning: usage limit is disabled because there is no \`pricingPerModel\` entry for the current model \`claude-sonnet-4-6\`${RESET}\n`,
+        ]);
       });
 
       it("hides startup durations when suppressStartupDurations is true", async () => {
@@ -1136,12 +1140,11 @@ describe("config", () => {
           }),
         );
 
-        const getCaptured = mockStdout();
+        const getWrites = mockStdoutWrites();
         await initState();
-        assert.deepStrictEqual(
-          stripAnsi(getCaptured()),
-          "- Warning: using a default context window of 128,000 tokens because there is no `contextWindowPerModel` entry for the current model `claude-sonnet-4-6`\n",
-        );
+        assert.deepStrictEqual(getWrites(), [
+          `${YELLOW}- Warning: using a default context window of 128,000 tokens because there is no \`contextWindowPerModel\` entry for the current model \`claude-sonnet-4-6\`${RESET}\n`,
+        ]);
       });
 
       it("uses its pricingPerModel over the default config", async () => {
@@ -1788,38 +1791,34 @@ hello
     });
 
     it("returns false when api key, baseURL, and model are set", () => {
-      const getCaptured = mockStdout();
+      const getWrites = mockStdoutWrites();
       assert.strictEqual(blockOnMissingConfig(), false);
-      assert.strictEqual(getCaptured(), "");
+      assert.deepStrictEqual(getWrites(), []);
     });
 
     it("returns true and suggests the init slash commands when nothing is set", () => {
       actions.resetState();
       testProcessEnv._clear();
-      const getCaptured = mockStdout();
+      const getWrites = mockStdoutWrites();
       assert.strictEqual(blockOnMissingConfig(), true);
-      assert.strictEqual(
-        stripAnsi(getCaptured()),
-        `Warning! You're missing required configuration options.
+      assert.deepStrictEqual(getWrites(), [
+        `${YELLOW}Warning! You're missing required configuration options.
 - Set the \`LASSO_API_KEY\` environment variable, e.g. \`export LASSO_API_KEY=...\`
 - Set \`sdkProvider\` in your config file (\`openai-compatible\` or \`anthropic\`)
 - Set \`model\` in your config file
 
-Run /initlocal or /initglobal to generate a sample config in \`./.lasso\` or \`~/.config/lasso\` respectively.
-`,
-      );
+Run /initlocal or /initglobal to generate a sample config in \`./.lasso\` or \`~/.config/lasso\` respectively.${RESET}\n`,
+      ]);
     });
 
     it("only mentions the missing api key when baseURL and model are set", () => {
       testProcessEnv._clear();
-      const getCaptured = mockStdout();
+      const getWrites = mockStdoutWrites();
       assert.strictEqual(blockOnMissingConfig(), true);
-      assert.strictEqual(
-        stripAnsi(getCaptured()),
-        `Warning! You're missing required configuration options.
-- Set the \`LASSO_API_KEY\` environment variable, e.g. \`export LASSO_API_KEY=...\`
-`,
-      );
+      assert.deepStrictEqual(getWrites(), [
+        `${YELLOW}Warning! You're missing required configuration options.
+- Set the \`LASSO_API_KEY\` environment variable, e.g. \`export LASSO_API_KEY=...\`${RESET}\n`,
+      ]);
     });
   });
 });
