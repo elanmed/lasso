@@ -393,3 +393,10 @@ export function getPrettyDuration(
 
   return `${prettyMin}${prettySec}${prettyMs}`;
 }
+
+export function getPrettyDate(timestamp: number) {
+  return new Date(timestamp).toLocaleString("en-US", {
+    dateStyle: "medium",
+    timeStyle: "medium",
+  });
+}

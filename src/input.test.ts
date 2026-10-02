@@ -1422,14 +1422,19 @@ l---
       assert.deepStrictEqual(getWrites(), [`${BLUE}No chat history${RESET}\n`]);
     });
 
-    it("opens the chat history in a pager with a heading prepended", () => {
+    it("opens the chat history newest first in a pager with a heading prepended", () => {
       const { spawned } = mockPagerSpawn();
       testProcessEnv._set("LASSO_PAGER", "nano __FILE__");
       actions.setTranscript([
         {
-          timestamp: 0,
+          timestamp: 1000,
           role: "user",
-          message: "log content",
+          message: "older content",
+        },
+        {
+          timestamp: 60000,
+          role: "assistant",
+          message: "newer content",
         },
       ]);
       pageHistory();
@@ -1438,8 +1443,13 @@ l---
         testFs._files.get("/tmp/lasso-test-uuid.txt"),
         `# [lasso] Chat history
 
-Jan 1, 1970, 12:00:00 AM  *user*
-log content
+Jan 1, 1970, 12:01:00 AM  *assistant*
+newer content
+
+---
+
+Jan 1, 1970, 12:00:01 AM  *user*
+older content
 
 `,
       );
@@ -1649,13 +1659,13 @@ latest question
         stripAnsi(testFs._files.get("/tmp/lasso-test-uuid.txt") ?? ""),
         `# [lasso] Conversation summaries
 
-## Summary 2 (20 tokens, compacted at 200)
+## Summary 2 (20 tokens, compacted at Jan 1, 1970, 12:00:00 AM)
 
 latest summary
 
 ---
 
-## Summary 1 (10 tokens, compacted at 100)
+## Summary 1 (10 tokens, compacted at Jan 1, 1970, 12:00:00 AM)
 
 older summary
 

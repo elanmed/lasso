@@ -18,6 +18,7 @@ import {
   listSessionFiles,
   getStrFromAssistantContent,
   getPrettyDuration,
+  getPrettyDate,
   getDurationColor,
   shouldDisableColor,
   decimalToPercent,
@@ -304,6 +305,16 @@ describe("utils", () => {
         getPrettyDuration(BigInt(0), BigInt(500_000_000)),
         "500ms",
       );
+    });
+  });
+
+  describe("getPrettyDate", () => {
+    it("formats the epoch timestamp as a medium date and time", () => {
+      assert.strictEqual(getPrettyDate(0), "Jan 1, 1970, 12:00:00 AM");
+    });
+
+    it("formats a later timestamp", () => {
+      assert.strictEqual(getPrettyDate(60000), "Jan 1, 1970, 12:01:00 AM");
     });
   });
 

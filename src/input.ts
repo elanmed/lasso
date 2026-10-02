@@ -23,6 +23,7 @@ import {
   markdownFence,
   isNullish,
   safeStringify,
+  getPrettyDate,
 } from "./utils.ts";
 import { truncate } from "./text.ts";
 import {
@@ -1376,15 +1377,10 @@ export function pageHistory({ isTyped = false }: SpacingOpts = {}) {
 
   const formattedTranscript = transcript
     .map(
-      ({ message, role, timestamp }) => `${new Date(timestamp).toLocaleString(
-        "en-US",
-        {
-          dateStyle: "medium",
-          timeStyle: "medium",
-        },
-      )}  *${role}*
+      ({ message, role, timestamp }) => `${getPrettyDate(timestamp)}  *${role}*
 ${normalizeNewline(message, { count: 0 })}`,
     )
+    .toReversed()
     .join("\n\n---\n\n");
 
   const initialContentStr = `# [lasso] Chat history
@@ -1476,7 +1472,7 @@ export function pageSummaries({ isTyped = false }: SpacingOpts = {}) {
       (
         summary,
         idx,
-      ) => `## Summary ${String(idx + 1)} (${summary.tokens.toLocaleString()} tokens, compacted at ${String(summary.compactedAt)})
+      ) => `## Summary ${String(idx + 1)} (${summary.tokens.toLocaleString()} tokens, compacted at ${getPrettyDate(summary.compactedAt)})
 
 ${summary.compacted}`,
     )
