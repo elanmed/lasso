@@ -24,140 +24,146 @@ describe("getAvailableSlashCommands", () => {
     setupTestContext();
   });
 
-  it("returns empty array when no commands found", () => {
-    const result = getAvailableSlashCommands();
-    assert.deepStrictEqual(result, []);
-  });
-
-  it("returns empty array when glob throws", () => {
-    mock.method(fsDeps, "globSync", () => {
-      throw new Error("permission denied");
+  describe("returns an empty array", () => {
+    it("returns empty array when no commands found", () => {
+      const result = getAvailableSlashCommands();
+      assert.deepStrictEqual(result, []);
     });
-    const result = getAvailableSlashCommands();
-    assert.deepStrictEqual(result, []);
-  });
 
-  it("returns empty array when glob returns empty", () => {
-    testFs._globResults.set("/test-cwd/.lasso/commands/**/*.md", []);
-    const result = getAvailableSlashCommands();
-    assert.deepStrictEqual(result, []);
-  });
-
-  it("includes custom slash command dirs", () => {
-    actions.setCustomSlashCommandDirs(["/custom-commands"]);
-    testFs._globResults.set("/custom-commands/**/*.md", [
-      "/custom-commands/foo.md",
-    ]);
-    testFs._files.set("/custom-commands/foo.md", "custom content");
-    const result = getAvailableSlashCommands();
-    assert.deepStrictEqual(result, [
-      {
-        name: "foo",
-        filePath: "/custom-commands/foo.md",
-        content: "custom content",
-      },
-    ]);
-  });
-
-  it("returns commands from local and global dirs", () => {
-    testFs._globResults.set("/test-cwd/.lasso/commands/**/*.md", [
-      "/test-cwd/.lasso/commands/help.md",
-    ]);
-    testFs._globResults.set("/fake-home/.config/lasso/commands/**/*.md", [
-      "/fake-home/.config/lasso/commands/status.md",
-    ]);
-    testFs._files.set("/test-cwd/.lasso/commands/help.md", "help content");
-    testFs._files.set(
-      "/fake-home/.config/lasso/commands/status.md",
-      "status content",
-    );
-    const result = getAvailableSlashCommands();
-    assert.deepStrictEqual(result, [
-      {
-        name: "help",
-        filePath: "/test-cwd/.lasso/commands/help.md",
-        content: "help content",
-      },
-      {
-        name: "status",
-        filePath: "/fake-home/.config/lasso/commands/status.md",
-        content: "status content",
-      },
-    ]);
-  });
-
-  it("deduplicates by name keeping first occurrence", () => {
-    testFs._globResults.set("/test-cwd/.lasso/commands/**/*.md", [
-      "/test-cwd/.lasso/commands/help.md",
-    ]);
-    testFs._globResults.set("/fake-home/.config/lasso/commands/**/*.md", [
-      "/fake-home/.config/lasso/commands/help.md",
-    ]);
-    testFs._files.set("/test-cwd/.lasso/commands/help.md", "local content");
-    testFs._files.set(
-      "/fake-home/.config/lasso/commands/help.md",
-      "global content",
-    );
-    const result = getAvailableSlashCommands();
-    assert.deepStrictEqual(result, [
-      {
-        name: "help",
-        filePath: "/test-cwd/.lasso/commands/help.md",
-        content: "local content",
-      },
-    ]);
-  });
-
-  it("skips files that fail to read", () => {
-    mock.method(fsDeps, "readFileSync", (path: string) => {
-      if (path.includes("bad")) throw new Error("read failed");
-      return Buffer.from("content");
+    it("returns empty array when glob throws", () => {
+      mock.method(fsDeps, "globSync", () => {
+        throw new Error("permission denied");
+      });
+      const result = getAvailableSlashCommands();
+      assert.deepStrictEqual(result, []);
     });
-    testFs._globResults.set("/test-cwd/.lasso/commands/**/*.md", [
-      "/test-cwd/.lasso/commands/good.md",
-      "/test-cwd/.lasso/commands/bad.md",
-    ]);
-    const result = getAvailableSlashCommands();
-    assert.deepStrictEqual(result, [
-      {
-        name: "good",
-        filePath: "/test-cwd/.lasso/commands/good.md",
-        content: "content",
-      },
-    ]);
+
+    it("returns empty array when glob returns empty", () => {
+      testFs._globResults.set("/test-cwd/.lasso/commands/**/*.md", []);
+      const result = getAvailableSlashCommands();
+      assert.deepStrictEqual(result, []);
+    });
   });
 
-  it("warns when glob fails", () => {
-    mock.method(fsDeps, "globSync", () => {
-      throw new Error("permission denied");
+  describe("returns commands", () => {
+    it("includes custom slash command dirs", () => {
+      actions.setCustomSlashCommandDirs(["/custom-commands"]);
+      testFs._globResults.set("/custom-commands/**/*.md", [
+        "/custom-commands/foo.md",
+      ]);
+      testFs._files.set("/custom-commands/foo.md", "custom content");
+      const result = getAvailableSlashCommands();
+      assert.deepStrictEqual(result, [
+        {
+          name: "foo",
+          filePath: "/custom-commands/foo.md",
+          content: "custom content",
+        },
+      ]);
     });
-    const getWrites = mockStdoutWrites();
 
-    const result = getAvailableSlashCommands();
+    it("returns commands from local and global dirs", () => {
+      testFs._globResults.set("/test-cwd/.lasso/commands/**/*.md", [
+        "/test-cwd/.lasso/commands/help.md",
+      ]);
+      testFs._globResults.set("/fake-home/.config/lasso/commands/**/*.md", [
+        "/fake-home/.config/lasso/commands/status.md",
+      ]);
+      testFs._files.set("/test-cwd/.lasso/commands/help.md", "help content");
+      testFs._files.set(
+        "/fake-home/.config/lasso/commands/status.md",
+        "status content",
+      );
+      const result = getAvailableSlashCommands();
+      assert.deepStrictEqual(result, [
+        {
+          name: "help",
+          filePath: "/test-cwd/.lasso/commands/help.md",
+          content: "help content",
+        },
+        {
+          name: "status",
+          filePath: "/fake-home/.config/lasso/commands/status.md",
+          content: "status content",
+        },
+      ]);
+    });
 
-    assert.deepStrictEqual(result, []);
-    assert.deepStrictEqual(getWrites(), [
-      `${YELLOW}Failed to list the slash command files in /test-cwd/.lasso/commands${RESET}\n`,
-      `${YELLOW}Failed to list the slash command files in /fake-home/.config/lasso/commands${RESET}\n`,
-    ]);
+    it("deduplicates by name keeping first occurrence", () => {
+      testFs._globResults.set("/test-cwd/.lasso/commands/**/*.md", [
+        "/test-cwd/.lasso/commands/help.md",
+      ]);
+      testFs._globResults.set("/fake-home/.config/lasso/commands/**/*.md", [
+        "/fake-home/.config/lasso/commands/help.md",
+      ]);
+      testFs._files.set("/test-cwd/.lasso/commands/help.md", "local content");
+      testFs._files.set(
+        "/fake-home/.config/lasso/commands/help.md",
+        "global content",
+      );
+      const result = getAvailableSlashCommands();
+      assert.deepStrictEqual(result, [
+        {
+          name: "help",
+          filePath: "/test-cwd/.lasso/commands/help.md",
+          content: "local content",
+        },
+      ]);
+    });
   });
 
-  it("warns when a slash command file cannot be read", () => {
-    mock.method(fsDeps, "readFileSync", (path: string) => {
-      if (path.includes("bad")) throw new Error("read failed");
-      return Buffer.from("content");
+  describe("handles errors", () => {
+    it("skips files that fail to read", () => {
+      mock.method(fsDeps, "readFileSync", (path: string) => {
+        if (path.includes("bad")) throw new Error("read failed");
+        return Buffer.from("content");
+      });
+      testFs._globResults.set("/test-cwd/.lasso/commands/**/*.md", [
+        "/test-cwd/.lasso/commands/good.md",
+        "/test-cwd/.lasso/commands/bad.md",
+      ]);
+      const result = getAvailableSlashCommands();
+      assert.deepStrictEqual(result, [
+        {
+          name: "good",
+          filePath: "/test-cwd/.lasso/commands/good.md",
+          content: "content",
+        },
+      ]);
     });
-    testFs._globResults.set("/test-cwd/.lasso/commands/**/*.md", [
-      "/test-cwd/.lasso/commands/bad.md",
-    ]);
-    const getWrites = mockStdoutWrites();
 
-    const result = getAvailableSlashCommands();
+    it("warns when glob fails", () => {
+      mock.method(fsDeps, "globSync", () => {
+        throw new Error("permission denied");
+      });
+      const getWrites = mockStdoutWrites();
 
-    assert.deepStrictEqual(result, []);
-    assert.deepStrictEqual(getWrites(), [
-      `${YELLOW}Failed to read the slash command file at /test-cwd/.lasso/commands/bad.md${RESET}\n`,
-    ]);
+      const result = getAvailableSlashCommands();
+
+      assert.deepStrictEqual(result, []);
+      assert.deepStrictEqual(getWrites(), [
+        `${YELLOW}Failed to list the slash command files in /test-cwd/.lasso/commands${RESET}\n`,
+        `${YELLOW}Failed to list the slash command files in /fake-home/.config/lasso/commands${RESET}\n`,
+      ]);
+    });
+
+    it("warns when a slash command file cannot be read", () => {
+      mock.method(fsDeps, "readFileSync", (path: string) => {
+        if (path.includes("bad")) throw new Error("read failed");
+        return Buffer.from("content");
+      });
+      testFs._globResults.set("/test-cwd/.lasso/commands/**/*.md", [
+        "/test-cwd/.lasso/commands/bad.md",
+      ]);
+      const getWrites = mockStdoutWrites();
+
+      const result = getAvailableSlashCommands();
+
+      assert.deepStrictEqual(result, []);
+      assert.deepStrictEqual(getWrites(), [
+        `${YELLOW}Failed to read the slash command file at /test-cwd/.lasso/commands/bad.md${RESET}\n`,
+      ]);
+    });
   });
 });
 

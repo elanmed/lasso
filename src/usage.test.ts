@@ -273,54 +273,55 @@ describe("usage", () => {
       mock.method(Date, "now", () => 4_000_000);
     });
 
-    it("creates the usage log directory and writes the usage entry", async () => {
-      const usage = {
-        inputTokens: 10,
-        outputTokens: 5,
-        cacheReadTokens: 1,
-        cacheWriteTokens: 0,
-        date: 500_000,
-      };
+    describe("writes the usage log", () => {
+      it("creates the usage log directory and writes the usage entry", async () => {
+        const usage = {
+          inputTokens: 10,
+          outputTokens: 5,
+          cacheReadTokens: 1,
+          cacheWriteTokens: 0,
+          date: 500_000,
+        };
 
-      await syncNewModelUsageForLimitWindow("gpt-4", usage);
+        await syncNewModelUsageForLimitWindow("gpt-4", usage);
 
-      assert.deepStrictEqual(getState().app.modelUsageForLimitWindow, {
-        "gpt-4": [usage],
+        assert.deepStrictEqual(getState().app.modelUsageForLimitWindow, {
+          "gpt-4": [usage],
+        });
+        assert.deepStrictEqual(getState().app.modelUsageForSession, {});
+        assert.strictEqual(
+          testFs._files.get(getUsageLogPath()),
+          JSON.stringify({ "gpt-4": [usage] }),
+        );
       });
-      assert.deepStrictEqual(getState().app.modelUsageForSession, {});
-      assert.strictEqual(
-        testFs._files.get(getUsageLogPath()),
-        JSON.stringify({ "gpt-4": [usage] }),
-      );
-    });
 
-    it("warns and preserves state when the usage log directory cannot be created", async () => {
-      mock.method(fsDeps, "existsSync", () => false);
-      mock.method(fsDeps, "mkdirSync", () => {
-        throw new Error("Permission denied");
+      it("warns and preserves state when the usage log directory cannot be created", async () => {
+        mock.method(fsDeps, "existsSync", () => false);
+        mock.method(fsDeps, "mkdirSync", () => {
+          throw new Error("Permission denied");
+        });
+        const getWrites = mockStdoutWrites();
+        const usage = {
+          inputTokens: 10,
+          outputTokens: 5,
+          cacheReadTokens: 1,
+          cacheWriteTokens: 0,
+          date: 500_000,
+        };
+
+        await syncNewModelUsageForLimitWindow("gpt-4", usage);
+
+        assert.deepStrictEqual(getWrites(), [
+          `${YELLOW}Failed to create the directory: ${dirname(getUsageLogPath())}${RESET}\n`,
+        ]);
+        assert.deepStrictEqual(getState().app.modelUsageForLimitWindow, {});
+        assert.strictEqual(testFs._files.has(getUsageLogPath()), false);
       });
-      const getWrites = mockStdoutWrites();
-      const usage = {
-        inputTokens: 10,
-        outputTokens: 5,
-        cacheReadTokens: 1,
-        cacheWriteTokens: 0,
-        date: 500_000,
-      };
 
-      await syncNewModelUsageForLimitWindow("gpt-4", usage);
-
-      assert.deepStrictEqual(getWrites(), [
-        `${YELLOW}Failed to create the directory: ${dirname(getUsageLogPath())}${RESET}\n`,
-      ]);
-      assert.deepStrictEqual(getState().app.modelUsageForLimitWindow, {});
-      assert.strictEqual(testFs._files.has(getUsageLogPath()), false);
-    });
-
-    it("appends to an existing usage log", async () => {
-      testFs._files.set(
-        getUsageLogPath(),
-        `{
+      it("appends to an existing usage log", async () => {
+        testFs._files.set(
+          getUsageLogPath(),
+          `{
   "gpt-4": [
     {
       "inputTokens": 5,
@@ -331,32 +332,18 @@ describe("usage", () => {
     }
   ]
 }`,
-      );
-      const usage = {
-        inputTokens: 10,
-        outputTokens: 5,
-        cacheReadTokens: 1,
-        cacheWriteTokens: 0,
-        date: 1_000_000,
-      };
+        );
+        const usage = {
+          inputTokens: 10,
+          outputTokens: 5,
+          cacheReadTokens: 1,
+          cacheWriteTokens: 0,
+          date: 1_000_000,
+        };
 
-      await syncNewModelUsageForLimitWindow("gpt-4", usage);
+        await syncNewModelUsageForLimitWindow("gpt-4", usage);
 
-      assert.deepStrictEqual(getState().app.modelUsageForLimitWindow, {
-        "gpt-4": [
-          {
-            inputTokens: 5,
-            outputTokens: 2,
-            cacheReadTokens: 0,
-            cacheWriteTokens: 0,
-            date: 500_000,
-          },
-          usage,
-        ],
-      });
-      assert.strictEqual(
-        testFs._files.get(getUsageLogPath()),
-        JSON.stringify({
+        assert.deepStrictEqual(getState().app.modelUsageForLimitWindow, {
           "gpt-4": [
             {
               inputTokens: 5,
@@ -367,164 +354,172 @@ describe("usage", () => {
             },
             usage,
           ],
-        }),
-      );
-    });
-
-    it("serializes concurrent same-process calls and keeps every usage", async () => {
-      const firstUsage = {
-        inputTokens: 10,
-        outputTokens: 5,
-        cacheReadTokens: 1,
-        cacheWriteTokens: 0,
-        date: 1_000_000,
-      };
-      const secondUsage = {
-        inputTokens: 20,
-        outputTokens: 8,
-        cacheReadTokens: 2,
-        cacheWriteTokens: 0,
-        date: 2_000_000,
-      };
-      await Promise.all([
-        syncNewModelUsageForLimitWindow("gpt-4", firstUsage),
-        syncNewModelUsageForLimitWindow("gpt-4", secondUsage),
-      ]);
-
-      assert.deepStrictEqual(getState().app.modelUsageForLimitWindow, {
-        "gpt-4": [firstUsage, secondUsage],
+        });
+        assert.strictEqual(
+          testFs._files.get(getUsageLogPath()),
+          JSON.stringify({
+            "gpt-4": [
+              {
+                inputTokens: 5,
+                outputTokens: 2,
+                cacheReadTokens: 0,
+                cacheWriteTokens: 0,
+                date: 500_000,
+              },
+              usage,
+            ],
+          }),
+        );
       });
-      assert.strictEqual(
-        testFs._files.get(getUsageLogPath()),
-        JSON.stringify({ "gpt-4": [firstUsage, secondUsage] }),
-      );
-    });
 
-    it("overwrites a malformed usage log with the new entry", async () => {
-      testFs._files.set(getUsageLogPath(), "not-json");
-      const usage = {
-        inputTokens: 10,
-        outputTokens: 5,
-        cacheReadTokens: 1,
-        cacheWriteTokens: 0,
-        date: 500_000,
-      };
+      it("serializes concurrent same-process calls and keeps every usage", async () => {
+        const firstUsage = {
+          inputTokens: 10,
+          outputTokens: 5,
+          cacheReadTokens: 1,
+          cacheWriteTokens: 0,
+          date: 1_000_000,
+        };
+        const secondUsage = {
+          inputTokens: 20,
+          outputTokens: 8,
+          cacheReadTokens: 2,
+          cacheWriteTokens: 0,
+          date: 2_000_000,
+        };
+        await Promise.all([
+          syncNewModelUsageForLimitWindow("gpt-4", firstUsage),
+          syncNewModelUsageForLimitWindow("gpt-4", secondUsage),
+        ]);
 
-      await syncNewModelUsageForLimitWindow("gpt-4", usage);
-
-      assert.deepStrictEqual(getState().app.modelUsageForLimitWindow, {
-        "gpt-4": [usage],
+        assert.deepStrictEqual(getState().app.modelUsageForLimitWindow, {
+          "gpt-4": [firstUsage, secondUsage],
+        });
+        assert.strictEqual(
+          testFs._files.get(getUsageLogPath()),
+          JSON.stringify({ "gpt-4": [firstUsage, secondUsage] }),
+        );
       });
-      assert.strictEqual(
-        testFs._files.get(getUsageLogPath()),
-        JSON.stringify({ "gpt-4": [usage] }),
-      );
-    });
 
-    it("appends to state even when the write fails", async () => {
-      const realWrite = testFs.writeFileSync;
-      mock.method(fsDeps, "writeFileSync", (path: string, content: string) => {
-        if (path === getUsageLogLockPath()) {
-          realWrite(path, content);
-          return;
-        }
-        throw new Error("write failed");
+      it("overwrites a malformed usage log with the new entry", async () => {
+        testFs._files.set(getUsageLogPath(), "not-json");
+        const usage = {
+          inputTokens: 10,
+          outputTokens: 5,
+          cacheReadTokens: 1,
+          cacheWriteTokens: 0,
+          date: 500_000,
+        };
+
+        await syncNewModelUsageForLimitWindow("gpt-4", usage);
+
+        assert.deepStrictEqual(getState().app.modelUsageForLimitWindow, {
+          "gpt-4": [usage],
+        });
+        assert.strictEqual(
+          testFs._files.get(getUsageLogPath()),
+          JSON.stringify({ "gpt-4": [usage] }),
+        );
       });
-      const usage = {
-        inputTokens: 10,
-        outputTokens: 5,
-        cacheReadTokens: 1,
-        cacheWriteTokens: 0,
-        date: 500_000,
-      };
 
-      await syncNewModelUsageForLimitWindow("gpt-4", usage);
-
-      assert.deepStrictEqual(getState().app.modelUsageForLimitWindow, {
-        "gpt-4": [usage],
-      });
-    });
-
-    it("does nothing when the usage limit is disabled", async () => {
-      actions.setPricingPerModel({});
-      actions.setUsageLimit(undefined);
-      const usage = {
-        inputTokens: 10,
-        outputTokens: 5,
-        cacheReadTokens: 1,
-        cacheWriteTokens: 0,
-        date: 1_000,
-      };
-
-      await syncNewModelUsageForLimitWindow("gpt-4", usage);
-
-      assert.deepStrictEqual(getState().app.modelUsageForLimitWindow, {});
-      assert.strictEqual(testFs._files.has(getUsageLogPath()), false);
-    });
-
-    it("does nothing when the model has no pricing configured", async () => {
-      actions.setPricingPerModel({});
-      const usage = {
-        inputTokens: 10,
-        outputTokens: 5,
-        cacheReadTokens: 1,
-        cacheWriteTokens: 0,
-        date: 500_000,
-      };
-
-      await syncNewModelUsageForLimitWindow("gpt-4", usage);
-
-      assert.deepStrictEqual(getState().app.modelUsageForLimitWindow, {});
-      assert.strictEqual(testFs._files.has(getUsageLogPath()), false);
-    });
-
-    it("filters expired entries from the log and state", async () => {
-      testFs._files.set(
-        getUsageLogPath(),
-        JSON.stringify({
-          "gpt-4": [
-            {
-              inputTokens: 5,
-              outputTokens: 2,
-              cacheReadTokens: 0,
-              cacheWriteTokens: 0,
-              date: 500_000,
-            },
-            {
-              inputTokens: 7,
-              outputTokens: 3,
-              cacheReadTokens: 0,
-              cacheWriteTokens: 0,
-              date: 300_000,
-            },
-          ],
-        }),
-      );
-      const usage = {
-        inputTokens: 10,
-        outputTokens: 5,
-        cacheReadTokens: 1,
-        cacheWriteTokens: 0,
-        date: 1_000_000,
-      };
-
-      await syncNewModelUsageForLimitWindow("gpt-4", usage);
-
-      assert.deepStrictEqual(getState().app.modelUsageForLimitWindow, {
-        "gpt-4": [
-          {
-            inputTokens: 5,
-            outputTokens: 2,
-            cacheReadTokens: 0,
-            cacheWriteTokens: 0,
-            date: 500_000,
+      it("appends to state even when the write fails", async () => {
+        const realWrite = testFs.writeFileSync;
+        mock.method(
+          fsDeps,
+          "writeFileSync",
+          (path: string, content: string) => {
+            if (path === getUsageLogLockPath()) {
+              realWrite(path, content);
+              return;
+            }
+            throw new Error("write failed");
           },
-          usage,
-        ],
+        );
+        const usage = {
+          inputTokens: 10,
+          outputTokens: 5,
+          cacheReadTokens: 1,
+          cacheWriteTokens: 0,
+          date: 500_000,
+        };
+
+        await syncNewModelUsageForLimitWindow("gpt-4", usage);
+
+        assert.deepStrictEqual(getState().app.modelUsageForLimitWindow, {
+          "gpt-4": [usage],
+        });
       });
-      assert.strictEqual(
-        testFs._files.get(getUsageLogPath()),
-        JSON.stringify({
+    });
+
+    describe("does nothing", () => {
+      it("does nothing when the usage limit is disabled", async () => {
+        actions.setPricingPerModel({});
+        actions.setUsageLimit(undefined);
+        const usage = {
+          inputTokens: 10,
+          outputTokens: 5,
+          cacheReadTokens: 1,
+          cacheWriteTokens: 0,
+          date: 1_000,
+        };
+
+        await syncNewModelUsageForLimitWindow("gpt-4", usage);
+
+        assert.deepStrictEqual(getState().app.modelUsageForLimitWindow, {});
+        assert.strictEqual(testFs._files.has(getUsageLogPath()), false);
+      });
+
+      it("does nothing when the model has no pricing configured", async () => {
+        actions.setPricingPerModel({});
+        const usage = {
+          inputTokens: 10,
+          outputTokens: 5,
+          cacheReadTokens: 1,
+          cacheWriteTokens: 0,
+          date: 500_000,
+        };
+
+        await syncNewModelUsageForLimitWindow("gpt-4", usage);
+
+        assert.deepStrictEqual(getState().app.modelUsageForLimitWindow, {});
+        assert.strictEqual(testFs._files.has(getUsageLogPath()), false);
+      });
+    });
+
+    describe("expires old entries", () => {
+      it("filters expired entries from the log and state", async () => {
+        testFs._files.set(
+          getUsageLogPath(),
+          JSON.stringify({
+            "gpt-4": [
+              {
+                inputTokens: 5,
+                outputTokens: 2,
+                cacheReadTokens: 0,
+                cacheWriteTokens: 0,
+                date: 500_000,
+              },
+              {
+                inputTokens: 7,
+                outputTokens: 3,
+                cacheReadTokens: 0,
+                cacheWriteTokens: 0,
+                date: 300_000,
+              },
+            ],
+          }),
+        );
+        const usage = {
+          inputTokens: 10,
+          outputTokens: 5,
+          cacheReadTokens: 1,
+          cacheWriteTokens: 0,
+          date: 1_000_000,
+        };
+
+        await syncNewModelUsageForLimitWindow("gpt-4", usage);
+
+        assert.deepStrictEqual(getState().app.modelUsageForLimitWindow, {
           "gpt-4": [
             {
               inputTokens: 5,
@@ -535,14 +530,50 @@ describe("usage", () => {
             },
             usage,
           ],
-        }),
-      );
-    });
+        });
+        assert.strictEqual(
+          testFs._files.get(getUsageLogPath()),
+          JSON.stringify({
+            "gpt-4": [
+              {
+                inputTokens: 5,
+                outputTokens: 2,
+                cacheReadTokens: 0,
+                cacheWriteTokens: 0,
+                date: 500_000,
+              },
+              usage,
+            ],
+          }),
+        );
+      });
 
-    it("keeps usage exactly at the duration boundary", async () => {
-      testFs._files.set(
-        getUsageLogPath(),
-        JSON.stringify({
+      it("keeps usage exactly at the duration boundary", async () => {
+        testFs._files.set(
+          getUsageLogPath(),
+          JSON.stringify({
+            "gpt-4": [
+              {
+                inputTokens: 5,
+                outputTokens: 2,
+                cacheReadTokens: 0,
+                cacheWriteTokens: 0,
+                date: 400_000,
+              },
+            ],
+          }),
+        );
+        const usage = {
+          inputTokens: 10,
+          outputTokens: 5,
+          cacheReadTokens: 1,
+          cacheWriteTokens: 0,
+          date: 1_000_000,
+        };
+
+        await syncNewModelUsageForLimitWindow("gpt-4", usage);
+
+        assert.deepStrictEqual(getState().app.modelUsageForLimitWindow, {
           "gpt-4": [
             {
               inputTokens: 5,
@@ -551,37 +582,46 @@ describe("usage", () => {
               cacheWriteTokens: 0,
               date: 400_000,
             },
+            usage,
           ],
-        }),
-      );
-      const usage = {
-        inputTokens: 10,
-        outputTokens: 5,
-        cacheReadTokens: 1,
-        cacheWriteTokens: 0,
-        date: 1_000_000,
-      };
-
-      await syncNewModelUsageForLimitWindow("gpt-4", usage);
-
-      assert.deepStrictEqual(getState().app.modelUsageForLimitWindow, {
-        "gpt-4": [
-          {
-            inputTokens: 5,
-            outputTokens: 2,
-            cacheReadTokens: 0,
-            cacheWriteTokens: 0,
-            date: 400_000,
-          },
-          usage,
-        ],
+        });
       });
-    });
 
-    it("drops models whose entries are all expired", async () => {
-      testFs._files.set(
-        getUsageLogPath(),
-        JSON.stringify({
+      it("drops models whose entries are all expired", async () => {
+        testFs._files.set(
+          getUsageLogPath(),
+          JSON.stringify({
+            "gpt-4": [
+              {
+                inputTokens: 5,
+                outputTokens: 2,
+                cacheReadTokens: 0,
+                cacheWriteTokens: 0,
+                date: 500_000,
+              },
+            ],
+            claude: [
+              {
+                inputTokens: 5,
+                outputTokens: 2,
+                cacheReadTokens: 0,
+                cacheWriteTokens: 0,
+                date: 100_000,
+              },
+            ],
+          }),
+        );
+        const usage = {
+          inputTokens: 10,
+          outputTokens: 5,
+          cacheReadTokens: 1,
+          cacheWriteTokens: 0,
+          date: 1_000_000,
+        };
+
+        await syncNewModelUsageForLimitWindow("gpt-4", usage);
+
+        assert.deepStrictEqual(getState().app.modelUsageForLimitWindow, {
           "gpt-4": [
             {
               inputTokens: 5,
@@ -590,39 +630,9 @@ describe("usage", () => {
               cacheWriteTokens: 0,
               date: 500_000,
             },
+            usage,
           ],
-          claude: [
-            {
-              inputTokens: 5,
-              outputTokens: 2,
-              cacheReadTokens: 0,
-              cacheWriteTokens: 0,
-              date: 100_000,
-            },
-          ],
-        }),
-      );
-      const usage = {
-        inputTokens: 10,
-        outputTokens: 5,
-        cacheReadTokens: 1,
-        cacheWriteTokens: 0,
-        date: 1_000_000,
-      };
-
-      await syncNewModelUsageForLimitWindow("gpt-4", usage);
-
-      assert.deepStrictEqual(getState().app.modelUsageForLimitWindow, {
-        "gpt-4": [
-          {
-            inputTokens: 5,
-            outputTokens: 2,
-            cacheReadTokens: 0,
-            cacheWriteTokens: 0,
-            date: 500_000,
-          },
-          usage,
-        ],
+        });
       });
     });
   });
