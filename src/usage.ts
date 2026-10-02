@@ -20,12 +20,12 @@ import { baseAgentPrompt } from "./prompts.ts";
 import { MISSING } from "./missing.ts";
 
 export const compactTriggerRatio = 0.95;
-export const dedicatedSummaryRatio = 0.5;
+export const dedicatedSummaryRatio = 0.25;
 export const dedicatedPromptOverheadRatio =
   compactTriggerRatio - dedicatedSummaryRatio;
 
 export const defaultContextWindow = 128_000;
-const maxTokenCountPerSummary = 10_000;
+const maxTokenCountPerSummary = 5_000;
 export const maxCharCountPerSummary = approxTokensToCharLen(
   maxTokenCountPerSummary,
 );

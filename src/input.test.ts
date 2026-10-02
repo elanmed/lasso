@@ -1101,14 +1101,14 @@ l---
 
     it("warns when the new model has large prompt overhead", () => {
       actions.setContextWindowPerModel({ "new-model": 100_000 });
-      mock.method(promptDeps, "getSystemContent", () => "s".repeat(150_000));
+      mock.method(promptDeps, "getSystemContent", () => "s".repeat(210_000));
 
       setModelCommand("/model new-model");
 
       assert.ok(
         getWrites().some((w) =>
           w.includes(
-            "The current set of context, skills, and tools is 50% of the 100,000 token context window!",
+            "The current set of context, skills, and tools is 70% of the 100,000 token context window!",
           ),
         ),
       );
@@ -2993,7 +2993,7 @@ commands diff
             contextWindowPerModel: { "gpt-4": 100_000 },
           }),
         );
-        mock.method(promptDeps, "getSystemContent", () => "s".repeat(150_000));
+        mock.method(promptDeps, "getSystemContent", () => "s".repeat(210_000));
         mockExecCalls([
           { stdout: "delta 0.18.2" },
           { stdout: "" },
@@ -3021,7 +3021,7 @@ commands diff
         assert(warningWrite !== undefined);
         assert.ok(
           warningWrite.startsWith(
-            `${YELLOW}The current set of context, skills, and tools is 51.09% of the 100,000 token context window!`,
+            `${YELLOW}The current set of context, skills, and tools is 71.09% of the 100,000 token context window!`,
           ),
         );
       });
@@ -3035,7 +3035,7 @@ commands diff
             contextWindowPerModel: { "gpt-4": 100_000 },
           }),
         );
-        mock.method(promptDeps, "getSystemContent", () => "s".repeat(150_000));
+        mock.method(promptDeps, "getSystemContent", () => "s".repeat(210_000));
         testProcessEnv._set("LASSO_PAGER", "cat __FILE__");
         mockPagerSpawn();
         mockExecCalls([
@@ -3079,7 +3079,7 @@ commands diff
         assert.ok(
           getWrites().some((w) =>
             w.includes(
-              "The current set of context, skills, and tools is 51.09% of the 100,000 token context window!",
+              "The current set of context, skills, and tools is 71.09% of the 100,000 token context window!",
             ),
           ),
         );

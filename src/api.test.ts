@@ -811,7 +811,7 @@ describe("api", () => {
 - Write "## Key facts" as a flat bullet list of short, self-contained facts.
 - When the maximum length is tight, cut from "## Everything else" and never from "## Key facts."
 - Output a plain-text prose summary, not JSON or a code fence.
-- Output a maximum of 30000 characters.
+- Output a maximum of 15000 characters.
 
 \`\`\`json
 [{"role":"user","content":"hi"}]
@@ -944,7 +944,7 @@ describe("api", () => {
 - Write "## Key facts" as a flat bullet list of short, self-contained facts.
 - When the maximum length is tight, cut from "## Everything else" and never from "## Key facts."
 - Output a plain-text prose summary, not JSON or a code fence.
-- Output a maximum of 30000 characters.
+- Output a maximum of 15000 characters.
 
 \`\`\`json
 [{"role":"user","content":"old"}]
@@ -1191,7 +1191,7 @@ describe("api", () => {
 - Write "## Key facts" as a flat bullet list of short, self-contained facts.
 - When the maximum length is tight, cut from "## Everything else" and never from "## Key facts."
 - Output a plain-text prose summary, not JSON or a code fence.
-- Output a maximum of 30000 characters.
+- Output a maximum of 15000 characters.
 
 \`\`\`json
 [{"role":"user","content":"not yet summarized"}]
@@ -1418,7 +1418,7 @@ describe("api", () => {
 - Write "## Key facts" as a flat bullet list of short, self-contained facts.
 - When the maximum length is tight, cut from "## Everything else" and never from "## Key facts."
 - Output a plain-text prose summary, not JSON or a code fence.
-- Output a maximum of 30000 characters.
+- Output a maximum of 15000 characters.
 
 \`\`\`json
 ["summary 1","summary 2"]
