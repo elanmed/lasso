@@ -1,10 +1,11 @@
 import { describe, it, beforeEach, afterEach, mock } from "node:test";
 import assert from "node:assert";
 import {
-  mockStdout,
+  mockStdoutWrites,
+  RESET,
   setupTestContext,
-  stripAnsi,
   testFs,
+  YELLOW,
 } from "./test-helpers.ts";
 import { fsDeps } from "./deps.ts";
 import { getGlobalContextDir } from "./paths.ts";
@@ -507,24 +508,23 @@ would benefit from specialized instructions.
       mock.method(fsDeps, "readFileSync", () => {
         throw new Error("Permission denied");
       });
-      const getCaptured = mockStdout();
+      const getWrites = mockStdoutWrites();
 
       const result = getContextEntries();
 
       assert.deepStrictEqual(result, []);
-      assert.strictEqual(
-        stripAnsi(getCaptured()),
-        "Failed to read the agent file at /test-cwd/AGENTS.md\n",
-      );
+      assert.deepStrictEqual(getWrites(), [
+        `${YELLOW}Failed to read the agent file at /test-cwd/AGENTS.md${RESET}\n`,
+      ]);
     });
 
     it("does not warn when agent files are missing", () => {
-      const getCaptured = mockStdout();
+      const getWrites = mockStdoutWrites();
 
       const result = getContextEntries();
 
       assert.deepStrictEqual(result, []);
-      assert.strictEqual(stripAnsi(getCaptured()), "");
+      assert.deepStrictEqual(getWrites(), []);
     });
 
     it("returns the cwd agent file", () => {
@@ -578,15 +578,14 @@ would benefit from specialized instructions.
   describe("getSkills", () => {
     it("warns when a skill agent file cannot be read", () => {
       testFs._gitLsFilesResults.set("**/AGENTS.md", ["/repo/src/AGENTS.md"]);
-      const getCaptured = mockStdout();
+      const getWrites = mockStdoutWrites();
 
       const result = getSkills();
 
       assert.deepStrictEqual(result, []);
-      assert.strictEqual(
-        stripAnsi(getCaptured()),
-        "Failed to read the agent file at /repo/src/AGENTS.md\n",
-      );
+      assert.deepStrictEqual(getWrites(), [
+        `${YELLOW}Failed to read the agent file at /repo/src/AGENTS.md${RESET}\n`,
+      ]);
     });
 
     it("returns skills from skill directories with front matter stripped", () => {
