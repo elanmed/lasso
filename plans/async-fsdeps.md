@@ -24,8 +24,12 @@ chasing the chain transitively until `./agent-pnpm-run ci` is clean.
 - `globSync` → `glob`: `fs/promises.glob` returns an **AsyncGenerator**, not a promise of an
   array. Wrap it in `fsDeps.glob` so it stays `glob(pattern): Promise<string[]>` — collect
   with `for await`, then return the array.
-- `gitLsFiles`: promisify `childProcess.execFile` (e.g. `node:util` `promisify`) inside
-  `deps.ts`, same split-on-`\0`/filter behavior.
+- `gitLsFiles`: promisify `childProcess.execFile` (`node:util` `promisify`) inside
+  `deps.ts`, same split-on-`\0`/filter behavior. Note: `promisify` only types the last
+  Node overload, so the promisified `execFile` must be cast to a
+  `(file, args, { encoding: "utf8" }) => Promise<{ stdout, stderr }>`-shaped
+  `PromiseExecFile` type; `childProcess.execFile.__promisify__` does not exist at
+  runtime (type-only artifact). Drop the `stdio` option — invalid for async `execFile`.
 - Error handling: `tryCatch(() => fsDeps.X(...))` becomes
   `await tryCatchAsync(fsDeps.X(...))` — note `tryCatchAsync` takes a **Promise**, not a
   callback.
@@ -78,9 +82,31 @@ The smallest step: one consumer, and its callers fire-and-forget — no cascade.
     awaited `mkdir` defers the write.
 - **Checkpoint:** `./agent-pnpm-run ci`.
 
-## Step 2: `gitLsFiles` → async (name unchanged)
+## Step 2: `gitLsFiles` → async (name unchanged) — DONE
 
-- **deps.ts:** replace `execFileSync` with a promisified `execFile` wrapper; same output
+Additional dep.ts work landed alongside this step (async conversion of exec):
+
+- `deps.ts` gained a `childProcessDeps` object (`execFile`, `exec`, `spawn`,
+  `spawnSync`) next to `fsDeps`/`processDeps`; all `node:child_process` imports were
+  removed from `src/*.ts` (terminal, differ, utils, input, tools) in favor of
+  `childProcessDeps` from `./deps.ts`. `gitLsFiles` calls
+  `childProcessDeps.execFile`.
+- `exec` is a **bare** `promisify(childProcess.exec)` typed as `PromiseExec`
+  (`Promise<PromiseExecResult> & { child: { stdin: { end: () => void } | null } }`).
+  No `stdin.end()` in the wrapper — an earlier wrapper version closed stdin and shielded
+  sync throws, but no consumer execs a stdin-reading command, so it was dropped per the
+  "consumer does it themselves" principle. Promisified exec already defaults `encoding`
+  to utf8, so call sites need no encoding options.
+- The one stdin-reading-risk consumer opts in itself: `tools.ts` `executeBashTool`
+  does `bashPromise.child.stdin?.end()` before awaiting, so bare `cat`-style bash-tool
+  commands resolve instead of hanging.
+- `differ.ts` execGitDiff error handling uses `tryCatchAsync(exec(...))`: code 1 with
+  delta, or codes ∉ [2, 127, 128] and ≤128 without delta → resolve; code-undefined or
+  fatal codes → throw. Because errors are rejections, `mockExecCalls` queue exhaustion
+  rejects ("Unexpected exec call") to preserve reload-abort semantics.
+- Old `execPromise` (and its `cat` stdin test) deleted from `utils.ts`/`utils.test.ts`
+  (test count 863).
+- **deps.ts:** `execFile` promisified as above; same output
   contract (`string[]` split on `\0`, filtered).
 - **Direct consumer:** `context.ts` `getSkills()` → async.
 - **Transitive:** `getSkills` callers — `config.ts` `initStateFromFs` (already async) →
