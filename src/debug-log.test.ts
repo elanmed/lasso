@@ -16,24 +16,24 @@ describe("debugLog", () => {
   });
 
   describe("does nothing", () => {
-    it("does nothing when debugLog is disabled", () => {
-      debugLog(false, path, "test message");
+    it("does nothing when debugLog is disabled", async () => {
+      await debugLog(false, path, "test message");
       assert.equal(testFs._files.has(path), false);
     });
 
-    it("does nothing when no debug log path is set", () => {
-      debugLog(true, "", "test message");
+    it("does nothing when no debug log path is set", async () => {
+      await debugLog(true, "", "test message");
       assert.equal(testFs._files.has(""), false);
     });
   });
 
   describe("creates the directory", () => {
-    it("creates directory when log file does not exist", () => {
-      debugLog(true, path, "test message");
+    it("creates directory when log file does not exist", async () => {
+      await debugLog(true, path, "test message");
       assert.equal(testFs._dirs.has("/fake-home/.config/lasso"), true);
     });
 
-    it("skips mkdir when the directory already exists", () => {
+    it("skips mkdir when the directory already exists", async () => {
       const mkdirCalls: string[] = [];
       mock.method(testFs, "mkdirSync", (dir: string) => {
         mkdirCalls.push(dir);
@@ -41,7 +41,7 @@ describe("debugLog", () => {
       });
       testFs._dirs.add("/fake-home/.config/lasso");
 
-      debugLog(true, path, "test message");
+      await debugLog(true, path, "test message");
 
       assert.deepEqual(mkdirCalls, []);
       assert.equal(
@@ -52,17 +52,17 @@ describe("debugLog", () => {
   });
 
   describe("appends messages", () => {
-    it("appends content to log file with timestamp", () => {
-      debugLog(true, path, "test message");
+    it("appends content to log file with timestamp", async () => {
+      await debugLog(true, path, "test message");
       assert.equal(
         testFs._files.get(path),
         "2023-11-14T22:13:20.000Z :: test message\n",
       );
     });
 
-    it("appends multiple messages", () => {
-      debugLog(true, path, "message 1");
-      debugLog(true, path, "message 2");
+    it("appends multiple messages", async () => {
+      await debugLog(true, path, "message 1");
+      await debugLog(true, path, "message 2");
       assert.equal(
         testFs._files.get(path),
         `2023-11-14T22:13:20.000Z :: message 1

@@ -15,7 +15,11 @@ import { debugLog as writeDebugLog } from "./debug-log.ts";
 import { errorWithSpacing, print } from "./print.ts";
 
 export function debugLog(content: string) {
-  writeDebugLog(getState().app.debugLog, getState().app.debugLogPath, content);
+  void writeDebugLog(
+    getState().app.debugLog,
+    getState().app.debugLogPath,
+    content,
+  );
 }
 
 export function getAppendedConversationMessages(...messages: ModelMessage[]) {

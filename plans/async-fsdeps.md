@@ -63,7 +63,7 @@ chasing the chain transitively until `./agent-pnpm-run ci` is clean.
 
 Run `./agent-pnpm-run ci` and confirm it is green before starting.
 
-## Step 1: `appendFileSync` → `appendFile`
+## Step 1: `appendFileSync` → `appendFile` - DONE
 
 The smallest step: one consumer, and its callers fire-and-forget — no cascade.
 

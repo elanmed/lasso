@@ -5,10 +5,10 @@ import {
   readdirSync,
   mkdirSync,
   unlinkSync,
-  appendFileSync,
   statSync,
   globSync,
 } from "node:fs";
+import { appendFile } from "node:fs/promises";
 import childProcess, {
   type ExecFileOptionsWithStringEncoding,
   type ExecOptionsWithStringEncoding,
@@ -55,7 +55,7 @@ export const fsDeps = {
   readdirSync,
   mkdirSync,
   unlinkSync,
-  appendFileSync,
+  appendFile,
   statSync,
   globSync,
   gitLsFiles,

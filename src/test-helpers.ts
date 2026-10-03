@@ -42,11 +42,11 @@ export interface FakeFsDeps {
   readdirSync: (path: string) => string[];
   mkdirSync: (path: string, options?: { recursive?: boolean }) => void;
   unlinkSync: (path: string) => void;
-  appendFileSync: (
+  appendFile: (
     path: string,
     content: string,
     options?: { signal?: AbortSignal },
-  ) => void;
+  ) => Promise<void>;
   statSync: (path: string) => {
     isFile: () => boolean;
     isDirectory: () => boolean;
@@ -114,9 +114,10 @@ export function makeFakeFsDeps(
       _files.delete(path);
       _mtimes.delete(path);
     },
-    appendFileSync: (path: string, content: string) => {
+    appendFile: (path: string, content: string) => {
       _files.set(path, (_files.get(path) ?? "") + content);
       _mtimes.set(path, ++_mtimeCounter);
+      return Promise.resolve();
     },
     statSync: (path: string) => ({
       isFile: () => _files.has(path),

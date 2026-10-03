@@ -206,7 +206,7 @@ export const promptDeps = {
 };
 
 const logStateChange = (actionType: string, before: string, after: string) => {
-  debugLog(
+  void debugLog(
     state.app.debugLog,
     state.app.debugLogPath,
     `dispatch ${actionType}: before=${before}, after=${after}`,
