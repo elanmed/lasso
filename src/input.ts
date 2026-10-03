@@ -15,7 +15,6 @@ import {
   getMessageFromError,
   normalizeNewline,
   getTempFileName,
-  execPromise,
   isExisty,
   listSessionFiles,
   stringify,
@@ -157,7 +156,7 @@ async function getEditorInitialContent(opts: {
     const pasteCmd =
       processDeps.env.get("LASSO_CLIPBOARD_PASTE") ?? getDefaultPasteCmd();
 
-    const pasteResult = await tryCatchAsync(execPromise(pasteCmd));
+    const pasteResult = await tryCatchAsync(childProcessDeps.exec(pasteCmd));
     if (pasteResult.ok) {
       clipboardContent = normalizeNewline(pasteResult.value.stdout);
     } else {

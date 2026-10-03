@@ -2,7 +2,6 @@ import { format } from "prettier";
 import { childProcessDeps, processDeps } from "./deps.ts";
 import { actions, getState } from "./state.ts";
 import {
-  execPromise,
   getMessageFromError,
   getTempFileName,
   isExisty,
@@ -16,7 +15,7 @@ import { print } from "./print.ts";
 import { getGlobalConfigPath, getLocalConfigPath } from "./paths.ts";
 
 export async function checkBat(): Promise<boolean> {
-  return (await tryCatchAsync(execPromise("bat --version"))).ok;
+  return (await tryCatchAsync(childProcessDeps.exec("bat --version"))).ok;
 }
 
 export async function warnOnMissingBat() {

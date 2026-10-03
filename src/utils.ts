@@ -4,7 +4,7 @@ import crypto from "node:crypto";
 import type { AssistantContent } from "ai";
 import type { ModelMessage } from "./state.ts";
 import { assertAtRuntime } from "./assert.ts";
-import { childProcessDeps, fsDeps, processDeps } from "./deps.ts";
+import { fsDeps, processDeps } from "./deps.ts";
 import { getSessionDir } from "./paths.ts";
 import type { Color } from "./print.ts";
 
@@ -140,26 +140,6 @@ export function getTempFileName(args?: GetTempFileNameArgs) {
   const writeResult = tryCatch(() => fsDeps.writeFileSync(tempFile, ""));
   if (!writeResult.ok) return null;
   return tempFile;
-}
-
-export function execPromise(
-  command: string,
-  options?: { signal?: AbortSignal },
-): Promise<{ stdout: string; stderr: string }> {
-  return new Promise((resolve, reject) => {
-    const child = childProcessDeps.exec(
-      command,
-      { encoding: "utf8", ...options },
-      (error, stdout, stderr) => {
-        if (error !== null) {
-          reject(error);
-        } else {
-          resolve({ stdout, stderr });
-        }
-      },
-    );
-    child.stdin?.end();
-  });
 }
 
 export function stringify(val: unknown) {

@@ -11,6 +11,7 @@ import {
 } from "node:fs";
 import childProcess, {
   type ExecFileOptionsWithStringEncoding,
+  type ExecOptionsWithStringEncoding,
 } from "node:child_process";
 import { promisify } from "node:util";
 import { generateText, isLoopFinished } from "ai";
@@ -24,9 +25,35 @@ type PromiseExecFile = (
 
 const execFile = promisify(childProcess.execFile) as unknown as PromiseExecFile;
 
+interface PromiseExecResult {
+  stdout: string;
+  stderr: string;
+}
+
+type PromiseExec = (
+  command: string,
+  options?: ExecOptionsWithStringEncoding,
+) => Promise<PromiseExecResult>;
+
+const exec: PromiseExec = (command, options) =>
+  new Promise((resolve, reject) => {
+    try {
+      const promise = promisify(childProcess.exec)(command, {
+        encoding: "utf8",
+        ...options,
+      }) as Promise<PromiseExecResult> & {
+        child: { stdin: { end: () => void } | null };
+      };
+      promise.child.stdin?.end();
+      promise.then(resolve, reject);
+    } catch (err) {
+      reject(err instanceof Error ? err : new Error(String(err)));
+    }
+  });
+
 export const childProcessDeps = {
   execFile,
-  exec: childProcess.exec,
+  exec,
   spawn: childProcess.spawn,
   spawnSync: childProcess.spawnSync,
 };

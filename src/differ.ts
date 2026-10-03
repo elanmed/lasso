@@ -4,7 +4,6 @@ import { childProcessDeps, fsDeps } from "./deps.ts";
 import { fencePrint } from "./fence.ts";
 import { print, printNewline } from "./print.ts";
 import {
-  execPromise,
   getMessageFromError,
   getTempFileName,
   normalizeNewline,
@@ -19,7 +18,9 @@ export async function execGitDiff(opts: {
   tempFileAfterPath: string;
   includeFilename?: boolean;
 }): Promise<{ stdout: string; stderr: string }> {
-  const deltaResult = await tryCatchAsync(execPromise("delta --version"));
+  const deltaResult = await tryCatchAsync(
+    childProcessDeps.exec("delta --version"),
+  );
   const isDeltaAvailable = deltaResult.ok;
 
   const colorFlag = shouldDisableColor() ? "--color=never" : "--color=always";
@@ -28,26 +29,24 @@ export async function execGitDiff(opts: {
   const command = isDeltaAvailable
     ? `${base} | delta --paging=never --line-numbers --hunk-header-style=omit --file-style=${fileStyle}`
     : base;
-  return new Promise((resolve, reject) => {
-    childProcessDeps.exec(
-      command,
-      { cwd: os.tmpdir() },
-      (error, stdout, stderr) => {
-        if (error?.code !== undefined) {
-          const isError = (() => {
-            if (isDeltaAvailable) return error.code > 1;
-            return [2, 127, 128].includes(error.code) || error.code > 128;
-          })();
+  const result = await tryCatchAsync(
+    childProcessDeps.exec(command, { cwd: os.tmpdir() }),
+  );
 
-          if (isError) {
-            reject(error);
-            return;
-          }
-        }
-        resolve({ stdout, stderr });
-      },
-    );
-  });
+  if (!result.ok) {
+    const code = (result.error as { code?: number }).code;
+    const isError = (() => {
+      if (code === undefined) return true;
+      if (isDeltaAvailable) return code > 1;
+      return [2, 127, 128].includes(code) || code > 128;
+    })();
+
+    if (isError) {
+      throw result.error;
+    }
+  }
+
+  return result.ok ? result.value : { stdout: "", stderr: "" };
 }
 
 export function isToolCallDiffIgnoredPath(path: string) {

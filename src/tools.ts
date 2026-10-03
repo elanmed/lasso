@@ -9,7 +9,6 @@ import {
   safeStringify,
   stringify,
   tryCatchAsync,
-  execPromise,
   getMaxColLength,
 } from "./utils.ts";
 import { getUnicodeChar } from "./text.ts";
@@ -17,7 +16,7 @@ import { createToolCallDiffer } from "./differ.ts";
 import { print, bold } from "./print.ts";
 import { getState } from "./state.ts";
 import { getLanguageModel } from "./model.ts";
-import { aiDeps } from "./deps.ts";
+import { aiDeps, childProcessDeps } from "./deps.ts";
 import { appendModelUsage } from "./usage.ts";
 import { getSubagentPrompt } from "./prompts.ts";
 
@@ -136,7 +135,10 @@ export async function executeBashTool(
   signal?: AbortSignal,
 ): Promise<ToolResult> {
   const bashResult = await tryCatchAsync(
-    execPromise(bashCommand, signal === undefined ? undefined : { signal }),
+    childProcessDeps.exec(
+      bashCommand,
+      signal === undefined ? undefined : { signal },
+    ),
   );
 
   if (!bashResult.ok) {

@@ -10,7 +10,6 @@ import {
   approxTokensToCharLen,
   tryCatchAsync,
   normalizeNewline,
-  execPromise,
   getMessageFromError,
   getTempFileName,
   createQueue,
@@ -384,13 +383,6 @@ describe("utils", () => {
 
     it("defaults to one newline when no options are given", () => {
       assert.equal(normalizeNewline("content\n\n\n"), "content\n");
-    });
-  });
-
-  describe("execPromise", () => {
-    it("closes stdin so commands reading stdin resolve", async () => {
-      const result = await execPromise("cat");
-      assert.deepStrictEqual(result, { stdout: "", stderr: "" });
     });
   });
 

@@ -396,12 +396,6 @@ export function mockGenerateTextResults(results: unknown[]) {
   };
 }
 
-type ExecCallback = (
-  error: Error | null,
-  stdout: string,
-  stderr: string,
-) => void;
-
 export function getCapturedMessages(
   options: Record<string, unknown> | undefined,
 ) {
@@ -416,8 +410,9 @@ export function mockExec(opts: {
   once?: boolean;
 }) {
   const { stdout, error, once } = opts;
-  const impl = (_cmd: string, _opts: unknown, cb: ExecCallback) => {
-    cb(error ?? null, stdout, "");
+  const impl = () => {
+    if (error !== undefined) return Promise.reject(error);
+    return Promise.resolve({ stdout, stderr: "" });
   };
   const m = mock.method(childProcessDeps, "exec", impl);
   if (once === true) {
@@ -431,18 +426,18 @@ export function mockExecCalls(
   onCall?: (cmd: string) => void,
 ) {
   const queue = [...calls];
-  mock.method(
-    childProcessDeps,
-    "exec",
-    (cmd: string, _opts: unknown, cb: ExecCallback) => {
-      commands?.push(cmd);
-      onCall?.(cmd);
-      const call = queue.shift();
-      if (call === undefined) throw new Error("Unexpected exec call");
-      const { stdout, error } = call;
-      cb(error ?? null, stdout, "");
-    },
-  );
+  mock.method(childProcessDeps, "exec", (cmd: string) => {
+    console.log("EXEC:", cmd);
+    commands?.push(cmd);
+    onCall?.(cmd);
+    const call = queue.shift();
+    if (call === undefined) {
+      return Promise.reject(new Error("Unexpected exec call"));
+    }
+    const { stdout, error } = call;
+    if (error !== undefined) return Promise.reject(error);
+    return Promise.resolve({ stdout, stderr: "" });
+  });
 }
 
 export function mockGenerateText(implementation: unknown) {
