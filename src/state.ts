@@ -285,13 +285,17 @@ export const actions = {
   setTranscriptionSdkProvider(provider: "google" | "openai") {
     const before = state.config.transcriptionSdkProvider;
     state.config.transcriptionSdkProvider = provider;
-    logStateChange("set-transcription-sdk-provider", before, provider);
+    logStateChange(
+      "set-transcription-sdk-provider",
+      String(before),
+      provider,
+    );
   },
 
   setTranscriptionModel(model: string) {
     const before = state.config.transcriptionModel;
     state.config.transcriptionModel = model;
-    logStateChange("set-transcription-model", before, model);
+    logStateChange("set-transcription-model", String(before), model);
   },
 
   setSdkProvider(sdkProvider: SdkProvider) {

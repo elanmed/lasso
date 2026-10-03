@@ -211,8 +211,8 @@ describe("config", () => {
 
         await initState();
 
-        assert.equal(getState().config.transcriptionSdkProvider, "google");
-        assert.equal(getState().config.transcriptionModel, MISSING);
+        assert.equal(getState().config.transcriptionSdkProvider, undefined);
+        assert.equal(getState().config.transcriptionModel, undefined);
         assert.equal(getState().config.transcriptionBaseURL, undefined);
       });
     });

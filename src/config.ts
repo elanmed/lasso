@@ -151,8 +151,12 @@ export function initStateFromConfig({
   if (defaultedBaseURL !== undefined) actions.setBaseURL(defaultedBaseURL);
   actions.setSdkProvider(defaultedSdkProvider);
   actions.setGateway(defaultedGateway);
-  actions.setTranscriptionSdkProvider(defaultedTranscriptionSdkProvider);
-  actions.setTranscriptionModel(defaultedTranscriptionModel);
+  if (defaultedTranscriptionSdkProvider !== undefined) {
+    actions.setTranscriptionSdkProvider(defaultedTranscriptionSdkProvider);
+  }
+  if (defaultedTranscriptionModel !== undefined) {
+    actions.setTranscriptionModel(defaultedTranscriptionModel);
+  }
   if (defaultedTranscriptionBaseURL !== undefined) {
     actions.setTranscriptionBaseURL(defaultedTranscriptionBaseURL);
   }

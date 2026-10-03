@@ -67,7 +67,9 @@ export function getLanguageModel(model = getState().config.model) {
 export function getTranscriptionProvider() {
   const apiKey = processDeps.env.get("LASSO_TRANSCRIPTION_API_KEY");
   assertAtBuildtime(apiKey !== undefined);
+
   const { transcriptionBaseURL, transcriptionSdkProvider } = getState().config;
+  assertAtBuildtime(transcriptionSdkProvider !== undefined);
 
   switch (transcriptionSdkProvider) {
     case "openai": {

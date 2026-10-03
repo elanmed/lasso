@@ -93,8 +93,8 @@ skills body`,
         model: MISSING,
         baseURL: undefined,
         sdkProvider: MISSING,
-        transcriptionSdkProvider: "google",
-        transcriptionModel: MISSING,
+        transcriptionSdkProvider: undefined,
+        transcriptionModel: undefined,
         transcriptionBaseURL: undefined,
         gateway: undefined,
         pricingPerModel: structuredClone(defaultConfig.pricingPerModel),
@@ -224,13 +224,13 @@ skills body`,
 
   describe("transcribe settings", () => {
     it("set-transcription-sdk-provider", () => {
-      assert.equal(getState().config.transcriptionSdkProvider, "google");
+      assert.equal(getState().config.transcriptionSdkProvider, undefined);
       actions.setTranscriptionSdkProvider("openai");
       assert.equal(getState().config.transcriptionSdkProvider, "openai");
     });
 
     it("set-transcription-model", () => {
-      assert.equal(getState().config.transcriptionModel, MISSING);
+      assert.equal(getState().config.transcriptionModel, undefined);
       actions.setTranscriptionModel("gpt-4o-transcribe");
       actions.setTranscriptionBaseURL("https://api.example.com");
       assert.equal(getState().config.transcriptionModel, "gpt-4o-transcribe");
@@ -239,13 +239,13 @@ skills body`,
 
   describe("transcription settings", () => {
     it("set-transcription-sdk-provider", () => {
-      assert.equal(getState().config.transcriptionSdkProvider, "google");
+      assert.equal(getState().config.transcriptionSdkProvider, undefined);
       actions.setTranscriptionSdkProvider("openai");
       assert.equal(getState().config.transcriptionSdkProvider, "openai");
     });
 
     it("set-transcription-model", () => {
-      assert.equal(getState().config.transcriptionModel, MISSING);
+      assert.equal(getState().config.transcriptionModel, undefined);
       actions.setTranscriptionModel("gpt-4o-transcribe");
       actions.setTranscriptionBaseURL("https://api.example.com");
       assert.equal(getState().config.transcriptionModel, "gpt-4o-transcribe");
