@@ -139,6 +139,84 @@ describe("config", () => {
       });
     });
 
+    describe("transcription settings", () => {
+      it("uses its transcriptionSdkProvider over the global config, default config", async () => {
+        testFs._files.set(
+          getGlobalConfigPath(),
+          JSON.stringify({
+            ...testConfig,
+            sdkProvider: "anthropic",
+            transcriptionSdkProvider: "google",
+          }),
+        );
+        testFs._files.set(
+          getLocalConfigPath(),
+          JSON.stringify({
+            ...testConfig,
+            sdkProvider: "anthropic",
+            transcriptionSdkProvider: "openai",
+          }),
+        );
+
+        await initState();
+
+        assert.equal(getState().config.transcriptionSdkProvider, "openai");
+      });
+
+      it("uses its transcriptionModel over the global config, default config", async () => {
+        testFs._files.set(
+          getGlobalConfigPath(),
+          JSON.stringify({
+            ...testConfig,
+            sdkProvider: "anthropic",
+            transcriptionModel: "global-transcribe",
+          }),
+        );
+        testFs._files.set(
+          getLocalConfigPath(),
+          JSON.stringify({
+            ...testConfig,
+            sdkProvider: "anthropic",
+            transcriptionModel: "local-transcribe",
+          }),
+        );
+
+        await initState();
+
+        assert.equal(getState().config.transcriptionModel, "local-transcribe");
+      });
+
+      it("uses its transcriptionBaseURL over config absence", async () => {
+        testFs._files.set(
+          getLocalConfigPath(),
+          JSON.stringify({
+            ...testConfig,
+            transcriptionBaseURL: "https://transcribe.example.com",
+          }),
+        );
+
+        await initState();
+
+        assert.equal(
+          getState().config.transcriptionBaseURL,
+          "https://transcribe.example.com",
+        );
+      });
+
+      it("uses defaults when transcription options are not set", async () => {
+        testFs._files.set(
+          getLocalConfigPath(),
+          JSON.stringify({ ...testConfig }),
+        );
+
+        await initState();
+
+        assert.equal(getState().config.transcriptionSdkProvider, "google");
+        assert.equal(getState().config.transcriptionModel, MISSING);
+        assert.equal(getState().config.transcriptionBaseURL, undefined);
+      });
+    });
+
     describe("gateway and mcps", () => {
       it("uses its gateway over the default config", async () => {
         testFs._files.set(
