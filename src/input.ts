@@ -69,7 +69,6 @@ import {
   syncSessionFile,
 } from "./log.ts";
 import { harnessTools } from "./tools.ts";
-import { MISSING } from "./missing.ts";
 import { getTranscriptionProvider } from "./model.ts";
 
 // https://stackoverflow.com/a/33500118

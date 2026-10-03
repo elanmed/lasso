@@ -7,7 +7,6 @@ import {
   getTranscriptionProvider,
 } from "./model.ts";
 import { setupTestContext, testProcessEnv } from "./test-helpers.ts";
-import { processDeps } from "./deps.ts";
 
 describe("model", () => {
   afterEach(() => {
