@@ -319,6 +319,7 @@ Slash commands are triggered with `/command` at the prompt.
 | `/lastdiff`     | View the last turn's tool edit diffs in a pager                               |
 | `/paste`        | Call the `paste` keymap                                                       |
 | `/model`        | Switch the model at runtime (e.g. `/model kimi-k2.6`)                         |
+| `/record`       | Record audio and transcribe it into the prompt (WIP)                          |
 | `/skills`       | List available skills                                                         |
 | `/tools`        | List available harness and MCP tools in a pager                               |
 | `/context`      | List available context files                                                  |
@@ -544,9 +545,25 @@ vim.g.clipboard = {
 }
 ```
 
+## TODO (now)
+
+- [ ] Record audio with /record
+- [ ] Queue audio with /record
+- [ ] Buffer input while init is running
+
 ## TODO (soon)
+
+- [ ] Convert all sync deps to async
+- [ ] Speed up init by running everything in parallel
+- [ ] Investigate potential shell expansion issues
+- [ ] Support interrupting both compactions at once
+
+## TODO (later)
 
 - [ ] Use native ai sdk v7 timeouts
 - [ ] Move all config validation into blockOnMissingConfig, don't throw at start
   - [ ] Separate error message for no config (`initlocal` and `initglobal`)
 - [ ] Reference history file for compacted summaries
+- [ ] Exit cleanly from C-d while loading
+- [ ] Add a tool for listing, providing MCP sources
+- [ ] Add a tool for consuming images
