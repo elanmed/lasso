@@ -428,7 +428,6 @@ export function mockExecCalls(
 ) {
   const queue = [...calls];
   mock.method(childProcessDeps, "exec", (cmd: string) => {
-    console.log("EXEC:", cmd);
     commands?.push(cmd);
     onCall?.(cmd);
     const call = queue.shift();
