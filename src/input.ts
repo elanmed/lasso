@@ -1585,14 +1585,38 @@ export function recordAndTranscribeInput() {
   const rl = getState().app.rl;
   assertAtBuildtime(rl !== null);
 
+  const transcriptionApiKey = processDeps.env.get(
+    "LASSO_TRANSCRIPTION_API_KEY",
+  );
   const { transcriptionModel, transcriptionSdkProvider } = getState().config;
-  if (
-    transcriptionModel === undefined ||
-    transcriptionSdkProvider === undefined
-  ) {
-    print.error(
-      "The `transcriptionSdkProvider` and `transcriptionModel` config options are required for /record",
+
+  const warningMessages: string[] = [];
+
+  if (transcriptionApiKey === undefined) {
+    warningMessages.push(
+      "Set the `LASSO_TRANSCRIPTION_API_KEY` environment variable, e.g. `export LASSO_TRANSCRIPTION_API_KEY=...`",
     );
+  }
+
+  if (transcriptionSdkProvider === undefined) {
+    warningMessages.push(
+      "Set `transcriptionSdkProvider` in your config file (`openai` or `google`)",
+    );
+  }
+
+  if (transcriptionModel === undefined) {
+    warningMessages.push("Set `transcriptionModel` in your config file");
+  }
+
+  if (warningMessages.length > 0) {
+    const formattedMessages = warningMessages
+      .map((message) => `- ${message}`)
+      .join("\n");
+
+    const warning = `Warning! You're missing required configuration options for /record.
+${formattedMessages}`;
+
+    print.warning(warning);
     return null;
   }
 

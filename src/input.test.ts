@@ -2623,6 +2623,7 @@ editor input
 
     describe("record commands", () => {
       it("handles /record command and logs the recording to the transcript", async () => {
+        testProcessEnv._set("LASSO_TRANSCRIPTION_API_KEY", "key");
         actions.setTranscriptionSdkProvider("openai");
         actions.setTranscriptionModel("gpt-4o-transcribe");
         actions.resetStdout();
@@ -2637,12 +2638,16 @@ editor input
         ]);
       });
 
-      it("handles /record command without transcription config by printing an error", async () => {
+      it("handles /record command without transcription config by printing a warning", async () => {
         actions.resetStdout();
         const result = await resolveSlashCommand("/record");
         assert.strictEqual(result, null);
         assert.deepStrictEqual(getWrites(), [
-          `${RED}The \`transcriptionSdkProvider\` and \`transcriptionModel\` config options are required for /record${RESET}\n`,
+          `${YELLOW}Warning! You're missing required configuration options for /record.
+- Set the \`LASSO_TRANSCRIPTION_API_KEY\` environment variable, e.g. \`export LASSO_TRANSCRIPTION_API_KEY=...\`
+- Set \`transcriptionSdkProvider\` in your config file (\`openai\` or \`google\`)
+- Set \`transcriptionModel\` in your config file${RESET}
+`,
         ]);
       });
     });
@@ -3369,17 +3374,22 @@ custom command content`,
     it("returns the result and sets the record process abort controller", () => {
       actions.setTranscriptionSdkProvider("openai");
       actions.setTranscriptionModel("gpt-4o-transcribe");
+      testProcessEnv._set("LASSO_TRANSCRIPTION_API_KEY", "key");
       const result = recordAndTranscribeInput();
       assert.strictEqual(result, "[Recording not yet implemented]");
       assert.strictEqual(getState().abortControllers.recordProcess, null);
     });
 
-    it("returns null and prints an error without transcription config", () => {
+    it("returns null and prints a warning without transcription configuration", () => {
       actions.resetStdout();
       const result = recordAndTranscribeInput();
       assert.strictEqual(result, null);
       assert.deepStrictEqual(getWrites(), [
-        `${RED}The \`transcriptionSdkProvider\` and \`transcriptionModel\` config options are required for /record${RESET}\n`,
+        `${YELLOW}Warning! You're missing required configuration options for /record.
+- Set the \`LASSO_TRANSCRIPTION_API_KEY\` environment variable, e.g. \`export LASSO_TRANSCRIPTION_API_KEY=...\`
+- Set \`transcriptionSdkProvider\` in your config file (\`openai\` or \`google\`)
+- Set \`transcriptionModel\` in your config file${RESET}
+`,
       ]);
       assert.strictEqual(getState().abortControllers.recordProcess, null);
     });
