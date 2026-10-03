@@ -39,7 +39,7 @@ export interface FakeFsDeps {
     options?: { signal?: AbortSignal },
   ) => void;
   existsSync: (path: string) => boolean;
-  readdirSync: (path: string) => string[];
+  readdir: (path: string) => Promise<string[]>;
   mkdirSync: (path: string, options?: { recursive?: boolean }) => void;
   unlinkSync: (path: string) => void;
   appendFile: (
@@ -89,7 +89,7 @@ export function makeFakeFsDeps(
       _mtimes.set(path, ++_mtimeCounter);
     },
     existsSync: (path: string) => _files.has(path) || _dirs.has(path),
-    readdirSync: (path: string) => {
+    readdir: (path: string) => {
       const prefix = path + "/";
       const result = new Set<string>();
       for (const filePath of _files.keys()) {
@@ -104,7 +104,7 @@ export function makeFakeFsDeps(
           if (name !== undefined) result.add(name);
         }
       }
-      return [...result];
+      return Promise.resolve([...result]);
     },
     mkdirSync: (path: string) => _dirs.add(path),
     unlinkSync: (path: string) => {

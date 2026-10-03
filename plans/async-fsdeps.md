@@ -139,7 +139,7 @@ Additional dep.ts work landed alongside this step (async conversion of exec):
 - **Tests:** `context.test.ts`, `slash-commands.test.ts`, `config.test.ts`.
 - **Checkpoint:** `./agent-pnpm-run ci`.
 
-## Step 5: `readdirSync` → `readdir`
+## Step 5: `readdirSync` → `readdir` - DONE
 
 - **Direct consumer:** `utils.ts` `listSessionFiles` — already async from step 3; add
   `await`. No new cascade.

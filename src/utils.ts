@@ -194,7 +194,7 @@ export async function listSessionFiles() {
   if (!fsDeps.existsSync(sessionDir)) return [];
 
   const sessionFiles: SessionFile[] = [];
-  for (const name of fsDeps.readdirSync(sessionDir)) {
+  for (const name of await fsDeps.readdir(sessionDir)) {
     const fullPath = join(sessionDir, name);
     const statResult = await tryCatchAsync(fsDeps.stat(fullPath));
     if (!statResult.ok) continue;
