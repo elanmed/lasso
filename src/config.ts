@@ -289,7 +289,7 @@ export async function initStateFromFs({
   performanceLogger.end();
 
   performanceLogger.start("Reading skills: ");
-  const skills = getSkills();
+  const skills = await getSkills();
   actions.setSkills(skills);
   actions.setSkillsStr(getSkillsStr(skills));
   performanceLogger.end();

@@ -284,7 +284,7 @@ export function setupTestContext({
   mock.method(processDeps.stdout, "write", () => true);
   mock.method(processDeps.stdout, "isTTY", () => true);
   mock.method(processDeps.stderr, "write", () => true);
-  mock.method(childProcessDeps, "execFileSync", () => "");
+  mock.method(childProcessDeps, "execFile", () => "");
   mock.method(childProcessDeps, "spawn", () => undefined);
   mock.method(childProcessDeps, "spawnSync", () => ({
     status: 0,

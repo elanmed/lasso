@@ -2,7 +2,7 @@ import { dirname, join } from "node:path";
 import * as YAML from "yaml";
 import { z } from "zod";
 import { fsDeps, processDeps } from "./deps.ts";
-import { normalizeNewline, tryCatch } from "./utils.ts";
+import { normalizeNewline, tryCatch, tryCatchAsync } from "./utils.ts";
 import { print } from "./print.ts";
 import { getState } from "./state.ts";
 import {
@@ -80,7 +80,7 @@ would benefit from specialized instructions.
 
 ${skillsFormatted}`;
 }
-export function getSkills() {
+export async function getSkills() {
   const seenSkills = new Set<string>();
   const skillGrandparentDirs = [
     ...getState().config.customSkillDirs,
@@ -106,7 +106,9 @@ export function getSkills() {
     skills.push(skill);
   }
 
-  const agentFileGlobResult = tryCatch(() => fsDeps.gitLsFiles("**/AGENTS.md"));
+  const agentFileGlobResult = await tryCatchAsync(
+    fsDeps.gitLsFiles("**/AGENTS.md"),
+  );
   if (!agentFileGlobResult.ok) return skills;
 
   for (const agentFilePath of agentFileGlobResult.value) {

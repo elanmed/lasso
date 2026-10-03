@@ -9,12 +9,23 @@ import {
   statSync,
   globSync,
 } from "node:fs";
-import childProcess from "node:child_process";
+import childProcess, {
+  type ExecFileOptionsWithStringEncoding,
+} from "node:child_process";
+import { promisify } from "node:util";
 import { generateText, isLoopFinished } from "ai";
 import { createMCPClient } from "@ai-sdk/mcp";
 
+type PromiseExecFile = (
+  file: string,
+  args: string[],
+  options: ExecFileOptionsWithStringEncoding,
+) => Promise<{ stdout: string; stderr: string }>;
+
+const execFile = promisify(childProcess.execFile) as unknown as PromiseExecFile;
+
 export const childProcessDeps = {
-  execFileSync: childProcess.execFileSync,
+  execFile,
   exec: childProcess.exec,
   spawn: childProcess.spawn,
   spawnSync: childProcess.spawnSync,
@@ -35,26 +46,21 @@ export const fsDeps = {
   gitLsFiles,
 };
 
-function gitLsFiles(regex: string) {
-  const stdin = "ignore";
-  const stdout = "pipe";
-  const stderr = "pipe";
-  return childProcessDeps
-    .execFileSync(
-      "git",
-      [
-        "ls-files",
-        "--cached",
-        "--others",
-        "--exclude-standard",
-        "-z",
-        "--",
-        regex,
-      ],
-      { encoding: "utf8", stdio: [stdin, stdout, stderr] },
-    )
-    .split("\0")
-    .filter(Boolean);
+async function gitLsFiles(regex: string) {
+  const out = await childProcessDeps.execFile(
+    "git",
+    [
+      "ls-files",
+      "--cached",
+      "--others",
+      "--exclude-standard",
+      "-z",
+      "--",
+      regex,
+    ],
+    { encoding: "utf8" },
+  );
+  return out.stdout.split("\0").filter(Boolean);
 }
 
 export const processDeps = {

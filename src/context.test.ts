@@ -146,7 +146,7 @@ global content
         assert.equal(result, "");
       });
 
-      it("lists skills found in skill directories", () => {
+      it("lists skills found in skill directories", async () => {
         testFs._globResults.set("/fake-home/.config/lasso/skills/**/SKILL.md", [
           "/fake-home/.config/lasso/skills/my-skill/SKILL.md",
         ]);
@@ -158,7 +158,7 @@ description: A test skill
 ---
 # Body`,
         );
-        const result = getSkillsStr(getSkills());
+        const result = getSkillsStr(await getSkills());
         assert.equal(
           result,
           `# [lasso] Skills
@@ -172,7 +172,7 @@ would benefit from specialized instructions.
         );
       });
 
-      it("deduplicates by parsed name, keeping first occurrence", () => {
+      it("deduplicates by parsed name, keeping first occurrence", async () => {
         testFs._globResults.set("/test-cwd/.lasso/skills/**/SKILL.md", [
           "/test-cwd/.lasso/skills/local-skill/SKILL.md",
         ]);
@@ -195,7 +195,7 @@ description: Global deploy
 ---
 # Global`,
         );
-        const result = getSkillsStr(getSkills());
+        const result = getSkillsStr(await getSkills());
         assert.equal(
           result,
           `# [lasso] Skills
@@ -209,7 +209,7 @@ would benefit from specialized instructions.
         );
       });
 
-      it("does not return duplicate skills", () => {
+      it("does not return duplicate skills", async () => {
         testFs._globResults.set("/test-cwd/.lasso/skills/**/SKILL.md", [
           "/test-cwd/.lasso/skills/a/SKILL.md",
         ]);
@@ -232,7 +232,7 @@ description: Second
 ---
 # B`,
         );
-        const result = getSkills();
+        const result = await getSkills();
         assert.equal(result.length, 1);
         assert.deepStrictEqual(result[0], {
           name: "deploy",
@@ -242,7 +242,7 @@ description: Second
         });
       });
 
-      it("includes skills with different names", () => {
+      it("includes skills with different names", async () => {
         testFs._globResults.set("/test-cwd/.lasso/skills/**/SKILL.md", [
           "/test-cwd/.lasso/skills/a/SKILL.md",
           "/test-cwd/.lasso/skills/b/SKILL.md",
@@ -263,7 +263,7 @@ description: Second
 ---
 `,
         );
-        const result = getSkillsStr(getSkills());
+        const result = getSkillsStr(await getSkills());
         assert.equal(
           result,
           `# [lasso] Skills
@@ -280,7 +280,7 @@ would benefit from specialized instructions.
     });
 
     describe("skips invalid skills", () => {
-      it("skips non-existent skill directories", () => {
+      it("skips non-existent skill directories", async () => {
         testFs._globResults.set("/fake-home/.config/lasso/skills/**/SKILL.md", [
           "/fake-home/.config/lasso/skills/my-skill/SKILL.md",
         ]);
@@ -292,7 +292,7 @@ description: A test skill
 ---
 # Body`,
         );
-        const result = getSkillsStr(getSkills());
+        const result = getSkillsStr(await getSkills());
         assert.equal(
           result,
           `# [lasso] Skills
@@ -306,7 +306,7 @@ would benefit from specialized instructions.
         );
       });
 
-      it("skips malformed skill files", () => {
+      it("skips malformed skill files", async () => {
         testFs._globResults.set("/fake-home/.config/lasso/skills/**/SKILL.md", [
           "/fake-home/.config/lasso/skills/bad/SKILL.md",
           "/fake-home/.config/lasso/skills/good/SKILL.md",
@@ -323,7 +323,7 @@ description: Valid
 ---
 `,
         );
-        const result = getSkillsStr(getSkills());
+        const result = getSkillsStr(await getSkills());
         assert.equal(
           result,
           `# [lasso] Skills
@@ -337,7 +337,7 @@ would benefit from specialized instructions.
         );
       });
 
-      it("skips entries where globSync throws", () => {
+      it("skips entries where globSync throws", async () => {
         mock.method(fsDeps, "globSync", (pattern: string) => {
           if (pattern === "/test-cwd/.lasso/skills/**/SKILL.md")
             throw new Error("glob failed");
@@ -354,7 +354,7 @@ description: Works
 ---
 `,
         );
-        const result = getSkillsStr(getSkills());
+        const result = getSkillsStr(await getSkills());
         assert.equal(
           result,
           `# [lasso] Skills
@@ -370,7 +370,7 @@ would benefit from specialized instructions.
     });
 
     describe("custom skill dirs", () => {
-      it("includes skills from custom skill dirs", () => {
+      it("includes skills from custom skill dirs", async () => {
         actions.setCustomSkillDirs(["/custom/skills"]);
         testFs._globResults.set("/custom/skills/**/SKILL.md", [
           "/custom/skills/custom-skill/SKILL.md",
@@ -383,7 +383,7 @@ description: From custom dir
 ---
 `,
         );
-        const result = getSkillsStr(getSkills());
+        const result = getSkillsStr(await getSkills());
         assert.equal(
           result,
           `# [lasso] Skills
@@ -397,7 +397,7 @@ would benefit from specialized instructions.
         );
       });
 
-      it("prioritizes custom skill dirs over local and global", () => {
+      it("prioritizes custom skill dirs over local and global", async () => {
         actions.setCustomSkillDirs(["/custom/skills"]);
         testFs._globResults.set("/custom/skills/**/SKILL.md", [
           "/custom/skills/deploy/SKILL.md",
@@ -421,7 +421,7 @@ description: Local deploy
 ---
 `,
         );
-        const result = getSkillsStr(getSkills());
+        const result = getSkillsStr(await getSkills());
         assert.equal(
           result,
           `# [lasso] Skills
@@ -437,12 +437,12 @@ would benefit from specialized instructions.
     });
 
     describe("context skills", () => {
-      it("includes nested AGENTS.md files as context skills", () => {
+      it("includes nested AGENTS.md files as context skills", async () => {
         testFs._gitLsFilesResults.set("**/AGENTS.md", [
           "/test-cwd/src/AGENTS.md",
         ]);
         testFs._files.set("/test-cwd/src/AGENTS.md", "nested content");
-        const result = getSkillsStr(getSkills());
+        const result = getSkillsStr(await getSkills());
         assert.equal(
           result,
           `# [lasso] Skills
@@ -456,14 +456,14 @@ would benefit from specialized instructions.
         );
       });
 
-      it("excludes the root AGENTS.md from context skills", () => {
+      it("excludes the root AGENTS.md from context skills", async () => {
         testFs._gitLsFilesResults.set("**/AGENTS.md", [
           "AGENTS.md",
           "/test-cwd/src/AGENTS.md",
         ]);
         testFs._files.set("/test-cwd/AGENTS.md", "root content");
         testFs._files.set("/test-cwd/src/AGENTS.md", "nested content");
-        const result = getSkillsStr(getSkills());
+        const result = getSkillsStr(await getSkills());
         assert.equal(
           result,
           `# [lasso] Skills
@@ -477,7 +477,7 @@ would benefit from specialized instructions.
         );
       });
 
-      it("nested AGENTS.md skills do not collide with regular skills", () => {
+      it("nested AGENTS.md skills do not collide with regular skills", async () => {
         testFs._globResults.set("/fake-home/.config/lasso/skills/**/SKILL.md", [
           "/fake-home/.config/lasso/skills/my-skill/SKILL.md",
         ]);
@@ -493,7 +493,7 @@ description: A test skill
           "/test-cwd/src/AGENTS.md",
         ]);
         testFs._files.set("/test-cwd/src/AGENTS.md", "nested content");
-        const result = getSkillsStr(getSkills());
+        const result = getSkillsStr(await getSkills());
         assert.equal(
           result,
           `# [lasso] Skills
@@ -585,11 +585,11 @@ would benefit from specialized instructions.
 
   describe("getSkills", () => {
     describe("loads and filters skills", () => {
-      it("warns when a skill agent file cannot be read", () => {
+      it("warns when a skill agent file cannot be read", async () => {
         testFs._gitLsFilesResults.set("**/AGENTS.md", ["/repo/src/AGENTS.md"]);
         const getWrites = mockStdoutWrites();
 
-        const result = getSkills();
+        const result = await getSkills();
 
         assert.deepStrictEqual(result, []);
         assert.deepStrictEqual(getWrites(), [
@@ -597,7 +597,7 @@ would benefit from specialized instructions.
         ]);
       });
 
-      it("returns skills from skill directories with front matter stripped", () => {
+      it("returns skills from skill directories with front matter stripped", async () => {
         testFs._globResults.set("/fake-home/.config/lasso/skills/**/SKILL.md", [
           "/fake-home/.config/lasso/skills/my-skill/SKILL.md",
         ]);
@@ -610,7 +610,7 @@ description: A test skill
 # Body`,
         );
 
-        const result = getSkills();
+        const result = await getSkills();
 
         assert.deepStrictEqual(result, [
           {
@@ -622,7 +622,7 @@ description: A test skill
         ]);
       });
 
-      it("returns skills from custom, local, and global dirs in order", () => {
+      it("returns skills from custom, local, and global dirs in order", async () => {
         actions.setCustomSkillDirs(["/custom/skills"]);
         testFs._globResults.set("/custom/skills/**/SKILL.md", [
           "/custom/skills/custom-skill/SKILL.md",
@@ -658,7 +658,7 @@ description: From global dir
 `,
         );
 
-        const result = getSkills();
+        const result = await getSkills();
 
         assert.deepStrictEqual(result, [
           {
@@ -682,7 +682,7 @@ description: From global dir
         ]);
       });
 
-      it("deduplicates skills by name keeping the first occurrence", () => {
+      it("deduplicates skills by name keeping the first occurrence", async () => {
         testFs._globResults.set("/test-cwd/.lasso/skills/**/SKILL.md", [
           "/test-cwd/.lasso/skills/deploy/SKILL.md",
         ]);
@@ -706,7 +706,7 @@ description: Global deploy
 `,
         );
 
-        const result = getSkills();
+        const result = await getSkills();
 
         assert.deepStrictEqual(result, [
           {
@@ -718,7 +718,7 @@ description: Global deploy
         ]);
       });
 
-      it("skips malformed skill files", () => {
+      it("skips malformed skill files", async () => {
         testFs._globResults.set("/test-cwd/.lasso/skills/**/SKILL.md", [
           "/test-cwd/.lasso/skills/broken/SKILL.md",
           "/test-cwd/.lasso/skills/valid/SKILL.md",
@@ -736,7 +736,7 @@ description: A valid skill
 `,
         );
 
-        const result = getSkills();
+        const result = await getSkills();
 
         assert.deepStrictEqual(result, [
           {
@@ -750,11 +750,11 @@ description: A valid skill
     });
 
     describe("context skills", () => {
-      it("converts nested git-tracked agent files into context skills", () => {
+      it("converts nested git-tracked agent files into context skills", async () => {
         testFs._gitLsFilesResults.set("**/AGENTS.md", ["/repo/src/AGENTS.md"]);
         testFs._files.set("/repo/src/AGENTS.md", "# Team conventions");
 
-        const result = getSkills();
+        const result = await getSkills();
 
         assert.deepStrictEqual(result, [
           {
@@ -766,14 +766,14 @@ description: A valid skill
         ]);
       });
 
-      it("excludes the root agent file from context skills", () => {
+      it("excludes the root agent file from context skills", async () => {
         testFs._gitLsFilesResults.set("**/AGENTS.md", [
           "AGENTS.md",
           "/repo/AGENTS.md",
         ]);
         testFs._files.set("/repo/AGENTS.md", "# Repo conventions");
 
-        const result = getSkills();
+        const result = await getSkills();
 
         assert.deepStrictEqual(result, [
           {
