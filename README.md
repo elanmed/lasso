@@ -65,6 +65,9 @@ If `model`, `baseURL`, or `LASSO_API_KEY` are missing at startup, lasso warns an
 | `sdkProvider`                   | `"anthropic"` \| `"openai"` \| `"google"` \| `"openai-compatible"`                   | `openai-compatible`      | AI SDK provider                                                            |
 | `gateway`                       | `"opencode"`                                                                         | —                        | Used to append gateway-specific headers                                    |
 | `baseURL`                       | `string`                                                                             | `null`                   | API base URL (required for `openai-compatible`)                            |
+| `transcriptionSdkProvider`      | `"google" \| "openai"`                                                               | `google`                 | AI SDK provider for audio transcription                                    |
+| `transcriptionModel`            | `string`                                                                             | —                        | Transcription model name                                                   |
+| `transcriptionBaseURL`          | `string`                                                                             | `null`                   | API base URL for audio transcription                                       |
 | `pricingPerModel`               | `object`                                                                             | `{}`                     | Token pricing per model per million                                        |
 | `contextWindowPerModel`         | `object`                                                                             | `{}`                     | Context window size in tokens per model                                    |
 | `keymaps`                       | `object`                                                                             | see below                | Custom keybindings                                                         |
@@ -88,7 +91,7 @@ If `model`, `baseURL`, or `LASSO_API_KEY` are missing at startup, lasso warns an
 
 The local config either overwrites or extends the global config per option:
 
-- **Overwrite**: scalar options (`model`, `sdkProvider`, `gateway`, `baseURL`, `loadingStateFrameDuration`, `promptPrefix`, `suppressBatUnavailableWarning`, `asciiOnly`, `suppressStartupDurations`, `suppressToolEditDiffs`, `messageQueueDelimiter`, `reasoning`, `usageLimit`, `compactWithStructuredOutput`) and arrays (`customSlashCommandDirs`, `customSkillDirs`, `subagentModels`, `loadingStateFrames`) replace the global value wholesale — arrays are not merged.
+- **Overwrite**: scalar options (`model`, `sdkProvider`, `gateway`, `baseURL`, `transcriptionSdkProvider`, `transcriptionModel`, `transcriptionBaseURL`, `loadingStateFrameDuration`, `promptPrefix`, `suppressBatUnavailableWarning`, `asciiOnly`, `suppressStartupDurations`, `suppressToolEditDiffs`, `messageQueueDelimiter`, `reasoning`, `usageLimit`, `compactWithStructuredOutput`) and arrays (`customSlashCommandDirs`, `customSkillDirs`, `subagentModels`, `loadingStateFrames`) replace the global value wholesale — arrays are not merged.
 - **Extend**: `keymaps`, `mcps`, `pricingPerModel`, and `contextWindowPerModel` merge entry-by-entry with the default and global entries, the local entry winning on conflicts. `pricingPerModel` and `contextWindowPerModel` entries set to `null` cancel the global or default entry (see the relevant sections below).
 
 ### MCP Servers
