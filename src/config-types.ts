@@ -46,6 +46,11 @@ const SdkProviderSchema = z.enum([
 ]);
 export type SdkProvider = z.infer<typeof SdkProviderSchema>;
 
+const TranscriptionSdkProviderSchema = z.enum(["google", "openai"]);
+export type TranscriptionSdkProvider = z.infer<
+  typeof TranscriptionSdkProviderSchema
+>;
+
 const ModelSchema = z.string();
 const BaseURLSchema = z.string();
 const GatewaySchema = z.enum(["opencode"]);
@@ -121,6 +126,9 @@ export const ConfigSchema = z.strictObject({
   model: ModelSchema.optional(),
   baseURL: BaseURLSchema.optional(),
   sdkProvider: SdkProviderSchema.optional(),
+  transcriptionSdkProvider: TranscriptionSdkProviderSchema.optional(),
+  transcriptionModel: ModelSchema.optional(),
+  transcriptionBaseURL: BaseURLSchema.optional(),
   gateway: GatewaySchema.optional(),
   pricingPerModel: PricingPerModelSchema.optional(),
   contextWindowPerModel: ContextWindowPerModelSchema.optional(),
@@ -148,6 +156,9 @@ export const DefaultedConfigSchema = z.strictObject({
   model: ModelSchema,
   baseURL: BaseURLSchema.optional(),
   sdkProvider: SdkProviderSchema,
+  transcriptionSdkProvider: TranscriptionSdkProviderSchema,
+  transcriptionModel: ModelSchema,
+  transcriptionBaseURL: BaseURLSchema.optional(),
   gateway: GatewaySchema.optional(),
   pricingPerModel: DefaultedPricingPerModelSchema,
   contextWindowPerModel: DefaultedContextWindowPerModelSchema,
@@ -185,6 +196,9 @@ export function isSameKey(a: Key, b: Key) {
 export const defaultConfig: DefaultedConfig = {
   model: MISSING,
   sdkProvider: MISSING,
+  transcriptionSdkProvider: "google",
+  transcriptionModel: MISSING,
+  transcriptionBaseURL: undefined,
   gateway: undefined,
   pricingPerModel: {},
   contextWindowPerModel: {},

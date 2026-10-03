@@ -127,6 +127,17 @@ export function initStateFromConfig({
     localConfig.gateway ?? globalConfig.gateway ?? defaultConfig.gateway;
   const defaultedBaseURL = localConfig.baseURL ?? globalConfig.baseURL;
 
+  const defaultedTranscriptionSdkProvider =
+    localConfig.transcriptionSdkProvider ??
+    globalConfig.transcriptionSdkProvider ??
+    defaultConfig.transcriptionSdkProvider;
+  const defaultedTranscriptionModel =
+    localConfig.transcriptionModel ??
+    globalConfig.transcriptionModel ??
+    defaultConfig.transcriptionModel;
+  const defaultedTranscriptionBaseURL =
+    localConfig.transcriptionBaseURL ?? globalConfig.transcriptionBaseURL;
+
   if (
     defaultedBaseURL === undefined &&
     defaultedSdkProvider === "openai-compatible"
@@ -140,6 +151,11 @@ export function initStateFromConfig({
   if (defaultedBaseURL !== undefined) actions.setBaseURL(defaultedBaseURL);
   actions.setSdkProvider(defaultedSdkProvider);
   actions.setGateway(defaultedGateway);
+  actions.setTranscriptionSdkProvider(defaultedTranscriptionSdkProvider);
+  actions.setTranscriptionModel(defaultedTranscriptionModel);
+  if (defaultedTranscriptionBaseURL !== undefined) {
+    actions.setTranscriptionBaseURL(defaultedTranscriptionBaseURL);
+  }
 
   const defaultedPricingPerModel = filterNulls({
     ...defaultConfig.pricingPerModel,
