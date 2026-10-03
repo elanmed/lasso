@@ -550,6 +550,8 @@ vim.g.clipboard = {
 - [ ] Record audio with /record
 - [ ] Queue audio with /record
 - [ ] Buffer input while init is running
+- [ ] Mark tokens as stale by default
+- [ ] Move child process fns to deps.ts
 
 ## TODO (soon)
 
