@@ -92,7 +92,7 @@ export async function getSkills() {
 
   for (const skillGrandparentDir of skillGrandparentDirs) {
     const glob = join(skillGrandparentDir, "**/SKILL.md");
-    const globResult = tryCatch(() => fsDeps.globSync(glob));
+    const globResult = await tryCatchAsync(fsDeps.glob(glob));
     if (!globResult.ok) continue;
     skillPaths.push(...globResult.value);
   }

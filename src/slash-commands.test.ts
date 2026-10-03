@@ -25,34 +25,34 @@ describe("getAvailableSlashCommands", () => {
   });
 
   describe("returns an empty array", () => {
-    it("returns empty array when no commands found", () => {
-      const result = getAvailableSlashCommands();
+    it("returns empty array when no commands found", async () => {
+      const result = await getAvailableSlashCommands();
       assert.deepStrictEqual(result, []);
     });
 
-    it("returns empty array when glob throws", () => {
-      mock.method(fsDeps, "globSync", () => {
-        throw new Error("permission denied");
-      });
-      const result = getAvailableSlashCommands();
+    it("returns empty array when glob throws", async () => {
+      mock.method(fsDeps, "glob", () =>
+        Promise.reject(new Error("permission denied")),
+      );
+      const result = await getAvailableSlashCommands();
       assert.deepStrictEqual(result, []);
     });
 
-    it("returns empty array when glob returns empty", () => {
+    it("returns empty array when glob returns empty", async () => {
       testFs._globResults.set("/test-cwd/.lasso/commands/**/*.md", []);
-      const result = getAvailableSlashCommands();
+      const result = await getAvailableSlashCommands();
       assert.deepStrictEqual(result, []);
     });
   });
 
   describe("returns commands", () => {
-    it("includes custom slash command dirs", () => {
+    it("includes custom slash command dirs", async () => {
       actions.setCustomSlashCommandDirs(["/custom-commands"]);
       testFs._globResults.set("/custom-commands/**/*.md", [
         "/custom-commands/foo.md",
       ]);
       testFs._files.set("/custom-commands/foo.md", "custom content");
-      const result = getAvailableSlashCommands();
+      const result = await getAvailableSlashCommands();
       assert.deepStrictEqual(result, [
         {
           name: "foo",
@@ -62,7 +62,7 @@ describe("getAvailableSlashCommands", () => {
       ]);
     });
 
-    it("returns commands from local and global dirs", () => {
+    it("returns commands from local and global dirs", async () => {
       testFs._globResults.set("/test-cwd/.lasso/commands/**/*.md", [
         "/test-cwd/.lasso/commands/help.md",
       ]);
@@ -74,7 +74,7 @@ describe("getAvailableSlashCommands", () => {
         "/fake-home/.config/lasso/commands/status.md",
         "status content",
       );
-      const result = getAvailableSlashCommands();
+      const result = await getAvailableSlashCommands();
       assert.deepStrictEqual(result, [
         {
           name: "help",
@@ -89,7 +89,7 @@ describe("getAvailableSlashCommands", () => {
       ]);
     });
 
-    it("deduplicates by name keeping first occurrence", () => {
+    it("deduplicates by name keeping first occurrence", async () => {
       testFs._globResults.set("/test-cwd/.lasso/commands/**/*.md", [
         "/test-cwd/.lasso/commands/help.md",
       ]);
@@ -101,7 +101,7 @@ describe("getAvailableSlashCommands", () => {
         "/fake-home/.config/lasso/commands/help.md",
         "global content",
       );
-      const result = getAvailableSlashCommands();
+      const result = await getAvailableSlashCommands();
       assert.deepStrictEqual(result, [
         {
           name: "help",
@@ -113,7 +113,7 @@ describe("getAvailableSlashCommands", () => {
   });
 
   describe("handles errors", () => {
-    it("skips files that fail to read", () => {
+    it("skips files that fail to read", async () => {
       mock.method(fsDeps, "readFileSync", (path: string) => {
         if (path.includes("bad")) throw new Error("read failed");
         return Buffer.from("content");
@@ -122,7 +122,7 @@ describe("getAvailableSlashCommands", () => {
         "/test-cwd/.lasso/commands/good.md",
         "/test-cwd/.lasso/commands/bad.md",
       ]);
-      const result = getAvailableSlashCommands();
+      const result = await getAvailableSlashCommands();
       assert.deepStrictEqual(result, [
         {
           name: "good",
@@ -132,13 +132,13 @@ describe("getAvailableSlashCommands", () => {
       ]);
     });
 
-    it("warns when glob fails", () => {
-      mock.method(fsDeps, "globSync", () => {
-        throw new Error("permission denied");
-      });
+    it("warns when glob fails", async () => {
+      mock.method(fsDeps, "glob", () =>
+        Promise.reject(new Error("permission denied")),
+      );
       const getWrites = mockStdoutWrites();
 
-      const result = getAvailableSlashCommands();
+      const result = await getAvailableSlashCommands();
 
       assert.deepStrictEqual(result, []);
       assert.deepStrictEqual(getWrites(), [
@@ -147,7 +147,7 @@ describe("getAvailableSlashCommands", () => {
       ]);
     });
 
-    it("warns when a slash command file cannot be read", () => {
+    it("warns when a slash command file cannot be read", async () => {
       mock.method(fsDeps, "readFileSync", (path: string) => {
         if (path.includes("bad")) throw new Error("read failed");
         return Buffer.from("content");
@@ -157,7 +157,7 @@ describe("getAvailableSlashCommands", () => {
       ]);
       const getWrites = mockStdoutWrites();
 
-      const result = getAvailableSlashCommands();
+      const result = await getAvailableSlashCommands();
 
       assert.deepStrictEqual(result, []);
       assert.deepStrictEqual(getWrites(), [

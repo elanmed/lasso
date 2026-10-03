@@ -559,6 +559,7 @@ vim.g.clipboard = {
 - [ ] Speed up init by running everything in parallel
 - [ ] Investigate potential shell expansion issues
 - [ ] Support interrupting both compactions at once
+- [ ] Allow opening the queue editor in the background
 
 ## TODO (later)
 

@@ -295,7 +295,7 @@ export async function initStateFromFs({
   performanceLogger.end();
 
   performanceLogger.start("Reading slash commands: ");
-  const slashCommands = getAvailableSlashCommands();
+  const slashCommands = await getAvailableSlashCommands();
   actions.setSlashCommands(slashCommands);
   performanceLogger.end();
 }

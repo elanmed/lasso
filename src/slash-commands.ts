@@ -1,6 +1,6 @@
 import { basename, extname, join } from "node:path";
 import { fsDeps } from "./deps.ts";
-import { normalizeNewline, tryCatch } from "./utils.ts";
+import { normalizeNewline, tryCatch, tryCatchAsync } from "./utils.ts";
 import { getGlobalSlashCommandDir, getLocalSlashCommandDir } from "./paths.ts";
 import { print } from "./print.ts";
 import { getState, type SlashCommand } from "./state.ts";
@@ -56,7 +56,7 @@ ${normalizeNewline(content, { count: 0 })}`,
 ${contents}`;
 }
 
-export function getAvailableSlashCommands() {
+export async function getAvailableSlashCommands() {
   const seenSlashCommands = new Set<string>();
 
   const entries: SlashCommand[] = [];
@@ -70,7 +70,7 @@ export function getAvailableSlashCommands() {
 
   for (const dir of slashCommandDirs) {
     const glob = join(dir, "**/*.md");
-    const globResult = tryCatch(() => fsDeps.globSync(glob));
+    const globResult = await tryCatchAsync(fsDeps.glob(glob));
     if (!globResult.ok) {
       print.warning(`Failed to list the slash command files in ${dir}`);
       continue;

@@ -115,7 +115,7 @@ Additional dep.ts work landed alongside this step (async conversion of exec):
 - **Tests:** `context.test.ts`, `config.test.ts` (await `getSkills` results/callers).
 - **Checkpoint:** `./agent-pnpm-run ci`.
 
-## Step 3: `statSync` → `stat`
+## Step 3: `statSync` → `stat` - DONE
 
 - **Direct consumers:**
   - `input.ts` `spawnAndReadEditorContent` — already async; just await.
@@ -127,7 +127,7 @@ Additional dep.ts work landed alongside this step (async conversion of exec):
 - **Tests:** `utils.test.ts`, `log.test.ts`, `input.test.ts` — await the above.
 - **Checkpoint:** `./agent-pnpm-run ci`.
 
-## Step 4: `globSync` → `glob`
+## Step 4: `globSync` → `glob` - DONE
 
 - **deps.ts:** async-generator wrapper (see Conventions) so the signature is
   `Promise<string[]>`.

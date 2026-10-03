@@ -337,11 +337,11 @@ would benefit from specialized instructions.
         );
       });
 
-      it("skips entries where globSync throws", async () => {
-        mock.method(fsDeps, "globSync", (pattern: string) => {
+      it("skips entries where glob throws", async () => {
+        mock.method(fsDeps, "glob", (pattern: string) => {
           if (pattern === "/test-cwd/.lasso/skills/**/SKILL.md")
-            throw new Error("glob failed");
-          return testFs.globSync(pattern);
+            return Promise.reject(new Error("glob failed"));
+          return testFs.glob(pattern);
         });
         testFs._globResults.set("/fake-home/.config/lasso/skills/**/SKILL.md", [
           "/fake-home/.config/lasso/skills/ok/SKILL.md",

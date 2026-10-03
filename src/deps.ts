@@ -5,9 +5,8 @@ import {
   readdirSync,
   mkdirSync,
   unlinkSync,
-  globSync,
 } from "node:fs";
-import { appendFile, stat } from "node:fs/promises";
+import { appendFile, glob as globAsync, stat } from "node:fs/promises";
 import childProcess, {
   type ExecFileOptionsWithStringEncoding,
   type ExecOptionsWithStringEncoding,
@@ -56,9 +55,17 @@ export const fsDeps = {
   unlinkSync,
   appendFile,
   stat,
-  globSync,
+  glob,
   gitLsFiles,
 };
+
+async function glob(pattern: string) {
+  const results: string[] = [];
+  for await (const entry of globAsync(pattern)) {
+    results.push(entry);
+  }
+  return results;
+}
 
 async function gitLsFiles(regex: string) {
   const out = await childProcessDeps.execFile(

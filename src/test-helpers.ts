@@ -51,7 +51,7 @@ export interface FakeFsDeps {
     isFile: () => boolean;
     isDirectory: () => boolean;
   }>;
-  globSync: (pattern: string) => string[];
+  glob: (pattern: string) => Promise<string[]>;
   gitLsFiles: (pattern: string) => string[];
 }
 
@@ -125,7 +125,7 @@ export function makeFakeFsDeps(
         isDirectory: () => _dirs.has(path),
         mtimeMs: _mtimes.get(path) ?? 0,
       }),
-    globSync: (pattern: string) => _globResults.get(pattern) ?? [],
+    glob: (pattern: string) => Promise.resolve(_globResults.get(pattern) ?? []),
     gitLsFiles: (pattern: string) => _gitLsFilesResults.get(pattern) ?? [],
     _restore: () => {
       _files.clear();
