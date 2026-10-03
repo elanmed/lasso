@@ -101,13 +101,13 @@ describe("log", () => {
       setupTestContext({ now: 1_234_567_890_000 });
     });
 
-    it("deletes expired session files, initializes the session file", () => {
+    it("deletes expired session files, initializes the session file", async () => {
       testFs._dirs.add("/fake-home/.local/state/lasso/sessions");
       testFs._files.set(
         "/fake-home/.local/state/lasso/sessions/session-1000000000.json",
         "expired",
       );
-      initLogs();
+      await initLogs();
 
       assert.equal(
         testFs._files.has(
@@ -128,21 +128,21 @@ describe("log", () => {
       setupTestContext({ now: 1_000_000_000_000 });
     });
 
-    it("returns early when directory does not exist", () => {
-      deleteExpiredSessionFiles();
+    it("returns early when directory does not exist", async () => {
+      await deleteExpiredSessionFiles();
       assert.equal(
         testFs._dirs.has("/fake-home/.local/state/lasso/sessions"),
         false,
       );
     });
 
-    it("deletes expired files older than 24 hours", () => {
+    it("deletes expired files older than 24 hours", async () => {
       testFs._dirs.add("/fake-home/.local/state/lasso/sessions");
       testFs._files.set(
         "/fake-home/.local/state/lasso/sessions/session-999900000000.json",
         "old",
       );
-      deleteExpiredSessionFiles();
+      await deleteExpiredSessionFiles();
       assert.equal(
         testFs._files.has(
           "/fake-home/.local/state/lasso/sessions/session-999900000000.json",
@@ -151,13 +151,13 @@ describe("log", () => {
       );
     });
 
-    it("keeps files newer than 24 hours", () => {
+    it("keeps files newer than 24 hours", async () => {
       testFs._dirs.add("/fake-home/.local/state/lasso/sessions");
       testFs._files.set(
         "/fake-home/.local/state/lasso/sessions/session-999990000000.json",
         "new",
       );
-      deleteExpiredSessionFiles();
+      await deleteExpiredSessionFiles();
       assert.equal(
         testFs._files.has(
           "/fake-home/.local/state/lasso/sessions/session-999990000000.json",
@@ -166,7 +166,7 @@ describe("log", () => {
       );
     });
 
-    it("skips files without correct format", () => {
+    it("skips files without correct format", async () => {
       testFs._dirs.add("/fake-home/.local/state/lasso/sessions");
       testFs._files.set(
         "/fake-home/.local/state/lasso/sessions/random-file.log",
@@ -180,7 +180,7 @@ describe("log", () => {
         "/fake-home/.local/state/lasso/sessions/prompt-history-uuid-999990000001.log",
         "",
       );
-      deleteExpiredSessionFiles();
+      await deleteExpiredSessionFiles();
       assert.equal(
         testFs._files.has(
           "/fake-home/.local/state/lasso/sessions/random-file.log",
@@ -201,13 +201,13 @@ describe("log", () => {
       );
     });
 
-    it("skips session files with 3 parts", () => {
+    it("skips session files with 3 parts", async () => {
       testFs._dirs.add("/fake-home/.local/state/lasso/sessions");
       testFs._files.set(
         "/fake-home/.local/state/lasso/sessions/session-uuid-999997600000.json",
         "",
       );
-      deleteExpiredSessionFiles();
+      await deleteExpiredSessionFiles();
       assert.equal(
         testFs._files.has(
           "/fake-home/.local/state/lasso/sessions/session-uuid-999997600000.json",

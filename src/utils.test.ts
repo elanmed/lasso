@@ -543,16 +543,16 @@ describe("utils", () => {
   });
 
   describe("listSessionFiles", () => {
-    it("returns an empty array when the directory does not exist", () => {
-      assert.deepStrictEqual(listSessionFiles(), []);
+    it("returns an empty array when the directory does not exist", async () => {
+      assert.deepStrictEqual(await listSessionFiles(), []);
     });
 
-    it("returns an empty array when the directory has no files", () => {
+    it("returns an empty array when the directory has no files", async () => {
       testFs._dirs.add("/fake-home/.local/state/lasso/sessions");
-      assert.deepStrictEqual(listSessionFiles(), []);
+      assert.deepStrictEqual(await listSessionFiles(), []);
     });
 
-    it("returns valid session files with absolute path and timestamp", () => {
+    it("returns valid session files with absolute path and timestamp", async () => {
       testFs._dirs.add("/fake-home/.local/state/lasso/sessions");
       testFs._files.set(
         "/fake-home/.local/state/lasso/sessions/session-1234567890000.json",
@@ -563,7 +563,7 @@ describe("utils", () => {
         "",
       );
 
-      assert.deepStrictEqual(listSessionFiles(), [
+      assert.deepStrictEqual(await listSessionFiles(), [
         {
           absolutePath:
             "/fake-home/.local/state/lasso/sessions/session-1234567890000.json",
@@ -577,15 +577,15 @@ describe("utils", () => {
       ]);
     });
 
-    it("skips directory entries", () => {
+    it("skips directory entries", async () => {
       testFs._dirs.add("/fake-home/.local/state/lasso/sessions");
       testFs._dirs.add(
         "/fake-home/.local/state/lasso/sessions/session-1234567890000.json",
       );
-      assert.deepStrictEqual(listSessionFiles(), []);
+      assert.deepStrictEqual(await listSessionFiles(), []);
     });
 
-    it("skips files that do not match session-<timestamp>", () => {
+    it("skips files that do not match session-<timestamp>", async () => {
       testFs._dirs.add("/fake-home/.local/state/lasso/sessions");
       testFs._files.set(
         "/fake-home/.local/state/lasso/sessions/random-file.md",
@@ -599,16 +599,16 @@ describe("utils", () => {
         "/fake-home/.local/state/lasso/sessions/session-notanumber.json",
         "",
       );
-      assert.deepStrictEqual(listSessionFiles(), []);
+      assert.deepStrictEqual(await listSessionFiles(), []);
     });
 
-    it("skips files with non-json extension", () => {
+    it("skips files with non-json extension", async () => {
       testFs._dirs.add("/fake-home/.local/state/lasso/sessions");
       testFs._files.set(
         "/fake-home/.local/state/lasso/sessions/session-123.log",
         "",
       );
-      assert.deepStrictEqual(listSessionFiles(), []);
+      assert.deepStrictEqual(await listSessionFiles(), []);
     });
 
     describe("createLockUtils", () => {

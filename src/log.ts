@@ -133,8 +133,8 @@ export function initSessionFile() {
   }
 }
 
-export function deleteExpiredSessionFiles() {
-  const sessionFiles = listSessionFiles();
+export async function deleteExpiredSessionFiles() {
+  const sessionFiles = await listSessionFiles();
 
   for (const { absolutePath, timestampMs } of sessionFiles) {
     const oneDay = 1_000 * 60 * 60 * 24;
@@ -144,7 +144,7 @@ export function deleteExpiredSessionFiles() {
   }
 }
 
-export function initLogs() {
-  deleteExpiredSessionFiles();
+export async function initLogs() {
+  await deleteExpiredSessionFiles();
   initSessionFile();
 }

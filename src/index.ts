@@ -17,7 +17,7 @@ import { warnOnLargePromptOverhead } from "./usage.ts";
 
 async function main() {
   await initState();
-  initLogs();
+  await initLogs();
 
   initReadline();
   initKeypress();

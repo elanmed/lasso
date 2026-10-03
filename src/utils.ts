@@ -189,14 +189,14 @@ interface SessionFile {
   timestampMs: number;
 }
 
-export function listSessionFiles() {
+export async function listSessionFiles() {
   const sessionDir = getSessionDir();
   if (!fsDeps.existsSync(sessionDir)) return [];
 
   const sessionFiles: SessionFile[] = [];
   for (const name of fsDeps.readdirSync(sessionDir)) {
     const fullPath = join(sessionDir, name);
-    const statResult = tryCatch(() => fsDeps.statSync(fullPath));
+    const statResult = await tryCatchAsync(fsDeps.stat(fullPath));
     if (!statResult.ok) continue;
     if (!statResult.value.isFile()) continue;
 

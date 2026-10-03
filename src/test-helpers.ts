@@ -47,10 +47,10 @@ export interface FakeFsDeps {
     content: string,
     options?: { signal?: AbortSignal },
   ) => Promise<void>;
-  statSync: (path: string) => {
+  stat: (path: string) => Promise<{
     isFile: () => boolean;
     isDirectory: () => boolean;
-  };
+  }>;
   globSync: (pattern: string) => string[];
   gitLsFiles: (pattern: string) => string[];
 }
@@ -119,11 +119,12 @@ export function makeFakeFsDeps(
       _mtimes.set(path, ++_mtimeCounter);
       return Promise.resolve();
     },
-    statSync: (path: string) => ({
-      isFile: () => _files.has(path),
-      isDirectory: () => _dirs.has(path),
-      mtimeMs: _mtimes.get(path) ?? 0,
-    }),
+    stat: (path: string) =>
+      Promise.resolve({
+        isFile: () => _files.has(path),
+        isDirectory: () => _dirs.has(path),
+        mtimeMs: _mtimes.get(path) ?? 0,
+      }),
     globSync: (pattern: string) => _globResults.get(pattern) ?? [],
     gitLsFiles: (pattern: string) => _gitLsFilesResults.get(pattern) ?? [],
     _restore: () => {

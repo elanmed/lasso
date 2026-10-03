@@ -1203,32 +1203,32 @@ l---
       actions.resetStdout();
     });
 
-    it("prints usage error when no session start date is provided", () => {
-      const result = resume("/resume");
+    it("prints usage error when no session start date is provided", async () => {
+      const result = await resume("/resume");
       assert.strictEqual(result, null);
       assert.deepStrictEqual(getWrites(), [
         `${RED}Usage: /resume [session start date]${RESET}\n`,
       ]);
     });
 
-    it("prints usage error when too many parts are provided", () => {
-      const result = resume("/resume 123 456");
+    it("prints usage error when too many parts are provided", async () => {
+      const result = await resume("/resume 123 456");
       assert.strictEqual(result, null);
       assert.deepStrictEqual(getWrites(), [
         `${RED}Usage: /resume [session start date]${RESET}\n`,
       ]);
     });
 
-    it("prints usage error when session start date is not a number", () => {
-      const result = resume("/resume abc");
+    it("prints usage error when session start date is not a number", async () => {
+      const result = await resume("/resume abc");
       assert.strictEqual(result, null);
       assert.deepStrictEqual(getWrites(), [
         `${RED}Usage: /resume [session start date]${RESET}\n`,
       ]);
     });
 
-    it("prints error when sessions directory does not exist", () => {
-      const result = resume("/resume 1234567890000");
+    it("prints error when sessions directory does not exist", async () => {
+      const result = await resume("/resume 1234567890000");
       assert.strictEqual(result, null);
       assert.deepStrictEqual(getWrites(), [
         `${RED}No conversation found with session start date: 1234567890000${RESET}\n`,
@@ -1236,7 +1236,7 @@ l---
       ]);
     });
 
-    it("loads the session and returns continue when the date matches", () => {
+    it("loads the session and returns continue when the date matches", async () => {
       actions.setConversationMessages([{ role: "user", content: "old" }]);
       addSessionFile(1234567890000, {
         messages: [{ role: "user", content: "hello" }],
@@ -1246,7 +1246,7 @@ l---
         ],
       });
 
-      const result = resume("/resume 1234567890000");
+      const result = await resume("/resume 1234567890000");
 
       assert.strictEqual(result, "Continue");
       assert.deepStrictEqual(getState().app.conversation, {
@@ -1262,13 +1262,13 @@ l---
       });
     });
 
-    it("prints error when no conversation is found", () => {
+    it("prints error when no conversation is found", async () => {
       testFs._dirs.add("/fake-home/.local/state/lasso/sessions");
       testFs._files.set(
         "/fake-home/.local/state/lasso/sessions/session-9999999999999.json",
         "transcript content",
       );
-      const result = resume("/resume 1234567890000");
+      const result = await resume("/resume 1234567890000");
       assert.strictEqual(result, null);
       assert.deepStrictEqual(getWrites(), [
         `${RED}No conversation found with session start date: 1234567890000${RESET}\n`,
@@ -1276,13 +1276,13 @@ l---
       ]);
     });
 
-    it("prints an error and returns null when the session file cannot be parsed", () => {
+    it("prints an error and returns null when the session file cannot be parsed", async () => {
       testFs._dirs.add("/fake-home/.local/state/lasso/sessions");
       testFs._files.set(
         "/fake-home/.local/state/lasso/sessions/session-1234567890000.json",
         "not json",
       );
-      const result = resume("/resume 1234567890000");
+      const result = await resume("/resume 1234567890000");
       assert.strictEqual(result, null);
       assert.deepStrictEqual(getWrites(), [
         `${RED}Failed to parse the session file at /fake-home/.local/state/lasso/sessions/session-1234567890000.json${RESET}\n`,
@@ -1290,13 +1290,13 @@ l---
       ]);
     });
 
-    it("skips files that do not match the session format", () => {
+    it("skips files that do not match the session format", async () => {
       testFs._dirs.add("/fake-home/.local/state/lasso/sessions");
       testFs._files.set(
         "/fake-home/.local/state/lasso/sessions/other-1234567890000.md",
         "other",
       );
-      const result = resume("/resume 1234567890000");
+      const result = await resume("/resume 1234567890000");
       assert.strictEqual(result, null);
       assert.deepStrictEqual(getWrites(), [
         `${RED}No conversation found with session start date: 1234567890000${RESET}\n`,
@@ -1310,8 +1310,8 @@ l---
       actions.resetStdout();
     });
 
-    it("prints an error when there are no sessions to resume", () => {
-      const result = resumeWithNoArgs();
+    it("prints an error when there are no sessions to resume", async () => {
+      const result = await resumeWithNoArgs();
       assert.strictEqual(result, null);
       assert.deepStrictEqual(getWrites(), [
         `${RED}No sessions to resume${RESET}\n`,
@@ -1319,7 +1319,7 @@ l---
       ]);
     });
 
-    it("resumes the most recent session", () => {
+    it("resumes the most recent session", async () => {
       actions.setConversationMessages([{ role: "user", content: "hello" }]);
       addSessionFile(1234567890000, {
         messages: [{ role: "user", content: "older" }],
@@ -1334,7 +1334,7 @@ l---
         ],
       });
 
-      const result = resumeWithNoArgs();
+      const result = await resumeWithNoArgs();
 
       assert.strictEqual(result, "Continue");
       assert.deepStrictEqual(getState().app.conversation, {
@@ -1346,7 +1346,7 @@ l---
       ]);
     });
 
-    it("excludes the current session file when resuming the most recent session", () => {
+    it("excludes the current session file when resuming the most recent session", async () => {
       addSessionFile(1234567899999, {
         messages: [{ role: "assistant", content: "newer" }],
         summaries: [{ compacted: "summary", compactedAt: 123, tokens: 456 }],
@@ -1363,7 +1363,7 @@ l---
         transcript: [],
       });
 
-      const result = resumeWithNoArgs();
+      const result = await resumeWithNoArgs();
 
       assert.strictEqual(result, "Continue");
       assert.deepStrictEqual(getState().app.conversation, {
@@ -1373,7 +1373,7 @@ l---
       assert.deepStrictEqual(getState().app.transcript, []);
     });
 
-    it("prints an error when the current session is the only session", () => {
+    it("prints an error when the current session is the only session", async () => {
       actions.setSessionFilePath(
         "/fake-home/.local/state/lasso/sessions/session-1234567890000.json",
       );
@@ -1383,7 +1383,7 @@ l---
         transcript: [],
       });
 
-      const result = resumeWithNoArgs();
+      const result = await resumeWithNoArgs();
 
       assert.strictEqual(result, null);
       assert.deepStrictEqual(getWrites(), [

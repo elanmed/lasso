@@ -687,7 +687,7 @@ async function resolveBuiltinSlashCommand(
       return { handled: true, inputFromCommand: null };
     }
     case "resume": {
-      const inputFromCommand = resumeWithNoArgs();
+      const inputFromCommand = await resumeWithNoArgs();
       if (inputFromCommand !== null) {
         syncSessionFile({
           transcript: getAppendedTranscript({
@@ -751,9 +751,9 @@ async function resolveBuiltinSlashCommand(
   }
 }
 
-function resolveParameterizedBuiltinSlashCommand(
+async function resolveParameterizedBuiltinSlashCommand(
   commandWithArgs: string,
-): SlashCommandOutcome {
+): Promise<SlashCommandOutcome> {
   const parts = commandWithArgs.split(/\s+/);
   const command = parts[0] as ParameterizedBuiltinSlashCommand | undefined;
   if (command === undefined) return { handled: false, inputFromCommand: null };
@@ -764,7 +764,7 @@ function resolveParameterizedBuiltinSlashCommand(
       return { handled: true, inputFromCommand: null };
     }
     case "resume": {
-      const inputFromCommand = resume(commandWithArgs);
+      const inputFromCommand = await resume(commandWithArgs);
       if (inputFromCommand !== null) {
         syncSessionFile({
           transcript: getAppendedTranscript({
@@ -840,7 +840,7 @@ export async function resolveSlashCommand(rawInput: string) {
   }
 
   const parameterizedBuiltinSlashCommandOutcome =
-    resolveParameterizedBuiltinSlashCommand(commandWithoutSlash);
+    await resolveParameterizedBuiltinSlashCommand(commandWithoutSlash);
   if (parameterizedBuiltinSlashCommandOutcome.handled) {
     return parameterizedBuiltinSlashCommandOutcome.inputFromCommand;
   }
@@ -968,14 +968,14 @@ export async function spawnAndReadEditorContent(opts?: {
     return null;
   }
 
-  const statBefore = tryCatch(() => fsDeps.statSync(tempFile));
+  const statBefore = await tryCatchAsync(fsDeps.stat(tempFile));
 
   childProcessDeps.spawnSync(editCommand, {
     shell: true,
     stdio: "inherit",
   });
 
-  const statAfter = tryCatch(() => fsDeps.statSync(tempFile));
+  const statAfter = await tryCatchAsync(fsDeps.stat(tempFile));
 
   const readResult = tryCatch(() => fsDeps.readFileSync(tempFile).toString());
   if (!readResult.ok) {
@@ -1134,8 +1134,8 @@ ${formatted}`;
   openWithPager({ contentType: "markdown", initialContentStr });
 }
 
-export function resumeWithNoArgs() {
-  const sessionFiles = listSessionFiles().filter(
+export async function resumeWithNoArgs() {
+  const sessionFiles = (await listSessionFiles()).filter(
     ({ absolutePath }) => getState().app.sessionFilePath !== absolutePath,
   );
   if (sessionFiles.length === 0) {
@@ -1154,7 +1154,7 @@ export function resumeWithNoArgs() {
   return null;
 }
 
-export function resume(rawInput: string) {
+export async function resume(rawInput: string) {
   const parts = rawInput.split(/\s+/);
 
   if (parts.length !== 2) {
@@ -1169,7 +1169,7 @@ export function resume(rawInput: string) {
     return null;
   }
 
-  const sessionFiles = listSessionFiles();
+  const sessionFiles = await listSessionFiles();
   for (const { absolutePath, timestampMs } of sessionFiles) {
     if (timestampMs !== Number(sessionStartDate)) continue;
     const success = resumeFromSessionFile(absolutePath);
