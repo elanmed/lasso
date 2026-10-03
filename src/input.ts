@@ -5,6 +5,7 @@ import { Writable } from "node:stream";
 import { dirname, join } from "node:path";
 import childProcess from "node:child_process";
 import os from "node:os";
+import { transcribe } from "ai";
 import type { AssistantContent, Tool } from "ai";
 import { assertAtBuildtime } from "./assert.ts";
 import {
@@ -68,6 +69,8 @@ import {
   syncSessionFile,
 } from "./log.ts";
 import { harnessTools } from "./tools.ts";
+import { MISSING } from "./missing.ts";
+import { getTranscriptionProvider } from "./model.ts";
 
 // https://stackoverflow.com/a/33500118
 const mutedStdout = new Writable({
@@ -298,6 +301,7 @@ export function initKeypress() {
           case "usage":
           case "tokens":
           case "resume":
+          case "record":
           case "clear": {
             if (getState().abortControllers.question !== null) {
               typeCommand(command);
@@ -729,6 +733,19 @@ async function resolveBuiltinSlashCommand(
     case "tools": {
       await pageTools();
       return { handled: true, inputFromCommand: null };
+    }
+    case "record": {
+      const inputFromCommand = recordAndTranscribeInput();
+      if (inputFromCommand !== null) {
+        syncSessionFile({
+          transcript: getAppendedTranscript({
+            message: inputFromCommand,
+            role: "user",
+            timestamp: Date.now(),
+          }),
+        });
+      }
+      return { handled: true, inputFromCommand };
     }
     default: {
       command satisfies never;
@@ -1562,4 +1579,99 @@ ${formattedHarnessTools.concat(formattedMCPTools).join("\n")}`;
     initialContentStr,
     contentType: "markdown",
   });
+}
+
+export function recordAndTranscribeInput() {
+  const rl = getState().app.rl;
+  assertAtBuildtime(rl !== null);
+
+  const { transcriptionModel, transcriptionSdkProvider } = getState().config;
+  if (
+    transcriptionModel === undefined ||
+    transcriptionSdkProvider === undefined
+  ) {
+    print.error(
+      "The `transcriptionSdkProvider` and `transcriptionModel` config options are required for /record",
+    );
+    return null;
+  }
+
+  const abortController = new AbortController();
+  actions.setRecordProcessAbortController(abortController);
+
+  const tempFile = getTempFileName();
+  if (tempFile === null) {
+    print.error("Error creating a time file to write the recording to");
+    return null;
+  }
+
+  // WIP
+  // recordInput(tempFile);
+  // const finishRecordingResult = await tryCatchAsync(
+  //   rl.question("Press enter to stop recording", {
+  //     signal: abortController.signal,
+  //   }),
+  // );
+
+  actions.setRecordProcessAbortController(null);
+  return "[Recording not yet implemented]";
+
+  // WIP
+  // if (!finishRecordingResult.ok) {
+  //   if (isAbortError(finishRecordingResult.error)) {
+  //     // TODO: print error
+  //     // TODO: delete temp file
+  //     return null;
+  //   } else {
+  //     // TODO: print error
+  //     return null;
+  //   }
+  // }
+  //
+  // const readResult = tryCatch(() => fsDeps.readFileSync(tempFile));
+  // if (!readResult.ok) {
+  //   // TODO: print error
+  //   return null;
+  // }
+  //
+  // const transcribeResult = await tryCatchAsync(
+  //   transcribeInput(readResult.value),
+  // );
+  // if (!transcribeResult.ok) {
+  //   // TODO: print error
+  //   return null;
+  // }
+  //
+  // return transcribeResult.value;
+}
+
+// WIP
+export function recordInput(tempFile: string) {
+  const abortController = getState().abortControllers.recordProcess;
+  assertAtBuildtime(abortController !== null);
+  const recordingProcess = childProcess.spawn(
+    "sox",
+    ["-d", "-r", "16000", "-c", "1", "-b", "16", tempFile],
+    { stdio: "ignore" },
+  );
+  abortController.signal.addEventListener(
+    "abort",
+    () => recordingProcess.kill("SIGINT"),
+    {
+      once: true,
+    },
+  );
+}
+
+// WIP
+export async function transcribeInput(buffer: Buffer): Promise<string> {
+  const { transcriptionModel } = getState().config;
+  assertAtBuildtime(transcriptionModel !== undefined);
+
+  const { text } = await transcribe({
+    model: getTranscriptionProvider().transcription(transcriptionModel),
+    audio: buffer,
+  });
+
+  return text;
 }

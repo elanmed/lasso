@@ -7,6 +7,7 @@ import { actions, getState, promptDeps } from "./state.ts";
 import { strToApproxTokens } from "./utils.ts";
 import {
   parseInputFromEditor,
+  recordAndTranscribeInput,
   resolveSlashCommand,
   resolveUserInput,
   shouldResolveSlashCommand,
@@ -2048,6 +2049,7 @@ editor input
 - /lastdiff
 - /summaries
 - /tools
+- /record
 - /test/.lasso/commands/custom.md
 
 `,
@@ -2438,6 +2440,7 @@ editor input
 - /lastdiff
 - /summaries
 - /tools
+- /record
 - /test/.lasso/commands/custom.md
 
 `,
@@ -2618,6 +2621,32 @@ editor input
       });
     });
 
+    describe("record commands", () => {
+      it("handles /record command and logs the recording to the transcript", async () => {
+        actions.setTranscriptionSdkProvider("openai");
+        actions.setTranscriptionModel("gpt-4o-transcribe");
+        actions.resetStdout();
+        const result = await resolveSlashCommand("/record");
+        assert.strictEqual(result, "[Recording not yet implemented]");
+        assert.deepStrictEqual(getState().app.transcript, [
+          {
+            timestamp: 0,
+            role: "user",
+            message: "[Recording not yet implemented]",
+          },
+        ]);
+      });
+
+      it("handles /record command without transcription config by printing an error", async () => {
+        actions.resetStdout();
+        const result = await resolveSlashCommand("/record");
+        assert.strictEqual(result, null);
+        assert.deepStrictEqual(getWrites(), [
+          `${RED}The \`transcriptionSdkProvider\` and \`transcriptionModel\` config options are required for /record${RESET}\n`,
+        ]);
+      });
+    });
+
     describe("paging commands", () => {
       it("handles /history command by opening chat history in a pager", async () => {
         testProcessEnv._set("LASSO_PAGER", "nano __FILE__");
@@ -2726,6 +2755,7 @@ log content
 - /lastdiff
 - /summaries
 - /tools
+- /record
 
 `,
         );
@@ -3325,9 +3355,33 @@ custom command content`,
         assert.deepStrictEqual(getWrites(), [
           "\n",
           `${RED}Invalid command: /unknown, valid commands:${RESET}\n`,
-          "- /edit\n- /editpage\n- /history\n- /clear\n- /paste\n- /model\n- /skills\n- /context\n- /commands\n- /keymaps\n- /usage\n- /tokens\n- /resume\n- /config\n- /reload\n- /initlocal\n- /initglobal\n- /lastresponse\n- /lastmessage\n- /lastdiff\n- /summaries\n- /tools\n- /test-cwd/.lasso/commands/known.md\n",
+          "- /edit\n- /editpage\n- /history\n- /clear\n- /paste\n- /model\n- /skills\n- /context\n- /commands\n- /keymaps\n- /usage\n- /tokens\n- /resume\n- /config\n- /reload\n- /initlocal\n- /initglobal\n- /lastresponse\n- /lastmessage\n- /lastdiff\n- /summaries\n- /tools\n- /record\n- /test-cwd/.lasso/commands/known.md\n",
         ]);
       });
+    });
+  });
+
+  describe("recordAndTranscribeInput", () => {
+    beforeEach(() => {
+      actions.setRl(makeFakeRl({ line: "" }));
+    });
+
+    it("returns the result and sets the record process abort controller", () => {
+      actions.setTranscriptionSdkProvider("openai");
+      actions.setTranscriptionModel("gpt-4o-transcribe");
+      const result = recordAndTranscribeInput();
+      assert.strictEqual(result, "[Recording not yet implemented]");
+      assert.strictEqual(getState().abortControllers.recordProcess, null);
+    });
+
+    it("returns null and prints an error without transcription config", () => {
+      actions.resetStdout();
+      const result = recordAndTranscribeInput();
+      assert.strictEqual(result, null);
+      assert.deepStrictEqual(getWrites(), [
+        `${RED}The \`transcriptionSdkProvider\` and \`transcriptionModel\` config options are required for /record${RESET}\n`,
+      ]);
+      assert.strictEqual(getState().abortControllers.recordProcess, null);
     });
   });
 
