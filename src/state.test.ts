@@ -93,6 +93,9 @@ skills body`,
         model: MISSING,
         baseURL: undefined,
         sdkProvider: MISSING,
+        transcriptionSdkProvider: "google",
+        transcriptionModel: MISSING,
+        transcriptionBaseURL: undefined,
         gateway: undefined,
         pricingPerModel: structuredClone(defaultConfig.pricingPerModel),
         contextWindowPerModel: structuredClone(
@@ -124,6 +127,7 @@ skills body`,
         question: null,
         apiStream: null,
         interruptWithEditorContent: null,
+        recordProcess: null,
       });
     };
 
@@ -162,6 +166,9 @@ skills body`,
       actions.setModel("claude-haiku-4-5");
       actions.setSubagentModels(["fast-model"]);
       actions.setSdkProvider("anthropic");
+      actions.setTranscriptionSdkProvider("openai");
+      actions.setTranscriptionModel("gpt-4o-transcribe");
+      actions.setTranscriptionBaseURL("https://api.example.com");
       actions.setGateway("opencode");
       actions.setBaseURL("https://api.example.com");
       actions.setPricingPerModel({
@@ -180,6 +187,7 @@ skills body`,
       actions.setQuestionAbortController(new AbortController());
       actions.setApiStreamAbortController(new AbortController());
       actions.setInterruptWithEditorAbortController(new AbortController());
+      actions.setRecordProcessAbortController(new AbortController());
       actions.resetState();
       clearTimeout(timeout);
 
@@ -211,6 +219,45 @@ skills body`,
       assert.deepStrictEqual(getState().app.transcript, [
         { timestamp: 0, role: "user", message: "hello" },
       ]);
+    });
+  });
+
+  describe("transcribe settings", () => {
+    it("set-transcription-sdk-provider", () => {
+      assert.equal(getState().config.transcriptionSdkProvider, "google");
+      actions.setTranscriptionSdkProvider("openai");
+      assert.equal(getState().config.transcriptionSdkProvider, "openai");
+    });
+
+    it("set-transcription-model", () => {
+      assert.equal(getState().config.transcriptionModel, MISSING);
+      actions.setTranscriptionModel("gpt-4o-transcribe");
+      actions.setTranscriptionBaseURL("https://api.example.com");
+      assert.equal(getState().config.transcriptionModel, "gpt-4o-transcribe");
+    });
+  });
+
+  describe("transcription settings", () => {
+    it("set-transcription-sdk-provider", () => {
+      assert.equal(getState().config.transcriptionSdkProvider, "google");
+      actions.setTranscriptionSdkProvider("openai");
+      assert.equal(getState().config.transcriptionSdkProvider, "openai");
+    });
+
+    it("set-transcription-model", () => {
+      assert.equal(getState().config.transcriptionModel, MISSING);
+      actions.setTranscriptionModel("gpt-4o-transcribe");
+      actions.setTranscriptionBaseURL("https://api.example.com");
+      assert.equal(getState().config.transcriptionModel, "gpt-4o-transcribe");
+    });
+
+    it("set-transcription-base-url", () => {
+      assert.equal(getState().config.transcriptionBaseURL, undefined);
+      actions.setTranscriptionBaseURL("https://api.example.com/v1");
+      assert.equal(
+        getState().config.transcriptionBaseURL,
+        "https://api.example.com/v1",
+      );
     });
   });
 
@@ -351,6 +398,13 @@ skills body`,
         getState().abortControllers.interruptWithEditorContent,
         controller,
       );
+    });
+
+    it("set-record-process-abort-controller", () => {
+      assert.equal(getState().abortControllers.recordProcess, null);
+      const controller = new AbortController();
+      actions.setRecordProcessAbortController(controller);
+      assert.equal(getState().abortControllers.recordProcess, controller);
     });
 
     it("set-editor-input-value", () => {

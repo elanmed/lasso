@@ -111,6 +111,7 @@ interface State {
     question: AbortController | null;
     apiStream: AbortController | null;
     interruptWithEditorContent: AbortController | null;
+    recordProcess: AbortController | null;
   };
 }
 
@@ -154,6 +155,9 @@ const createInitialState = (): State => ({
     model: MISSING,
     baseURL: undefined,
     sdkProvider: defaultConfig.sdkProvider,
+    transcriptionSdkProvider: defaultConfig.transcriptionSdkProvider,
+    transcriptionModel: defaultConfig.transcriptionModel,
+    transcriptionBaseURL: defaultConfig.transcriptionBaseURL,
     gateway: undefined,
     pricingPerModel: structuredClone(defaultConfig.pricingPerModel),
     contextWindowPerModel: structuredClone(defaultConfig.contextWindowPerModel),
@@ -185,6 +189,7 @@ const createInitialState = (): State => ({
     question: null,
     apiStream: null,
     interruptWithEditorContent: null,
+    recordProcess: null,
   },
 });
 
@@ -277,6 +282,18 @@ export const actions = {
     );
   },
 
+  setTranscriptionSdkProvider(provider: "google" | "openai") {
+    const before = state.config.transcriptionSdkProvider;
+    state.config.transcriptionSdkProvider = provider;
+    logStateChange("set-transcription-sdk-provider", before, provider);
+  },
+
+  setTranscriptionModel(model: string) {
+    const before = state.config.transcriptionModel;
+    state.config.transcriptionModel = model;
+    logStateChange("set-transcription-model", before, model);
+  },
+
   setSdkProvider(sdkProvider: SdkProvider) {
     const before = state.config.sdkProvider;
     state.config.sdkProvider = sdkProvider;
@@ -293,6 +310,12 @@ export const actions = {
     const before = state.config.baseURL;
     state.config.baseURL = baseURL;
     logStateChange("set-base-url", String(before), baseURL);
+  },
+
+  setTranscriptionBaseURL(baseURL: string) {
+    const before = state.config.transcriptionBaseURL;
+    state.config.transcriptionBaseURL = baseURL;
+    logStateChange("set-transcription-base-url", String(before), baseURL);
   },
 
   setPricingPerModel(pricing: Record<string, ModelPricing>) {
@@ -346,6 +369,16 @@ export const actions = {
     state.abortControllers.interruptWithEditorContent = controller;
     logStateChange(
       "set-interrupt-with-editor-abort-controller",
+      String(before),
+      String(controller),
+    );
+  },
+
+  setRecordProcessAbortController(controller: AbortController | null) {
+    const before = state.abortControllers.recordProcess;
+    state.abortControllers.recordProcess = controller;
+    logStateChange(
+      "set-record-process-abort-controller",
       String(before),
       String(controller),
     );
