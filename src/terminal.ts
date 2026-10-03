@@ -1,6 +1,5 @@
-import childProcess from "node:child_process";
 import { format } from "prettier";
-import { processDeps } from "./deps.ts";
+import { childProcessDeps, processDeps } from "./deps.ts";
 import { actions, getState } from "./state.ts";
 import {
   execPromise,
@@ -41,7 +40,7 @@ export const markdownBatFlags = ["--language", "md", "--italic-text=always"];
 
 function spawnBat(input: string) {
   return tryCatch(() =>
-    childProcess.spawnSync(
+    childProcessDeps.spawnSync(
       "bat",
       [...baseBatFlags(), ...markdownBatFlags, "--paging=never", "-"],
       {
@@ -129,7 +128,7 @@ export function openWithPager({
     return `less "${tempFile}"`;
   })();
 
-  childProcess.spawnSync(pagerCommand, {
+  childProcessDeps.spawnSync(pagerCommand, {
     shell: true,
     stdio: "inherit",
   });

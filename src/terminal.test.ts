@@ -1,7 +1,6 @@
 import { describe, it, beforeEach, afterEach, mock } from "node:test";
 import assert from "node:assert";
-import childProcess from "node:child_process";
-import { fsDeps } from "./deps.ts";
+import { childProcessDeps, fsDeps } from "./deps.ts";
 import { getGlobalConfigPath, getLocalConfigPath } from "./paths.ts";
 import { actions, getState } from "./state.ts";
 import {
@@ -106,7 +105,7 @@ describe("terminal", () => {
 
       it("spawns pager with shell and inherit stdio", () => {
         let spawnArgs: unknown[] = [];
-        mock.method(childProcess, "spawnSync", (...args: unknown[]) => {
+        mock.method(childProcessDeps, "spawnSync", (...args: unknown[]) => {
           spawnArgs = args;
         });
         openWithPager({

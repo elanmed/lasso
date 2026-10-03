@@ -13,6 +13,15 @@ import childProcess from "node:child_process";
 import { generateText, isLoopFinished } from "ai";
 import { createMCPClient } from "@ai-sdk/mcp";
 
+export const childProcessDeps = {
+  execFileSync: childProcess.execFileSync,
+  exec: childProcess.exec,
+  spawn: childProcess.spawn,
+  spawnSync: childProcess.spawnSync,
+};
+
+export type ChildProcessDeps = typeof childProcessDeps;
+
 export const fsDeps = {
   readFileSync,
   writeFileSync,
@@ -30,7 +39,7 @@ function gitLsFiles(regex: string) {
   const stdin = "ignore";
   const stdout = "pipe";
   const stderr = "pipe";
-  return childProcess
+  return childProcessDeps
     .execFileSync(
       "git",
       [
@@ -47,8 +56,6 @@ function gitLsFiles(regex: string) {
     .split("\0")
     .filter(Boolean);
 }
-
-export type FsDeps = typeof fsDeps;
 
 export const processDeps = {
   env: {

@@ -1,6 +1,5 @@
 import { describe, it, beforeEach, afterEach, mock } from "node:test";
 import assert from "node:assert";
-import childProcess from "node:child_process";
 import os from "node:os";
 import { actions, getState, promptDeps } from "./state.ts";
 
@@ -63,7 +62,7 @@ import {
   makeErrnoError,
   mockProcessExit,
 } from "./test-helpers.ts";
-import { fsDeps } from "./deps.ts";
+import { childProcessDeps, fsDeps } from "./deps.ts";
 import { getGlobalConfigPath, getGlobalContextDir } from "./paths.ts";
 import { defaultConfig } from "./config-types.ts";
 
@@ -314,7 +313,7 @@ describe("input", () => {
     beforeEach(() => {
       spawned = [];
       actions.setRl(makeFakeRl({ line: "" }));
-      mock.method(childProcess, "spawnSync", (cmd: string) => {
+      mock.method(childProcessDeps, "spawnSync", (cmd: string) => {
         spawned.push(cmd);
       });
     });
@@ -343,7 +342,7 @@ describe("input", () => {
       });
 
       it("returns null and cleans up when readFile fails", async () => {
-        mock.method(childProcess, "spawnSync", () => {
+        mock.method(childProcessDeps, "spawnSync", () => {
           testFs.writeFileSync("/tmp/lasso-test-uuid.txt", "modified");
         });
         mock.method(fsDeps, "readFileSync", () => {
@@ -360,7 +359,7 @@ describe("input", () => {
 
     describe("processes the editor result", () => {
       it("returns null when editor returns empty content", async () => {
-        mock.method(childProcess, "spawnSync", () => {
+        mock.method(childProcessDeps, "spawnSync", () => {
           testFs.writeFileSync("/tmp/lasso-test-uuid.txt", "");
         });
         const result = await spawnAndReadEditorContent();
@@ -369,7 +368,7 @@ describe("input", () => {
 
       it("clears the editor input value and returns null when the editor result is whitespace only", async () => {
         actions.setEditorInputValue("prefill");
-        mock.method(childProcess, "spawnSync", () => {
+        mock.method(childProcessDeps, "spawnSync", () => {
           testFs.writeFileSync("/tmp/lasso-test-uuid.txt", "   \n\t");
         });
         const result = await spawnAndReadEditorContent();
@@ -378,7 +377,7 @@ describe("input", () => {
       });
 
       it("returns null without state changes when the editor result is whitespace only and there was no prefill", async () => {
-        mock.method(childProcess, "spawnSync", () => {
+        mock.method(childProcessDeps, "spawnSync", () => {
           testFs.writeFileSync("/tmp/lasso-test-uuid.txt", "   ");
         });
         const result = await spawnAndReadEditorContent();
@@ -387,7 +386,7 @@ describe("input", () => {
       });
 
       it("returns normalized content", async () => {
-        mock.method(childProcess, "spawnSync", () => {
+        mock.method(childProcessDeps, "spawnSync", () => {
           testFs.writeFileSync("/tmp/lasso-test-uuid.txt", "  hello  ");
         });
         const result = await spawnAndReadEditorContent();
@@ -397,7 +396,7 @@ describe("input", () => {
 
       it("returns normalized content when editor saves unchanged content", async () => {
         actions.setRl(makeFakeRl({ line: "hello" }));
-        mock.method(childProcess, "spawnSync", () => {
+        mock.method(childProcessDeps, "spawnSync", () => {
           testFs.writeFileSync("/tmp/lasso-test-uuid.txt", "hello");
         });
         const result = await spawnAndReadEditorContent();
@@ -434,7 +433,7 @@ describe("input", () => {
       it("includes clipboard content when includeClipboardSuffix is true", async () => {
         actions.setRl(makeFakeRl({ line: "hello " }));
         mockClipboardPaste("world");
-        mock.method(childProcess, "spawnSync", () => {
+        mock.method(childProcessDeps, "spawnSync", () => {
           testFs.writeFileSync(
             "/tmp/lasso-test-uuid.txt",
             "  hello world modified  \n",
@@ -449,7 +448,7 @@ describe("input", () => {
       it("returns content when includeClipboardSuffix is true and editor saves unchanged content", async () => {
         actions.setRl(makeFakeRl({ line: "query" }));
         mockClipboardPaste("clip");
-        mock.method(childProcess, "spawnSync", () => {
+        mock.method(childProcessDeps, "spawnSync", () => {
           testFs.writeFileSync("/tmp/lasso-test-uuid.txt", "queryclip");
         });
         const result = await spawnAndReadEditorContent({
@@ -483,7 +482,7 @@ describe("input", () => {
         actions.setRl(makeFakeRl({ line: "hello " }));
         mockClipboardPasteFailure(new Error("boom"));
         let initialEditorContent = "";
-        mock.method(childProcess, "spawnSync", () => {
+        mock.method(childProcessDeps, "spawnSync", () => {
           initialEditorContent = testFs
             .readFileSync("/tmp/lasso-test-uuid.txt")
             .toString();
@@ -2163,7 +2162,7 @@ editor input
         mock.method(harness.rl, "prompt", (arg: boolean) => {
           prompts.push(arg);
         });
-        mock.method(childProcess, "spawnSync", () => {
+        mock.method(childProcessDeps, "spawnSync", () => {
           testFs.writeFileSync("/tmp/lasso-test-uuid.txt", "  edited  ");
         });
         harness.emitKey({ name: "g", ctrl: true });
@@ -2178,7 +2177,7 @@ editor input
           paste: { name: "v", ctrl: true },
         });
         mockClipboardPaste("world");
-        mock.method(childProcess, "spawnSync", () => {
+        mock.method(childProcessDeps, "spawnSync", () => {
           testFs.writeFileSync(
             "/tmp/lasso-test-uuid.txt",
             "  hello world modified  \n",
@@ -2197,7 +2196,7 @@ editor input
         mock.method(harness.rl, "prompt", (arg: boolean) => {
           prompts.push(arg);
         });
-        mock.method(childProcess, "spawnSync", () => {
+        mock.method(childProcessDeps, "spawnSync", () => {
           testFs.writeFileSync("/tmp/lasso-test-uuid.txt", "");
         });
         harness.emitKey({ name: "g", ctrl: true });
@@ -2550,7 +2549,7 @@ editor input
       });
 
       it("handles /edit command and logs editor content to the transcript", async () => {
-        mock.method(childProcess, "spawnSync", () => {
+        mock.method(childProcessDeps, "spawnSync", () => {
           testFs.writeFileSync("/tmp/lasso-test-uuid.txt", "from editor");
         });
         const result = await resolveSlashCommand("/edit");
@@ -2562,7 +2561,7 @@ editor input
 
       it("handles /paste command and logs editor content to the transcript", async () => {
         mockClipboardPaste("clip");
-        mock.method(childProcess, "spawnSync", () => {
+        mock.method(childProcessDeps, "spawnSync", () => {
           testFs.writeFileSync("/tmp/lasso-test-uuid.txt", "pasted content");
         });
         const result = await resolveSlashCommand("/paste");

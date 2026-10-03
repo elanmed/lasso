@@ -1,11 +1,10 @@
 import { basename, extname, join } from "node:path";
 import os from "node:os";
 import crypto from "node:crypto";
-import childProcess from "node:child_process";
 import type { AssistantContent } from "ai";
 import type { ModelMessage } from "./state.ts";
 import { assertAtRuntime } from "./assert.ts";
-import { fsDeps, processDeps } from "./deps.ts";
+import { childProcessDeps, fsDeps, processDeps } from "./deps.ts";
 import { getSessionDir } from "./paths.ts";
 import type { Color } from "./print.ts";
 
@@ -148,7 +147,7 @@ export function execPromise(
   options?: { signal?: AbortSignal },
 ): Promise<{ stdout: string; stderr: string }> {
   return new Promise((resolve, reject) => {
-    const child = childProcess.exec(
+    const child = childProcessDeps.exec(
       command,
       { encoding: "utf8", ...options },
       (error, stdout, stderr) => {

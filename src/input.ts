@@ -3,7 +3,6 @@ import { emitKeypressEvents } from "node:readline";
 import { stdin, stdout } from "node:process";
 import { Writable } from "node:stream";
 import { dirname, join } from "node:path";
-import childProcess from "node:child_process";
 import os from "node:os";
 import { transcribe } from "ai";
 import type { AssistantContent, Tool } from "ai";
@@ -52,7 +51,7 @@ import {
 import { actions, getState } from "./state.ts";
 import { initStateRepeatable } from "./config.ts";
 import { isSameKey, type Key } from "./config-types.ts";
-import { fsDeps, processDeps } from "./deps.ts";
+import { childProcessDeps, fsDeps, processDeps } from "./deps.ts";
 import { getGlobalConfigPath, getLocalConfigPath } from "./paths.ts";
 import { contextFileSkillNamePrefix } from "./context.ts";
 import { execGitDiff } from "./differ.ts";
@@ -972,7 +971,7 @@ export async function spawnAndReadEditorContent(opts?: {
 
   const statBefore = tryCatch(() => fsDeps.statSync(tempFile));
 
-  childProcess.spawnSync(editCommand, {
+  childProcessDeps.spawnSync(editCommand, {
     shell: true,
     stdio: "inherit",
   });
@@ -1672,7 +1671,7 @@ ${formattedMessages}`;
 export function recordInput(tempFile: string) {
   const abortController = getState().abortControllers.recordProcess;
   assertAtBuildtime(abortController !== null);
-  const recordingProcess = childProcess.spawn(
+  const recordingProcess = childProcessDeps.spawn(
     "sox",
     ["-d", "-r", "16000", "-c", "1", "-b", "16", tempFile],
     { stdio: "ignore" },

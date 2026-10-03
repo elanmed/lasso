@@ -1,7 +1,6 @@
 import os from "node:os";
-import childProcess from "node:child_process";
 import { assertAtRuntime } from "./assert.ts";
-import { fsDeps } from "./deps.ts";
+import { childProcessDeps, fsDeps } from "./deps.ts";
 import { fencePrint } from "./fence.ts";
 import { print, printNewline } from "./print.ts";
 import {
@@ -30,7 +29,7 @@ export async function execGitDiff(opts: {
     ? `${base} | delta --paging=never --line-numbers --hunk-header-style=omit --file-style=${fileStyle}`
     : base;
   return new Promise((resolve, reject) => {
-    childProcess.exec(
+    childProcessDeps.exec(
       command,
       { cwd: os.tmpdir() },
       (error, stdout, stderr) => {

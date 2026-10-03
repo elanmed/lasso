@@ -1,6 +1,5 @@
 import os from "node:os";
 import crypto from "node:crypto";
-import childProcess from "node:child_process";
 import { mock } from "node:test";
 import assert from "node:assert";
 import readline from "node:readline/promises";
@@ -8,7 +7,13 @@ import { stdin } from "node:process";
 import { z } from "zod";
 import type { ModelMessage, ToolSet } from "ai";
 import type { MCPClient } from "@ai-sdk/mcp";
-import { aiDeps, fsDeps, mcpDeps, processDeps } from "./deps.ts";
+import {
+  aiDeps,
+  childProcessDeps,
+  fsDeps,
+  mcpDeps,
+  processDeps,
+} from "./deps.ts";
 import { actions, promptDeps, type SessionFile } from "./state.ts";
 import { initKeypress } from "./input.ts";
 import type { Key, Mcp, SdkProvider } from "./config-types.ts";
@@ -279,6 +284,13 @@ export function setupTestContext({
   mock.method(processDeps.stdout, "write", () => true);
   mock.method(processDeps.stdout, "isTTY", () => true);
   mock.method(processDeps.stderr, "write", () => true);
+  mock.method(childProcessDeps, "execFileSync", () => "");
+  mock.method(childProcessDeps, "spawn", () => undefined);
+  mock.method(childProcessDeps, "spawnSync", () => ({
+    status: 0,
+    stdout: "",
+    stderr: "",
+  }));
   mock.method(os, "homedir", () => "/fake-home");
   mock.method(os, "tmpdir", () => "/tmp");
   mock.method(
@@ -407,7 +419,7 @@ export function mockExec(opts: {
   const impl = (_cmd: string, _opts: unknown, cb: ExecCallback) => {
     cb(error ?? null, stdout, "");
   };
-  const m = mock.method(childProcess, "exec", impl);
+  const m = mock.method(childProcessDeps, "exec", impl);
   if (once === true) {
     m.mock.mockImplementationOnce(impl);
   }
@@ -420,7 +432,7 @@ export function mockExecCalls(
 ) {
   const queue = [...calls];
   mock.method(
-    childProcess,
+    childProcessDeps,
     "exec",
     (cmd: string, _opts: unknown, cb: ExecCallback) => {
       commands?.push(cmd);
@@ -476,7 +488,7 @@ export function mockSpawnSync(
 ) {
   const { result, error, echoInput } = opts;
   mock.method(
-    childProcess,
+    childProcessDeps,
     "spawnSync",
     (_cmd: string, _args: readonly string[], options: { input?: string }) => {
       if (error !== undefined) {
@@ -496,7 +508,7 @@ export function mockSpawnSync(
 
 export function mockPagerSpawn() {
   const spawned: string[] = [];
-  mock.method(childProcess, "spawnSync", (cmd: string) => {
+  mock.method(childProcessDeps, "spawnSync", (cmd: string) => {
     spawned.push(cmd);
   });
   return { spawned };
