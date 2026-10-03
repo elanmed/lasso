@@ -1,11 +1,14 @@
+import { existsSync } from "node:fs";
 import {
-  readFileSync,
-  writeFileSync,
-  existsSync,
-  mkdirSync,
-  unlinkSync,
-} from "node:fs";
-import { appendFile, glob as globAsync, readdir, stat } from "node:fs/promises";
+  appendFile,
+  glob as globAsync,
+  mkdir,
+  readFile,
+  readdir,
+  stat,
+  unlink,
+  writeFile,
+} from "node:fs/promises";
 import childProcess, {
   type ExecFileOptionsWithStringEncoding,
   type ExecOptionsWithStringEncoding,
@@ -46,12 +49,12 @@ export const childProcessDeps = {
 export type ChildProcessDeps = typeof childProcessDeps;
 
 export const fsDeps = {
-  readFileSync,
-  writeFileSync,
+  readFile,
+  writeFile,
   existsSync,
   readdir,
-  mkdirSync,
-  unlinkSync,
+  mkdir,
+  unlink,
   appendFile,
   stat,
   glob,

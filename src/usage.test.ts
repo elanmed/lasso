@@ -297,9 +297,9 @@ describe("usage", () => {
 
       it("warns and preserves state when the usage log directory cannot be created", async () => {
         mock.method(fsDeps, "existsSync", () => false);
-        mock.method(fsDeps, "mkdirSync", () => {
-          throw new Error("Permission denied");
-        });
+        mock.method(fsDeps, "mkdir", () =>
+          Promise.reject(new Error("Permission denied")),
+        );
         const getWrites = mockStdoutWrites();
         const usage = {
           inputTokens: 10,
@@ -373,6 +373,7 @@ describe("usage", () => {
       });
 
       it("serializes concurrent same-process calls and keeps every usage", async () => {
+        testFs._dirs.add(dirname(getUsageLogPath()));
         const firstUsage = {
           inputTokens: 10,
           outputTokens: 5,
@@ -423,18 +424,14 @@ describe("usage", () => {
       });
 
       it("appends to state even when the write fails", async () => {
-        const realWrite = testFs.writeFileSync;
-        mock.method(
-          fsDeps,
-          "writeFileSync",
-          (path: string, content: string) => {
-            if (path === getUsageLogLockPath()) {
-              realWrite(path, content);
-              return;
-            }
-            throw new Error("write failed");
-          },
-        );
+        const realWrite = testFs.writeFile;
+        mock.method(fsDeps, "writeFile", (path: string, content: string) => {
+          if (path === getUsageLogLockPath()) {
+            realWrite(path, content);
+            return;
+          }
+          return Promise.reject(new Error("write failed"));
+        });
         const usage = {
           inputTokens: 10,
           outputTokens: 5,
@@ -784,9 +781,9 @@ describe("usage", () => {
 
     it("overwrites an unreadable usage log with an empty object and releases the lock", async () => {
       testFs._dirs.add(dirname(getUsageLogPath()));
-      mock.method(fsDeps, "readFileSync", () => {
-        throw makeErrnoError("EIO");
-      });
+      mock.method(fsDeps, "readFile", () =>
+        Promise.reject(makeErrnoError("EIO")),
+      );
 
       await syncInitialModelUsageForLimitWindow();
 

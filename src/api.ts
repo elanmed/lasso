@@ -63,7 +63,9 @@ export async function resolveApiCall(userInput: string) {
 
   const systemContent = promptDeps.getSystemContent();
 
-  syncSessionFile({ messages: getAppendedConversationMessages(userMessage) });
+  await syncSessionFile({
+    messages: getAppendedConversationMessages(userMessage),
+  });
 
   actions.resetToolEditDiffs();
   actions.setApiStartTime();
@@ -78,13 +80,13 @@ export async function resolveApiCall(userInput: string) {
       tools: getBaseAgentTools(),
       stopWhen: aiDeps.isLoopFinished(),
       abortSignal: getApiStreamAbortSignal(),
-      onToolExecutionStart: ({ toolCall }) => {
+      onToolExecutionStart: async ({ toolCall }) => {
         switch (toolCall.toolName) {
           case "bash": {
             const input = bashToolInputSchema.parse(toolCall.input);
             toolPrint("bash", input.command);
             if (input.fileSystemAccessType === "create-update-delete") {
-              toolCallDiffer.setTempFileBefore(
+              await toolCallDiffer.setTempFileBefore(
                 toolCall.toolCallId,
                 input.filePath,
               );
@@ -127,7 +129,7 @@ export async function resolveApiCall(userInput: string) {
         const bashSchemaResult = bashToolInputSchema.parse(toolCall.input);
         if (bashSchemaResult.fileSystemAccessType === "create-update-delete") {
           if (!success) {
-            toolCallDiffer.cleanupTempFileBefore(toolCall.toolCallId);
+            await toolCallDiffer.cleanupTempFileBefore(toolCall.toolCallId);
             return;
           }
           await toolCallDiffer.diffAndCleanup(
@@ -144,7 +146,7 @@ export async function resolveApiCall(userInput: string) {
 
   if (!generateTextResult.ok) {
     actions.setPromptTokensDirty(true);
-    toolCallDiffer.cleanupAllTempFileBefore();
+    await toolCallDiffer.cleanupAllTempFileBefore();
 
     if (isAbortError(generateTextResult.error)) {
       const interruptContent = "[Interrupted before a response was generated]";
@@ -153,7 +155,7 @@ export async function resolveApiCall(userInput: string) {
         content: interruptContent,
       };
 
-      syncSessionFile({
+      await syncSessionFile({
         messages: getAppendedConversationMessages(interruptMessage),
       });
 
@@ -177,7 +179,7 @@ export async function resolveApiCall(userInput: string) {
   actions.setPromptTokens(inputTokens + outputTokens);
   actions.setPromptTokensDirty(false);
 
-  syncSessionFile({
+  await syncSessionFile({
     transcript: getAppendedTranscript({
       message: text,
       role: "assistant",
@@ -372,8 +374,8 @@ export async function getConversationSummary() {
   return summary;
 }
 
-function applyCompactedConversation(summaries: ModelSummary[]) {
-  syncSessionFile({
+async function applyCompactedConversation(summaries: ModelSummary[]) {
+  await syncSessionFile({
     messages: summaries.map(({ compacted }) => ({
       content: compacted,
       role: "assistant",
@@ -409,7 +411,7 @@ export async function maybeCompact(userInput: string) {
   // If merging the existing summaries failed, use existing summaries
   const mergedSummaries = await getMergedSummaries();
 
-  applyCompactedConversation([...mergedSummaries, conversationSummary]);
+  await applyCompactedConversation([...mergedSummaries, conversationSummary]);
 
   const summaryTokens = getState()
     .app.conversation.summaries.map(({ tokens }) => tokens)

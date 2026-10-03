@@ -96,7 +96,7 @@ export interface GetTempFileNameArgs {
   initialContentStr?: string | undefined;
 }
 
-export function getTempFileName(args?: GetTempFileNameArgs) {
+export async function getTempFileName(args?: GetTempFileNameArgs) {
   const { pathPrefix, initialContentPath, initialContentStr } = args ?? {};
   assertAtRuntime(
     initialContentPath === undefined || initialContentStr === undefined,
@@ -111,18 +111,18 @@ export function getTempFileName(args?: GetTempFileNameArgs) {
     const existsResult = tryCatch(() => fsDeps.existsSync(initialContentPath));
     if (!existsResult.ok) return null;
     if (!existsResult.value) {
-      const writeResult = tryCatch(() => fsDeps.writeFileSync(tempFile, ""));
+      const writeResult = await tryCatchAsync(fsDeps.writeFile(tempFile, ""));
       if (!writeResult.ok) return null;
       return tempFile;
     }
 
-    const readResult = tryCatch(() =>
-      fsDeps.readFileSync(initialContentPath).toString(),
+    const readResult = await tryCatchAsync(
+      fsDeps.readFile(initialContentPath, "utf8"),
     );
     if (!readResult.ok) return null;
 
-    const writeResult = tryCatch(() =>
-      fsDeps.writeFileSync(tempFile, readResult.value),
+    const writeResult = await tryCatchAsync(
+      fsDeps.writeFile(tempFile, readResult.value),
     );
     if (!writeResult.ok) return null;
 
@@ -130,14 +130,14 @@ export function getTempFileName(args?: GetTempFileNameArgs) {
   }
 
   if (initialContentStr !== undefined) {
-    const writeResult = tryCatch(() =>
-      fsDeps.writeFileSync(tempFile, initialContentStr),
+    const writeResult = await tryCatchAsync(
+      fsDeps.writeFile(tempFile, initialContentStr),
     );
     if (!writeResult.ok) return null;
     return tempFile;
   }
 
-  const writeResult = tryCatch(() => fsDeps.writeFileSync(tempFile, ""));
+  const writeResult = await tryCatchAsync(fsDeps.writeFile(tempFile, ""));
   if (!writeResult.ok) return null;
   return tempFile;
 }
@@ -219,24 +219,24 @@ export async function listSessionFiles() {
 }
 
 export function createLockUtils(lockPath: string) {
-  function writeLockFile() {
-    return tryCatch(() =>
-      fsDeps.writeFileSync(lockPath, String(process.pid), { flag: "wx" }),
+  async function writeLockFile() {
+    return await tryCatchAsync(
+      fsDeps.writeFile(lockPath, String(process.pid), { flag: "wx" }),
     );
   }
 
-  function overwriteLockFile() {
-    const unlinkResult = tryCatch(() => fsDeps.unlinkSync(lockPath));
+  async function overwriteLockFile() {
+    const unlinkResult = await tryCatchAsync(fsDeps.unlink(lockPath));
     if (!unlinkResult.ok) return false;
-    return writeLockFile().ok;
+    return (await writeLockFile()).ok;
   }
 
-  function writeLock() {
-    const writeLockResult = writeLockFile();
+  async function writeLock() {
+    const writeLockResult = await writeLockFile();
     if (writeLockResult.ok) return true;
 
-    const readLockResult = tryCatch(() =>
-      fsDeps.readFileSync(lockPath).toString(),
+    const readLockResult = await tryCatchAsync(
+      fsDeps.readFile(lockPath, "utf8"),
     );
     if (!readLockResult.ok) {
       return overwriteLockFile();
@@ -253,7 +253,7 @@ export function createLockUtils(lockPath: string) {
       return false;
     }
 
-    return overwriteLockFile();
+    return await overwriteLockFile();
   }
 
   return {
@@ -261,17 +261,17 @@ export function createLockUtils(lockPath: string) {
       let iter = 0;
       const maxIter = 10;
 
-      let pendingWrite = !writeLock();
+      let pendingWrite = !(await writeLock());
       while (pendingWrite && iter < maxIter) {
         await sleep(25);
-        pendingWrite = !writeLock();
+        pendingWrite = !(await writeLock());
         iter++;
       }
 
       return !pendingWrite;
     },
-    deleteLock() {
-      tryCatch(() => fsDeps.unlinkSync(lockPath));
+    async deleteLock() {
+      await tryCatchAsync(fsDeps.unlink(lockPath));
     },
   };
 }

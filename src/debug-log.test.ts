@@ -35,7 +35,7 @@ describe("debugLog", () => {
 
     it("skips mkdir when the directory already exists", async () => {
       const mkdirCalls: string[] = [];
-      mock.method(testFs, "mkdirSync", (dir: string) => {
+      mock.method(testFs, "mkdir", (dir: string) => {
         mkdirCalls.push(dir);
         testFs._dirs.add(dir);
       });

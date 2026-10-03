@@ -33,7 +33,7 @@ ${normalizeNewline(entry.content)}`,
 
 ${contextFilesList}`;
 }
-export function getContextEntries() {
+export async function getContextEntries() {
   const agentFileDirs: string[] = [processDeps.cwd(), getGlobalContextDir()];
 
   const entries: ContextEntry[] = [];
@@ -41,7 +41,7 @@ export function getContextEntries() {
   for (const agentFileDir of agentFileDirs) {
     const filePath = join(agentFileDir, "AGENTS.md");
     if (!fsDeps.existsSync(filePath)) continue;
-    const readResult = tryCatch(() => fsDeps.readFileSync(filePath).toString());
+    const readResult = await tryCatchAsync(fsDeps.readFile(filePath, "utf8"));
     if (!readResult.ok) {
       print.warning(`Failed to read the agent file at ${filePath}`);
       continue;
@@ -98,7 +98,7 @@ export async function getSkills() {
   }
 
   for (const skillPath of skillPaths) {
-    const skill = getSkillJSON(skillPath);
+    const skill = await getSkillJSON(skillPath);
     if (skill === null) continue;
 
     if (seenSkills.has(skill.name)) continue;
@@ -114,8 +114,8 @@ export async function getSkills() {
   for (const agentFilePath of agentFileGlobResult.value) {
     const isRootAgentsMd = agentFilePath === "AGENTS.md";
     if (isRootAgentsMd) continue;
-    const readResult = tryCatch(() =>
-      fsDeps.readFileSync(agentFilePath).toString(),
+    const readResult = await tryCatchAsync(
+      fsDeps.readFile(agentFilePath, "utf8"),
     );
     if (!readResult.ok) {
       print.warning(`Failed to read the agent file at ${agentFilePath}`);
@@ -153,10 +153,8 @@ export function parseFrontMatter(content: string) {
   return { data: parseResult.value, body };
 }
 
-export function getSkillJSON(skillMdPath: string) {
-  const readResult = tryCatch(() =>
-    fsDeps.readFileSync(skillMdPath).toString(),
-  );
+export async function getSkillJSON(skillMdPath: string) {
+  const readResult = await tryCatchAsync(fsDeps.readFile(skillMdPath, "utf8"));
   if (!readResult.ok) return null;
 
   const parsed = parseFrontMatter(readResult.value);

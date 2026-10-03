@@ -34,8 +34,8 @@ describe("log", () => {
       setupTestContext({ now: 1_234_567_890_000 });
     });
 
-    it("creates directory and sets path when directory does not exist", () => {
-      initSessionFile();
+    it("creates directory and sets path when directory does not exist", async () => {
+      await initSessionFile();
       assert.equal(
         testFs._dirs.has("/fake-home/.local/state/lasso/sessions"),
         true,
@@ -52,14 +52,14 @@ describe("log", () => {
       );
     });
 
-    it("warns and leaves the session path empty when mkdir fails", () => {
+    it("warns and leaves the session path empty when mkdir fails", async () => {
       mock.method(fsDeps, "existsSync", () => false);
-      mock.method(fsDeps, "mkdirSync", () => {
-        throw new Error("Permission denied");
-      });
+      mock.method(fsDeps, "mkdir", () =>
+        Promise.reject(new Error("Permission denied")),
+      );
       const getWrites = mockStdoutWrites();
 
-      initSessionFile();
+      await initSessionFile();
 
       assert.deepStrictEqual(getWrites(), [
         `${YELLOW}Failed to create the directory: /fake-home/.local/state/lasso/sessions${RESET}\n`,
@@ -67,21 +67,21 @@ describe("log", () => {
       assert.equal(getState().app.sessionFilePath, "");
     });
 
-    it("warns when the initial write fails", () => {
-      mock.method(fsDeps, "writeFileSync", () => {
-        throw new Error("Permission denied");
-      });
+    it("warns when the initial write fails", async () => {
+      mock.method(fsDeps, "writeFile", () =>
+        Promise.reject(new Error("Permission denied")),
+      );
       const getWrites = mockStdoutWrites();
 
-      initSessionFile();
+      await initSessionFile();
 
       assert.deepStrictEqual(getWrites(), [
         `${YELLOW}Failed to write the session file to /fake-home/.local/state/lasso/sessions/session-1234567890000.json${RESET}\n`,
       ]);
     });
 
-    it("generates correct log path with session start date", () => {
-      initSessionFile();
+    it("generates correct log path with session start date", async () => {
+      await initSessionFile();
       assert.equal(
         getState().app.sessionFilePath,
         "/fake-home/.local/state/lasso/sessions/session-1234567890000.json",
@@ -226,7 +226,7 @@ describe("log", () => {
       );
     });
 
-    it("writes the current state to the session file", () => {
+    it("writes the current state to the session file", async () => {
       testFs._dirs.add("/fake-home/.local/state/lasso/sessions");
       actions.setConversationMessages([{ role: "user", content: "hello" }]);
       actions.setTranscript([
@@ -237,7 +237,7 @@ describe("log", () => {
         },
       ]);
 
-      syncSessionFile();
+      await syncSessionFile();
 
       assert.equal(
         testFs._files.get(
@@ -247,9 +247,11 @@ describe("log", () => {
       );
     });
 
-    it("replaces the provided fields and updates state", () => {
+    it("replaces the provided fields and updates state", async () => {
       actions.setConversationMessages([{ role: "user", content: "old" }]);
-      syncSessionFile({ messages: [{ role: "assistant", content: "reply" }] });
+      await syncSessionFile({
+        messages: [{ role: "assistant", content: "reply" }],
+      });
 
       assert.equal(
         testFs._files.get(
@@ -263,21 +265,21 @@ describe("log", () => {
       });
     });
 
-    it("creates the directory when it does not exist", () => {
-      syncSessionFile();
+    it("creates the directory when it does not exist", async () => {
+      await syncSessionFile();
       assert.equal(
         testFs._dirs.has("/fake-home/.local/state/lasso/sessions"),
         true,
       );
     });
 
-    it("warns and updates state when writing fails", () => {
-      mock.method(fsDeps, "writeFileSync", () => {
-        throw new Error("Permission denied");
-      });
+    it("warns and updates state when writing fails", async () => {
+      mock.method(fsDeps, "writeFile", () =>
+        Promise.reject(new Error("Permission denied")),
+      );
       const getWrites = mockStdoutWrites();
 
-      syncSessionFile();
+      await syncSessionFile();
 
       assert.deepStrictEqual(getWrites(), [
         `${YELLOW}Failed to write the session file to /fake-home/.local/state/lasso/sessions/session-1234567890000.json${RESET}\n`,
@@ -285,12 +287,12 @@ describe("log", () => {
       assert.deepStrictEqual(getState().app.conversation.messages, []);
     });
 
-    it("warns and updates state when stringifying fails", () => {
+    it("warns and updates state when stringifying fails", async () => {
       const circularContent: { self?: unknown } = {};
       circularContent.self = circularContent;
 
       const getWrites = mockStdoutWrites();
-      syncSessionFile({
+      await syncSessionFile({
         messages: [{ role: "user", content: circularContent }],
       });
 
@@ -315,7 +317,7 @@ describe("log", () => {
       setupTestContext({ now: 1_234_567_890_000 });
     });
 
-    it("loads messages, summaries, and transcript into state and returns true", () => {
+    it("loads messages, summaries, and transcript into state and returns true", async () => {
       actions.setConversationMessages([{ role: "user", content: "old" }]);
       testFs._files.set(
         "/test/session.json",
@@ -328,7 +330,7 @@ describe("log", () => {
 
       actions.setPromptTokens(100);
 
-      const result = resumeFromSessionFile("/test/session.json");
+      const result = await resumeFromSessionFile("/test/session.json");
 
       assert.equal(result, true);
       assert.deepStrictEqual(getState().app.conversation, {
@@ -344,10 +346,10 @@ describe("log", () => {
       });
     });
 
-    it("prints an error and returns false when the session file cannot be read", () => {
+    it("prints an error and returns false when the session file cannot be read", async () => {
       const getWrites = mockStdoutWrites();
 
-      const result = resumeFromSessionFile("/test/missing.json");
+      const result = await resumeFromSessionFile("/test/missing.json");
 
       assert.equal(result, false);
       assert.deepStrictEqual(getWrites(), [
@@ -356,11 +358,11 @@ describe("log", () => {
       ]);
     });
 
-    it("prints an error and returns false when the session file is not valid json", () => {
+    it("prints an error and returns false when the session file is not valid json", async () => {
       testFs._files.set("/test/broken.json", "not json");
       const getWrites = mockStdoutWrites();
 
-      const result = resumeFromSessionFile("/test/broken.json");
+      const result = await resumeFromSessionFile("/test/broken.json");
 
       assert.equal(result, false);
       assert.deepStrictEqual(getWrites(), [
@@ -369,11 +371,11 @@ describe("log", () => {
       ]);
     });
 
-    it("prints an error and returns false when the session file fails validation", () => {
+    it("prints an error and returns false when the session file fails validation", async () => {
       testFs._files.set("/test/invalid.json", "{}");
       const getWrites = mockStdoutWrites();
 
-      const result = resumeFromSessionFile("/test/invalid.json");
+      const result = await resumeFromSessionFile("/test/invalid.json");
 
       assert.equal(result, false);
       assert.deepStrictEqual(getWrites(), [

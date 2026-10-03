@@ -10,7 +10,6 @@ import { assertAtBuildtime } from "./assert.ts";
 import {
   isAbortError,
   isReadlineClosedError,
-  tryCatch,
   tryCatchAsync,
   getMessageFromError,
   normalizeNewline,
@@ -223,7 +222,7 @@ export function initKeypress() {
             return;
           }
           case "editpage": {
-            pageEditStr();
+            await pageEditStr();
             redrawPendingQuestion();
             return;
           }
@@ -239,14 +238,14 @@ export function initKeypress() {
             return;
           }
           case "history": {
-            pageHistory();
+            await pageHistory();
             redrawPendingQuestion();
             return;
           }
           case "config": {
             const initialContentStr = getAllPrettyConfig();
 
-            openWithPager({
+            await openWithPager({
               initialContentStr,
               contentType: "markdown",
             });
@@ -260,17 +259,17 @@ export function initKeypress() {
             return;
           }
           case "lastmessage": {
-            pageLastMessage();
+            await pageLastMessage();
             redrawPendingQuestion();
             return;
           }
           case "lastdiff": {
-            pageLastDiff();
+            await pageLastDiff();
             redrawPendingQuestion();
             return;
           }
           case "summaries": {
-            pageSummaries();
+            await pageSummaries();
             redrawPendingQuestion();
             return;
           }
@@ -280,7 +279,7 @@ export function initKeypress() {
             return;
           }
           case "commands": {
-            pageCommands();
+            await pageCommands();
             redrawPendingQuestion();
             return;
           }
@@ -363,7 +362,7 @@ function filterIfLength(str: string) {
   return str.length > 0;
 }
 
-export function parseInputFromEditor() {
+export async function parseInputFromEditor() {
   const editorInputValue = getState().app.editorInputValue;
   assertAtBuildtime(editorInputValue !== null);
   const splitByDelimiterEditorInputValue = editorInputValue
@@ -411,7 +410,7 @@ export function parseInputFromEditor() {
     );
   }
 
-  syncSessionFile({
+  await syncSessionFile({
     transcript: getAppendedTranscript({
       message: firstMessage,
       role: "user",
@@ -430,7 +429,7 @@ export async function resolveUserInput({
   assertAtBuildtime(rl !== null);
 
   if (getState().app.editorInputValue !== null) {
-    const editorInput = parseInputFromEditor();
+    const editorInput = await parseInputFromEditor();
     if (
       editorInput !== null &&
       shouldResolveSlashCommand(editorInput, { forceKnownCommand: true })
@@ -468,7 +467,7 @@ export async function resolveUserInput({
 
     const abortedByEditor = getState().app.editorInputValue !== null;
     if (abortedByEditor) {
-      const editorInput = parseInputFromEditor();
+      const editorInput = await parseInputFromEditor();
       if (
         editorInput !== null &&
         shouldResolveSlashCommand(editorInput, { forceKnownCommand: true })
@@ -485,7 +484,7 @@ export async function resolveUserInput({
   actions.appendStdoutTail(
     `${getState().config.promptPrefix}${inputResult.value}\n`,
   );
-  syncSessionFile({
+  await syncSessionFile({
     transcript: getAppendedTranscript({
       message: inputResult.value,
       role: "user",
@@ -612,7 +611,7 @@ async function resolveBuiltinSlashCommand(
     case "edit": {
       const content = await spawnAndReadEditorContent();
       if (content !== null) {
-        syncSessionFile({
+        await syncSessionFile({
           transcript: getAppendedTranscript({
             message: content,
             role: "user",
@@ -623,7 +622,7 @@ async function resolveBuiltinSlashCommand(
       return { handled: true, inputFromCommand: content };
     }
     case "editpage": {
-      pageEditStr({ isTyped: true });
+      await pageEditStr({ isTyped: true });
       return { handled: true, inputFromCommand: null };
     }
     case "paste": {
@@ -631,7 +630,7 @@ async function resolveBuiltinSlashCommand(
         includeClipboardSuffix: true,
       });
       if (content !== null)
-        syncSessionFile({
+        await syncSessionFile({
           transcript: getAppendedTranscript({
             message: content,
             role: "user",
@@ -641,11 +640,11 @@ async function resolveBuiltinSlashCommand(
       return { handled: true, inputFromCommand: content };
     }
     case "clear": {
-      clearCommand();
+      await clearCommand();
       return { handled: true, inputFromCommand: null };
     }
     case "history": {
-      pageHistory({ isTyped: true });
+      await pageHistory({ isTyped: true });
       return { handled: true, inputFromCommand: null };
     }
     case "model": {
@@ -653,15 +652,15 @@ async function resolveBuiltinSlashCommand(
       return { handled: true, inputFromCommand: null };
     }
     case "skills": {
-      pageSkills();
+      await pageSkills();
       return { handled: true, inputFromCommand: null };
     }
     case "context": {
-      pageAvailableContextFiles();
+      await pageAvailableContextFiles();
       return { handled: true, inputFromCommand: null };
     }
     case "commands": {
-      pageCommands();
+      await pageCommands();
       return { handled: true, inputFromCommand: null };
     }
     case "keymaps": {
@@ -679,7 +678,7 @@ async function resolveBuiltinSlashCommand(
     case "config": {
       const initialContentStr = getAllPrettyConfig();
 
-      openWithPager({
+      await openWithPager({
         initialContentStr,
         contentType: "markdown",
       });
@@ -689,7 +688,7 @@ async function resolveBuiltinSlashCommand(
     case "resume": {
       const inputFromCommand = await resumeWithNoArgs();
       if (inputFromCommand !== null) {
-        syncSessionFile({
+        await syncSessionFile({
           transcript: getAppendedTranscript({
             message: inputFromCommand,
             role: "user",
@@ -704,11 +703,11 @@ async function resolveBuiltinSlashCommand(
       return { handled: true, inputFromCommand: null };
     }
     case "initlocal": {
-      initLocalConfig();
+      await initLocalConfig();
       return { handled: true, inputFromCommand: null };
     }
     case "initglobal": {
-      initGlobalConfig();
+      await initGlobalConfig();
       return { handled: true, inputFromCommand: null };
     }
     case "lastresponse": {
@@ -716,15 +715,15 @@ async function resolveBuiltinSlashCommand(
       return { handled: true, inputFromCommand: null };
     }
     case "lastmessage": {
-      pageLastMessage({ isTyped: true });
+      await pageLastMessage({ isTyped: true });
       return { handled: true, inputFromCommand: null };
     }
     case "lastdiff": {
-      pageLastDiff({ isTyped: true });
+      await pageLastDiff({ isTyped: true });
       return { handled: true, inputFromCommand: null };
     }
     case "summaries": {
-      pageSummaries({ isTyped: true });
+      await pageSummaries({ isTyped: true });
       return { handled: true, inputFromCommand: null };
     }
     case "tools": {
@@ -732,9 +731,9 @@ async function resolveBuiltinSlashCommand(
       return { handled: true, inputFromCommand: null };
     }
     case "record": {
-      const inputFromCommand = recordAndTranscribeInput();
+      const inputFromCommand = await recordAndTranscribeInput();
       if (inputFromCommand !== null) {
-        syncSessionFile({
+        await syncSessionFile({
           transcript: getAppendedTranscript({
             message: inputFromCommand,
             role: "user",
@@ -766,7 +765,7 @@ async function resolveParameterizedBuiltinSlashCommand(
     case "resume": {
       const inputFromCommand = await resume(commandWithArgs);
       if (inputFromCommand !== null) {
-        syncSessionFile({
+        await syncSessionFile({
           transcript: getAppendedTranscript({
             message: inputFromCommand,
             role: "user",
@@ -857,9 +856,9 @@ export async function resolveSlashCommand(rawInput: string) {
   return null;
 }
 
-export function clearCommand() {
+export async function clearCommand() {
   print.infoSubtle(`Context cleared (${getPrettyTokenUsage()})`);
-  syncSessionFile({
+  await syncSessionFile({
     messages: [],
     summaries: [],
     transcript: [],
@@ -952,7 +951,7 @@ export async function spawnAndReadEditorContent(opts?: {
     includeClipboardSuffix,
   });
 
-  const tempFile = getTempFileName();
+  const tempFile = await getTempFileName();
   if (tempFile === null) {
     print.error("Failed to create a temp file");
     return null;
@@ -960,8 +959,8 @@ export async function spawnAndReadEditorContent(opts?: {
 
   const editCommand = getEditCommand(tempFile);
 
-  const writeResult = tryCatch(() =>
-    fsDeps.writeFileSync(tempFile, initialContent),
+  const writeResult = await tryCatchAsync(
+    fsDeps.writeFile(tempFile, initialContent),
   );
   if (!writeResult.ok) {
     print.error("Failed to write to temp file");
@@ -977,13 +976,13 @@ export async function spawnAndReadEditorContent(opts?: {
 
   const statAfter = await tryCatchAsync(fsDeps.stat(tempFile));
 
-  const readResult = tryCatch(() => fsDeps.readFileSync(tempFile).toString());
+  const readResult = await tryCatchAsync(fsDeps.readFile(tempFile, "utf8"));
   if (!readResult.ok) {
     print.error("Failed to read from temp file");
-    tryCatch(() => fsDeps.unlinkSync(tempFile));
+    await tryCatchAsync(fsDeps.unlink(tempFile));
     return null;
   }
-  tryCatch(() => fsDeps.unlinkSync(tempFile));
+  await tryCatchAsync(fsDeps.unlink(tempFile));
 
   if (
     statBefore.ok &&
@@ -1051,7 +1050,7 @@ function streamingSupportedWithSpacing(isTyped: boolean, cb: () => void) {
   printNewline();
 }
 
-export function pageEditStr({ isTyped = false }: SpacingOpts = {}) {
+export async function pageEditStr({ isTyped = false }: SpacingOpts = {}) {
   const { editorInputValue } = getState().app;
   if (editorInputValue === null) {
     streamingSupportedWithSpacing(isTyped, () =>
@@ -1064,24 +1063,24 @@ export function pageEditStr({ isTyped = false }: SpacingOpts = {}) {
 
 ${editorInputValue}`;
 
-  openWithPager({
+  await openWithPager({
     initialContentStr,
     contentType: "markdown",
   });
 }
 
-export function pageCommands() {
+export async function pageCommands() {
   const initialContentStr = `# Available commands:
 
 ${getAvailableCommandsStr()}`;
 
-  openWithPager({
+  await openWithPager({
     initialContentStr,
     contentType: "markdown",
   });
 }
 
-export function pageSkills({ isTyped = false }: SpacingOpts = {}) {
+export async function pageSkills({ isTyped = false }: SpacingOpts = {}) {
   if (getState().app.skills.length === 0) {
     streamingSupportedWithSpacing(isTyped, () =>
       print.doing("No available skills"),
@@ -1103,10 +1102,10 @@ export function pageSkills({ isTyped = false }: SpacingOpts = {}) {
 
 ${skillsList}`;
 
-  openWithPager({ contentType: "markdown", initialContentStr });
+  await openWithPager({ contentType: "markdown", initialContentStr });
 }
 
-export function pageAvailableContextFiles({
+export async function pageAvailableContextFiles({
   isTyped = false,
 }: SpacingOpts = {}) {
   if (getState().app.contextEntries.length === 0) {
@@ -1131,7 +1130,7 @@ export function pageAvailableContextFiles({
   const initialContentStr = `# Available context files:
 
 ${formatted}`;
-  openWithPager({ contentType: "markdown", initialContentStr });
+  await openWithPager({ contentType: "markdown", initialContentStr });
 }
 
 export async function resumeWithNoArgs() {
@@ -1149,7 +1148,7 @@ export async function resumeWithNoArgs() {
   const sessionFile = sortedSessionFiles[0];
   assertAtBuildtime(sessionFile !== undefined);
 
-  const success = resumeFromSessionFile(sessionFile.absolutePath);
+  const success = await resumeFromSessionFile(sessionFile.absolutePath);
   if (success) return "Continue";
   return null;
 }
@@ -1172,7 +1171,7 @@ export async function resume(rawInput: string) {
   const sessionFiles = await listSessionFiles();
   for (const { absolutePath, timestampMs } of sessionFiles) {
     if (timestampMs !== Number(sessionStartDate)) continue;
-    const success = resumeFromSessionFile(absolutePath);
+    const success = await resumeFromSessionFile(absolutePath);
     if (success) {
       return "Continue";
     }
@@ -1245,20 +1244,24 @@ const getReloadTempFileStr = (): Record<ReloadTempFilePrefixes, string> => ({
 });
 
 async function reload() {
-  const beforeFiles = reloadTempFilePrefixes.map((prefix) =>
-    getTempFileName({
-      pathPrefix: `lasso-${prefix}-before`,
-      initialContentStr: getReloadTempFileStr()[prefix],
-    }),
+  const beforeFiles = await Promise.all(
+    reloadTempFilePrefixes.map((prefix) =>
+      getTempFileName({
+        pathPrefix: `lasso-${prefix}-before`,
+        initialContentStr: getReloadTempFileStr()[prefix],
+      }),
+    ),
   );
 
   await initStateRepeatable();
 
-  const afterFiles = reloadTempFilePrefixes.map((prefix) =>
-    getTempFileName({
-      pathPrefix: `lasso-${prefix}-after`,
-      initialContentStr: getReloadTempFileStr()[prefix],
-    }),
+  const afterFiles = await Promise.all(
+    reloadTempFilePrefixes.map((prefix) =>
+      getTempFileName({
+        pathPrefix: `lasso-${prefix}-after`,
+        initialContentStr: getReloadTempFileStr()[prefix],
+      }),
+    ),
   );
   const diffResults = [];
   for (let i = 0; i < reloadTempFilePrefixes.length; i++) {
@@ -1267,7 +1270,7 @@ async function reload() {
 
     const afterFile = afterFiles[i];
     if (afterFile === null || afterFile === undefined) {
-      tryCatch(() => fsDeps.unlinkSync(beforeFile));
+      await tryCatchAsync(fsDeps.unlink(beforeFile));
       continue;
     }
 
@@ -1282,7 +1285,7 @@ async function reload() {
       for (const path of beforeFiles
         .concat(afterFiles)
         .filter((p) => p !== null)) {
-        tryCatch(() => fsDeps.unlinkSync(path));
+        await tryCatchAsync(fsDeps.unlink(path));
       }
       print.error(
         `An error occurred when getting the diff: ${getMessageFromError(diffResult.error)}`,
@@ -1300,14 +1303,14 @@ ${normalizeNewline(diffResult.value.stdout)}`,
     }
   }
   for (const path of beforeFiles.concat(afterFiles).filter((p) => p !== null)) {
-    tryCatch(() => fsDeps.unlinkSync(path));
+    await tryCatchAsync(fsDeps.unlink(path));
   }
 
   const diff = diffResults.join("\n");
   if (diff.length === 0) {
     print.info("No diff from reload");
   } else {
-    openWithPager({
+    await openWithPager({
       initialContentStr: diff,
       contentType: "diff",
     });
@@ -1321,7 +1324,7 @@ const getDefaultConfig = (
 model: deepseek-v4-pro
 baseURL: https://opencode.ai/zen/v1\n`;
 
-export function initLocalConfig() {
+export async function initLocalConfig() {
   const path = getLocalConfigPath();
 
   if (fsDeps.existsSync(path)) {
@@ -1331,8 +1334,8 @@ export function initLocalConfig() {
 
   const dir = dirname(path);
   if (!fsDeps.existsSync(dir)) {
-    const mkdirResult = tryCatch(() =>
-      fsDeps.mkdirSync(dir, { recursive: true }),
+    const mkdirResult = await tryCatchAsync(
+      fsDeps.mkdir(dir, { recursive: true }),
     );
     if (!mkdirResult.ok) {
       print.error(`Failed to create the directory: ${dir}`);
@@ -1340,8 +1343,8 @@ export function initLocalConfig() {
     }
   }
 
-  const writeResult = tryCatch(() =>
-    fsDeps.writeFileSync(path, getDefaultConfig("initlocal")),
+  const writeResult = await tryCatchAsync(
+    fsDeps.writeFile(path, getDefaultConfig("initlocal")),
   );
   if (!writeResult.ok) {
     print.error(`Failed to write the config to ${path}`);
@@ -1350,7 +1353,7 @@ export function initLocalConfig() {
   print.info(`Created the local config at ${path}`);
 }
 
-export function initGlobalConfig() {
+export async function initGlobalConfig() {
   const path = getGlobalConfigPath();
 
   if (fsDeps.existsSync(path)) {
@@ -1360,8 +1363,8 @@ export function initGlobalConfig() {
 
   const dir = dirname(path);
   if (!fsDeps.existsSync(dir)) {
-    const mkdirResult = tryCatch(() =>
-      fsDeps.mkdirSync(dir, { recursive: true }),
+    const mkdirResult = await tryCatchAsync(
+      fsDeps.mkdir(dir, { recursive: true }),
     );
     if (!mkdirResult.ok) {
       print.error(`Failed to create the directory: ${dir}`);
@@ -1369,8 +1372,8 @@ export function initGlobalConfig() {
     }
   }
 
-  const writeResult = tryCatch(() =>
-    fsDeps.writeFileSync(path, getDefaultConfig("initglobal")),
+  const writeResult = await tryCatchAsync(
+    fsDeps.writeFile(path, getDefaultConfig("initglobal")),
   );
   if (!writeResult.ok) {
     print.error(`Failed to write the config to ${path}`);
@@ -1379,7 +1382,7 @@ export function initGlobalConfig() {
   print.info(`Created the global config at ${path}`);
 }
 
-export function pageHistory({ isTyped = false }: SpacingOpts = {}) {
+export async function pageHistory({ isTyped = false }: SpacingOpts = {}) {
   const { transcript } = getState().app;
 
   if (transcript.length === 0) {
@@ -1401,7 +1404,7 @@ ${normalizeNewline(message, { count: 0 })}`,
 
 ${formattedTranscript}`;
 
-  openWithPager({
+  await openWithPager({
     initialContentStr,
     contentType: "markdown",
   });
@@ -1436,13 +1439,13 @@ export async function pageLastResponse({ isTyped = false }: SpacingOpts = {}) {
 
 ${formattedContentStr}`;
 
-  openWithPager({
+  await openWithPager({
     initialContentStr,
     contentType: "markdown",
   });
 }
 
-export function pageLastMessage({ isTyped = false }: SpacingOpts = {}) {
+export async function pageLastMessage({ isTyped = false }: SpacingOpts = {}) {
   const { messages } = getState().app.conversation;
   const lastMessage = messages.findLast((message) => message.role === "user");
 
@@ -1467,13 +1470,13 @@ export function pageLastMessage({ isTyped = false }: SpacingOpts = {}) {
 
 ${contentStr}`;
 
-  openWithPager({
+  await openWithPager({
     initialContentStr,
     contentType: "markdown",
   });
 }
 
-export function pageSummaries({ isTyped = false }: SpacingOpts = {}) {
+export async function pageSummaries({ isTyped = false }: SpacingOpts = {}) {
   if (getState().app.conversation.summaries.length === 0) {
     streamingSupportedWithSpacing(isTyped, () =>
       print.doing("No conversation summaries"),
@@ -1497,13 +1500,13 @@ ${summary.compacted}`,
 
 ${summariesStr}`;
 
-  openWithPager({
+  await openWithPager({
     initialContentStr,
     contentType: "markdown",
   });
 }
 
-export function pageLastDiff({ isTyped = false }: SpacingOpts = {}) {
+export async function pageLastDiff({ isTyped = false }: SpacingOpts = {}) {
   const { toolEditDiffs } = getState().app;
 
   if (toolEditDiffs.length === 0) {
@@ -1519,7 +1522,7 @@ ${diffStdout}`,
     )
     .join("\n\n");
 
-  openWithPager({
+  await openWithPager({
     initialContentStr,
     contentType: "diff",
   });
@@ -1572,13 +1575,13 @@ export async function pageTools() {
 
 ${formattedHarnessTools.concat(formattedMCPTools).join("\n")}`;
 
-  openWithPager({
+  await openWithPager({
     initialContentStr,
     contentType: "markdown",
   });
 }
 
-export function recordAndTranscribeInput() {
+export async function recordAndTranscribeInput() {
   const rl = getState().app.rl;
   assertAtBuildtime(rl !== null);
 
@@ -1620,7 +1623,7 @@ ${formattedMessages}`;
   const abortController = new AbortController();
   actions.setRecordProcessAbortController(abortController);
 
-  const tempFile = getTempFileName();
+  const tempFile = await getTempFileName();
   if (tempFile === null) {
     print.error("Error creating a time file to write the recording to");
     return null;
@@ -1649,7 +1652,6 @@ ${formattedMessages}`;
   //   }
   // }
   //
-  // const readResult = tryCatch(() => fsDeps.readFileSync(tempFile));
   // if (!readResult.ok) {
   //   // TODO: print error
   //   return null;

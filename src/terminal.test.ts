@@ -45,45 +45,45 @@ describe("terminal", () => {
     });
 
     describe("selects the pager", () => {
-      it("ignores per-view pager env vars in favor of LASSO_PAGER", () => {
+      it("ignores per-view pager env vars in favor of LASSO_PAGER", async () => {
         testProcessEnv._set("LASSO_PAGER_HISTORY", "nano __FILE__");
         testProcessEnv._set("LASSO_PAGER", "bat __FILE__");
-        openWithPager({
+        await openWithPager({
           initialContentStr: "",
           contentType: "markdown",
         });
         assert.strictEqual(spawned[0], "bat /tmp/lasso-test-uuid.txt");
       });
 
-      it("falls back to LASSO_PAGER env var", () => {
+      it("falls back to LASSO_PAGER env var", async () => {
         testProcessEnv._set("LASSO_PAGER", "bat __FILE__");
-        openWithPager({
+        await openWithPager({
           initialContentStr: "",
           contentType: "markdown",
         });
         assert.strictEqual(spawned[0], "bat /tmp/lasso-test-uuid.txt");
       });
 
-      it("falls back to PAGER env var with quoted temp file", () => {
+      it("falls back to PAGER env var with quoted temp file", async () => {
         testProcessEnv._set("PAGER", "more");
-        openWithPager({
+        await openWithPager({
           initialContentStr: "",
           contentType: "markdown",
         });
         assert.strictEqual(spawned[0], `more "/tmp/lasso-test-uuid.txt"`);
       });
 
-      it("falls back to bat", () => {
-        openWithPager({
+      it("falls back to bat", async () => {
+        await openWithPager({
           initialContentStr: "",
           contentType: "markdown",
         });
         assert.strictEqual(spawned[0], batPagerCmd("/tmp/lasso-test-uuid.txt"));
       });
 
-      it("falls back to less when bat is unavailable", () => {
+      it("falls back to less when bat is unavailable", async () => {
         actions.setBatAvailable(false);
-        openWithPager({
+        await openWithPager({
           initialContentStr: "",
           contentType: "markdown",
         });
@@ -92,8 +92,8 @@ describe("terminal", () => {
     });
 
     describe("spawns the pager", () => {
-      it("uses base bat flags without markdown flags for diff contentType", () => {
-        openWithPager({
+      it("uses base bat flags without markdown flags for diff contentType", async () => {
+        await openWithPager({
           initialContentStr: "",
           contentType: "diff",
         });
@@ -103,12 +103,12 @@ describe("terminal", () => {
         );
       });
 
-      it("spawns pager with shell and inherit stdio", () => {
+      it("spawns pager with shell and inherit stdio", async () => {
         let spawnArgs: unknown[] = [];
         mock.method(childProcessDeps, "spawnSync", (...args: unknown[]) => {
           spawnArgs = args;
         });
-        openWithPager({
+        await openWithPager({
           initialContentStr: "",
           contentType: "markdown",
         });
@@ -118,8 +118,8 @@ describe("terminal", () => {
         ]);
       });
 
-      it("writes initialContentStr into the temp file", () => {
-        openWithPager({
+      it("writes initialContentStr into the temp file", async () => {
+        await openWithPager({
           initialContentStr: "string content",
           contentType: "markdown",
         });
@@ -129,8 +129,8 @@ describe("terminal", () => {
         );
       });
 
-      it("trims trailing newlines before appending exactly two", () => {
-        openWithPager({
+      it("trims trailing newlines before appending exactly two", async () => {
+        await openWithPager({
           initialContentStr: "content\n\n\n\n",
           contentType: "markdown",
         });
@@ -140,11 +140,11 @@ describe("terminal", () => {
         );
       });
 
-      it("does not spawn a pager when the temp file cannot be created", () => {
-        mock.method(fsDeps, "writeFileSync", () => {
-          throw new Error("write failed");
-        });
-        openWithPager({
+      it("does not spawn a pager when the temp file cannot be created", async () => {
+        mock.method(fsDeps, "writeFile", () =>
+          Promise.reject(new Error("write failed")),
+        );
+        await openWithPager({
           initialContentStr: "content",
           contentType: "markdown",
         });

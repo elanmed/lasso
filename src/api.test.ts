@@ -65,7 +65,7 @@ describe("api", () => {
         const mcpTool = makeMcpTool();
         const mcpTools: MCPToolSet = { mcp_tool: mcpTool };
         actions.setMcp({}, mcpTools);
-        mockGenerateText((options: Record<string, unknown>) => {
+        mockGenerateText(async (options: Record<string, unknown>) => {
           capturedOptions = options;
           return Promise.resolve(makeGenerateTextResult());
         });
@@ -81,7 +81,7 @@ describe("api", () => {
 
       it("passes the configured reasoning to generateText", async () => {
         const captured: Record<string, unknown>[] = [];
-        mockGenerateText((options: Record<string, unknown>) => {
+        mockGenerateText(async (options: Record<string, unknown>) => {
           captured.push(options);
           return Promise.resolve(makeGenerateTextResult());
         });
@@ -274,11 +274,11 @@ describe("api", () => {
       it("prints the [mcp] prefix on mcp tool call start", async () => {
         const getWrites = mockStdoutWrites();
         actions.setMcp({}, { mcp_tool: makeMcpTool() });
-        mockGenerateText((options: Record<string, unknown>) => {
+        mockGenerateText(async (options: Record<string, unknown>) => {
           const onStart = options["onToolExecutionStart"] as (
             arg: Record<string, unknown>,
-          ) => void;
-          onStart({
+          ) => Promise<unknown>;
+          await onStart({
             toolCall: {
               toolName: "mcp_tool",
               toolCallId: "call-9",
@@ -295,11 +295,11 @@ describe("api", () => {
 
       it("prints load_skill details on tool call start", async () => {
         const getWrites = mockStdoutWrites();
-        mockGenerateText((options: Record<string, unknown>) => {
+        mockGenerateText(async (options: Record<string, unknown>) => {
           const onStart = options["onToolExecutionStart"] as (
             arg: Record<string, unknown>,
-          ) => void;
-          onStart({
+          ) => Promise<unknown>;
+          await onStart({
             toolCall: {
               toolName: "load_skill",
               toolCallId: "call-10",
@@ -316,18 +316,18 @@ describe("api", () => {
 
       it("prints web_fetch_html and web_fetch_json details on tool call start", async () => {
         const getWrites = mockStdoutWrites();
-        mockGenerateText((options: Record<string, unknown>) => {
+        mockGenerateText(async (options: Record<string, unknown>) => {
           const onStart = options["onToolExecutionStart"] as (
             arg: Record<string, unknown>,
-          ) => void;
-          onStart({
+          ) => Promise<unknown>;
+          await onStart({
             toolCall: {
               toolName: "web_fetch_html",
               toolCallId: "call-11",
               input: { href: "https://example.com" },
             },
           });
-          onStart({
+          await onStart({
             toolCall: {
               toolName: "web_fetch_json",
               toolCallId: "call-12",
@@ -345,11 +345,11 @@ describe("api", () => {
 
       it("prints one indented line per subagent task on tool call start", async () => {
         const getWrites = mockStdoutWrites();
-        mockGenerateText((options: Record<string, unknown>) => {
+        mockGenerateText(async (options: Record<string, unknown>) => {
           const onStart = options["onToolExecutionStart"] as (
             arg: Record<string, unknown>,
-          ) => void;
-          onStart({
+          ) => Promise<unknown>;
+          await onStart({
             toolCall: {
               toolName: "create_subagent",
               toolCallId: "call-13",
@@ -392,44 +392,52 @@ describe("api", () => {
 
       it("creates temp file on tool call start for writing bash tools", async () => {
         testFs._files.set("/test/file.txt", "original content");
-        mock.method(aiDeps, "generateText", (opts: Record<string, unknown>) => {
-          const onStart = opts["onToolExecutionStart"] as (
-            arg: Record<string, unknown>,
-          ) => void;
-          onStart({
-            toolCall: {
-              toolName: "bash",
-              toolCallId: "call-1",
-              input: {
-                fileSystemAccessType: "create-update-delete",
-                filePath: "/test/file.txt",
-                command: "write",
+        mock.method(
+          aiDeps,
+          "generateText",
+          async (opts: Record<string, unknown>) => {
+            const onStart = opts["onToolExecutionStart"] as (
+              arg: Record<string, unknown>,
+            ) => Promise<unknown>;
+            await onStart({
+              toolCall: {
+                toolName: "bash",
+                toolCallId: "call-1",
+                input: {
+                  fileSystemAccessType: "create-update-delete",
+                  filePath: "/test/file.txt",
+                  command: "write",
+                },
               },
-            },
-          });
-          return makeGenerateTextResult();
-        });
+            });
+            return makeGenerateTextResult();
+          },
+        );
         await resolveApiCall("edit file");
         assert.strictEqual(testFs._files.has("/tmp/lasso-test-uuid.txt"), true);
       });
 
       it("does not create temp file for read-only bash tools", async () => {
-        mock.method(aiDeps, "generateText", (opts: Record<string, unknown>) => {
-          const onStart = opts["onToolExecutionStart"] as (
-            arg: Record<string, unknown>,
-          ) => void;
-          onStart({
-            toolCall: {
-              toolName: "bash",
-              toolCallId: "call-3",
-              input: {
-                fileSystemAccessType: "read",
-                command: "ls",
+        mock.method(
+          aiDeps,
+          "generateText",
+          async (opts: Record<string, unknown>) => {
+            const onStart = opts["onToolExecutionStart"] as (
+              arg: Record<string, unknown>,
+            ) => Promise<unknown>;
+            await onStart({
+              toolCall: {
+                toolName: "bash",
+                toolCallId: "call-3",
+                input: {
+                  fileSystemAccessType: "read",
+                  command: "ls",
+                },
               },
-            },
-          });
-          return makeGenerateTextResult();
-        });
+            });
+            return makeGenerateTextResult();
+          },
+        );
         await resolveApiCall("run command");
         assert.strictEqual(
           testFs._files.has("/tmp/lasso-test-uuid.txt"),
@@ -446,11 +454,11 @@ describe("api", () => {
           async (opts: Record<string, unknown>) => {
             const onStart = opts["onToolExecutionStart"] as (
               arg: Record<string, unknown>,
-            ) => void;
+            ) => Promise<unknown>;
             const onFinish = opts["onToolExecutionEnd"] as (
               arg: Record<string, unknown>,
             ) => Promise<void>;
-            onStart({
+            await onStart({
               toolCall: {
                 toolName: "bash",
                 toolCallId: "call-1",
@@ -498,11 +506,11 @@ describe("api", () => {
           async (opts: Record<string, unknown>) => {
             const onStart = opts["onToolExecutionStart"] as (
               arg: Record<string, unknown>,
-            ) => void;
+            ) => Promise<unknown>;
             const onFinish = opts["onToolExecutionEnd"] as (
               arg: Record<string, unknown>,
             ) => Promise<void>;
-            onStart({
+            await onStart({
               toolCall: {
                 toolName: "bash",
                 toolCallId: "call-1",
@@ -897,24 +905,30 @@ describe("api", () => {
         actions.setPromptTokens(96_000);
         const calls: ModelMessage[][] = [];
         let callCount = 0;
-        mock.method(aiDeps, "generateText", (opts: Record<string, unknown>) => {
-          calls.push(opts["messages"] as ModelMessage[]);
-          const overrides = (() => {
-            if (callCount === 0) {
+        mock.method(
+          aiDeps,
+          "generateText",
+          async (opts: Record<string, unknown>) => {
+            calls.push(opts["messages"] as ModelMessage[]);
+            const overrides = (() => {
+              if (callCount === 0) {
+                return {
+                  output: { compacted: "compacted summary" },
+                  usage: makeMockUsage({ outputTokens: 25 }),
+                };
+              }
               return {
-                output: { compacted: "compacted summary" },
+                text: "answer text",
                 usage: makeMockUsage({ outputTokens: 25 }),
+                responseMessages: [
+                  { role: "assistant", content: "answer text" },
+                ],
               };
-            }
-            return {
-              text: "answer text",
-              usage: makeMockUsage({ outputTokens: 25 }),
-              responseMessages: [{ role: "assistant", content: "answer text" }],
-            };
-          })();
-          callCount = callCount + 1;
-          return Promise.resolve(makeGenerateTextResult(overrides));
-        });
+            })();
+            callCount = callCount + 1;
+            return Promise.resolve(makeGenerateTextResult(overrides));
+          },
+        );
         await maybeCompact("new input");
         await resolveApiCall("new input");
         assert.deepStrictEqual(getState().app.conversation, {

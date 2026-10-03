@@ -114,10 +114,11 @@ describe("getAvailableSlashCommands", () => {
 
   describe("handles errors", () => {
     it("skips files that fail to read", async () => {
-      mock.method(fsDeps, "readFileSync", (path: string) => {
-        if (path.includes("bad")) throw new Error("read failed");
-        return Buffer.from("content");
-      });
+      mock.method(fsDeps, "readFile", (path: string) =>
+        path.includes("bad")
+          ? Promise.reject(new Error("read failed"))
+          : Promise.resolve(Buffer.from("content").toString()),
+      );
       testFs._globResults.set("/test-cwd/.lasso/commands/**/*.md", [
         "/test-cwd/.lasso/commands/good.md",
         "/test-cwd/.lasso/commands/bad.md",
@@ -148,10 +149,11 @@ describe("getAvailableSlashCommands", () => {
     });
 
     it("warns when a slash command file cannot be read", async () => {
-      mock.method(fsDeps, "readFileSync", (path: string) => {
-        if (path.includes("bad")) throw new Error("read failed");
-        return Buffer.from("content");
-      });
+      mock.method(fsDeps, "readFile", (path: string) =>
+        path.includes("bad")
+          ? Promise.reject(new Error("read failed"))
+          : Promise.resolve(Buffer.from("content").toString()),
+      );
       testFs._globResults.set("/test-cwd/.lasso/commands/**/*.md", [
         "/test-cwd/.lasso/commands/bad.md",
       ]);

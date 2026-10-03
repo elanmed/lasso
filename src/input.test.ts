@@ -320,17 +320,17 @@ describe("input", () => {
 
     describe("returns null on file failures", () => {
       it("returns null when writeFile fails", async () => {
-        mock.method(fsDeps, "writeFileSync", () => {
-          throw new Error("write failed");
-        });
+        mock.method(fsDeps, "writeFile", () =>
+          Promise.reject(new Error("write failed")),
+        );
         const result = await spawnAndReadEditorContent();
         assert.strictEqual(result, null);
       });
 
       it("warns when creating the temp file fails", async () => {
-        mock.method(fsDeps, "writeFileSync", () => {
-          throw new Error("write failed");
-        });
+        mock.method(fsDeps, "writeFile", () =>
+          Promise.reject(new Error("write failed")),
+        );
         const getWrites = mockStdoutWrites();
 
         const result = await spawnAndReadEditorContent();
@@ -343,11 +343,11 @@ describe("input", () => {
 
       it("returns null and cleans up when readFile fails", async () => {
         mock.method(childProcessDeps, "spawnSync", () => {
-          testFs.writeFileSync("/tmp/lasso-test-uuid.txt", "modified");
+          testFs.writeFile("/tmp/lasso-test-uuid.txt", "modified");
         });
-        mock.method(fsDeps, "readFileSync", () => {
-          throw new Error("read failed");
-        });
+        mock.method(fsDeps, "readFile", () =>
+          Promise.reject(new Error("read failed")),
+        );
         const result = await spawnAndReadEditorContent();
         assert.strictEqual(result, null);
         assert.strictEqual(
@@ -360,7 +360,7 @@ describe("input", () => {
     describe("processes the editor result", () => {
       it("returns null when editor returns empty content", async () => {
         mock.method(childProcessDeps, "spawnSync", () => {
-          testFs.writeFileSync("/tmp/lasso-test-uuid.txt", "");
+          testFs.writeFile("/tmp/lasso-test-uuid.txt", "");
         });
         const result = await spawnAndReadEditorContent();
         assert.strictEqual(result, null);
@@ -369,7 +369,7 @@ describe("input", () => {
       it("clears the editor input value and returns null when the editor result is whitespace only", async () => {
         actions.setEditorInputValue("prefill");
         mock.method(childProcessDeps, "spawnSync", () => {
-          testFs.writeFileSync("/tmp/lasso-test-uuid.txt", "   \n\t");
+          testFs.writeFile("/tmp/lasso-test-uuid.txt", "   \n\t");
         });
         const result = await spawnAndReadEditorContent();
         assert.strictEqual(result, null);
@@ -378,7 +378,7 @@ describe("input", () => {
 
       it("returns null without state changes when the editor result is whitespace only and there was no prefill", async () => {
         mock.method(childProcessDeps, "spawnSync", () => {
-          testFs.writeFileSync("/tmp/lasso-test-uuid.txt", "   ");
+          testFs.writeFile("/tmp/lasso-test-uuid.txt", "   ");
         });
         const result = await spawnAndReadEditorContent();
         assert.strictEqual(result, null);
@@ -387,7 +387,7 @@ describe("input", () => {
 
       it("returns normalized content", async () => {
         mock.method(childProcessDeps, "spawnSync", () => {
-          testFs.writeFileSync("/tmp/lasso-test-uuid.txt", "  hello  ");
+          testFs.writeFile("/tmp/lasso-test-uuid.txt", "  hello  ");
         });
         const result = await spawnAndReadEditorContent();
         assert.strictEqual(result, "  hello\n");
@@ -397,7 +397,7 @@ describe("input", () => {
       it("returns normalized content when editor saves unchanged content", async () => {
         actions.setRl(makeFakeRl({ line: "hello" }));
         mock.method(childProcessDeps, "spawnSync", () => {
-          testFs.writeFileSync("/tmp/lasso-test-uuid.txt", "hello");
+          testFs.writeFile("/tmp/lasso-test-uuid.txt", "hello");
         });
         const result = await spawnAndReadEditorContent();
         assert.strictEqual(result, "hello\n");
@@ -434,7 +434,7 @@ describe("input", () => {
         actions.setRl(makeFakeRl({ line: "hello " }));
         mockClipboardPaste("world");
         mock.method(childProcessDeps, "spawnSync", () => {
-          testFs.writeFileSync(
+          testFs.writeFile(
             "/tmp/lasso-test-uuid.txt",
             "  hello world modified  \n",
           );
@@ -449,7 +449,7 @@ describe("input", () => {
         actions.setRl(makeFakeRl({ line: "query" }));
         mockClipboardPaste("clip");
         mock.method(childProcessDeps, "spawnSync", () => {
-          testFs.writeFileSync("/tmp/lasso-test-uuid.txt", "queryclip");
+          testFs.writeFile("/tmp/lasso-test-uuid.txt", "queryclip");
         });
         const result = await spawnAndReadEditorContent({
           includeClipboardSuffix: true,
@@ -483,10 +483,9 @@ describe("input", () => {
         mockClipboardPasteFailure(new Error("boom"));
         let initialEditorContent = "";
         mock.method(childProcessDeps, "spawnSync", () => {
-          initialEditorContent = testFs
-            .readFileSync("/tmp/lasso-test-uuid.txt")
-            .toString();
-          testFs.writeFileSync("/tmp/lasso-test-uuid.txt", "final");
+          initialEditorContent =
+            testFs._files.get("/tmp/lasso-test-uuid.txt") ?? "";
+          testFs.writeFile("/tmp/lasso-test-uuid.txt", "final");
         });
         const result = await spawnAndReadEditorContent({
           includeClipboardSuffix: true,
@@ -737,9 +736,9 @@ second
 
   describe("parseInputFromEditor", () => {
     describe("splits on the delimiter", () => {
-      it("returns the whole editor value and clears it when no delimiter is present", () => {
+      it("returns the whole editor value and clears it when no delimiter is present", async () => {
         actions.setEditorInputValue("editor content");
-        const result = parseInputFromEditor();
+        const result = await parseInputFromEditor();
         assert.strictEqual(result, "editor content");
         assert.strictEqual(getState().app.editorInputValue, null);
         assert.deepStrictEqual(getState().app.transcript, [
@@ -747,14 +746,14 @@ second
         ]);
       });
 
-      it("splits on the delimiter, returns the first message, and keeps the rest", () => {
+      it("splits on the delimiter, returns the first message, and keeps the rest", async () => {
         actions.setEditorInputValue(`first
 l---
 second
 l---
 third
 `);
-        const result = parseInputFromEditor();
+        const result = await parseInputFromEditor();
         assert.strictEqual(result, "first\n");
         assert.strictEqual(
           getState().app.editorInputValue,
@@ -768,40 +767,40 @@ third
         ]);
       });
 
-      it("returns queued messages one per call until the queue is drained", () => {
+      it("returns queued messages one per call until the queue is drained", async () => {
         actions.setEditorInputValue(`first
 l---
 second
 l---
 third
 `);
-        assert.strictEqual(parseInputFromEditor(), "first\n");
-        assert.strictEqual(parseInputFromEditor(), "second\n");
-        assert.strictEqual(parseInputFromEditor(), "third\n");
+        assert.strictEqual(await parseInputFromEditor(), "first\n");
+        assert.strictEqual(await parseInputFromEditor(), "second\n");
+        assert.strictEqual(await parseInputFromEditor(), "third\n");
         assert.strictEqual(getState().app.editorInputValue, null);
       });
 
-      it("filters empty parts around the delimiter", () => {
+      it("filters empty parts around the delimiter", async () => {
         actions.setEditorInputValue(`l---
 msg
 l---
 `);
-        const result = parseInputFromEditor();
+        const result = await parseInputFromEditor();
         assert.strictEqual(result, "msg\n");
         assert.strictEqual(getState().app.editorInputValue, null);
       });
 
-      it("returns null when the editor value is nothing but delimiters", () => {
+      it("returns null when the editor value is nothing but delimiters", async () => {
         actions.setEditorInputValue(`l---
 l---
 `);
-        assert.strictEqual(parseInputFromEditor(), null);
+        assert.strictEqual(await parseInputFromEditor(), null);
         assert.strictEqual(getState().app.editorInputValue, null);
       });
     });
 
     describe("splits slash commands", () => {
-      it("splits slash command lines into their own messages", () => {
+      it("splits slash command lines into their own messages", async () => {
         actions.setSlashCommands([
           {
             name: "cwd",
@@ -812,14 +811,14 @@ l---
         actions.setEditorInputValue(`message 2
 /cwd
 `);
-        assert.strictEqual(parseInputFromEditor(), "message 2\n");
+        assert.strictEqual(await parseInputFromEditor(), "message 2\n");
         assert.strictEqual(getState().app.editorInputValue, "/cwd\n");
         assert.deepStrictEqual(getState().app.transcript, [
           { timestamp: 0, role: "user", message: "message 2\n" },
         ]);
       });
 
-      it("keeps the user's internal newlines when a command splits multi-line text", () => {
+      it("keeps the user's internal newlines when a command splits multi-line text", async () => {
         actions.setSlashCommands([
           {
             name: "cwd",
@@ -832,7 +831,10 @@ line two
 /cwd
 line three
 `);
-        assert.strictEqual(parseInputFromEditor(), "line one\nline two\n");
+        assert.strictEqual(
+          await parseInputFromEditor(),
+          "line one\nline two\n",
+        );
         assert.strictEqual(
           getState().app.editorInputValue,
           `/cwd
@@ -842,18 +844,18 @@ line three
         );
       });
 
-      it("keeps arguments on the slash command line intact", () => {
+      it("keeps arguments on the slash command line intact", async () => {
         actions.setEditorInputValue(`context
 /model new-model
 `);
-        assert.strictEqual(parseInputFromEditor(), "context\n");
+        assert.strictEqual(await parseInputFromEditor(), "context\n");
         assert.strictEqual(
           getState().app.editorInputValue,
           "/model new-model\n",
         );
       });
 
-      it("returns the slash command when it is the first message", () => {
+      it("returns the slash command when it is the first message", async () => {
         actions.setSlashCommands([
           {
             name: "cwd",
@@ -863,11 +865,11 @@ line three
         ]);
         actions.setEditorInputValue(`/cwd
 rest`);
-        assert.strictEqual(parseInputFromEditor(), "/cwd\n");
+        assert.strictEqual(await parseInputFromEditor(), "/cwd\n");
         assert.strictEqual(getState().app.editorInputValue, "rest");
       });
 
-      it("splits multiple slash commands within a single chunk", () => {
+      it("splits multiple slash commands within a single chunk", async () => {
         actions.setSlashCommands([
           {
             name: "cwd",
@@ -885,7 +887,7 @@ rest`);
 second
 /pwd
 `);
-        assert.strictEqual(parseInputFromEditor(), "first\n");
+        assert.strictEqual(await parseInputFromEditor(), "first\n");
         assert.strictEqual(
           getState().app.editorInputValue,
           `/cwd
@@ -897,7 +899,7 @@ l---
         );
       });
 
-      it("returns queued slash commands one per call until the queue is drained", () => {
+      it("returns queued slash commands one per call until the queue is drained", async () => {
         actions.setSlashCommands([
           {
             name: "cwd",
@@ -916,9 +918,9 @@ l---
 l---
 /pwd
 `);
-        assert.strictEqual(parseInputFromEditor(), "first\n");
-        assert.strictEqual(parseInputFromEditor(), "/cwd\n");
-        assert.strictEqual(parseInputFromEditor(), "/pwd\n");
+        assert.strictEqual(await parseInputFromEditor(), "first\n");
+        assert.strictEqual(await parseInputFromEditor(), "/cwd\n");
+        assert.strictEqual(await parseInputFromEditor(), "/pwd\n");
         assert.strictEqual(getState().app.editorInputValue, null);
       });
     });
@@ -1132,13 +1134,13 @@ l---
       actions.resetStdout();
     });
 
-    it("resets params", () => {
+    it("resets params", async () => {
       actions.setConversationMessages([{ role: "user", content: "hello" }]);
       actions.setConversationSummaries([
         { compacted: "summary", compactedAt: 3, tokens: 5 },
       ]);
       mock.method(promptDeps, "getSystemContent", () => "abc");
-      clearCommand();
+      await clearCommand();
       assert.deepStrictEqual(getState().app.conversation, {
         summaries: [],
         messages: [],
@@ -1407,8 +1409,8 @@ l---
       ]);
     });
 
-    it("surrounds the message with blank lines when isTyped is false", () => {
-      pageHistory();
+    it("surrounds the message with blank lines when isTyped is false", async () => {
+      await pageHistory();
       assert.deepStrictEqual(getWrites(), [
         "\n",
         `${BLUE}No chat history${RESET}\n`,
@@ -1416,13 +1418,13 @@ l---
       ]);
     });
 
-    it("does not add spacing when streaming", () => {
+    it("does not add spacing when streaming", async () => {
       actions.setApiStreamAbortController(new AbortController());
-      pageHistory();
+      await pageHistory();
       assert.deepStrictEqual(getWrites(), [`${BLUE}No chat history${RESET}\n`]);
     });
 
-    it("opens the chat history newest first in a pager with a heading prepended", () => {
+    it("opens the chat history newest first in a pager with a heading prepended", async () => {
       const { spawned } = mockPagerSpawn();
       testProcessEnv._set("LASSO_PAGER", "nano __FILE__");
       actions.setTranscript([
@@ -1437,7 +1439,7 @@ l---
           message: "newer content",
         },
       ]);
-      pageHistory();
+      await pageHistory();
       assert.strictEqual(spawned[0], "nano /tmp/lasso-test-uuid.txt");
       assert.strictEqual(
         testFs._files.get("/tmp/lasso-test-uuid.txt"),
@@ -1531,8 +1533,8 @@ second
       ]);
     });
 
-    it("surrounds the message with blank lines when isTyped is false", () => {
-      pageLastMessage();
+    it("surrounds the message with blank lines when isTyped is false", async () => {
+      await pageLastMessage();
       assert.deepStrictEqual(getWrites(), [
         "\n",
         `${BLUE}No user messages${RESET}\n`,
@@ -1540,15 +1542,15 @@ second
       ]);
     });
 
-    it("does not add spacing when streaming", () => {
+    it("does not add spacing when streaming", async () => {
       actions.setApiStreamAbortController(new AbortController());
-      pageLastMessage();
+      await pageLastMessage();
       assert.deepStrictEqual(getWrites(), [
         `${BLUE}No user messages${RESET}\n`,
       ]);
     });
 
-    it("opens the latest user message in a pager", () => {
+    it("opens the latest user message in a pager", async () => {
       const { spawned } = mockPagerSpawn();
       testProcessEnv._set("LASSO_PAGER", "nano __FILE__");
       actions.setConversationMessages([
@@ -1563,7 +1565,7 @@ second
         },
       ]);
 
-      pageLastMessage();
+      await pageLastMessage();
 
       assert.strictEqual(spawned[0], "nano /tmp/lasso-test-uuid.txt");
       assert.strictEqual(
@@ -1591,8 +1593,8 @@ latest question
       ]);
     });
 
-    it("surrounds the message with blank lines when isTyped is false", () => {
-      pageLastDiff();
+    it("surrounds the message with blank lines when isTyped is false", async () => {
+      await pageLastDiff();
       assert.deepStrictEqual(getWrites(), [
         "\n",
         `${BLUE}No diffs from the last turn${RESET}\n`,
@@ -1600,21 +1602,21 @@ latest question
       ]);
     });
 
-    it("does not add spacing when streaming", () => {
+    it("does not add spacing when streaming", async () => {
       actions.setApiStreamAbortController(new AbortController());
-      pageLastDiff();
+      await pageLastDiff();
       assert.deepStrictEqual(getWrites(), [
         `${BLUE}No diffs from the last turn${RESET}\n`,
       ]);
     });
 
-    it("opens the diffs in a pager with a fence per file", () => {
+    it("opens the diffs in a pager with a fence per file", async () => {
       const { spawned } = mockPagerSpawn();
       testProcessEnv._set("LASSO_PAGER", "nano __FILE__");
       actions.appendToolEditDiff({ fileName: "/a.ts", diffStdout: "+a\n" });
       actions.appendToolEditDiff({ fileName: "/b.ts", diffStdout: "+b\n" });
 
-      pageLastDiff();
+      await pageLastDiff();
 
       assert.strictEqual(spawned[0], "nano /tmp/lasso-test-uuid.txt");
       assert.strictEqual(
@@ -1623,12 +1625,12 @@ latest question
       );
     });
 
-    it("opens the diffs with collapsed extra trailing newlines", () => {
+    it("opens the diffs with collapsed extra trailing newlines", async () => {
       const { spawned } = mockPagerSpawn();
       testProcessEnv._set("LASSO_PAGER", "nano __FILE__");
       actions.appendToolEditDiff({ fileName: "/a.ts", diffStdout: "+a\n\n\n" });
 
-      pageLastDiff();
+      await pageLastDiff();
 
       assert.strictEqual(spawned[0], "nano /tmp/lasso-test-uuid.txt");
       assert.strictEqual(
@@ -1644,7 +1646,7 @@ latest question
       actions.resetStdout();
     });
 
-    it("opens the summaries list newest first in a pager", () => {
+    it("opens the summaries list newest first in a pager", async () => {
       const { spawned } = mockPagerSpawn();
       testProcessEnv._set("LASSO_PAGER", "nano __FILE__");
       actions.setConversationSummaries([
@@ -1652,7 +1654,7 @@ latest question
         { compacted: "latest summary", compactedAt: 200, tokens: 20 },
       ]);
 
-      pageSummaries();
+      await pageSummaries();
 
       assert.strictEqual(spawned[0], "nano /tmp/lasso-test-uuid.txt");
       assert.deepStrictEqual(
@@ -1683,8 +1685,8 @@ older summary
       assert.strictEqual(testFs._files.has("/tmp/lasso-test-uuid.txt"), false);
     });
 
-    it("surrounds the message with blank lines when isTyped is false", () => {
-      pageSummaries();
+    it("surrounds the message with blank lines when isTyped is false", async () => {
+      await pageSummaries();
       assert.deepStrictEqual(getWrites(), [
         "\n",
         `${BLUE}No conversation summaries${RESET}\n`,
@@ -1692,9 +1694,405 @@ older summary
       ]);
     });
 
-    it("does not add spacing when streaming", () => {
+    it("does not add spacing when streaming", async () => {
       actions.setApiStreamAbortController(new AbortController());
-      pageSummaries();
+      await pageSummaries();
+      assert.deepStrictEqual(getWrites(), [
+        `${BLUE}No conversation summaries${RESET}\n`,
+      ]);
+    });
+  });
+
+  describe("resumeWithNoArgs", () => {
+    beforeEach(() => {
+      actions.resetStdout();
+    });
+
+    it("prints an error when there are no sessions to resume", async () => {
+      const result = await resumeWithNoArgs();
+      assert.strictEqual(result, null);
+      assert.deepStrictEqual(getWrites(), [
+        `${RED}No sessions to resume${RESET}\n`,
+        "\n",
+      ]);
+    });
+
+    it("resumes the most recent session", async () => {
+      actions.setConversationMessages([{ role: "user", content: "hello" }]);
+      addSessionFile(1234567890000, {
+        messages: [{ role: "user", content: "older" }],
+        summaries: [],
+        transcript: [],
+      });
+      addSessionFile(1234567899999, {
+        messages: [{ role: "assistant", content: "newer" }],
+        summaries: [{ compacted: "summary", compactedAt: 123, tokens: 456 }],
+        transcript: [
+          { timestamp: 0, role: "user", message: "newer transcript" },
+        ],
+      });
+
+      const result = await resumeWithNoArgs();
+
+      assert.strictEqual(result, "Continue");
+      assert.deepStrictEqual(getState().app.conversation, {
+        summaries: [{ compacted: "summary", compactedAt: 123, tokens: 456 }],
+        messages: [{ role: "assistant", content: "newer" }],
+      });
+      assert.deepStrictEqual(getState().app.transcript, [
+        { timestamp: 0, role: "user", message: "newer transcript" },
+      ]);
+    });
+
+    it("excludes the current session file when resuming the most recent session", async () => {
+      addSessionFile(1234567899999, {
+        messages: [{ role: "assistant", content: "newer" }],
+        summaries: [{ compacted: "summary", compactedAt: 123, tokens: 456 }],
+        transcript: [
+          { timestamp: 0, role: "user", message: "newer transcript" },
+        ],
+      });
+      actions.setSessionFilePath(
+        "/fake-home/.local/state/lasso/sessions/session-1234567899999.json",
+      );
+      addSessionFile(1234567890000, {
+        messages: [{ role: "user", content: "older" }],
+        summaries: [],
+        transcript: [],
+      });
+
+      const result = await resumeWithNoArgs();
+
+      assert.strictEqual(result, "Continue");
+      assert.deepStrictEqual(getState().app.conversation, {
+        summaries: [],
+        messages: [{ role: "user", content: "older" }],
+      });
+      assert.deepStrictEqual(getState().app.transcript, []);
+    });
+
+    it("prints an error when the current session is the only session", async () => {
+      actions.setSessionFilePath(
+        "/fake-home/.local/state/lasso/sessions/session-1234567890000.json",
+      );
+      addSessionFile(1234567890000, {
+        messages: [{ role: "user", content: "hello" }],
+        summaries: [],
+        transcript: [],
+      });
+
+      const result = await resumeWithNoArgs();
+
+      assert.strictEqual(result, null);
+      assert.deepStrictEqual(getWrites(), [
+        `${RED}No sessions to resume${RESET}\n`,
+        "\n",
+      ]);
+    });
+  });
+
+  describe("pageHistory", () => {
+    beforeEach(() => {
+      actions.resetState();
+      actions.resetStdout();
+    });
+
+    it("prints that history is empty when the transcript is empty", () => {
+      pageHistory({ isTyped: true });
+      assert.deepStrictEqual(getWrites(), [
+        `${BLUE}No chat history${RESET}\n`,
+        "\n",
+      ]);
+    });
+
+    it("surrounds the message with blank lines when isTyped is false", async () => {
+      await pageHistory();
+      assert.deepStrictEqual(getWrites(), [
+        "\n",
+        `${BLUE}No chat history${RESET}\n`,
+        "\n",
+      ]);
+    });
+
+    it("does not add spacing when streaming", async () => {
+      actions.setApiStreamAbortController(new AbortController());
+      await pageHistory();
+      assert.deepStrictEqual(getWrites(), [`${BLUE}No chat history${RESET}\n`]);
+    });
+
+    it("opens the chat history newest first in a pager with a heading prepended", async () => {
+      const { spawned } = mockPagerSpawn();
+      testProcessEnv._set("LASSO_PAGER", "nano __FILE__");
+      actions.setTranscript([
+        {
+          timestamp: 1000,
+          role: "user",
+          message: "older content",
+        },
+        {
+          timestamp: 60000,
+          role: "assistant",
+          message: "newer content",
+        },
+      ]);
+      await pageHistory();
+      assert.strictEqual(spawned[0], "nano /tmp/lasso-test-uuid.txt");
+      assert.strictEqual(
+        testFs._files.get("/tmp/lasso-test-uuid.txt"),
+        `# [lasso] Chat history
+
+Jan 1, 1970, 12:01:00 AM  *assistant*
+newer content
+
+---
+
+Jan 1, 1970, 12:00:01 AM  *user*
+older content
+
+`,
+      );
+    });
+  });
+
+  describe("pageLastResponse", () => {
+    beforeEach(() => {
+      actions.resetState();
+      actions.resetStdout();
+    });
+
+    it("prints no messages when there is no assistant response", async () => {
+      await pageLastResponse({ isTyped: true });
+      assert.deepStrictEqual(getWrites(), [
+        `${BLUE}No llm messages${RESET}\n`,
+        "\n",
+      ]);
+    });
+
+    it("surrounds the message with blank lines when isTyped is false", async () => {
+      await pageLastResponse();
+      assert.deepStrictEqual(getWrites(), [
+        "\n",
+        `${BLUE}No llm messages${RESET}\n`,
+        "\n",
+      ]);
+    });
+
+    it("does not add spacing when streaming", async () => {
+      actions.setApiStreamAbortController(new AbortController());
+      await pageLastResponse();
+      assert.deepStrictEqual(getWrites(), [`${BLUE}No llm messages${RESET}\n`]);
+    });
+
+    it("opens the latest assistant response in a pager", async () => {
+      const { spawned } = mockPagerSpawn();
+      testProcessEnv._set("LASSO_PAGER", "nano __FILE__");
+      actions.setConversationMessages([
+        {
+          role: "user",
+          content: "question",
+        },
+        {
+          role: "assistant",
+          content: [
+            { type: "text", text: "first" },
+            { type: "text", text: "second" },
+          ],
+        },
+      ]);
+
+      await pageLastResponse();
+
+      assert.strictEqual(spawned[0], "nano /tmp/lasso-test-uuid.txt");
+      assert.strictEqual(
+        testFs._files.get("/tmp/lasso-test-uuid.txt"),
+        `# [lasso] Last response
+
+first
+second
+
+`,
+      );
+    });
+  });
+
+  describe("pageLastMessage", () => {
+    beforeEach(() => {
+      actions.resetState();
+      actions.resetStdout();
+    });
+
+    it("prints no messages when there is no user message", () => {
+      pageLastMessage({ isTyped: true });
+      assert.deepStrictEqual(getWrites(), [
+        `${BLUE}No user messages${RESET}\n`,
+        "\n",
+      ]);
+    });
+
+    it("surrounds the message with blank lines when isTyped is false", async () => {
+      await pageLastMessage();
+      assert.deepStrictEqual(getWrites(), [
+        "\n",
+        `${BLUE}No user messages${RESET}\n`,
+        "\n",
+      ]);
+    });
+
+    it("does not add spacing when streaming", async () => {
+      actions.setApiStreamAbortController(new AbortController());
+      await pageLastMessage();
+      assert.deepStrictEqual(getWrites(), [
+        `${BLUE}No user messages${RESET}\n`,
+      ]);
+    });
+
+    it("opens the latest user message in a pager", async () => {
+      const { spawned } = mockPagerSpawn();
+      testProcessEnv._set("LASSO_PAGER", "nano __FILE__");
+      actions.setConversationMessages([
+        { role: "user", content: "older" },
+        {
+          role: "assistant",
+          content: [{ type: "text", text: "answer" }],
+        },
+        {
+          role: "user",
+          content: "latest question",
+        },
+      ]);
+
+      await pageLastMessage();
+
+      assert.strictEqual(spawned[0], "nano /tmp/lasso-test-uuid.txt");
+      assert.strictEqual(
+        testFs._files.get("/tmp/lasso-test-uuid.txt"),
+        `# [lasso] Last message
+
+latest question
+
+`,
+      );
+    });
+  });
+
+  describe("pageLastDiff", () => {
+    beforeEach(() => {
+      actions.resetState();
+      actions.resetStdout();
+    });
+
+    it("prints no diffs when there are no diffs", () => {
+      pageLastDiff({ isTyped: true });
+      assert.deepStrictEqual(getWrites(), [
+        `${BLUE}No diffs from the last turn${RESET}\n`,
+        "\n",
+      ]);
+    });
+
+    it("surrounds the message with blank lines when isTyped is false", async () => {
+      await pageLastDiff();
+      assert.deepStrictEqual(getWrites(), [
+        "\n",
+        `${BLUE}No diffs from the last turn${RESET}\n`,
+        "\n",
+      ]);
+    });
+
+    it("does not add spacing when streaming", async () => {
+      actions.setApiStreamAbortController(new AbortController());
+      await pageLastDiff();
+      assert.deepStrictEqual(getWrites(), [
+        `${BLUE}No diffs from the last turn${RESET}\n`,
+      ]);
+    });
+
+    it("opens the diffs in a pager with a fence per file", async () => {
+      const { spawned } = mockPagerSpawn();
+      testProcessEnv._set("LASSO_PAGER", "nano __FILE__");
+      actions.appendToolEditDiff({ fileName: "/a.ts", diffStdout: "+a\n" });
+      actions.appendToolEditDiff({ fileName: "/b.ts", diffStdout: "+b\n" });
+
+      await pageLastDiff();
+
+      assert.strictEqual(spawned[0], "nano /tmp/lasso-test-uuid.txt");
+      assert.strictEqual(
+        testFs._files.get("/tmp/lasso-test-uuid.txt"),
+        `━━ /a.ts ━━\n+a\n\n\n━━ /b.ts ━━\n+b\n\n`,
+      );
+    });
+
+    it("opens the diffs with collapsed extra trailing newlines", async () => {
+      const { spawned } = mockPagerSpawn();
+      testProcessEnv._set("LASSO_PAGER", "nano __FILE__");
+      actions.appendToolEditDiff({ fileName: "/a.ts", diffStdout: "+a\n\n\n" });
+
+      await pageLastDiff();
+
+      assert.strictEqual(spawned[0], "nano /tmp/lasso-test-uuid.txt");
+      assert.strictEqual(
+        testFs._files.get("/tmp/lasso-test-uuid.txt"),
+        `━━ /a.ts ━━\n+a\n\n`,
+      );
+    });
+  });
+
+  describe("pageSummaries", () => {
+    beforeEach(() => {
+      actions.resetState();
+      actions.resetStdout();
+    });
+
+    it("opens the summaries list newest first in a pager", async () => {
+      const { spawned } = mockPagerSpawn();
+      testProcessEnv._set("LASSO_PAGER", "nano __FILE__");
+      actions.setConversationSummaries([
+        { compacted: "older summary", compactedAt: 100, tokens: 10 },
+        { compacted: "latest summary", compactedAt: 200, tokens: 20 },
+      ]);
+
+      await pageSummaries();
+
+      assert.strictEqual(spawned[0], "nano /tmp/lasso-test-uuid.txt");
+      assert.deepStrictEqual(
+        stripAnsi(testFs._files.get("/tmp/lasso-test-uuid.txt") ?? ""),
+        `# [lasso] Conversation summaries
+
+## Summary 2 (20 tokens, compacted at Jan 1, 1970, 12:00:00 AM)
+
+latest summary
+
+---
+
+## Summary 1 (10 tokens, compacted at Jan 1, 1970, 12:00:00 AM)
+
+older summary
+
+`,
+      );
+    });
+
+    it("prints a message when there are no conversation summaries", () => {
+      pageSummaries({ isTyped: true });
+
+      assert.deepStrictEqual(getWrites(), [
+        `${BLUE}No conversation summaries${RESET}\n`,
+        "\n",
+      ]);
+      assert.strictEqual(testFs._files.has("/tmp/lasso-test-uuid.txt"), false);
+    });
+
+    it("surrounds the message with blank lines when isTyped is false", async () => {
+      await pageSummaries();
+      assert.deepStrictEqual(getWrites(), [
+        "\n",
+        `${BLUE}No conversation summaries${RESET}\n`,
+        "\n",
+      ]);
+    });
+
+    it("does not add spacing when streaming", async () => {
+      actions.setApiStreamAbortController(new AbortController());
+      await pageSummaries();
       assert.deepStrictEqual(getWrites(), [
         `${BLUE}No conversation summaries${RESET}\n`,
       ]);
@@ -1715,8 +2113,8 @@ older summary
       ]);
     });
 
-    it("surrounds the message with blank lines when isTyped is false", () => {
-      pageEditStr();
+    it("surrounds the message with blank lines when isTyped is false", async () => {
+      await pageEditStr();
       assert.deepStrictEqual(getWrites(), [
         "\n",
         `${BLUE}Editor is empty${RESET}\n`,
@@ -1724,18 +2122,18 @@ older summary
       ]);
     });
 
-    it("does not add spacing when streaming", () => {
+    it("does not add spacing when streaming", async () => {
       actions.setApiStreamAbortController(new AbortController());
-      pageEditStr();
+      await pageEditStr();
       assert.deepStrictEqual(getWrites(), [`${BLUE}Editor is empty${RESET}\n`]);
     });
 
-    it("opens the editor input in a pager with a header", () => {
+    it("opens the editor input in a pager with a header", async () => {
       const { spawned } = mockPagerSpawn();
       testProcessEnv._set("LASSO_PAGER", "nano __FILE__");
       actions.setEditorInputValue("editor input");
 
-      pageEditStr();
+      await pageEditStr();
 
       assert.strictEqual(spawned[0], "nano /tmp/lasso-test-uuid.txt");
       assert.strictEqual(
@@ -1755,7 +2153,7 @@ editor input
       actions.resetStdout();
     });
 
-    it("opens available skills in a pager", () => {
+    it("opens available skills in a pager", async () => {
       const { spawned } = mockPagerSpawn();
       testProcessEnv._set("LASSO_PAGER", "nano __FILE__");
       actions.setSkills([
@@ -1767,7 +2165,7 @@ editor input
         },
       ]);
 
-      pageSkills();
+      await pageSkills();
 
       assert.strictEqual(spawned[0], "nano /tmp/lasso-test-uuid.txt");
       assert.strictEqual(
@@ -1782,7 +2180,7 @@ editor input
       assert.deepStrictEqual(getWrites(), []);
     });
 
-    it("filters out context file skills", () => {
+    it("filters out context file skills", async () => {
       actions.setSkills([
         {
           name: "__lasso-context-for-/ctx",
@@ -1798,7 +2196,7 @@ editor input
         },
       ]);
 
-      pageSkills();
+      await pageSkills();
 
       assert.strictEqual(
         testFs._files.get("/tmp/lasso-test-uuid.txt"),
@@ -1820,8 +2218,8 @@ editor input
       assert.strictEqual(testFs._files.has("/tmp/lasso-test-uuid.txt"), false);
     });
 
-    it("surrounds the message with blank lines when isTyped is false", () => {
-      pageSkills();
+    it("surrounds the message with blank lines when isTyped is false", async () => {
+      await pageSkills();
       assert.deepStrictEqual(getWrites(), [
         "\n",
         `${BLUE}No available skills${RESET}\n`,
@@ -1829,9 +2227,9 @@ editor input
       ]);
     });
 
-    it("does not add spacing when streaming", () => {
+    it("does not add spacing when streaming", async () => {
       actions.setApiStreamAbortController(new AbortController());
-      pageSkills();
+      await pageSkills();
       assert.deepStrictEqual(getWrites(), [
         `${BLUE}No available skills${RESET}\n`,
       ]);
@@ -1910,14 +2308,14 @@ editor input
       actions.resetStdout();
     });
 
-    it("opens available context files in a pager", () => {
+    it("opens available context files in a pager", async () => {
       const { spawned } = mockPagerSpawn();
       testProcessEnv._set("LASSO_PAGER", "nano __FILE__");
       actions.setContextEntries([
         { filePath: "/project/AGENTS.md", content: "context" },
       ]);
 
-      pageAvailableContextFiles();
+      await pageAvailableContextFiles();
 
       assert.strictEqual(spawned[0], "nano /tmp/lasso-test-uuid.txt");
       assert.strictEqual(
@@ -1931,7 +2329,7 @@ editor input
       assert.deepStrictEqual(getWrites(), []);
     });
 
-    it("includes context file skills", () => {
+    it("includes context file skills", async () => {
       actions.setContextEntries([
         { filePath: "/project/AGENTS.md", content: "context" },
       ]);
@@ -1950,7 +2348,7 @@ editor input
         },
       ]);
 
-      pageAvailableContextFiles();
+      await pageAvailableContextFiles();
 
       assert.strictEqual(
         testFs._files.get("/tmp/lasso-test-uuid.txt"),
@@ -1972,8 +2370,8 @@ editor input
       assert.strictEqual(testFs._files.has("/tmp/lasso-test-uuid.txt"), false);
     });
 
-    it("surrounds the message with blank lines when isTyped is false", () => {
-      pageAvailableContextFiles();
+    it("surrounds the message with blank lines when isTyped is false", async () => {
+      await pageAvailableContextFiles();
       assert.deepStrictEqual(getWrites(), [
         "\n",
         `${BLUE}No available context files${RESET}\n`,
@@ -1981,9 +2379,9 @@ editor input
       ]);
     });
 
-    it("does not add spacing when streaming", () => {
+    it("does not add spacing when streaming", async () => {
       actions.setApiStreamAbortController(new AbortController());
-      pageAvailableContextFiles();
+      await pageAvailableContextFiles();
       assert.deepStrictEqual(getWrites(), [
         `${BLUE}No available context files${RESET}\n`,
       ]);
@@ -2013,7 +2411,7 @@ editor input
       actions.resetStdout();
     });
 
-    it("writes builtin and custom commands into the temp file", () => {
+    it("writes builtin and custom commands into the temp file", async () => {
       actions.setSlashCommands([
         {
           name: "custom.md",
@@ -2021,7 +2419,7 @@ editor input
           content: "custom",
         },
       ]);
-      pageCommands();
+      await pageCommands();
       assert.strictEqual(
         testFs._files.get("/tmp/lasso-test-uuid.txt"),
         `# Available commands:
@@ -2056,10 +2454,10 @@ editor input
       assert.deepStrictEqual(getWrites(), []);
     });
 
-    it("opens commands in a pager via LASSO_PAGER", () => {
+    it("opens commands in a pager via LASSO_PAGER", async () => {
       const { spawned } = mockPagerSpawn();
       testProcessEnv._set("LASSO_PAGER", "nano __FILE__");
-      pageCommands();
+      await pageCommands();
       assert.strictEqual(spawned[0], "nano /tmp/lasso-test-uuid.txt");
     });
   });
@@ -2163,7 +2561,7 @@ editor input
           prompts.push(arg);
         });
         mock.method(childProcessDeps, "spawnSync", () => {
-          testFs.writeFileSync("/tmp/lasso-test-uuid.txt", "  edited  ");
+          testFs.writeFile("/tmp/lasso-test-uuid.txt", "  edited  ");
         });
         harness.emitKey({ name: "g", ctrl: true });
         await harness.flush();
@@ -2178,7 +2576,7 @@ editor input
         });
         mockClipboardPaste("world");
         mock.method(childProcessDeps, "spawnSync", () => {
-          testFs.writeFileSync(
+          testFs.writeFile(
             "/tmp/lasso-test-uuid.txt",
             "  hello world modified  \n",
           );
@@ -2197,7 +2595,7 @@ editor input
           prompts.push(arg);
         });
         mock.method(childProcessDeps, "spawnSync", () => {
-          testFs.writeFileSync("/tmp/lasso-test-uuid.txt", "");
+          testFs.writeFile("/tmp/lasso-test-uuid.txt", "");
         });
         harness.emitKey({ name: "g", ctrl: true });
         await harness.flush();
@@ -2550,7 +2948,7 @@ editor input
 
       it("handles /edit command and logs editor content to the transcript", async () => {
         mock.method(childProcessDeps, "spawnSync", () => {
-          testFs.writeFileSync("/tmp/lasso-test-uuid.txt", "from editor");
+          testFs.writeFile("/tmp/lasso-test-uuid.txt", "from editor");
         });
         const result = await resolveSlashCommand("/edit");
         assert.strictEqual(result, "from editor\n");
@@ -2562,7 +2960,7 @@ editor input
       it("handles /paste command and logs editor content to the transcript", async () => {
         mockClipboardPaste("clip");
         mock.method(childProcessDeps, "spawnSync", () => {
-          testFs.writeFileSync("/tmp/lasso-test-uuid.txt", "pasted content");
+          testFs.writeFile("/tmp/lasso-test-uuid.txt", "pasted content");
         });
         const result = await resolveSlashCommand("/paste");
         assert.strictEqual(result, "pasted content\n");
@@ -2927,16 +3325,12 @@ log content
       it("skips the before-and-after diff when a before temp file cannot be created", async () => {
         testProcessEnv._set("LASSO_PAGER", "cat __FILE__");
         mockPagerSpawn();
-        mock.method(
-          fsDeps,
-          "writeFileSync",
-          (path: string, content: string) => {
-            if (path === "/tmp/lasso-global-before-test-uuid.txt") {
-              throw new Error("write failed");
-            }
-            testFs.writeFileSync(path, content);
-          },
-        );
+        mock.method(fsDeps, "writeFile", (path: string, content: string) => {
+          if (path === "/tmp/lasso-global-before-test-uuid.txt") {
+            return Promise.reject(new Error("write failed"));
+          }
+          return testFs.writeFile(path, content);
+        });
         mockExecCalls([
           { stdout: "delta 0.18.2" },
           { stdout: "local diff\n" },
@@ -2979,16 +3373,12 @@ commands diff
       it("unlinks the before temp file when the after temp file cannot be created", async () => {
         testProcessEnv._set("LASSO_PAGER", "cat __FILE__");
         mockPagerSpawn();
-        mock.method(
-          fsDeps,
-          "writeFileSync",
-          (path: string, content: string) => {
-            if (path === "/tmp/lasso-global-after-test-uuid.txt") {
-              throw new Error("write failed");
-            }
-            testFs.writeFileSync(path, content);
-          },
-        );
+        mock.method(fsDeps, "writeFile", (path: string, content: string) => {
+          if (path === "/tmp/lasso-global-after-test-uuid.txt") {
+            return Promise.reject(new Error("write failed"));
+          }
+          return testFs.writeFile(path, content);
+        });
         mockExecCalls([
           { stdout: "delta 0.18.2" },
           { stdout: "local diff\n" },
@@ -3370,18 +3760,18 @@ custom command content`,
       actions.setRl(makeFakeRl({ line: "" }));
     });
 
-    it("returns the result and sets the record process abort controller", () => {
+    it("returns the result and sets the record process abort controller", async () => {
       actions.setTranscriptionSdkProvider("openai");
       actions.setTranscriptionModel("gpt-4o-transcribe");
       testProcessEnv._set("LASSO_TRANSCRIPTION_API_KEY", "key");
-      const result = recordAndTranscribeInput();
+      const result = await recordAndTranscribeInput();
       assert.strictEqual(result, "[Recording not yet implemented]");
       assert.strictEqual(getState().abortControllers.recordProcess, null);
     });
 
-    it("returns null and prints a warning without transcription configuration", () => {
+    it("returns null and prints a warning without transcription configuration", async () => {
       actions.resetStdout();
-      const result = recordAndTranscribeInput();
+      const result = await recordAndTranscribeInput();
       assert.strictEqual(result, null);
       assert.deepStrictEqual(getWrites(), [
         `${YELLOW}Warning! You're missing required configuration options for /record.
@@ -3395,9 +3785,9 @@ custom command content`,
   });
 
   describe("initLocalConfig and initGlobalConfig", () => {
-    it("creates the local config in .lasso/settings.yaml", () => {
+    it("creates the local config in .lasso/settings.yaml", async () => {
       actions.resetStdout();
-      initLocalConfig();
+      await initLocalConfig();
       assert.deepStrictEqual(getWrites(), [
         `${PURPLE}Created the local config at /test-cwd/.lasso/settings.yaml${RESET}\n`,
       ]);
@@ -3411,10 +3801,10 @@ baseURL: https://opencode.ai/zen/v1
       assert.ok(testFs._dirs.has("/test-cwd/.lasso"));
     });
 
-    it("warns and does not overwrite when the local config already exists", () => {
+    it("warns and does not overwrite when the local config already exists", async () => {
       testFs._files.set("/test-cwd/.lasso/settings.yaml", "existing config");
       actions.resetStdout();
-      initLocalConfig();
+      await initLocalConfig();
       assert.deepStrictEqual(getWrites(), [
         `${YELLOW}The local config already exists at /test-cwd/.lasso/settings.yaml${RESET}\n`,
       ]);
@@ -3424,20 +3814,20 @@ baseURL: https://opencode.ai/zen/v1
       );
     });
 
-    it("warns when writing the local config fails", () => {
-      mock.method(fsDeps, "writeFileSync", () => {
-        throw new Error("write failed");
-      });
+    it("warns when writing the local config fails", async () => {
+      mock.method(fsDeps, "writeFile", () =>
+        Promise.reject(new Error("write failed")),
+      );
       actions.resetStdout();
-      initLocalConfig();
+      await initLocalConfig();
       assert.deepStrictEqual(getWrites(), [
         `${RED}Failed to write the config to /test-cwd/.lasso/settings.yaml${RESET}\n`,
       ]);
     });
 
-    it("creates the global config in ~/.config/lasso/settings.yaml", () => {
+    it("creates the global config in ~/.config/lasso/settings.yaml", async () => {
       actions.resetStdout();
-      initGlobalConfig();
+      await initGlobalConfig();
       assert.deepStrictEqual(getWrites(), [
         `${PURPLE}Created the global config at /fake-home/.config/lasso/settings.yaml${RESET}\n`,
       ]);
@@ -3451,13 +3841,13 @@ baseURL: https://opencode.ai/zen/v1
       assert.ok(testFs._dirs.has("/fake-home/.config/lasso"));
     });
 
-    it("warns and does not overwrite when the global config already exists", () => {
+    it("warns and does not overwrite when the global config already exists", async () => {
       testFs._files.set(
         "/fake-home/.config/lasso/settings.yaml",
         "existing config",
       );
       actions.resetStdout();
-      initGlobalConfig();
+      await initGlobalConfig();
       assert.deepStrictEqual(getWrites(), [
         `${YELLOW}The global config already exists at /fake-home/.config/lasso/settings.yaml${RESET}\n`,
       ]);
@@ -3467,23 +3857,23 @@ baseURL: https://opencode.ai/zen/v1
       );
     });
 
-    it("warns when writing the global config fails", () => {
-      mock.method(fsDeps, "writeFileSync", () => {
-        throw new Error("write failed");
-      });
+    it("warns when writing the global config fails", async () => {
+      mock.method(fsDeps, "writeFile", () =>
+        Promise.reject(new Error("write failed")),
+      );
       actions.resetStdout();
-      initGlobalConfig();
+      await initGlobalConfig();
       assert.deepStrictEqual(getWrites(), [
         `${RED}Failed to write the config to /fake-home/.config/lasso/settings.yaml${RESET}\n`,
       ]);
     });
 
-    it("warns when the config directory cannot be created", () => {
-      mock.method(fsDeps, "mkdirSync", () => {
-        throw new Error("mkdir failed");
-      });
+    it("warns when the config directory cannot be created", async () => {
+      mock.method(fsDeps, "mkdir", () =>
+        Promise.reject(new Error("mkdir failed")),
+      );
       actions.resetStdout();
-      initLocalConfig();
+      await initLocalConfig();
       assert.deepStrictEqual(getWrites(), [
         `${RED}Failed to create the directory: /test-cwd/.lasso${RESET}\n`,
       ]);

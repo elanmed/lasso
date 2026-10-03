@@ -240,7 +240,7 @@ describe("config", () => {
         assert.equal(getState().config.gateway, undefined);
       });
 
-      it("merges its mcps with the global and default config", () => {
+      it("merges its mcps with the global and default config", async () => {
         testFs._files.set(
           getGlobalConfigPath(),
           JSON.stringify({
@@ -276,7 +276,7 @@ describe("config", () => {
           }),
         );
 
-        const { globalConfig, localConfig } = initStateFirst();
+        const { globalConfig, localConfig } = await initStateFirst();
         initStateFromConfig({ globalConfig, localConfig });
 
         assert.deepStrictEqual(getState().config.mcps, {
@@ -1811,22 +1811,22 @@ hello
   });
 
   describe("initStateFirst", () => {
-    it("sets debug flag when DEBUG=1", () => {
+    it("sets debug flag when DEBUG=1", async () => {
       testProcessEnv._clear();
       testProcessEnv._set("DEBUG", "1");
 
-      initStateFirst();
+      await initStateFirst();
 
       assert.strictEqual(getState().app.debugLog, true);
     });
 
-    it("keeps debug flag off when DEBUG is not set", () => {
-      initStateFirst();
+    it("keeps debug flag off when DEBUG is not set", async () => {
+      await initStateFirst();
 
       assert.strictEqual(getState().app.debugLog, false);
     });
 
-    it("reads each config file once and reuses the same read for parsing", () => {
+    it("reads each config file once and reuses the same read for parsing", async () => {
       const globalConfigStr = JSON.stringify({ ...testConfig });
       testFs._files.set(getGlobalConfigPath(), globalConfigStr);
       const localConfigStr = JSON.stringify({ promptPrefix: ">>> " });
@@ -1834,13 +1834,13 @@ hello
 
       let globalReads = 0;
       let localReads = 0;
-      mock.method(fsDeps, "readFileSync", (path: string) => {
+      mock.method(fsDeps, "readFile", async (path: string) => {
         if (path === getGlobalConfigPath()) globalReads += 1;
         if (path === getLocalConfigPath()) localReads += 1;
-        return testFs.readFileSync(path);
+        return testFs.readFile(path, "utf8");
       });
 
-      const { globalConfig, localConfig } = initStateFirst();
+      const { globalConfig, localConfig } = await initStateFirst();
 
       assert.strictEqual(globalReads, 1);
       assert.strictEqual(localReads, 1);

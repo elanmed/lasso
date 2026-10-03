@@ -93,15 +93,15 @@ export async function executeBat(content: string) {
   print.plain(batResult.value.stdout);
 }
 
-export function openWithPager({
+export async function openWithPager({
   initialContentStr,
   contentType,
 }: {
   initialContentStr: string;
   contentType: "diff" | "markdown";
-}): void {
+}): Promise<void> {
   initialContentStr = normalizeNewline(initialContentStr, { count: 2 });
-  const tempFile = getTempFileName({ initialContentStr });
+  const tempFile = await getTempFileName({ initialContentStr });
   if (tempFile === null) return;
 
   const pagerCommand = (() => {

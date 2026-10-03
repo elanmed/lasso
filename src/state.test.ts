@@ -43,13 +43,15 @@ skills body`,
   });
 
   describe("initial and reset state", () => {
-    it("reset-state writes debug-log entry using pre-reset debug settings", () => {
+    it("reset-state writes debug-log entry using pre-reset debug settings", async () => {
       const debugLogPath = "/fake-home/.config/lasso/debug/debug-test-uuid.log";
+      testFs._dirs.add("/fake-home/.config/lasso/debug");
       testFs._files.set(debugLogPath, "");
       actions.setDebugLogPath(debugLogPath);
       actions.setDebugLog(true);
       actions.setQuestionAbortController(new AbortController());
       actions.resetState();
+      await new Promise((resolve) => setImmediate(resolve));
 
       assert.equal(
         testFs._files.get(debugLogPath),

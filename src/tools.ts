@@ -457,7 +457,7 @@ export async function createSubagentTool(
           tools: { ...subagentSafeTools, ...getState().mcp.tools },
           stopWhen: aiDeps.isLoopFinished(),
           abortSignal: controller.signal,
-          onToolExecutionStart: ({ toolCall }) => {
+          onToolExecutionStart: async ({ toolCall }) => {
             if (subagentSchema.access !== "read-write") return;
             if (toolCall.toolName !== "bash") return;
 
@@ -465,7 +465,7 @@ export async function createSubagentTool(
             if (
               bashSchemaResult.fileSystemAccessType === "create-update-delete"
             ) {
-              toolCallDiffer.setTempFileBefore(
+              await toolCallDiffer.setTempFileBefore(
                 toolCall.toolCallId,
                 bashSchemaResult.filePath,
               );
@@ -482,7 +482,7 @@ export async function createSubagentTool(
               bashSchemaResult.fileSystemAccessType === "create-update-delete"
             ) {
               if (!success) {
-                toolCallDiffer.cleanupTempFileBefore(toolCall.toolCallId);
+                await toolCallDiffer.cleanupTempFileBefore(toolCall.toolCallId);
                 return;
               }
               await toolCallDiffer.diffAndCleanup(
@@ -495,7 +495,7 @@ export async function createSubagentTool(
       );
 
       if (!generateTextResult.ok) {
-        toolCallDiffer.cleanupAllTempFileBefore();
+        await toolCallDiffer.cleanupAllTempFileBefore();
         cleanup();
         const timeoutResult = resolveTimeoutError({
           error: generateTextResult.error,
@@ -512,7 +512,7 @@ export async function createSubagentTool(
 
       const { usage, text } = generateTextResult.value;
       await appendModelUsage(usage, model);
-      toolCallDiffer.cleanupAllTempFileBefore();
+      await toolCallDiffer.cleanupAllTempFileBefore();
       cleanup();
 
       return {

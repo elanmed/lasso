@@ -8,7 +8,7 @@ import {
   type SessionFile,
   type TranscriptEntry,
 } from "./state.ts";
-import { listSessionFiles, tryCatch } from "./utils.ts";
+import { listSessionFiles, tryCatch, tryCatchAsync } from "./utils.ts";
 import { fsDeps } from "./deps.ts";
 import { getSessionDir } from "./paths.ts";
 import { debugLog as writeDebugLog } from "./debug-log.ts";
@@ -30,7 +30,7 @@ export function getAppendedTranscript(...transcriptEntries: TranscriptEntry[]) {
   return [...getState().app.transcript, ...transcriptEntries];
 }
 
-export function syncSessionFile({
+export async function syncSessionFile({
   messages = getState().app.conversation.messages,
   summaries = getState().app.conversation.summaries,
   transcript = getState().app.transcript,
@@ -42,8 +42,8 @@ export function syncSessionFile({
   const { sessionFilePath } = getState().app;
   const sessionDir = getSessionDir();
   if (!fsDeps.existsSync(sessionDir)) {
-    const mkdirResult = tryCatch(() =>
-      fsDeps.mkdirSync(sessionDir, { recursive: true }),
+    const mkdirResult = await tryCatchAsync(
+      fsDeps.mkdir(sessionDir, { recursive: true }),
     );
     if (!mkdirResult.ok) {
       print.warning(`Failed to create the directory: ${sessionDir}`);
@@ -67,8 +67,8 @@ export function syncSessionFile({
     return;
   }
 
-  const writeResult = tryCatch(() =>
-    fsDeps.writeFileSync(sessionFilePath, stringifyResult.value),
+  const writeResult = await tryCatchAsync(
+    fsDeps.writeFile(sessionFilePath, stringifyResult.value),
   );
   if (!writeResult.ok) {
     print.warning(`Failed to write the session file to ${sessionFilePath}`);
@@ -76,9 +76,9 @@ export function syncSessionFile({
   }
 }
 
-export function resumeFromSessionFile(sessionFilePath: string) {
-  const readResult = tryCatch(() =>
-    fsDeps.readFileSync(sessionFilePath).toString(),
+export async function resumeFromSessionFile(sessionFilePath: string) {
+  const readResult = await tryCatchAsync(
+    fsDeps.readFile(sessionFilePath, "utf8"),
   );
   if (!readResult.ok) {
     errorWithSpacing(() => {
@@ -110,11 +110,11 @@ export function resumeFromSessionFile(sessionFilePath: string) {
   return true;
 }
 
-export function initSessionFile() {
+export async function initSessionFile() {
   const sessionDir = getSessionDir();
   if (!fsDeps.existsSync(sessionDir)) {
-    const mkDirResult = tryCatch(() =>
-      fsDeps.mkdirSync(sessionDir, { recursive: true }),
+    const mkDirResult = await tryCatchAsync(
+      fsDeps.mkdir(sessionDir, { recursive: true }),
     );
     if (!mkDirResult.ok) {
       print.warning(`Failed to create the directory: ${sessionDir}`);
@@ -127,7 +127,9 @@ export function initSessionFile() {
     `session-${getState().app.sessionStartDate.toString()}.json`,
   );
   actions.setSessionFilePath(sessionFilePath);
-  const writeResult = tryCatch(() => fsDeps.writeFileSync(sessionFilePath, ""));
+  const writeResult = await tryCatchAsync(
+    fsDeps.writeFile(sessionFilePath, ""),
+  );
   if (!writeResult.ok) {
     print.warning(`Failed to write the session file to ${sessionFilePath}`);
   }
@@ -139,12 +141,12 @@ export async function deleteExpiredSessionFiles() {
   for (const { absolutePath, timestampMs } of sessionFiles) {
     const oneDay = 1_000 * 60 * 60 * 24;
     if (timestampMs + oneDay < getState().app.sessionStartDate) {
-      tryCatch(() => fsDeps.unlinkSync(absolutePath));
+      await tryCatchAsync(fsDeps.unlink(absolutePath));
     }
   }
 }
 
 export async function initLogs() {
   await deleteExpiredSessionFiles();
-  initSessionFile();
+  await initSessionFile();
 }

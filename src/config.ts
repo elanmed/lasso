@@ -1,6 +1,6 @@
 import { join } from "node:path";
 import * as YAML from "yaml";
-import { getShortId, stringify, tryCatch } from "./utils.ts";
+import { getShortId, stringify, tryCatch, tryCatchAsync } from "./utils.ts";
 import { getAvailableSlashCommands } from "./slash-commands.ts";
 import {
   getContextEntries,
@@ -27,10 +27,10 @@ import { createPerformanceLogger, print } from "./print.ts";
 import { initMcpState } from "./mcp.ts";
 import { stringifyTools } from "./tools.ts";
 
-export function readConfigFileStr(path: string) {
+export async function readConfigFileStr(path: string) {
   if (!fsDeps.existsSync(path)) return "{}";
 
-  const readResult = tryCatch(() => fsDeps.readFileSync(path).toString());
+  const readResult = await tryCatchAsync(fsDeps.readFile(path, "utf8"));
   if (!readResult.ok) return "{}";
 
   return readResult.value;
@@ -283,7 +283,7 @@ export async function initStateFromFs({
   await syncInitialModelUsageForLimitWindow();
 
   performanceLogger.start("Reading context files: ");
-  const contextEntries = getContextEntries();
+  const contextEntries = await getContextEntries();
   actions.setContextEntries(contextEntries);
   actions.setContextStr(getContextFilesStr(contextEntries));
   performanceLogger.end();
@@ -300,17 +300,17 @@ export async function initStateFromFs({
   performanceLogger.end();
 }
 
-export function initStateFirst() {
+export async function initStateFirst() {
   actions.setDebugLog(processDeps.env.get("DEBUG") === "1");
 
-  const globalConfigStr = readConfigFileStr(getGlobalConfigPath());
+  const globalConfigStr = await readConfigFileStr(getGlobalConfigPath());
   const globalConfig = parseConfigFileStr(
     globalConfigStr,
     getGlobalConfigPath(),
   );
   actions.setGlobalConfigStr(globalConfigStr);
 
-  const localConfigStr = readConfigFileStr(getLocalConfigPath());
+  const localConfigStr = await readConfigFileStr(getLocalConfigPath());
   const localConfig = parseConfigFileStr(localConfigStr, getLocalConfigPath());
   actions.setLocalConfigStr(localConfigStr);
 
@@ -324,7 +324,7 @@ export function initStateFirst() {
 }
 
 export async function initStateRepeatable() {
-  const { globalConfig, localConfig } = initStateFirst();
+  const { globalConfig, localConfig } = await initStateFirst();
   initStateFromConfig({ globalConfig, localConfig });
   await initMcpState();
   promptDeps.getToolsContentStr = stringifyTools;
@@ -332,7 +332,7 @@ export async function initStateRepeatable() {
 }
 
 export async function initState() {
-  const { globalConfig, localConfig } = initStateFirst();
+  const { globalConfig, localConfig } = await initStateFirst();
   const debugLogPath = join(getDebugLogDir(), `debug-${getShortId()}.log`);
   actions.setDebugLogPath(debugLogPath);
 

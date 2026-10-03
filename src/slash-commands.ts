@@ -1,6 +1,6 @@
 import { basename, extname, join } from "node:path";
 import { fsDeps } from "./deps.ts";
-import { normalizeNewline, tryCatch, tryCatchAsync } from "./utils.ts";
+import { normalizeNewline, tryCatchAsync } from "./utils.ts";
 import { getGlobalSlashCommandDir, getLocalSlashCommandDir } from "./paths.ts";
 import { print } from "./print.ts";
 import { getState, type SlashCommand } from "./state.ts";
@@ -79,7 +79,7 @@ export async function getAvailableSlashCommands() {
   }
 
   for (const filePath of slashCommandFilePaths) {
-    const readResult = tryCatch(() => fsDeps.readFileSync(filePath).toString());
+    const readResult = await tryCatchAsync(fsDeps.readFile(filePath, "utf8"));
     if (!readResult.ok) {
       print.warning(`Failed to read the slash command file at ${filePath}`);
       continue;

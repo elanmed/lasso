@@ -8,7 +8,6 @@ import {
   getTempFileName,
   normalizeNewline,
   shouldDisableColor,
-  tryCatch,
   tryCatchAsync,
 } from "./utils.ts";
 import { actions, getState } from "./state.ts";
@@ -56,9 +55,9 @@ export function isToolCallDiffIgnoredPath(path: string) {
 export function createToolCallDiffer() {
   const toolCallIdToTempFileBefore = new Map<string, string>();
 
-  function setTempFileBefore(toolCallId: string, path: string) {
+  async function setTempFileBefore(toolCallId: string, path: string) {
     if (isToolCallDiffIgnoredPath(path)) return;
-    const tempFileBefore = getTempFileName({ initialContentPath: path });
+    const tempFileBefore = await getTempFileName({ initialContentPath: path });
     if (tempFileBefore === null) return;
     toolCallIdToTempFileBefore.set(toolCallId, tempFileBefore);
   }
@@ -70,16 +69,18 @@ export function createToolCallDiffer() {
   }
 
   async function diffAndCleanup(toolCallId: string, path: string) {
-    const tempFileAfterPath = getTempFileName({ initialContentPath: path });
+    const tempFileAfterPath = await getTempFileName({
+      initialContentPath: path,
+    });
     if (tempFileAfterPath === null) {
       if (toolCallIdToTempFileBefore.has(toolCallId)) {
-        cleanupTempFileBefore(toolCallId);
+        await cleanupTempFileBefore(toolCallId);
       }
       return;
     }
 
     if (!toolCallIdToTempFileBefore.has(toolCallId)) {
-      tryCatch(() => fsDeps.unlinkSync(tempFileAfterPath));
+      await tryCatchAsync(fsDeps.unlink(tempFileAfterPath));
       return;
     }
 
@@ -113,20 +114,20 @@ export function createToolCallDiffer() {
       }
     }
 
-    tryCatch(() => fsDeps.unlinkSync(tempFileAfterPath));
-    cleanupTempFileBefore(toolCallId);
+    await tryCatchAsync(fsDeps.unlink(tempFileAfterPath));
+    await cleanupTempFileBefore(toolCallId);
   }
 
-  function cleanupTempFileBefore(toolCallId: string) {
+  async function cleanupTempFileBefore(toolCallId: string) {
     const tempFile = toolCallIdToTempFileBefore.get(toolCallId);
     if (tempFile === undefined) return;
-    tryCatch(() => fsDeps.unlinkSync(tempFile));
+    await tryCatchAsync(fsDeps.unlink(tempFile));
     toolCallIdToTempFileBefore.delete(toolCallId);
   }
 
-  function cleanupAllTempFileBefore() {
+  async function cleanupAllTempFileBefore() {
     for (const tempFile of toolCallIdToTempFileBefore.values()) {
-      tryCatch(() => fsDeps.unlinkSync(tempFile));
+      await tryCatchAsync(fsDeps.unlink(tempFile));
     }
     toolCallIdToTempFileBefore.clear();
   }

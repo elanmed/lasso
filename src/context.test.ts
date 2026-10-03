@@ -29,17 +29,17 @@ describe("context", () => {
   });
 
   describe("getContextFilesStr", () => {
-    it("returns empty string when no AGENTS.md files found", () => {
-      const result = getContextFilesStr(getContextEntries());
+    it("returns empty string when no AGENTS.md files found", async () => {
+      const result = getContextFilesStr(await getContextEntries());
       assert.equal(result, "");
     });
 
-    it("returns formatted content for single file", () => {
+    it("returns formatted content for single file", async () => {
       testFs._globResults.set("/test-cwd/**/AGENTS.md", [
         "/test-cwd/AGENTS.md",
       ]);
       testFs._files.set("/test-cwd/AGENTS.md", "# Agent Instructions");
-      const result = getContextFilesStr(getContextEntries());
+      const result = getContextFilesStr(await getContextEntries());
       assert.equal(
         result,
         `# [lasso] AGENTS.md context files
@@ -51,14 +51,14 @@ describe("context", () => {
       );
     });
 
-    it("returns formatted content for multiple files", () => {
+    it("returns formatted content for multiple files", async () => {
       testFs._dirs.add(getGlobalContextDir());
       testFs._files.set("/test-cwd/AGENTS.md", "Root content");
       testFs._files.set(
         "/fake-home/.config/lasso/context/AGENTS.md",
         "Global content",
       );
-      const result = getContextFilesStr(getContextEntries());
+      const result = getContextFilesStr(await getContextEntries());
       assert.equal(
         result,
         `# [lasso] AGENTS.md context files
@@ -75,13 +75,13 @@ Global content
       );
     });
 
-    it("skips files that fail to read", () => {
+    it("skips files that fail to read", async () => {
       testFs._dirs.add(getGlobalContextDir());
       testFs._files.set(
         "/fake-home/.config/lasso/context/AGENTS.md",
         "Global content",
       );
-      const result = getContextFilesStr(getContextEntries());
+      const result = getContextFilesStr(await getContextEntries());
       assert.equal(
         result,
         `# [lasso] AGENTS.md context files
@@ -93,7 +93,7 @@ Global content
       );
     });
 
-    it("includes global agents dir files", () => {
+    it("includes global agents dir files", async () => {
       testFs._dirs.add(getGlobalContextDir());
       testFs._globResults.set("/fake-home/.config/lasso/context/**/AGENTS.md", [
         "/fake-home/.config/lasso/context/AGENTS.md",
@@ -102,7 +102,7 @@ Global content
         "/fake-home/.config/lasso/context/AGENTS.md",
         "global content",
       );
-      const result = getContextFilesStr(getContextEntries());
+      const result = getContextFilesStr(await getContextEntries());
       assert.equal(
         result,
         `# [lasso] AGENTS.md context files
@@ -114,14 +114,14 @@ global content
       );
     });
 
-    it("combines cwd and global agents dir files", () => {
+    it("combines cwd and global agents dir files", async () => {
       testFs._dirs.add(getGlobalContextDir());
       testFs._files.set(
         "/fake-home/.config/lasso/context/AGENTS.md",
         "global content",
       );
       testFs._files.set("/test-cwd/AGENTS.md", "local content");
-      const result = getContextFilesStr(getContextEntries());
+      const result = getContextFilesStr(await getContextEntries());
       assert.equal(
         result,
         `# [lasso] AGENTS.md context files
@@ -511,14 +511,14 @@ would benefit from specialized instructions.
   });
 
   describe("getContextEntries", () => {
-    it("warns when an agent file cannot be read", () => {
+    it("warns when an agent file cannot be read", async () => {
       testFs._files.set("/test-cwd/AGENTS.md", "content");
-      mock.method(fsDeps, "readFileSync", () => {
-        throw new Error("Permission denied");
-      });
+      mock.method(fsDeps, "readFile", () =>
+        Promise.reject(new Error("Permission denied")),
+      );
       const getWrites = mockStdoutWrites();
 
-      const result = getContextEntries();
+      const result = await getContextEntries();
 
       assert.deepStrictEqual(result, []);
       assert.deepStrictEqual(getWrites(), [
@@ -526,19 +526,19 @@ would benefit from specialized instructions.
       ]);
     });
 
-    it("does not warn when agent files are missing", () => {
+    it("does not warn when agent files are missing", async () => {
       const getWrites = mockStdoutWrites();
 
-      const result = getContextEntries();
+      const result = await getContextEntries();
 
       assert.deepStrictEqual(result, []);
       assert.deepStrictEqual(getWrites(), []);
     });
 
-    it("returns the cwd agent file", () => {
+    it("returns the cwd agent file", async () => {
       testFs._files.set("/test-cwd/AGENTS.md", "# Project conventions");
 
-      const result = getContextEntries();
+      const result = await getContextEntries();
 
       assert.deepStrictEqual(result, [
         {
@@ -548,13 +548,13 @@ would benefit from specialized instructions.
       ]);
     });
 
-    it("returns the global agent file", () => {
+    it("returns the global agent file", async () => {
       testFs._files.set(
         "/fake-home/.config/lasso/context/AGENTS.md",
         "# Global conventions",
       );
 
-      const result = getContextEntries();
+      const result = await getContextEntries();
 
       assert.deepStrictEqual(result, [
         {
@@ -564,14 +564,14 @@ would benefit from specialized instructions.
       ]);
     });
 
-    it("combines cwd and global agent files in order", () => {
+    it("combines cwd and global agent files in order", async () => {
       testFs._files.set("/test-cwd/AGENTS.md", "local content");
       testFs._files.set(
         "/fake-home/.config/lasso/context/AGENTS.md",
         "global content",
       );
 
-      const result = getContextEntries();
+      const result = await getContextEntries();
 
       assert.deepStrictEqual(result, [
         { filePath: "/test-cwd/AGENTS.md", content: "local content" },
@@ -788,12 +788,12 @@ description: A valid skill
   });
 
   describe("getSkillJSON", () => {
-    it("returns null when file does not exist", () => {
-      const result = getSkillJSON("/some/dir/SKILL.md");
+    it("returns null when file does not exist", async () => {
+      const result = await getSkillJSON("/some/dir/SKILL.md");
       assert.equal(result, null);
     });
 
-    it("parses valid SKILL.md front matter", () => {
+    it("parses valid SKILL.md front matter", async () => {
       testFs._files.set(
         "/skill-dir/SKILL.md",
         `---
@@ -802,7 +802,7 @@ description: Deploy the app
 ---
 # Deploy`,
       );
-      const result = getSkillJSON("/skill-dir/SKILL.md");
+      const result = await getSkillJSON("/skill-dir/SKILL.md");
       assert.deepStrictEqual(result, {
         name: "deploy",
         description: "Deploy the app",
@@ -811,7 +811,7 @@ description: Deploy the app
       });
     });
 
-    it("returns null when front matter is missing name", () => {
+    it("returns null when front matter is missing name", async () => {
       testFs._files.set(
         "/skill-dir/SKILL.md",
         `---
@@ -819,11 +819,11 @@ description: No name here
 ---
 `,
       );
-      const result = getSkillJSON("/skill-dir/SKILL.md");
+      const result = await getSkillJSON("/skill-dir/SKILL.md");
       assert.equal(result, null);
     });
 
-    it("returns null when front matter is missing description", () => {
+    it("returns null when front matter is missing description", async () => {
       testFs._files.set(
         "/skill-dir/SKILL.md",
         `---
@@ -831,18 +831,18 @@ name: deploy
 ---
 `,
       );
-      const result = getSkillJSON("/skill-dir/SKILL.md");
+      const result = await getSkillJSON("/skill-dir/SKILL.md");
       assert.equal(result, null);
     });
 
-    it("returns null when path is a directory", () => {
+    it("returns null when path is a directory", async () => {
       testFs._dirs.add("/skill-dir");
-      const result = getSkillJSON("/skill-dir");
+      const result = await getSkillJSON("/skill-dir");
       assert.equal(result, null);
     });
 
-    it("returns null when readFileSync fails", () => {
-      const result = getSkillJSON("/skill-dir/SKILL.md");
+    it("returns null when readFile fails", async () => {
+      const result = await getSkillJSON("/skill-dir/SKILL.md");
       assert.equal(result, null);
     });
   });

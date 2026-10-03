@@ -12,6 +12,7 @@ import {
   strToApproxTokens,
   decimalToPercent,
   approxTokensToCharLen,
+  tryCatchAsync,
 } from "./utils.ts";
 import { fsDeps } from "./deps.ts";
 import { getUsageLogLockPath, getUsageLogPath } from "./paths.ts";
@@ -144,10 +145,10 @@ export async function syncInitialModelUsageForLimitWindow() {
       );
     }
 
-    const readResult = tryCatch(() => fsDeps.readFileSync(path).toString());
+    const readResult = await tryCatchAsync(fsDeps.readFile(path, "utf8"));
     if (!readResult.ok) {
-      tryCatch(() => fsDeps.writeFileSync(path, JSON.stringify({})));
-      lockUtils.deleteLock();
+      await tryCatchAsync(fsDeps.writeFile(path, JSON.stringify({})));
+      await lockUtils.deleteLock();
       return;
     }
 
@@ -155,15 +156,15 @@ export async function syncInitialModelUsageForLimitWindow() {
       ModelUsageMapSchema.parse(JSON.parse(readResult.value)),
     );
     if (!parseResult.ok) {
-      tryCatch(() => fsDeps.writeFileSync(path, JSON.stringify({})));
-      lockUtils.deleteLock();
+      await tryCatchAsync(fsDeps.writeFile(path, JSON.stringify({})));
+      await lockUtils.deleteLock();
       return;
     }
     const filtered = filterExpiredModelUsage(parseResult.value, expiredTime);
 
-    tryCatch(() => fsDeps.writeFileSync(path, JSON.stringify(filtered)));
+    await tryCatchAsync(fsDeps.writeFile(path, JSON.stringify(filtered)));
 
-    lockUtils.deleteLock();
+    await lockUtils.deleteLock();
     actions.setModelUsageForLimitWindow(filtered);
   });
 }
@@ -179,8 +180,8 @@ export async function syncNewModelUsageForLimitWindow(
   const path = getUsageLogPath();
   const dir = dirname(path);
   if (!fsDeps.existsSync(dir)) {
-    const mkDirResult = tryCatch(() =>
-      fsDeps.mkdirSync(dir, { recursive: true }),
+    const mkDirResult = await tryCatchAsync(
+      fsDeps.mkdir(dir, { recursive: true }),
     );
     if (!mkDirResult.ok) {
       print.warning(`Failed to create the directory: ${dir}`);
@@ -197,7 +198,7 @@ export async function syncNewModelUsageForLimitWindow(
       );
     }
 
-    const readResult = tryCatch(() => fsDeps.readFileSync(path).toString());
+    const readResult = await tryCatchAsync(fsDeps.readFile(path, "utf8"));
     const loggedModelUsage = (() => {
       if (!readResult.ok) return {};
       const parseResult = tryCatch(() =>
@@ -210,8 +211,8 @@ export async function syncNewModelUsageForLimitWindow(
 
     const filtered = filterExpiredModelUsage(loggedModelUsage, expiredTime);
 
-    tryCatch(() => fsDeps.writeFileSync(path, JSON.stringify(filtered)));
-    lockUtils.deleteLock();
+    await tryCatchAsync(fsDeps.writeFile(path, JSON.stringify(filtered)));
+    await lockUtils.deleteLock();
 
     actions.setModelUsageForLimitWindow(filtered);
   });

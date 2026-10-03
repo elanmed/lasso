@@ -32,16 +32,19 @@ export interface FakeFsDeps {
   _globResults: Map<string, string[]>;
   _gitLsFilesResults: Map<string, string[]>;
   _restore: () => void;
-  readFileSync: (path: string) => Buffer;
-  writeFileSync: (
+  readFile: (
+    path: string,
+    options?: { encoding?: BufferEncoding | null } | BufferEncoding,
+  ) => Promise<Buffer | string>;
+  writeFile: (
     path: string,
     content: string,
     options?: { signal?: AbortSignal },
-  ) => void;
+  ) => Promise<void>;
   existsSync: (path: string) => boolean;
   readdir: (path: string) => Promise<string[]>;
-  mkdirSync: (path: string, options?: { recursive?: boolean }) => void;
-  unlinkSync: (path: string) => void;
+  mkdir: (path: string, options?: { recursive?: boolean }) => Promise<void>;
+  unlink: (path: string) => Promise<void>;
   appendFile: (
     path: string,
     content: string,
@@ -79,14 +82,22 @@ export function makeFakeFsDeps(
     _dirs,
     _globResults,
     _gitLsFilesResults,
-    readFileSync: (path: string) => {
+    readFile: (
+      path: string,
+      options?: { encoding?: BufferEncoding | null } | BufferEncoding,
+    ) => {
       const content = _files.get(path);
-      if (content === undefined) throw new Error(`ENOENT: ${path}`);
-      return Buffer.from(content);
+      if (content === undefined) {
+        return Promise.reject(new Error(`ENOENT: ${path}`));
+      }
+      return Promise.resolve(
+        typeof options === "string" ? content : Buffer.from(content),
+      );
     },
-    writeFileSync: (path: string, content: string) => {
+    writeFile: (path: string, content: string) => {
       _files.set(path, content);
       _mtimes.set(path, ++_mtimeCounter);
+      return Promise.resolve();
     },
     existsSync: (path: string) => _files.has(path) || _dirs.has(path),
     readdir: (path: string) => {
@@ -106,13 +117,19 @@ export function makeFakeFsDeps(
       }
       return Promise.resolve([...result]);
     },
-    mkdirSync: (path: string) => _dirs.add(path),
-    unlinkSync: (path: string) => {
+    mkdir: (path: string) => {
+      _dirs.add(path);
+      return Promise.resolve();
+    },
+    unlink: (path: string) => {
       if (!_files.has(path)) {
-        throw makeErrnoError("ENOENT", `ENOENT: no such file: ${path}`);
+        return Promise.reject(
+          makeErrnoError("ENOENT", `ENOENT: no such file: ${path}`),
+        );
       }
       _files.delete(path);
       _mtimes.delete(path);
+      return Promise.resolve();
     },
     appendFile: (path: string, content: string) => {
       _files.set(path, (_files.get(path) ?? "") + content);
@@ -575,11 +592,12 @@ export async function drainTimerCallbacks(
   callbacks: (() => void)[],
   { keep = 0 }: { keep?: number } = {},
 ) {
+  await new Promise<void>((resolve) => setImmediate(resolve));
   while (callbacks.length > keep) {
     const callback = callbacks.shift();
     assert(callback !== undefined);
     callback();
-    await Promise.resolve();
+    await new Promise<void>((resolve) => setImmediate(resolve));
   }
 }
 

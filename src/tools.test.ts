@@ -708,13 +708,13 @@ describe("tools", () => {
           ]);
           const onStart = options["onToolExecutionStart"] as (
             arg: Record<string, unknown>,
-          ) => void;
+          ) => Promise<unknown>;
           const onFinish = options["onToolExecutionEnd"] as (
             arg: Record<string, unknown>,
           ) => Promise<void>;
           assert.strictEqual(typeof onStart, "function");
           assert.strictEqual(typeof onFinish, "function");
-          onStart({
+          await onStart({
             toolCall: {
               toolName: "bash",
               toolCallId: "call-1",

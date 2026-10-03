@@ -25,11 +25,11 @@ describe("differ", () => {
     });
 
     describe("snapshots", () => {
-      it("creates and cleans up a tool call snapshot", () => {
+      it("creates and cleans up a tool call snapshot", async () => {
         testFs._files.set("/source/file.txt", "original content");
         const differ = createToolCallDiffer();
 
-        differ.setTempFileBefore("call-1", "/source/file.txt");
+        await differ.setTempFileBefore("call-1", "/source/file.txt");
 
         assert.strictEqual(
           testFs._files.get("/tmp/lasso-test-uuid.txt"),
@@ -40,7 +40,7 @@ describe("differ", () => {
           "/tmp/lasso-test-uuid.txt",
         );
 
-        differ.cleanupTempFileBefore("call-1");
+        await differ.cleanupTempFileBefore("call-1");
 
         assert.strictEqual(
           testFs._files.has("/tmp/lasso-test-uuid.txt"),
@@ -52,10 +52,10 @@ describe("differ", () => {
         );
       });
 
-      it("registers an empty snapshot when the source file does not exist", () => {
+      it("registers an empty snapshot when the source file does not exist", async () => {
         const differ = createToolCallDiffer();
 
-        differ.setTempFileBefore("call-1", "/missing/file.txt");
+        await differ.setTempFileBefore("call-1", "/missing/file.txt");
 
         assert.equal(testFs._files.get("/tmp/lasso-test-uuid.txt"), "");
         assert.equal(
@@ -64,22 +64,22 @@ describe("differ", () => {
         );
       });
 
-      it("cleans up an empty snapshot", () => {
+      it("cleans up an empty snapshot", async () => {
         const differ = createToolCallDiffer();
 
-        differ.setTempFileBefore("call-1", "/missing/file.txt");
-        differ.cleanupTempFileBefore("call-1");
+        await differ.setTempFileBefore("call-1", "/missing/file.txt");
+        await differ.cleanupTempFileBefore("call-1");
 
         assert.equal(testFs._files.has("/tmp/lasso-test-uuid.txt"), false);
         assert.equal(differ.toolCallIdToTempFileBefore.has("call-1"), false);
       });
 
-      it("cleans up all empty snapshots", () => {
+      it("cleans up all empty snapshots", async () => {
         const differ = createToolCallDiffer();
 
-        differ.setTempFileBefore("call-1", "/missing/a.txt");
-        differ.setTempFileBefore("call-2", "/missing/b.txt");
-        differ.cleanupAllTempFileBefore();
+        await differ.setTempFileBefore("call-1", "/missing/a.txt");
+        await differ.setTempFileBefore("call-2", "/missing/b.txt");
+        await differ.cleanupAllTempFileBefore();
 
         assert.deepStrictEqual(
           [...differ.toolCallIdToTempFileBefore.keys()],
@@ -88,12 +88,12 @@ describe("differ", () => {
         assert.equal(testFs._files.has("/tmp/lasso-test-uuid.txt"), false);
       });
 
-      it("cleans up all outstanding tool call snapshots", () => {
+      it("cleans up all outstanding tool call snapshots", async () => {
         const differ = createToolCallDiffer();
-        differ.setTempFileBefore("call-1", "/a");
-        differ.setTempFileBefore("call-2", "/b");
+        await differ.setTempFileBefore("call-1", "/a");
+        await differ.setTempFileBefore("call-2", "/b");
 
-        differ.cleanupAllTempFileBefore();
+        await differ.cleanupAllTempFileBefore();
 
         assert.strictEqual(
           testFs._files.has("/tmp/lasso-test-uuid.txt"),
@@ -111,11 +111,11 @@ describe("differ", () => {
     });
 
     describe("ignored paths", () => {
-      it("does not snapshot ignores-path files", () => {
+      it("does not snapshot ignores-path files", async () => {
         testFs._files.set("/tmp/file.txt", "original content");
         const differ = createToolCallDiffer();
 
-        differ.setTempFileBefore("call-1", "/tmp/file.txt");
+        await differ.setTempFileBefore("call-1", "/tmp/file.txt");
 
         assert.equal(testFs._files.has("/tmp/lasso-test-uuid.txt"), false);
         assert.equal(differ.toolCallIdToTempFileBefore.has("call-1"), false);
@@ -127,7 +127,7 @@ describe("differ", () => {
         const differ = createToolCallDiffer();
         mockExecCalls([], commands);
 
-        differ.setTempFileBefore("call-1", "/tmp/file.txt");
+        await differ.setTempFileBefore("call-1", "/tmp/file.txt");
         testFs._files.set("/tmp/file.txt", "new content");
         await differ.diffAndCleanup("call-1", "/tmp/file.txt");
 
@@ -147,7 +147,7 @@ describe("differ", () => {
           commands,
         );
 
-        differ.setTempFileBefore("call-1", "/test/new-file.txt");
+        await differ.setTempFileBefore("call-1", "/test/new-file.txt");
         testFs._files.set("/test/new-file.txt", "created content");
         await differ.diffAndCleanup("call-1", "/test/new-file.txt");
 
@@ -174,7 +174,7 @@ describe("differ", () => {
         );
         actions.setSuppressToolEditDiffs(true);
 
-        differ.setTempFileBefore("call-1", "/test/new-file.txt");
+        await differ.setTempFileBefore("call-1", "/test/new-file.txt");
         testFs._files.set("/test/new-file.txt", "created content");
         await differ.diffAndCleanup("call-1", "/test/new-file.txt");
 
@@ -196,7 +196,7 @@ describe("differ", () => {
           commands,
         );
 
-        differ.setTempFileBefore("call-1", "/source/file.txt");
+        await differ.setTempFileBefore("call-1", "/source/file.txt");
         await differ.diffAndCleanup("call-1", "/missing/after.txt");
 
         assert.equal(commands.length, 2);
@@ -216,7 +216,7 @@ describe("differ", () => {
           commands,
         );
 
-        differ.setTempFileBefore("call-1", "/test/file.txt");
+        await differ.setTempFileBefore("call-1", "/test/file.txt");
         await differ.diffAndCleanup("call-1", "/test/file.txt");
 
         assert.strictEqual(
@@ -245,7 +245,7 @@ describe("differ", () => {
           { stdout: "+added line\n" },
         ]);
 
-        differ.setTempFileBefore("call-1", "/test/file.txt");
+        await differ.setTempFileBefore("call-1", "/test/file.txt");
         await differ.diffAndCleanup("call-1", "/test/file.txt");
 
         assert.deepStrictEqual(getWrites(), [
@@ -422,7 +422,7 @@ describe("differ", () => {
       mockExecCalls([{ stdout: "delta 0.18.2" }, { stdout: "", error: err }]);
       const differ = createToolCallDiffer();
       testFs._files.set("/test/file.txt", "original content");
-      differ.setTempFileBefore("call-1", "/test/file.txt");
+      await differ.setTempFileBefore("call-1", "/test/file.txt");
       await differ.diffAndCleanup("call-1", "/test/file.txt");
       assert.deepStrictEqual(getWrites(), [
         `${RED}An error occurred when getting the diff for /test/file.txt: fatal${RESET}\n`,
@@ -435,7 +435,7 @@ describe("differ", () => {
       testFs._files.set("/test/file.txt", "original content");
       mockExecCalls([{ stdout: "delta 0.18.2" }, { stdout: "" }]);
       const differ = createToolCallDiffer();
-      differ.setTempFileBefore("call-1", "/test/file.txt");
+      await differ.setTempFileBefore("call-1", "/test/file.txt");
       await differ.diffAndCleanup("call-1", "/test/file.txt");
       assert.deepStrictEqual(getWrites(), []);
       assert.deepStrictEqual(getState().app.toolEditDiffs, []);
