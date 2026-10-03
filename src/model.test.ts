@@ -1,8 +1,13 @@
 import { describe, it, beforeEach, afterEach, mock } from "node:test";
 import assert from "node:assert";
 import { actions } from "./state.ts";
-import { getHeaders, getLanguageModel } from "./model.ts";
-import { setupTestContext } from "./test-helpers.ts";
+import {
+  getHeaders,
+  getLanguageModel,
+  getTranscriptionProvider,
+} from "./model.ts";
+import { setupTestContext, testProcessEnv } from "./test-helpers.ts";
+import { processDeps } from "./deps.ts";
 
 describe("model", () => {
   afterEach(() => {
@@ -54,6 +59,26 @@ describe("model", () => {
           provider: "google.generative-ai",
         },
       );
+    });
+  });
+
+  describe("getTranscriptionProvider", () => {
+    beforeEach(() => {
+      testProcessEnv._set("LASSO_TRANSCRIPTION_API_KEY", "test-key");
+    });
+
+    it("creates an OpenAI transcription model", () => {
+      actions.setTranscriptionSdkProvider("openai");
+      const model =
+        getTranscriptionProvider().transcription("gpt-4o-transcribe");
+      assert.equal(model.provider, "openai.transcription");
+    });
+
+    it("creates a Google transcription model", () => {
+      actions.setTranscriptionSdkProvider("google");
+      const model =
+        getTranscriptionProvider().transcription("gemini-2.0-flash");
+      assert.equal(model.provider, "google.generative-ai.transcription");
     });
   });
 

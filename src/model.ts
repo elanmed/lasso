@@ -63,3 +63,32 @@ export function getLanguageModel(model = getState().config.model) {
     }
   }
 }
+
+export function getTranscriptionProvider() {
+  const apiKey = processDeps.env.get("LASSO_TRANSCRIPTION_API_KEY");
+  assertAtBuildtime(apiKey !== undefined);
+  const { transcriptionBaseURL, transcriptionSdkProvider } = getState().config;
+
+  switch (transcriptionSdkProvider) {
+    case "openai": {
+      return createOpenAI({
+        apiKey,
+        ...(transcriptionBaseURL === undefined
+          ? {}
+          : { baseURL: transcriptionBaseURL }),
+      });
+    }
+    case "google": {
+      return createGoogle({
+        apiKey,
+        ...(transcriptionBaseURL === undefined
+          ? {}
+          : { baseURL: transcriptionBaseURL }),
+      });
+    }
+    default: {
+      transcriptionSdkProvider satisfies never;
+      throw new Error("Unhandled transcriptionSdkProvider");
+    }
+  }
+}
