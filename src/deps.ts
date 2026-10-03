@@ -33,23 +33,11 @@ interface PromiseExecResult {
 type PromiseExec = (
   command: string,
   options?: ExecOptionsWithStringEncoding,
-) => Promise<PromiseExecResult>;
+) => Promise<PromiseExecResult> & {
+  child: { stdin: { end: () => void } | null };
+};
 
-const exec: PromiseExec = (command, options) =>
-  new Promise((resolve, reject) => {
-    try {
-      const promise = promisify(childProcess.exec)(command, {
-        encoding: "utf8",
-        ...options,
-      }) as Promise<PromiseExecResult> & {
-        child: { stdin: { end: () => void } | null };
-      };
-      promise.child.stdin?.end();
-      promise.then(resolve, reject);
-    } catch (err) {
-      reject(err instanceof Error ? err : new Error(String(err)));
-    }
-  });
+const exec: PromiseExec = promisify(childProcess.exec);
 
 export const childProcessDeps = {
   execFile,
