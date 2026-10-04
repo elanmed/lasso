@@ -50,6 +50,8 @@ import {
   mockClipboardPasteFailure,
   mockExecCalls,
   mockEditorSpawn,
+  mockSetInterval,
+  mockClearInterval,
   mockSpawnSync,
   mockPagerSpawn,
   mockRecording,
@@ -2724,6 +2726,24 @@ editor input
         assert.deepStrictEqual(getWrites(), [
           `${PURPLE}first${RESET}\n`,
           `${PURPLE}second${RESET}\n`,
+        ]);
+      });
+
+      it("flushes buffered stdout before restarting the loading state spinner", async () => {
+        const getWrites = mockStdoutWrites({ includeSpinnerFrames: true });
+        const spinnerFrames = mockSetInterval();
+        mockClearInterval(spinnerFrames);
+        actions.setApiStreamAbortController(new AbortController());
+        mockEditorSpawn(() => {
+          print.info("during editor");
+          testFs.writeFile("/tmp/lasso-test-uuid.txt", "");
+        });
+        harness.emitKey({ name: "g", ctrl: true });
+        await harness.flush();
+
+        assert.deepStrictEqual(getWrites(), [
+          `${PURPLE}during editor${RESET}\n`,
+          "\r|",
         ]);
       });
 

@@ -167,13 +167,13 @@ export function initKeypress(rl: readline.Interface) {
     const editorContent = await cb();
     stdin.resume();
     actions.setIsEditorOpen(false);
-    if (getState().abortControllers.apiStream !== null) {
-      startLoadingState();
-    }
     const bufferedStdout = getState().app.bufferedStdoutWhileEditorOpen;
     if (bufferedStdout.length > 0) {
       processDeps.stdout.write(bufferedStdout);
       actions.resetBufferedStdoutWhileEditorOpen();
+    }
+    if (getState().abortControllers.apiStream !== null) {
+      startLoadingState();
     }
     return editorContent;
   }
