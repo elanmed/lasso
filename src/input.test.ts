@@ -22,8 +22,10 @@ import {
   spawnAndReadEditorContent,
   resume,
   resumeWithNoArgs,
-  initReadline,
+  initStdin,
   initSigInt,
+  recordInput,
+  transcribeInput,
   initLocalConfig,
   initGlobalConfig,
   pageSummaries,
@@ -48,6 +50,8 @@ import {
   mockExecCalls,
   mockSpawnSync,
   mockPagerSpawn,
+  mockRecording,
+  mockTranscription,
   makeFakeMcpClient,
   makeMcpTool,
   batPagerCmd,
@@ -66,7 +70,7 @@ import {
   makeErrnoError,
   mockProcessExit,
 } from "./test-helpers.ts";
-import { childProcessDeps, fsDeps } from "./deps.ts";
+import { aiDeps, childProcessDeps, fsDeps } from "./deps.ts";
 import { getGlobalConfigPath, getGlobalContextDir } from "./paths.ts";
 import { defaultConfig, type Key } from "./config-types.ts";
 
@@ -174,7 +178,7 @@ describe("input", () => {
       const controller = new AbortController();
       actions.setInterruptWithEditorAbortController(controller);
 
-      initSigInt();
+      initSigInt(rl);
       assert(sigint !== undefined);
       sigint();
 
@@ -183,17 +187,16 @@ describe("input", () => {
 
     it("aborts API stream", () => {
       let sigint: (() => void) | undefined;
-      actions.setRl(
-        makeFakeRl({
-          on: (_event: string, listener: () => void) => {
-            sigint = listener;
-          },
-        }),
-      );
+      const rl = makeFakeRl({
+        on: (_event: string, listener: () => void) => {
+          sigint = listener;
+        },
+      });
+      actions.setRl(rl);
       const controller = new AbortController();
       actions.setApiStreamAbortController(controller);
 
-      initSigInt();
+      initSigInt(rl);
       assert(sigint !== undefined);
       sigint();
 
@@ -203,21 +206,20 @@ describe("input", () => {
     it("clears readline input for an active question", () => {
       let sigint: (() => void) | undefined;
       let writeCount = 0;
-      actions.setRl(
-        makeFakeRl({
-          line: "input",
-          on: (_event: string, listener: () => void) => {
-            sigint = listener;
-          },
-          write: () => {
-            writeCount += 1;
-          },
-        }),
-      );
+      const rl = makeFakeRl({
+        line: "input",
+        on: (_event: string, listener: () => void) => {
+          sigint = listener;
+        },
+        write: () => {
+          writeCount += 1;
+        },
+      });
+      actions.setRl(rl);
       const controller = new AbortController();
       actions.setQuestionAbortController(controller);
 
-      initSigInt();
+      initSigInt(rl);
       assert(sigint !== undefined);
       sigint();
 
@@ -227,17 +229,16 @@ describe("input", () => {
 
     it("aborts an active question when readline input is empty", () => {
       let sigint: (() => void) | undefined;
-      actions.setRl(
-        makeFakeRl({
-          on: (_event: string, listener: () => void) => {
-            sigint = listener;
-          },
-        }),
-      );
+      const rl = makeFakeRl({
+        on: (_event: string, listener: () => void) => {
+          sigint = listener;
+        },
+      });
+      actions.setRl(rl);
       const controller = new AbortController();
       actions.setQuestionAbortController(controller);
 
-      initSigInt();
+      initSigInt(rl);
       assert(sigint !== undefined);
       sigint();
 
@@ -246,76 +247,72 @@ describe("input", () => {
 
     it("does nothing when no controller is active", () => {
       let sigint: (() => void) | undefined;
-      actions.setRl(
-        makeFakeRl({
-          on: (_event: string, listener: () => void) => {
-            sigint = listener;
-          },
-        }),
-      );
+      const rl = makeFakeRl({
+        on: (_event: string, listener: () => void) => {
+          sigint = listener;
+        },
+      });
+      actions.setRl(rl);
 
-      initSigInt();
+      initSigInt(rl);
       assert(sigint !== undefined);
       assert.doesNotThrow(sigint);
     });
 
     it("rejects simultaneous API and editor interruption controllers", () => {
       let sigint: (() => void) | undefined;
-      actions.setRl(
-        makeFakeRl({
-          on: (_event: string, listener: () => void) => {
-            sigint = listener;
-          },
-        }),
-      );
+      const rl = makeFakeRl({
+        on: (_event: string, listener: () => void) => {
+          sigint = listener;
+        },
+      });
+      actions.setRl(rl);
       actions.setApiStreamAbortController(new AbortController());
       actions.setInterruptWithEditorAbortController(new AbortController());
 
-      initSigInt();
+      initSigInt(rl);
       assert(sigint !== undefined);
       assert.throws(sigint);
     });
 
     it("rejects simultaneous API and question controllers", () => {
       let sigint: (() => void) | undefined;
-      actions.setRl(
-        makeFakeRl({
-          on: (_event: string, listener: () => void) => {
-            sigint = listener;
-          },
-        }),
-      );
+      const rl = makeFakeRl({
+        on: (_event: string, listener: () => void) => {
+          sigint = listener;
+        },
+      });
+      actions.setRl(rl);
       actions.setApiStreamAbortController(new AbortController());
       actions.setQuestionAbortController(new AbortController());
 
-      initSigInt();
+      initSigInt(rl);
       assert(sigint !== undefined);
       assert.throws(sigint);
     });
 
     it("rejects simultaneous question and editor interruption controllers", () => {
       let sigint: (() => void) | undefined;
-      actions.setRl(
-        makeFakeRl({
-          on: (_event: string, listener: () => void) => {
-            sigint = listener;
-          },
-        }),
-      );
+      const rl = makeFakeRl({
+        on: (_event: string, listener: () => void) => {
+          sigint = listener;
+        },
+      });
+      actions.setRl(rl);
       actions.setQuestionAbortController(new AbortController());
       actions.setInterruptWithEditorAbortController(new AbortController());
 
-      initSigInt();
+      initSigInt(rl);
       assert(sigint !== undefined);
       assert.throws(sigint);
     });
   });
 
-  describe("initReadline input buffering", () => {
+  describe("initStdin input buffering", () => {
     let emitKey: (char: string | undefined, key: Key) => void;
 
     beforeEach(() => {
-      initReadline();
+      initStdin();
       emitKey = (char, key) => {
         stdin.emit("keypress", char, key);
       };
@@ -324,6 +321,7 @@ describe("input", () => {
     afterEach(() => {
       stdin.removeAllListeners();
       stdin.pause();
+      stdin.destroy();
     });
 
     it("buffers typeable characters while initializing", () => {
@@ -3107,13 +3105,16 @@ editor input
         actions.setTranscriptionSdkProvider("openai");
         actions.setTranscriptionModel("gpt-4o-transcribe");
         actions.resetStdout();
+        actions.setRl(makeFakeRlWithWrites().rl);
+        mockRecording();
+        mockTranscription("hello from the mic");
         const result = await resolveSlashCommand("/record");
-        assert.strictEqual(result, "[Recording not yet implemented]");
+        assert.strictEqual(result, "hello from the mic");
         assert.deepStrictEqual(getState().app.transcript, [
           {
             timestamp: 0,
             role: "user",
-            message: "[Recording not yet implemented]",
+            message: "hello from the mic",
           },
         ]);
       });
@@ -3856,8 +3857,21 @@ custom command content`,
       actions.setTranscriptionSdkProvider("openai");
       actions.setTranscriptionModel("gpt-4o-transcribe");
       testProcessEnv._set("LASSO_TRANSCRIPTION_API_KEY", "key");
+      mockRecording();
+      mockTranscription("hello from the mic");
+      let questionSawController = false;
+      actions.setRl(
+        makeFakeRl({
+          question: () => {
+            questionSawController =
+              getState().abortControllers.recordProcess !== null;
+            return Promise.resolve("");
+          },
+        }),
+      );
       const result = await recordAndTranscribeInput();
-      assert.strictEqual(result, "[Recording not yet implemented]");
+      assert.strictEqual(result, "hello from the mic");
+      assert.strictEqual(questionSawController, true);
       assert.strictEqual(getState().abortControllers.recordProcess, null);
     });
 
@@ -3873,6 +3887,122 @@ custom command content`,
 `,
       ]);
       assert.strictEqual(getState().abortControllers.recordProcess, null);
+    });
+
+    it("returns null and prints an error when the stop-recording question rejects", async () => {
+      actions.setTranscriptionSdkProvider("openai");
+      actions.setTranscriptionModel("gpt-4o-transcribe");
+      testProcessEnv._set("LASSO_TRANSCRIPTION_API_KEY", "key");
+      mockRecording();
+      mockTranscription("hello from the mic");
+      actions.setRl(
+        makeFakeRl({
+          question: () => Promise.reject(new Error("boom")),
+        }),
+      );
+      actions.resetStdout();
+      const result = await recordAndTranscribeInput();
+      assert.strictEqual(result, null);
+      assert.deepStrictEqual(getWrites(), [
+        `${RED}Error while prompting the user to stop recording: boom${RESET}\n`,
+      ]);
+      assert.strictEqual(getState().abortControllers.recordProcess, null);
+    });
+
+    it("returns null without an error when the stop-recording question is aborted", async () => {
+      actions.setTranscriptionSdkProvider("openai");
+      actions.setTranscriptionModel("gpt-4o-transcribe");
+      testProcessEnv._set("LASSO_TRANSCRIPTION_API_KEY", "key");
+      mockRecording();
+      mockTranscription("hello from the mic");
+      actions.setRl(
+        makeFakeRl({
+          question: () => Promise.reject(makeAbortError("aborted")),
+        }),
+      );
+      actions.resetStdout();
+      const result = await recordAndTranscribeInput();
+      assert.strictEqual(result, null);
+      assert.deepStrictEqual(getWrites(), []);
+      assert.strictEqual(getState().abortControllers.recordProcess, null);
+    });
+
+    it("returns null and prints an error when transcription fails", async () => {
+      actions.setTranscriptionSdkProvider("openai");
+      actions.setTranscriptionModel("gpt-4o-transcribe");
+      testProcessEnv._set("LASSO_TRANSCRIPTION_API_KEY", "key");
+      mockRecording();
+      mock.method(aiDeps, "transcribe", () =>
+        Promise.reject(new Error("bad audio")),
+      );
+      actions.resetStdout();
+      const result = await recordAndTranscribeInput();
+      assert.strictEqual(result, null);
+      assert.deepStrictEqual(getWrites(), [
+        `${RED}Error while transcribing: bad audio${RESET}\n`,
+      ]);
+      assert.strictEqual(getState().abortControllers.recordProcess, null);
+    });
+  });
+
+  describe("recordInput", () => {
+    it("spawns sox with the raw mono 16-bit output config", () => {
+      actions.setRecordProcessAbortController(new AbortController());
+      const { spawnCalls } = mockRecording();
+      recordInput();
+      assert.strictEqual(spawnCalls.length, 1);
+      assert.ok(spawnCalls[0] !== undefined);
+      assert.strictEqual(spawnCalls[0].file, "sox");
+      assert.deepStrictEqual(spawnCalls[0].args, [
+        "-d",
+        "-t",
+        "raw",
+        "-r",
+        "16000",
+        "-c",
+        "1",
+        "-b",
+        "16",
+        "-e",
+        "signed-integer",
+        "-",
+      ]);
+      assert.deepStrictEqual(spawnCalls[0].options, {
+        stdio: ["ignore", "pipe", "ignore"],
+      });
+    });
+
+    it("collects stdout chunks and resolves them with the recording on stop", async () => {
+      actions.setRecordProcessAbortController(new AbortController());
+      const { stdout, killSignals } = mockRecording({ chunk: "tail" });
+      const { stop, recordingFinished } = recordInput();
+      stdout.emit("data", Buffer.from("abc"));
+      stop();
+      assert.deepStrictEqual(killSignals, ["SIGINT"]);
+      const recording = await recordingFinished;
+      assert.deepStrictEqual(
+        recording,
+        Buffer.concat([Buffer.from("abc"), Buffer.from("tail")]),
+      );
+    });
+  });
+
+  describe("transcribeInput", () => {
+    it("sends the audio to the transcription model and returns the text", async () => {
+      actions.setTranscriptionSdkProvider("openai");
+      actions.setTranscriptionModel("gpt-4o-transcribe");
+      testProcessEnv._set("LASSO_TRANSCRIPTION_API_KEY", "key");
+      const audio = Buffer.from("recording");
+      let transcribeArgs: { audio: Buffer; model: unknown } =
+        undefined as never;
+      mock.method(aiDeps, "transcribe", (args: unknown) => {
+        transcribeArgs = args as { audio: Buffer; model: unknown };
+        return Promise.resolve({ text: "hi" });
+      });
+      const result = await transcribeInput(audio);
+      assert.strictEqual(result, "hi");
+      assert.strictEqual(transcribeArgs.audio, audio);
+      assert.ok(transcribeArgs.model !== undefined);
     });
   });
 

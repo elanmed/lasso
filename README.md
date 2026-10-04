@@ -6,7 +6,7 @@ _A minimal agent harness to rein in your llm_
 
 ## Features
 
-- **Minimal**: ~6,200 lines of source code, ~13,900 lines of tests
+- **Minimal**: ~6,200 lines of source code, ~14,000 lines of tests
   - Responses are piped through `bat` to render markdown
   - Multi-line input is supported by spawning an editor of your choice
   - Messages can be queued by typing a custom delimiter (default `l---`) in the spawned editor
@@ -549,20 +549,20 @@ vim.g.clipboard = {
 
 - [ ] Record audio with /record
 - [ ] Queue audio with /record
-- [x] Buffer input while init is running
 
 ## TODO (soon)
 
 - [ ] Investigate potential shell expansion issues
-- [ ] Support interrupting both compactions at once
-- [ ] Allow opening the queue editor in the background
+- [ ] Allow opening the queue editor in a non-blocking way
 
 ## TODO (later)
 
 - [ ] Use native ai sdk v7 timeouts
 - [ ] Move all config validation into blockOnMissingConfig, don't throw at start
   - [ ] Separate error message for no config (`initlocal` and `initglobal`)
-- [ ] Reference history file for compacted summaries
+- [ ] Reference history file for compacted summaries (?)
 - [ ] Exit cleanly from C-d while loading
 - [ ] Add a tool for listing, providing MCP sources
 - [ ] Add a tool for consuming images
+- [ ] Audit for async actions that should use an abort controller
+- - [ ] Support interrupting both compactions at once

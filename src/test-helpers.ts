@@ -3,6 +3,8 @@ import crypto from "node:crypto";
 import { mock } from "node:test";
 import assert from "node:assert";
 import readline from "node:readline/promises";
+import { EventEmitter } from "node:events";
+import type { ChildProcess } from "node:child_process";
 import { stdin } from "node:process";
 import { z } from "zod";
 import type { ModelMessage, ToolSet } from "ai";
@@ -529,6 +531,37 @@ export function mockPagerSpawn() {
   return { spawned };
 }
 
+export function mockRecording({ chunk = "fake recording" } = {}) {
+  const stdout = new EventEmitter();
+  const killSignals: string[] = [];
+  const child = Object.assign(new EventEmitter(), {
+    stdout,
+    kill: (signal?: string) => {
+      killSignals.push(signal ?? "");
+      stdout.emit("data", Buffer.from(chunk));
+      child.emit("close", 0, signal ?? null);
+    },
+  }) as unknown as ChildProcess;
+  const spawnCalls: {
+    file: string;
+    args: string[];
+    options: unknown;
+  }[] = [];
+  mock.method(
+    childProcessDeps,
+    "spawn",
+    (file: string, args: string[], options: unknown) => {
+      spawnCalls.push({ file, args, options });
+      return child;
+    },
+  );
+  return { child, stdout, spawnCalls, killSignals };
+}
+
+export function mockTranscription(text: string) {
+  mock.method(aiDeps, "transcribe", () => Promise.resolve({ text }));
+}
+
 export function batPagerCmd(
   tempFile: string,
   contentType: "diff" | "markdown" = "markdown",
@@ -544,7 +577,7 @@ export function setupKeypressTests() {
   const { rl, writes } = makeFakeRlWithWrites();
   actions.setRl(rl);
   actions.setQuestionAbortController(new AbortController());
-  initKeypress();
+  initKeypress(rl);
 
   const emitKey = (key: Key) => {
     actions.resetStdout();

@@ -5,7 +5,6 @@ import { stdin, stdout } from "node:process";
 import { Writable } from "node:stream";
 import { dirname, join } from "node:path";
 import os from "node:os";
-import { transcribe } from "ai";
 import type { AssistantContent, Tool } from "ai";
 import { assertAtBuildtime } from "./assert.ts";
 import {
@@ -50,7 +49,7 @@ import {
 import { actions, getState } from "./state.ts";
 import { initStateRepeatable } from "./config.ts";
 import { isSameKey, type Key } from "./config-types.ts";
-import { childProcessDeps, fsDeps, processDeps } from "./deps.ts";
+import { aiDeps, childProcessDeps, fsDeps, processDeps } from "./deps.ts";
 import { getGlobalConfigPath, getLocalConfigPath } from "./paths.ts";
 import { contextFileSkillNamePrefix } from "./context.ts";
 import { execGitDiff } from "./differ.ts";
@@ -1739,7 +1738,7 @@ export async function transcribeInput(buffer: Buffer): Promise<string> {
   const { transcriptionModel } = getState().config;
   assertAtBuildtime(transcriptionModel !== undefined);
 
-  const { text } = await transcribe({
+  const { text } = await aiDeps.transcribe({
     model: getTranscriptionProvider().transcription(transcriptionModel),
     audio: buffer,
   });

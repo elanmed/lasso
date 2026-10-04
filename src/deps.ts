@@ -14,7 +14,7 @@ import childProcess, {
   type ExecOptionsWithStringEncoding,
 } from "node:child_process";
 import { promisify } from "node:util";
-import { generateText, isLoopFinished } from "ai";
+import { generateText, isLoopFinished, transcribe } from "ai";
 import { createMCPClient } from "@ai-sdk/mcp";
 
 type PromiseExecFile = (
@@ -109,6 +109,7 @@ export const processDeps = {
 export const aiDeps = {
   generateText,
   isLoopFinished,
+  transcribe,
 };
 
 export const mcpDeps = { createMCPClient };
