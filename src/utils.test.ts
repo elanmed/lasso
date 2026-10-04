@@ -448,6 +448,11 @@ describe("utils", () => {
       );
     });
 
+    it("uses the extension in the temp file path", async () => {
+      const result = await getTempFileName({ extension: "wav" });
+      assert.equal(result, "/tmp/lasso-test-uuid.wav");
+    });
+
     it("uses the path prefix in the temp file path", async () => {
       const result = await getTempFileName({
         pathPrefix: "lasso-local",

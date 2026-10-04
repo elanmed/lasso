@@ -3108,6 +3108,7 @@ editor input
         actions.setRl(makeFakeRlWithWrites().rl);
         mockRecording();
         mockTranscription("hello from the mic");
+        testFs._files.set("/tmp/lasso-test-uuid.wav", "wav recording bytes");
         const result = await resolveSlashCommand("/record");
         assert.strictEqual(result, "hello from the mic");
         assert.deepStrictEqual(getState().app.transcript, [
@@ -3857,8 +3858,8 @@ custom command content`,
       actions.setTranscriptionSdkProvider("openai");
       actions.setTranscriptionModel("gpt-4o-transcribe");
       testProcessEnv._set("LASSO_TRANSCRIPTION_API_KEY", "key");
-      mockRecording();
-      mockTranscription("hello from the mic");
+      mockRecording({ chunk: "wav pcm bytes" });
+      const { transcribeCalls } = mockTranscription("hello from the mic");
       let questionSawController = false;
       actions.setRl(
         makeFakeRl({
@@ -3869,10 +3870,32 @@ custom command content`,
           },
         }),
       );
+      actions.resetStdout();
       const result = await recordAndTranscribeInput();
       assert.strictEqual(result, "hello from the mic");
       assert.strictEqual(questionSawController, true);
       assert.strictEqual(getState().abortControllers.recordProcess, null);
+      assert.ok(transcribeCalls[0] !== undefined);
+      assert.deepStrictEqual(
+        transcribeCalls[0].audio,
+        Buffer.from("wav pcm bytes"),
+      );
+      assert.deepStrictEqual(getWrites(), [
+        `${BLUE}Transcribed: ${RESET}`,
+        "hello from the mic\n",
+      ]);
+    });
+
+    it("removes the wav temp file after a successful transcription", async () => {
+      actions.setTranscriptionSdkProvider("openai");
+      actions.setTranscriptionModel("gpt-4o-transcribe");
+      testProcessEnv._set("LASSO_TRANSCRIPTION_API_KEY", "key");
+      mockRecording();
+      mockTranscription("hello from the mic");
+      testFs._files.set("/tmp/lasso-test-uuid.wav", "wav recording bytes");
+      const result = await recordAndTranscribeInput();
+      assert.strictEqual(result, "hello from the mic");
+      assert.strictEqual(testFs._files.has("/tmp/lasso-test-uuid.wav"), false);
     });
 
     it("returns null and prints a warning without transcription configuration", async () => {
@@ -3907,6 +3930,7 @@ custom command content`,
         `${RED}Error while prompting the user to stop recording: boom${RESET}\n`,
       ]);
       assert.strictEqual(getState().abortControllers.recordProcess, null);
+      assert.strictEqual(testFs._files.has("/tmp/lasso-test-uuid.wav"), false);
     });
 
     it("returns null without an error when the stop-recording question is aborted", async () => {
@@ -3925,6 +3949,27 @@ custom command content`,
       assert.strictEqual(result, null);
       assert.deepStrictEqual(getWrites(), []);
       assert.strictEqual(getState().abortControllers.recordProcess, null);
+      assert.strictEqual(testFs._files.has("/tmp/lasso-test-uuid.wav"), false);
+    });
+
+    it("returns null and prints an error when reading the recorded temp file fails", async () => {
+      actions.setTranscriptionSdkProvider("openai");
+      actions.setTranscriptionModel("gpt-4o-transcribe");
+      testProcessEnv._set("LASSO_TRANSCRIPTION_API_KEY", "key");
+      mockRecording();
+      const { transcribeCalls } = mockTranscription("hello from the mic");
+      mock.method(fsDeps, "readFile", () =>
+        Promise.reject(makeErrnoError("ENOENT", "ENOENT: no such file")),
+      );
+      actions.resetStdout();
+      const result = await recordAndTranscribeInput();
+      assert.strictEqual(result, null);
+      assert.deepStrictEqual(getWrites(), [
+        `${RED}Error while reading the temp file that was recorded to: ENOENT: no such file${RESET}\n`,
+      ]);
+      assert.strictEqual(getState().abortControllers.recordProcess, null);
+      assert.strictEqual(transcribeCalls.length, 0);
+      assert.strictEqual(testFs._files.has("/tmp/lasso-test-uuid.wav"), false);
     });
 
     it("returns null and prints an error when transcription fails", async () => {
@@ -3932,6 +3977,7 @@ custom command content`,
       actions.setTranscriptionModel("gpt-4o-transcribe");
       testProcessEnv._set("LASSO_TRANSCRIPTION_API_KEY", "key");
       mockRecording();
+      testFs._files.set("/tmp/lasso-test-uuid.wav", "wav recording bytes");
       mock.method(aiDeps, "transcribe", () =>
         Promise.reject(new Error("bad audio")),
       );
@@ -3942,48 +3988,66 @@ custom command content`,
         `${RED}Error while transcribing: bad audio${RESET}\n`,
       ]);
       assert.strictEqual(getState().abortControllers.recordProcess, null);
+      assert.strictEqual(testFs._files.has("/tmp/lasso-test-uuid.wav"), false);
     });
   });
 
   describe("recordInput", () => {
-    it("spawns sox with the raw mono 16-bit output config", () => {
+    it("spawns sox with the wav mono 16-bit output config writing to the temp file", () => {
       actions.setRecordProcessAbortController(new AbortController());
       const { spawnCalls } = mockRecording();
-      recordInput();
+      recordInput("/tmp/lasso-test-uuid.wav");
       assert.strictEqual(spawnCalls.length, 1);
       assert.ok(spawnCalls[0] !== undefined);
       assert.strictEqual(spawnCalls[0].file, "sox");
       assert.deepStrictEqual(spawnCalls[0].args, [
         "-d",
         "-t",
-        "raw",
+        "wav",
         "-r",
         "16000",
         "-c",
         "1",
         "-b",
         "16",
-        "-e",
-        "signed-integer",
-        "-",
+        "/tmp/lasso-test-uuid.wav",
       ]);
       assert.deepStrictEqual(spawnCalls[0].options, {
-        stdio: ["ignore", "pipe", "ignore"],
+        stdio: ["ignore", "pipe", "pipe"],
       });
     });
 
-    it("collects stdout chunks and resolves them with the recording on stop", async () => {
+    it("resolves recordingFinished with the close args on stop", async () => {
       actions.setRecordProcessAbortController(new AbortController());
-      const { stdout, killSignals } = mockRecording({ chunk: "tail" });
-      const { stop, recordingFinished } = recordInput();
-      stdout.emit("data", Buffer.from("abc"));
+      const { killSignals } = mockRecording();
+      const { stop, recordingFinished } = recordInput(
+        "/tmp/lasso-test-uuid.wav",
+      );
       stop();
       assert.deepStrictEqual(killSignals, ["SIGINT"]);
-      const recording = await recordingFinished;
-      assert.deepStrictEqual(
-        recording,
-        Buffer.concat([Buffer.from("abc"), Buffer.from("tail")]),
+      const closeArgs = await recordingFinished;
+      assert.deepStrictEqual(closeArgs, [0, "SIGINT"]);
+    });
+
+    it("resolves recordingReady when sox first writes to stderr", async () => {
+      actions.setRecordProcessAbortController(new AbortController());
+      const { stderr } = mockRecording();
+      const { recordingReady } = recordInput("/tmp/lasso-test-uuid.wav");
+      stderr.emit("data", Buffer.from("ready"));
+      await recordingReady;
+    });
+
+    it("collects stderr chunks and exposes them via getErrorOutput", async () => {
+      actions.setRecordProcessAbortController(new AbortController());
+      const { stderr } = mockRecording();
+      const { stop, getErrorOutput, recordingFinished } = recordInput(
+        "/tmp/lasso-test-uuid.wav",
       );
+      stderr.emit("data", Buffer.from("in:"));
+      stderr.emit("data", Buffer.from(" 16kHz"));
+      stop();
+      await recordingFinished;
+      assert.strictEqual(getErrorOutput(), "in: 16kHz");
     });
   });
 

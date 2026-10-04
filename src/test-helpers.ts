@@ -533,12 +533,19 @@ export function mockPagerSpawn() {
 
 export function mockRecording({ chunk = "fake recording" } = {}) {
   const stdout = new EventEmitter();
+  const stderr = new EventEmitter();
   const killSignals: string[] = [];
   const child = Object.assign(new EventEmitter(), {
     stdout,
+    stderr,
     kill: (signal?: string) => {
       killSignals.push(signal ?? "");
       stdout.emit("data", Buffer.from(chunk));
+      const lastCall = spawnCalls[spawnCalls.length - 1];
+      const outputArg = lastCall?.args[lastCall.args.length - 1];
+      if (typeof outputArg === "string") {
+        testFs._files.set(outputArg, chunk);
+      }
       child.emit("close", 0, signal ?? null);
     },
   }) as unknown as ChildProcess;
@@ -555,7 +562,7 @@ export function mockRecording({ chunk = "fake recording" } = {}) {
       return child;
     },
   );
-  return { child, stdout, spawnCalls, killSignals };
+  return { child, stdout, stderr, spawnCalls, killSignals };
 }
 
 export function mockTranscription(text: string) {

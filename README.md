@@ -6,7 +6,7 @@ _A minimal agent harness to rein in your llm_
 
 ## Features
 
-- **Minimal**: ~6,200 lines of source code, ~14,000 lines of tests
+- **Minimal**: ~6,300 lines of source code, ~14,000 lines of tests
   - Responses are piped through `bat` to render markdown
   - Multi-line input is supported by spawning an editor of your choice
   - Messages can be queued by typing a custom delimiter (default `l---`) in the spawned editor
@@ -319,7 +319,7 @@ Slash commands are triggered with `/command` at the prompt.
 | `/lastdiff`     | View the last turn's tool edit diffs in a pager                               |
 | `/paste`        | Call the `paste` keymap                                                       |
 | `/model`        | Switch the model at runtime (e.g. `/model kimi-k2.6`)                         |
-| `/record`       | Record audio and transcribe it into the prompt (WIP)                          |
+| `/record`       | Record audio and transcribe it into the prompt                                |
 | `/skills`       | List available skills                                                         |
 | `/tools`        | List available harness and MCP tools in a pager                               |
 | `/context`      | List available context files                                                  |
@@ -547,13 +547,13 @@ vim.g.clipboard = {
 
 ## TODO (now)
 
-- [ ] Record audio with /record
+- [x] Record audio with /record
 - [ ] Queue audio with /record
+- [ ] Allow opening the queue editor in a non-blocking way
 
 ## TODO (soon)
 
 - [ ] Investigate potential shell expansion issues
-- [ ] Allow opening the queue editor in a non-blocking way
 
 ## TODO (later)
 
