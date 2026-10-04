@@ -1733,7 +1733,6 @@ export function recordInput() {
   };
 }
 
-// WIP
 export async function transcribeInput(buffer: Buffer): Promise<string> {
   const { transcriptionModel } = getState().config;
   assertAtBuildtime(transcriptionModel !== undefined);
