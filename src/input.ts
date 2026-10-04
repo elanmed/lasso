@@ -121,7 +121,7 @@ export function initStdin() {
     if (key.name === "return" || key.name === "enter") return;
     if (!isTypeableKey(key)) return;
     if (typeof char !== "string") return;
-    actions.appendInitializingBufferedInput(char);
+    actions.appendBufferedInputWhileInitializing(char);
   });
 }
 
@@ -169,6 +169,11 @@ export function initKeypress(rl: readline.Interface) {
     actions.setIsEditorOpen(false);
     if (getState().abortControllers.apiStream !== null) {
       startLoadingState();
+    }
+    const bufferedStdout = getState().app.bufferedStdoutWhileEditorOpen;
+    if (bufferedStdout.length > 0) {
+      processDeps.stdout.write(bufferedStdout);
+      actions.resetBufferedStdoutWhileEditorOpen();
     }
     return editorContent;
   }
@@ -491,15 +496,16 @@ export async function resolveUserInput({
   actions.setQuestionAbortController(new AbortController());
   const abortController = getState().abortControllers.question;
   assertAtBuildtime(abortController !== null);
-  const initializingBufferedInput = getState().app.initializingBufferedInput;
+  const bufferedInputWhileInitializing =
+    getState().app.bufferedInputWhileInitializing;
   const questionResult = tryCatchAsync(
     rl.question(getState().config.promptPrefix, {
       signal: abortController.signal,
     }),
   );
-  if (initializingBufferedInput.length > 0) {
-    rl.write(initializingBufferedInput);
-    actions.resetInitializingBufferedInput();
+  if (bufferedInputWhileInitializing.length > 0) {
+    rl.write(bufferedInputWhileInitializing);
+    actions.resetBufferedInputWhileInitializing();
   }
   const inputResult = await questionResult;
   actions.setQuestionAbortController(null);

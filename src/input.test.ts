@@ -3,6 +3,7 @@ import assert from "node:assert";
 import os from "node:os";
 import { stdin } from "node:process";
 import { actions, getState, promptDeps } from "./state.ts";
+import { print } from "./print.ts";
 
 import { strToApproxTokens } from "./utils.ts";
 import {
@@ -329,35 +330,35 @@ describe("input", () => {
       actions.setIsInitializing(true);
       emitKey("a", { name: "a" });
       emitKey(" ", { name: "space" });
-      assert.equal(getState().app.initializingBufferedInput, "a ");
+      assert.equal(getState().app.bufferedInputWhileInitializing, "a ");
     });
 
     it("ignores keypresses when not initializing", () => {
       emitKey("a", { name: "a" });
-      assert.equal(getState().app.initializingBufferedInput, "");
+      assert.equal(getState().app.bufferedInputWhileInitializing, "");
     });
 
     it("ignores return and enter keys", () => {
       actions.setIsInitializing(true);
-      actions.appendInitializingBufferedInput("ab");
+      actions.appendBufferedInputWhileInitializing("ab");
       emitKey("\r", { name: "return" });
       emitKey("\n", { name: "enter" });
-      assert.equal(getState().app.initializingBufferedInput, "ab");
+      assert.equal(getState().app.bufferedInputWhileInitializing, "ab");
     });
 
     it("ignores keys without characters like arrow keys", () => {
       actions.setIsInitializing(true);
-      actions.appendInitializingBufferedInput("ab");
+      actions.appendBufferedInputWhileInitializing("ab");
       emitKey(undefined, { name: "left" });
-      assert.equal(getState().app.initializingBufferedInput, "ab");
+      assert.equal(getState().app.bufferedInputWhileInitializing, "ab");
     });
 
     it("ignores ctrl and meta keys", () => {
       actions.setIsInitializing(true);
-      actions.appendInitializingBufferedInput("ab");
+      actions.appendBufferedInputWhileInitializing("ab");
       emitKey("h", { name: "h", ctrl: true });
       emitKey("f", { name: "f", meta: true });
-      assert.equal(getState().app.initializingBufferedInput, "ab");
+      assert.equal(getState().app.bufferedInputWhileInitializing, "ab");
     });
 
     it("exits with code 130 on ctrl c while initializing", () => {
@@ -378,13 +379,13 @@ describe("input", () => {
         question: () => new Promise(() => undefined),
       });
       actions.setRl(rl);
-      actions.appendInitializingBufferedInput("ab");
+      actions.appendBufferedInputWhileInitializing("ab");
       void resolveUserInput({ isFirstInput: true });
       assert.deepStrictEqual(
         writes.map((write) => write.chunk),
         ["ab"],
       );
-      assert.equal(getState().app.initializingBufferedInput, "");
+      assert.equal(getState().app.bufferedInputWhileInitializing, "");
     });
   });
 
@@ -2687,6 +2688,43 @@ editor input
           getState().app.editorInputValue,
           "  hello world modified  \n",
         );
+      });
+
+      it("replays stdout printed while the editor was open and clears the buffer", async () => {
+        const getWrites = mockStdoutWrites();
+        mockEditorSpawn(() => {
+          print.info("during editor");
+          testFs.writeFile("/tmp/lasso-test-uuid.txt", "");
+        });
+        harness.emitKey({ name: "g", ctrl: true });
+        await harness.flush();
+
+        assert.strictEqual(getState().app.bufferedStdoutWhileEditorOpen, "");
+        assert.deepStrictEqual(getWrites(), [
+          `${PURPLE}during editor${RESET}\n`,
+        ]);
+      });
+
+      it("does not replay buffered stdout from a previous editor session", async () => {
+        const getWrites = mockStdoutWrites();
+        mockEditorSpawn(() => {
+          print.info("first");
+          testFs.writeFile("/tmp/lasso-test-uuid.txt", "");
+        });
+        harness.emitKey({ name: "g", ctrl: true });
+        await harness.flush();
+
+        mockEditorSpawn(() => {
+          print.info("second");
+          testFs.writeFile("/tmp/lasso-test-uuid.txt", "");
+        });
+        harness.emitKey({ name: "g", ctrl: true });
+        await harness.flush();
+
+        assert.deepStrictEqual(getWrites(), [
+          `${PURPLE}first${RESET}\n`,
+          `${PURPLE}second${RESET}\n`,
+        ]);
       });
 
       it("redraws the pending question prompt after a cancelled edit", async () => {

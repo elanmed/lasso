@@ -59,6 +59,7 @@ export function colorPrint(
 
   const { isEditorOpen } = getState().app;
   if (isEditorOpen) {
+    actions.appendBufferedStdoutWhileEditorOpen(out);
     actions.appendStdoutTail(out);
     return;
   }

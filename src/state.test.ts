@@ -75,7 +75,7 @@ skills body`,
         editorInputValue: null,
         isInitializing: false,
         isEditorOpen: false,
-        initializingBufferedInput: "",
+        bufferedInputWhileInitializing: "",
         slashCommands: [],
         stdoutTail: "",
         batAvailable: false,
@@ -148,7 +148,7 @@ skills body`,
       actions.setPromptTokensDirty(true);
       actions.setEditorInputValue("draft");
       actions.setIsInitializing(true);
-      actions.appendInitializingBufferedInput("buffered");
+      actions.appendBufferedInputWhileInitializing("buffered");
       actions.setSlashCommands([
         {
           name: "custom",
@@ -305,17 +305,17 @@ skills body`,
       assert.equal(getState().app.isEditorOpen, false);
     });
 
-    it("append-initializing-buffered-input accumulates inputs", () => {
-      assert.equal(getState().app.initializingBufferedInput, "");
-      actions.appendInitializingBufferedInput("he");
-      actions.appendInitializingBufferedInput("llo");
-      assert.equal(getState().app.initializingBufferedInput, "hello");
+    it("append-buffered-input-while-initializing accumulates inputs", () => {
+      assert.equal(getState().app.bufferedInputWhileInitializing, "");
+      actions.appendBufferedInputWhileInitializing("he");
+      actions.appendBufferedInputWhileInitializing("llo");
+      assert.equal(getState().app.bufferedInputWhileInitializing, "hello");
     });
 
-    it("reset-initializing-buffered-input", () => {
-      actions.appendInitializingBufferedInput("abc");
-      actions.resetInitializingBufferedInput();
-      assert.equal(getState().app.initializingBufferedInput, "");
+    it("reset-buffered-input-while-initializing", () => {
+      actions.appendBufferedInputWhileInitializing("abc");
+      actions.resetBufferedInputWhileInitializing();
+      assert.equal(getState().app.bufferedInputWhileInitializing, "");
     });
 
     it("append-buffered-stdout-while-editor-open accumulates lines", () => {
