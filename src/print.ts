@@ -1,4 +1,4 @@
-import { assertAtRuntime } from "./assert.ts";
+import { assertAtBuildtime, assertAtRuntime } from "./assert.ts";
 import {
   getDurationColor,
   getPrettyDuration,
@@ -91,36 +91,47 @@ export function createPerformanceLogger({
   return { start, end };
 }
 
+export type ParallelPerformanceLogger = ReturnType<
+  typeof createParallelPerformanceLogger
+>;
+
+export type LogIdToLabel = [logId: string, label: string][];
+
 export function createParallelPerformanceLogger({
   logDuration,
-  labels,
+  logIdToLabel,
 }: {
   logDuration: boolean;
-  labels: string[];
+  logIdToLabel: LogIdToLabel;
 }) {
-  const startTimeByLabel = new Map<string, bigint>();
+  const startTimeByLogId = new Map<string, bigint>();
+  const labels = logIdToLabel.map(([, label]) => label);
 
   function printAllLabels() {
     if (!logDuration) return;
-    for (const label of labels) {
-      print.doing(label, { appendNewline: true });
+    for (const labelContent of labels) {
+      print.doing(labelContent);
     }
   }
 
-  function start(label: string) {
+  function start(logId: string) {
     if (!logDuration) return;
-    startTimeByLabel.set(label, process.hrtime.bigint());
+    startTimeByLogId.set(logId, process.hrtime.bigint());
   }
 
-  function end(label: string) {
+  function end(logId: string) {
     if (!logDuration) return;
-    const startTime = startTimeByLabel.get(label);
+    const startTime = startTimeByLogId.get(logId);
     assertAtRuntime(startTime !== undefined);
     const endTime = process.hrtime.bigint();
     const duration = getPrettyDuration(startTime, endTime, {
       includeMicroseconds: true,
     });
-    const linesUp = labels.length - labels.indexOf(label);
+    const labelEntry = logIdToLabel.find(([id]) => id === logId);
+    assertAtBuildtime(labelEntry !== undefined);
+    const labelIndex = logIdToLabel.indexOf(labelEntry);
+    const linesUp = labels.length - labelIndex;
+    const label = labelEntry[1];
     processDeps.stdout.write(`\x1b[${String(linesUp)}A\x1b[2K\r`);
     print.doing(label, { appendNewline: false });
     colorPrint(duration, getDurationColor(startTime, endTime), {

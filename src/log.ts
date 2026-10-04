@@ -145,8 +145,3 @@ export async function deleteExpiredSessionFiles() {
     }
   }
 }
-
-export async function initLogs() {
-  await deleteExpiredSessionFiles();
-  await initSessionFile();
-}

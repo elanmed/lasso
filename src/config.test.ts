@@ -1185,16 +1185,25 @@ describe("config", () => {
             JSON.stringify({ model: testConfig.model }),
           );
 
-          const getWrites = mockStdoutWrites();
+          const getWrites = mockStdoutWrites({ includeSpinnerFrames: true });
           await initState();
           assert.deepStrictEqual(getWrites(), [
             `${YELLOW}- Warning: using a default context window of 128,000 tokens because there is no \`contextWindowPerModel\` entry for the current model \`claude-sonnet-4-6\`${RESET}\n`,
+            `${BLUE}Reading context files: ${RESET}\n`,
+            `${BLUE}Reading skills: ${RESET}\n`,
+            `${BLUE}Reading slash commands: ${RESET}\n`,
+            `\x1b[3A\x1b[2K\r`,
             `${BLUE}Reading context files: ${RESET}`,
-            `${GREEN}0.0ms${RESET}\n`,
+            `${GREEN}0.0ms${RESET}`,
+            `\x1b[3B\r`,
+            `\x1b[2A\x1b[2K\r`,
             `${BLUE}Reading skills: ${RESET}`,
-            `${GREEN}0.0ms${RESET}\n`,
+            `${GREEN}0.0ms${RESET}`,
+            `\x1b[2B\r`,
+            `\x1b[1A\x1b[2K\r`,
             `${BLUE}Reading slash commands: ${RESET}`,
-            `${GREEN}0.0ms${RESET}\n`,
+            `${GREEN}0.0ms${RESET}`,
+            `\x1b[1B\r`,
           ]);
         });
 
@@ -1342,7 +1351,7 @@ describe("config", () => {
             }),
           );
 
-          const getWrites = mockStdoutWrites();
+          const getWrites = mockStdoutWrites({ includeSpinnerFrames: true });
           await initState();
           assert.deepStrictEqual(getWrites(), [
             `${YELLOW}- Warning: using a default context window of 128,000 tokens because there is no \`contextWindowPerModel\` entry for the current model \`claude-sonnet-4-6\`${RESET}\n`,

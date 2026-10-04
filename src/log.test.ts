@@ -4,7 +4,6 @@ import assert from "node:assert/strict";
 import {
   initSessionFile,
   deleteExpiredSessionFiles,
-  initLogs,
   syncSessionFile,
   resumeFromSessionFile,
 } from "./log.ts";
@@ -91,33 +90,6 @@ describe("log", () => {
           "/fake-home/.local/state/lasso/sessions/session-1234567890000.json",
         ),
         "",
-      );
-    });
-  });
-
-  describe("initLogs", () => {
-    beforeEach(() => {
-      mock.restoreAll();
-      setupTestContext({ now: 1_234_567_890_000 });
-    });
-
-    it("deletes expired session files, initializes the session file", async () => {
-      testFs._dirs.add("/fake-home/.local/state/lasso/sessions");
-      testFs._files.set(
-        "/fake-home/.local/state/lasso/sessions/session-1000000000.json",
-        "expired",
-      );
-      await initLogs();
-
-      assert.equal(
-        testFs._files.has(
-          "/fake-home/.local/state/lasso/sessions/session-1000000000.json",
-        ),
-        false,
-      );
-      assert.equal(
-        getState().app.sessionFilePath,
-        "/fake-home/.local/state/lasso/sessions/session-1234567890000.json",
       );
     });
   });

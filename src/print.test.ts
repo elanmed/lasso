@@ -186,7 +186,10 @@ describe("print", () => {
     it("prints every label on its own line upfront", () => {
       const logger = createParallelPerformanceLogger({
         logDuration: true,
-        labels: ["Starting a: ", "Starting b: "],
+        logIdToLabel: [
+          ["a", "Starting a: "],
+          ["b", "Starting b: "],
+        ],
       });
       const getWrites = mockStdoutWrites();
 
@@ -202,17 +205,20 @@ describe("print", () => {
       mock.method(process.hrtime, "bigint", () => BigInt(1_000_000_000));
       const logger = createParallelPerformanceLogger({
         logDuration: true,
-        labels: ["Starting a: ", "Starting b: "],
+        logIdToLabel: [
+          ["a", "Starting a: "],
+          ["b", "Starting b: "],
+        ],
       });
       const getWrites = mockStdoutWrites({ includeSpinnerFrames: true });
 
       logger.printAllLabels();
-      logger.start("Starting a: ");
+      logger.start("a");
       mock.method(process.hrtime, "bigint", () => BigInt(1_234_567_890));
-      logger.end("Starting a: ");
-      logger.start("Starting b: ");
+      logger.end("a");
+      logger.start("b");
       mock.method(process.hrtime, "bigint", () => BigInt(2_234_567_890));
-      logger.end("Starting b: ");
+      logger.end("b");
 
       assert.deepStrictEqual(getWrites(), [
         `${BLUE}Starting a: ${RESET}\n`,
@@ -231,13 +237,13 @@ describe("print", () => {
     it("does nothing when logDuration is false", () => {
       const logger = createParallelPerformanceLogger({
         logDuration: false,
-        labels: ["Starting a: "],
+        logIdToLabel: [["a", "Starting a: "]],
       });
       const getWrites = mockStdoutWrites();
 
       logger.printAllLabels();
-      logger.start("Starting a: ");
-      logger.end("Starting a: ");
+      logger.start("a");
+      logger.end("a");
 
       assert.deepStrictEqual(getWrites(), []);
     });
@@ -245,9 +251,9 @@ describe("print", () => {
     it("throws when ended without start", () => {
       const logger = createParallelPerformanceLogger({
         logDuration: true,
-        labels: ["Starting a: "],
+        logIdToLabel: [["a", "Starting a: "]],
       });
-      assert.throws(() => logger.end("Starting a: "));
+      assert.throws(() => logger.end("a"));
     });
   });
 

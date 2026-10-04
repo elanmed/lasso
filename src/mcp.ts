@@ -3,10 +3,9 @@ import { Experimental_StdioMCPTransport as StdioClientTransport } from "@ai-sdk/
 import type { MCPClient } from "@ai-sdk/mcp";
 import { actions, getState, type MCPToolSet } from "./state.ts";
 import type { Mcp } from "./config-types.ts";
-import { createParallelPerformanceLogger, print } from "./print.ts";
+import { print, type ParallelPerformanceLogger } from "./print.ts";
 import { getMessageFromError, tryCatchAsync } from "./utils.ts";
 import { mcpDeps } from "./deps.ts";
-import { assertAtBuildtime } from "./assert.ts";
 
 async function createMcpClient(config: Mcp) {
   switch (config.type) {
@@ -48,28 +47,20 @@ async function createMcpClient(config: Mcp) {
   }
 }
 
-async function getMcpClients() {
+async function getMcpClients({
+  performanceLogger,
+}: {
+  performanceLogger: ParallelPerformanceLogger;
+}) {
   const mcpClients: Record<string, MCPClient> = {};
 
   const serverEntries = Object.entries(getState().config.mcps);
-  const labelByName = Object.fromEntries(
-    serverEntries.map(([name]) => [name, `Starting ${name} mcp server: `]),
-  );
-  const performanceLogger = createParallelPerformanceLogger({
-    logDuration: !getState().config.suppressStartupDurations,
-    labels: Object.values(labelByName),
-  });
-  performanceLogger.printAllLabels();
-
   const failureMessages: string[] = [];
   await Promise.all(
     serverEntries.map(async ([name, config]) => {
-      const label = labelByName[name];
-      assertAtBuildtime(label !== undefined);
-
-      performanceLogger.start(label);
+      performanceLogger.start(name);
       const createMcpResult = await tryCatchAsync(createMcpClient(config));
-      performanceLogger.end(label);
+      performanceLogger.end(name);
       if (createMcpResult.ok) {
         mcpClients[name] = createMcpResult.value;
       } else {
@@ -84,11 +75,17 @@ async function getMcpClients() {
   return mcpClients;
 }
 
-export async function initMcpState() {
+export async function initMcpState({
+  performanceLogger,
+}: {
+  performanceLogger: ParallelPerformanceLogger;
+}) {
   const state = getState();
 
   await state.mcp.close();
-  const clients = await getMcpClients();
+  const clients = await getMcpClients({
+    performanceLogger,
+  });
   const toolSetsPromise = Promise.all(
     Object.entries(clients).map(async ([name, client]) => {
       const toolsPromise = await tryCatchAsync(client.tools());

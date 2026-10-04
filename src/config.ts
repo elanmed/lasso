@@ -23,9 +23,15 @@ import {
   getLocalConfigPath,
 } from "./paths.ts";
 import { syncInitialModelUsageForLimitWindow } from "./usage.ts";
-import { createPerformanceLogger, print } from "./print.ts";
+import {
+  createParallelPerformanceLogger,
+  print,
+  type LogIdToLabel,
+  type ParallelPerformanceLogger,
+} from "./print.ts";
 import { initMcpState } from "./mcp.ts";
 import { stringifyTools } from "./tools.ts";
+import { deleteExpiredSessionFiles, initSessionFile } from "./log.ts";
 
 export async function readConfigFileStr(path: string) {
   if (!fsDeps.existsSync(path)) return "{}";
@@ -273,31 +279,28 @@ export function initStateFromConfig({
 }
 
 export async function initStateFromFs({
-  logDuration = false,
-}: { logDuration?: boolean } = {}) {
-  const shouldLogDuration =
-    logDuration && !getState().config.suppressStartupDurations;
-  const performanceLogger = createPerformanceLogger({
-    logDuration: shouldLogDuration,
-  });
+  performanceLogger,
+}: {
+  performanceLogger: ParallelPerformanceLogger;
+}) {
   await syncInitialModelUsageForLimitWindow();
 
-  performanceLogger.start("Reading context files: ");
+  performanceLogger.start("context");
   const contextEntries = await getContextEntries();
   actions.setContextEntries(contextEntries);
   actions.setContextStr(getContextFilesStr(contextEntries));
-  performanceLogger.end();
+  performanceLogger.end("context");
 
-  performanceLogger.start("Reading skills: ");
+  performanceLogger.start("skills");
   const skills = await getSkills();
   actions.setSkills(skills);
   actions.setSkillsStr(getSkillsStr(skills));
-  performanceLogger.end();
+  performanceLogger.end("skills");
 
-  performanceLogger.start("Reading slash commands: ");
+  performanceLogger.start("commands");
   const slashCommands = await getAvailableSlashCommands();
   actions.setSlashCommands(slashCommands);
-  performanceLogger.end();
+  performanceLogger.end("commands");
 }
 
 export async function initStateFirst() {
@@ -326,9 +329,23 @@ export async function initStateFirst() {
 export async function initStateRepeatable() {
   const { globalConfig, localConfig } = await initStateFirst();
   initStateFromConfig({ globalConfig, localConfig });
-  await initMcpState();
   promptDeps.getToolsContentStr = stringifyTools;
-  await initStateFromFs();
+
+  const performanceLogger = createParallelPerformanceLogger({
+    logDuration: !getState().config.suppressStartupDurations,
+    logIdToLabel: getMcpLogIdToLabel(),
+  });
+  performanceLogger.printAllLabels();
+
+  await Promise.all([
+    initMcpState({ performanceLogger }),
+    initStateFromFs({ performanceLogger }),
+  ]);
+}
+
+export function getMcpLogIdToLabel(): LogIdToLabel {
+  const serverEntries = Object.entries(getState().config.mcps);
+  return serverEntries.map(([name]) => [name, `Starting ${name} mcp server: `]);
 }
 
 export async function initState() {
@@ -337,7 +354,24 @@ export async function initState() {
   actions.setDebugLogPath(debugLogPath);
 
   initStateFromConfig({ globalConfig, localConfig });
-  await initMcpState();
   promptDeps.getToolsContentStr = stringifyTools;
-  await initStateFromFs({ logDuration: true });
+
+  const logIdToLabel: LogIdToLabel = getMcpLogIdToLabel().concat([
+    ["context", "Reading context files: "],
+    ["skills", "Reading skills: "],
+    ["commands", "Reading slash commands: "],
+  ]);
+
+  const performanceLogger = createParallelPerformanceLogger({
+    logDuration: !getState().config.suppressStartupDurations,
+    logIdToLabel,
+  });
+  performanceLogger.printAllLabels();
+
+  await Promise.all([
+    initMcpState({ performanceLogger }),
+    initStateFromFs({ performanceLogger }),
+    deleteExpiredSessionFiles(),
+    initSessionFile(),
+  ]);
 }
