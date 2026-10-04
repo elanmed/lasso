@@ -72,16 +72,15 @@ import { harnessTools } from "./tools.ts";
 import { getTranscriptionProvider } from "./model.ts";
 
 // https://stackoverflow.com/a/33500118
-const mutedStdout = new Writable({
+export const mutedStdout = new Writable({
   write(
-    chunk: Buffer,
+    out: Buffer,
     _encoding: BufferEncoding,
     callback: (error?: Error | null) => void,
   ) {
-    const isLoading = getState().app.loadingStateTimeout !== null;
-    if (isLoading) return callback();
+    if (shouldMuteStdout()) return callback();
 
-    stdout.write(chunk);
+    processDeps.stdout.write(out);
     callback();
   },
 });
@@ -98,6 +97,15 @@ Object.defineProperties(mutedStdout, {
     configurable: true,
   },
 });
+
+export function mutedPrint(text: string) {
+  processDeps.stdout.write(text);
+}
+
+export function shouldMuteStdout() {
+  const { loadingStateTimeout, isNonBlockingProcessOngoing } = getState().app;
+  return loadingStateTimeout !== null || isNonBlockingProcessOngoing;
+}
 
 export function initStdin() {
   if (stdin.isTTY) {
@@ -217,19 +225,8 @@ export function initKeypress(rl: readline.Interface) {
               { pauseStdin: false },
             );
 
-            if (transcriptionInput === null) {
-              redrawPendingQuestion();
-            } else {
-              const existingEditorContentPrefix = (() => {
-                const { editorInputValue } = getState().app;
-                if (editorInputValue !== null) {
-                  return `${editorInputValue}${getState().config.messageQueueDelimiter}`;
-                }
-                return "";
-              })();
-
-              const editorInputValue = `${existingEditorContentPrefix}${transcriptionInput}`;
-              actions.setEditorInputValue(editorInputValue);
+            if (transcriptionInput !== null) {
+              actions.appendEditorInputValue(transcriptionInput);
             }
             return;
           }
@@ -1739,10 +1736,11 @@ ${formattedMessages}`;
   const { stop, recordingFinished } = recordInput(tempFile);
   const recordingPromise = tryCatchAsync(recordingFinished);
 
+  const banner = "Press enter to stop recording:\n";
+  if (shouldMuteStdout()) mutedPrint(banner);
+  else print.plain(banner, { appendNewline: false });
   const finishRecordingResult = await tryCatchAsync(
-    rl.question("Press enter to stop recording: ", {
-      signal: abortController.signal,
-    }),
+    rl.question("", { signal: abortController.signal }),
   );
   stop();
   await recordingPromise;

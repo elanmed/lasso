@@ -399,6 +399,17 @@ export const actions = {
     logStateChange("set-editor-input-value", String(before), String(value));
   },
 
+  appendEditorInputValue(value: string) {
+    assertAtRuntime(value !== "");
+    const before = state.app.editorInputValue;
+    const appended =
+      before === null
+        ? value
+        : `${before}${state.config.messageQueueDelimiter}${value}`;
+    state.app.editorInputValue = appended;
+    logStateChange("append-editor-input-value", String(before), appended);
+  },
+
   setIsNonBlockingProcessOngoing(isNonBlockingProcessOngoing: boolean) {
     const before = state.app.isNonBlockingProcessOngoing;
     state.app.isNonBlockingProcessOngoing = isNonBlockingProcessOngoing;

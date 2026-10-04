@@ -92,7 +92,7 @@ export const processDeps = {
   },
   stdout: {
     getColumns: (): number | undefined => process.stdout.columns,
-    write: (out: string) => {
+    write: (out: string | Buffer) => {
       process.stdout.write(out);
     },
     isTTY: () => process.stdout.isTTY,

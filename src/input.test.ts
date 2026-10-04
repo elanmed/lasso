@@ -8,6 +8,9 @@ import { print } from "./print.ts";
 import { strToApproxTokens } from "./utils.ts";
 import {
   parseInputFromEditor,
+  mutedPrint,
+  shouldMuteStdout,
+  mutedStdout,
   recordAndTranscribeInput,
   resolveSlashCommand,
   resolveUserInput,
@@ -3969,7 +3972,7 @@ custom command content`,
         transcribeCalls[0].audio,
         Buffer.from("wav pcm bytes"),
       );
-      assert.deepStrictEqual(getWrites(), []);
+      assert.deepStrictEqual(getWrites(), ["Press enter to stop recording:\n"]);
     });
 
     it("removes the wav temp file after a successful transcription", async () => {
@@ -4013,6 +4016,7 @@ custom command content`,
       const result = await recordAndTranscribeInput();
       assert.strictEqual(result, null);
       assert.deepStrictEqual(getWrites(), [
+        "Press enter to stop recording:\n",
         `${RED}Error while prompting the user to stop recording: boom${RESET}\n`,
       ]);
       assert.strictEqual(getState().abortControllers.recordProcess, null);
@@ -4033,7 +4037,7 @@ custom command content`,
       actions.resetStdout();
       const result = await recordAndTranscribeInput();
       assert.strictEqual(result, null);
-      assert.deepStrictEqual(getWrites(), []);
+      assert.deepStrictEqual(getWrites(), ["Press enter to stop recording:\n"]);
       assert.strictEqual(getState().abortControllers.recordProcess, null);
       assert.strictEqual(testFs._files.has("/tmp/lasso-test-uuid.wav"), false);
     });
@@ -4051,10 +4055,30 @@ custom command content`,
       const result = await recordAndTranscribeInput();
       assert.strictEqual(result, null);
       assert.deepStrictEqual(getWrites(), [
+        "Press enter to stop recording:\n",
         `${RED}Error while reading the temp file that was recorded to: ENOENT: no such file${RESET}\n`,
       ]);
       assert.strictEqual(getState().abortControllers.recordProcess, null);
       assert.strictEqual(transcribeCalls.length, 0);
+      assert.strictEqual(testFs._files.has("/tmp/lasso-test-uuid.wav"), false);
+    });
+
+    it("writes the banner directly when stdout is muted", async () => {
+      actions.setTranscriptionSdkProvider("openai");
+      actions.setTranscriptionModel("gpt-4o-transcribe");
+      testProcessEnv._set("LASSO_TRANSCRIPTION_API_KEY", "key");
+      mockRecording();
+      actions.setIsNonBlockingProcessOngoing(true);
+      actions.setRl(
+        makeFakeRl({
+          question: () => Promise.reject(makeAbortError("aborted")),
+        }),
+      );
+      actions.resetStdout();
+      const result = await recordAndTranscribeInput();
+      actions.setIsNonBlockingProcessOngoing(false);
+      assert.strictEqual(result, null);
+      assert.deepStrictEqual(getWrites(), ["Press enter to stop recording:\n"]);
       assert.strictEqual(testFs._files.has("/tmp/lasso-test-uuid.wav"), false);
     });
 
@@ -4071,10 +4095,78 @@ custom command content`,
       const result = await recordAndTranscribeInput();
       assert.strictEqual(result, null);
       assert.deepStrictEqual(getWrites(), [
+        "Press enter to stop recording:\n",
         `${RED}Error while transcribing: bad audio${RESET}\n`,
       ]);
       assert.strictEqual(getState().abortControllers.recordProcess, null);
       assert.strictEqual(testFs._files.has("/tmp/lasso-test-uuid.wav"), false);
+    });
+  });
+
+  describe("mutedStdout", () => {
+    it("passes output through normally", () => {
+      mutedStdout.write("echo chars");
+      assert.deepStrictEqual(getWrites(), [Buffer.from("echo chars")]);
+    });
+
+    it("drops output while a non-blocking process is ongoing", () => {
+      actions.setIsNonBlockingProcessOngoing(true);
+      actions.resetStdout();
+      mutedStdout.write("echo chars");
+      assert.deepStrictEqual(getWrites(), []);
+    });
+  });
+
+  describe("shouldMuteStdout", () => {
+    it("is false initially", () => {
+      assert.strictEqual(shouldMuteStdout(), false);
+    });
+
+    it("is true while the loading state spinner is active", () => {
+      actions.setLoadingStateTimeout({} as NodeJS.Timeout);
+      assert.strictEqual(shouldMuteStdout(), true);
+    });
+    it("is true while the loading state spinner is active", () => {
+      actions.setLoadingStateTimeout({} as NodeJS.Timeout);
+      assert.strictEqual(shouldMuteStdout(), true);
+    });
+    it("is true while the loading state spinner is active", () => {
+      actions.setLoadingStateTimeout({} as NodeJS.Timeout);
+      assert.strictEqual(shouldMuteStdout(), true);
+    });
+    it("is true while the loading state spinner is active", () => {
+      actions.setLoadingStateTimeout({} as NodeJS.Timeout);
+      assert.strictEqual(shouldMuteStdout(), true);
+    });
+    it("is true while the loading state spinner is active", () => {
+      actions.setLoadingStateTimeout({} as NodeJS.Timeout);
+      assert.strictEqual(shouldMuteStdout(), true);
+    });
+    it("is true while the loading state spinner is active", () => {
+      actions.setLoadingStateTimeout({} as NodeJS.Timeout);
+      assert.strictEqual(shouldMuteStdout(), true);
+    });
+    it("is true while the loading state spinner is active", () => {
+      actions.setLoadingStateTimeout({} as NodeJS.Timeout);
+      assert.strictEqual(shouldMuteStdout(), true);
+    });
+    it("is true while a non-blocking process is ongoing", () => {
+      actions.setIsNonBlockingProcessOngoing(true);
+      assert.strictEqual(shouldMuteStdout(), true);
+    });
+  });
+
+  describe("mutedPrint", () => {
+    it("writes text to stdout directly", () => {
+      mutedPrint("text");
+      assert.deepStrictEqual(getWrites(), ["text"]);
+    });
+
+    it("writes text to stdout directly even while a non-blocking process is ongoing", () => {
+      actions.setIsNonBlockingProcessOngoing(true);
+      actions.resetStdout();
+      mutedPrint("text");
+      assert.deepStrictEqual(getWrites(), ["text"]);
     });
   });
 

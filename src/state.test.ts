@@ -473,6 +473,18 @@ skills body`,
       assert.equal(getState().app.editorInputValue, null);
       assert.throws(() => actions.setEditorInputValue(""));
     });
+
+    it("append-editor-input-value sets when null and appends with the delimiter", () => {
+      assert.equal(getState().app.editorInputValue, null);
+      actions.appendEditorInputValue("first");
+      assert.equal(getState().app.editorInputValue, "first");
+      actions.appendEditorInputValue("second");
+      assert.strictEqual(
+        getState().app.editorInputValue,
+        `first${defaultConfig.messageQueueDelimiter}second`,
+      );
+      assert.throws(() => actions.appendEditorInputValue(""));
+    });
   });
 
   describe("debug log", () => {
