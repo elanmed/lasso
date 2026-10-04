@@ -71,6 +71,7 @@ skills body`,
         conversation: { summaries: [], messages: [] },
         transcript: [],
         promptTokens: { value: 0, dirty: true },
+        bufferedStdoutWhileEditorOpen: "",
         editorInputValue: null,
         isInitializing: false,
         isEditorOpen: false,
@@ -315,6 +316,19 @@ skills body`,
       actions.appendInitializingBufferedInput("abc");
       actions.resetInitializingBufferedInput();
       assert.equal(getState().app.initializingBufferedInput, "");
+    });
+
+    it("append-buffered-stdout-while-editor-open accumulates lines", () => {
+      assert.equal(getState().app.bufferedStdoutWhileEditorOpen, "");
+      actions.appendBufferedStdoutWhileEditorOpen("he");
+      actions.appendBufferedStdoutWhileEditorOpen("llo");
+      assert.equal(getState().app.bufferedStdoutWhileEditorOpen, "hello");
+    });
+
+    it("reset-buffered-stdout-while-editor-open", () => {
+      actions.appendBufferedStdoutWhileEditorOpen("abc");
+      actions.resetBufferedStdoutWhileEditorOpen();
+      assert.equal(getState().app.bufferedStdoutWhileEditorOpen, "");
     });
   });
 

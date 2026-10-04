@@ -80,6 +80,7 @@ interface State {
       value: number;
       dirty: boolean;
     };
+    bufferedStdoutWhileEditorOpen: string;
     editorInputValue: string | null;
     isEditorOpen: boolean;
     isInitializing: boolean;
@@ -129,6 +130,7 @@ const createInitialState = (): State => ({
       value: 0,
       dirty: true,
     },
+    bufferedStdoutWhileEditorOpen: "",
     editorInputValue: null,
     isEditorOpen: false,
     isInitializing: false,
@@ -427,6 +429,26 @@ export const actions = {
     const before = state.app.initializingBufferedInput;
     state.app.initializingBufferedInput = "";
     logStateChange("reset-initializing-buffered-input", before, "");
+  },
+
+  appendBufferedStdoutWhileEditorOpen(line: string) {
+    const before = state.app.bufferedStdoutWhileEditorOpen;
+    state.app.bufferedStdoutWhileEditorOpen += line;
+    logStateChange(
+      "append-buffered-stdout-while-editor-open",
+      String(before.length),
+      String(state.app.bufferedStdoutWhileEditorOpen.length),
+    );
+  },
+
+  resetBufferedStdoutWhileEditorOpen() {
+    const before = state.app.bufferedStdoutWhileEditorOpen;
+    state.app.bufferedStdoutWhileEditorOpen = "";
+    logStateChange(
+      "reset-buffered-stdout-while-editor-open",
+      String(before.length),
+      "0",
+    );
   },
 
   setSlashCommands(commands: SlashCommand[]) {

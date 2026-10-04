@@ -1,5 +1,5 @@
 import { fileURLToPath } from "node:url";
-import { getMessageFromError, sleep } from "./utils.ts";
+import { getMessageFromError } from "./utils.ts";
 import { print, printNewline, printSessionStartDate } from "./print.ts";
 import { fencePrint } from "./fence.ts";
 import { executeBat, warnOnMissingBat } from "./terminal.ts";

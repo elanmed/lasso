@@ -308,7 +308,11 @@ export function setupTestContext({
   mock.method(processDeps.stdout, "isTTY", () => true);
   mock.method(processDeps.stderr, "write", () => true);
   mock.method(childProcessDeps, "execFile", () => "");
-  mock.method(childProcessDeps, "spawn", () => undefined);
+  mock.method(childProcessDeps, "spawn", () => {
+    const child = new EventEmitter();
+    queueMicrotask(() => child.emit("exit"));
+    return child as unknown as ChildProcess;
+  });
   mock.method(childProcessDeps, "spawnSync", () => ({
     status: 0,
     stdout: "",
@@ -527,6 +531,22 @@ export function mockPagerSpawn() {
   const spawned: string[] = [];
   mock.method(childProcessDeps, "spawnSync", (cmd: string) => {
     spawned.push(cmd);
+  });
+  return { spawned };
+}
+
+export function mockEditorSpawn(
+  onSpawn?: (cmd: string, child: EventEmitter) => void,
+) {
+  const spawned: string[] = [];
+  mock.method(childProcessDeps, "spawn", (cmd: string) => {
+    spawned.push(cmd);
+    const child = new EventEmitter();
+    queueMicrotask(() => {
+      onSpawn?.(cmd, child);
+      child.emit("exit");
+    });
+    return child as unknown as ChildProcess;
   });
   return { spawned };
 }
