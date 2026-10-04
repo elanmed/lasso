@@ -559,7 +559,12 @@ export function mockRecording({ chunk = "fake recording" } = {}) {
 }
 
 export function mockTranscription(text: string) {
-  mock.method(aiDeps, "transcribe", () => Promise.resolve({ text }));
+  const transcribeCalls: { audio: Buffer; model: unknown }[] = [];
+  mock.method(aiDeps, "transcribe", (args: unknown) => {
+    transcribeCalls.push(args as { audio: Buffer; model: unknown });
+    return Promise.resolve({ text });
+  });
+  return { transcribeCalls };
 }
 
 export function batPagerCmd(

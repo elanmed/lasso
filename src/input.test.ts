@@ -3993,16 +3993,12 @@ custom command content`,
       actions.setTranscriptionModel("gpt-4o-transcribe");
       testProcessEnv._set("LASSO_TRANSCRIPTION_API_KEY", "key");
       const audio = Buffer.from("recording");
-      let transcribeArgs: { audio: Buffer; model: unknown } =
-        undefined as never;
-      mock.method(aiDeps, "transcribe", (args: unknown) => {
-        transcribeArgs = args as { audio: Buffer; model: unknown };
-        return Promise.resolve({ text: "hi" });
-      });
+      const { transcribeCalls } = mockTranscription("hi");
       const result = await transcribeInput(audio);
       assert.strictEqual(result, "hi");
-      assert.strictEqual(transcribeArgs.audio, audio);
-      assert.ok(transcribeArgs.model !== undefined);
+      assert.ok(transcribeCalls[0] !== undefined);
+      assert.strictEqual(transcribeCalls[0].audio, audio);
+      assert.ok(transcribeCalls[0].model !== undefined);
     });
   });
 
