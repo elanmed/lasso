@@ -5,10 +5,9 @@ import { fencePrint } from "./fence.ts";
 import { executeBat, warnOnMissingBat } from "./terminal.ts";
 import { initState, blockOnMissingConfig } from "./config.ts";
 import {
-  initBufferedInput,
-  initKeypress,
   initReadline,
-  initSigInt,
+  initStdin,
+  initStdout,
   resolveUserInput,
 } from "./input.ts";
 import { resolveApiCall, maybeCompact } from "./api.ts";
@@ -16,12 +15,11 @@ import { getState } from "./state.ts";
 import { warnOnLargePromptOverhead } from "./usage.ts";
 
 async function main() {
-  initBufferedInput();
+  initStdin();
+  initStdout();
   await initState();
 
   initReadline();
-  initKeypress();
-  initSigInt();
 
   await warnOnMissingBat();
   warnOnLargePromptOverhead();

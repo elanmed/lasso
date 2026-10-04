@@ -97,22 +97,9 @@ Object.defineProperties(mutedStdout, {
   },
 });
 
-export function initReadline() {
-  const rl = readline.createInterface({
-    input: stdin,
-    output: mutedStdout,
-    terminal: true,
-  });
-  actions.setRl(rl);
-
+export function initStdin() {
   if (stdin.isTTY) {
     stdin.setRawMode(true);
-  }
-
-  if (stdout.isTTY) {
-    stdout.on("resize", () => {
-      mutedStdout.emit("resize");
-    });
   }
 
   process.on("exit", () => {
@@ -121,65 +108,43 @@ export function initReadline() {
     }
   });
 
-  emitKeypressEvents(stdin, rl);
-  return rl;
+  emitKeypressEvents(stdin);
+
+  stdin.on("keypress", (char: string, key: Key) => {
+    if (!getState().app.isInitializing) return;
+
+    // at this point raw mode is on, so:
+    // - input isn't echoed by the terminal
+    // - terminal sigint has no affect
+    // after readline is initialized:
+    // - it echos input, which is selectively muted via mutedStdout
+    // - it has its own signint handler
+    if (key.ctrl === true && key.name === "c") process.exit(130);
+    if (key.name === "return" || key.name === "enter") return;
+    if (!isTypeableKey(key)) return;
+    if (typeof char !== "string") return;
+    actions.appendInitializingBufferedInput(char);
+  });
 }
 
-function getDefaultPasteCmd() {
-  if (os.platform() === "darwin") return "pbpaste";
-  if (os.platform() === "linux") return "xclip -selection clipboard -o";
-  return "";
-}
-
-function getPrefilledEditorContent() {
-  const editorInputValue = getState().app.editorInputValue;
-  if (editorInputValue !== null) return normalizeNewline(editorInputValue);
-  return "";
-}
-
-function getReadlineContent(rl: readline.Interface) {
-  if (rl.line.length > 0) return rl.line;
-  return "";
-}
-
-async function getEditorInitialContent(opts: {
-  includeClipboardSuffix: boolean;
-}) {
-  const rl = getState().app.rl;
-  assertAtBuildtime(rl !== null);
-
-  const prefilledEditorContent = getPrefilledEditorContent();
-
-  const readlineContent = getReadlineContent(rl);
-
-  let clipboardContent = "";
-  if (opts.includeClipboardSuffix) {
-    const pasteCmd =
-      processDeps.env.get("LASSO_CLIPBOARD_PASTE") ?? getDefaultPasteCmd();
-
-    const pasteResult = await tryCatchAsync(childProcessDeps.exec(pasteCmd));
-    if (pasteResult.ok) {
-      clipboardContent = normalizeNewline(pasteResult.value.stdout);
-    } else {
-      clipboardContent = `[Error executing ${pasteCmd}: ${getMessageFromError(pasteResult.error)}]`;
-    }
+export function initStdout() {
+  if (stdout.isTTY) {
+    stdout.on("resize", () => {
+      mutedStdout.emit("resize");
+    });
   }
-
-  return `${prefilledEditorContent}${readlineContent}${clipboardContent}`;
 }
 
-function abortRlQuestionForEditorIfActive(editorContent: string) {
-  const abortController = getState().abortControllers.question;
-  if (abortController !== null) {
-    const rl = clearRlLine();
-    assertAtBuildtime(rl !== null);
+export function initReadline() {
+  const rl = readline.createInterface({
+    input: stdin,
+    output: mutedStdout,
+    terminal: true,
+  });
+  actions.setRl(rl);
 
-    const truncatedFirstLine = truncate(editorContent);
-    rl.write(truncatedFirstLine);
-    actions.appendStdoutTail(truncatedFirstLine);
-
-    abortController.abort();
-  }
+  initKeypress();
+  initSigInt();
 }
 
 export function initKeypress() {
@@ -187,7 +152,6 @@ export function initKeypress() {
   assertAtBuildtime(rl !== null);
 
   function typeCommand(command: string) {
-    // TODO: clear first
     assertAtBuildtime(rl !== null);
     const output = `/${command}\n`;
     rl.write(output);
@@ -330,32 +294,61 @@ export function initKeypress() {
   });
 }
 
-export function initBufferedInput() {
-  if (stdin.isTTY) {
-    // turn off the kernel's line discipline so bytes arrive immediately,
-    // unsolicited input is not echoed, and ctrl+c stops generating SIGINT
-    stdin.setRawMode(true);
-    // decode raw stdin bytes into "keypress" events so the listener below
-    // receives structured keys (e.g. escape sequences become key objects)
-    emitKeypressEvents(stdin);
-    // stream is paused by default until readline attaches; resume it now so
-    // typed bytes reach the listener during init instead of draining later
-    stdin.resume();
+function getDefaultPasteCmd() {
+  if (os.platform() === "darwin") return "pbpaste";
+  if (os.platform() === "linux") return "xclip -selection clipboard -o";
+  return "";
+}
+
+function getPrefilledEditorContent() {
+  const editorInputValue = getState().app.editorInputValue;
+  if (editorInputValue !== null) return normalizeNewline(editorInputValue);
+  return "";
+}
+
+function getReadlineContent(rl: readline.Interface) {
+  if (rl.line.length > 0) return rl.line;
+  return "";
+}
+
+async function getEditorInitialContent(opts: {
+  includeClipboardSuffix: boolean;
+}) {
+  const rl = getState().app.rl;
+  assertAtBuildtime(rl !== null);
+
+  const prefilledEditorContent = getPrefilledEditorContent();
+
+  const readlineContent = getReadlineContent(rl);
+
+  let clipboardContent = "";
+  if (opts.includeClipboardSuffix) {
+    const pasteCmd =
+      processDeps.env.get("LASSO_CLIPBOARD_PASTE") ?? getDefaultPasteCmd();
+
+    const pasteResult = await tryCatchAsync(childProcessDeps.exec(pasteCmd));
+    if (pasteResult.ok) {
+      clipboardContent = normalizeNewline(pasteResult.value.stdout);
+    } else {
+      clipboardContent = `[Error executing ${pasteCmd}: ${getMessageFromError(pasteResult.error)}]`;
+    }
   }
 
-  stdin.on("keypress", (char: string, key: Key) => {
-    if (!getState().app.isInitializing) return;
-    if (key.ctrl === true && key.name === "c") {
-      if (stdin.isTTY) {
-        stdin.setRawMode(false);
-      }
-      process.exit(130);
-    }
-    if (key.name === "return" || key.name === "enter") return;
-    if (!isTypeableKey(key)) return;
-    if (typeof char !== "string") return;
-    actions.appendInitializingBufferedInput(char);
-  });
+  return `${prefilledEditorContent}${readlineContent}${clipboardContent}`;
+}
+
+function abortRlQuestionForEditorIfActive(editorContent: string) {
+  const abortController = getState().abortControllers.question;
+  if (abortController !== null) {
+    const rl = clearRlLine();
+    assertAtBuildtime(rl !== null);
+
+    const truncatedFirstLine = truncate(editorContent);
+    rl.write(truncatedFirstLine);
+    actions.appendStdoutTail(truncatedFirstLine);
+
+    abortController.abort();
+  }
 }
 
 export function isTypeableKey(key: Key) {

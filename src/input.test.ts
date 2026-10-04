@@ -22,7 +22,7 @@ import {
   spawnAndReadEditorContent,
   resume,
   resumeWithNoArgs,
-  initBufferedInput,
+  initReadline,
   initSigInt,
   initLocalConfig,
   initGlobalConfig,
@@ -311,18 +311,19 @@ describe("input", () => {
     });
   });
 
-  describe("initBufferedInput", () => {
+  describe("initReadline input buffering", () => {
     let emitKey: (char: string | undefined, key: Key) => void;
 
     beforeEach(() => {
-      initBufferedInput();
+      initReadline();
       emitKey = (char, key) => {
         stdin.emit("keypress", char, key);
       };
     });
 
     afterEach(() => {
-      stdin.removeAllListeners("keypress");
+      stdin.removeAllListeners();
+      stdin.pause();
     });
 
     it("buffers typeable characters while initializing", () => {
