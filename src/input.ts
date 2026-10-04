@@ -75,9 +75,8 @@ const mutedStdout = new Writable({
     _encoding: BufferEncoding,
     callback: (error?: Error | null) => void,
   ) {
-    const { isInitializing, loadingStateTimeout } = getState().app;
-    const isLoading = loadingStateTimeout !== null;
-    if (isLoading || isInitializing) return callback();
+    const isLoading = getState().app.loadingStateTimeout !== null;
+    if (isLoading) return callback();
 
     stdout.write(chunk);
     callback();
@@ -287,6 +286,7 @@ export function initKeypress() {
         return;
       }
 
+      // mutedStdout prevents echoing, but readline's internal state still needs to be cleared
       if (getState().app.loadingStateTimeout !== null) {
         rl.write(null, { ctrl: true, name: "u" });
       }
