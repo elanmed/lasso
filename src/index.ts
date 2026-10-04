@@ -18,7 +18,6 @@ async function main() {
   initStdin();
   initStdout();
   await initState();
-
   initReadline();
 
   await warnOnMissingBat();

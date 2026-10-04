@@ -142,16 +142,12 @@ export function initReadline() {
   });
   actions.setRl(rl);
 
-  initKeypress();
-  initSigInt();
+  initKeypress(rl);
+  initSigInt(rl);
 }
 
-export function initKeypress() {
-  const rl = getState().app.rl;
-  assertAtBuildtime(rl !== null);
-
+export function initKeypress(rl: readline.Interface) {
   function typeCommand(command: string) {
-    assertAtBuildtime(rl !== null);
     const output = `/${command}\n`;
     rl.write(output);
     actions.appendStdoutTail(output);
@@ -161,7 +157,6 @@ export function initKeypress() {
   // commands so the pending question and its input stay visible and editable
   function redrawPendingQuestion() {
     if (getState().abortControllers.question === null) return;
-    assertAtBuildtime(rl !== null);
     rl.prompt(true);
     actions.appendStdoutTail(getState().config.promptPrefix);
   }
@@ -356,9 +351,7 @@ export function isTypeableKey(key: Key) {
   return !isNotTypeable;
 }
 
-export function initSigInt() {
-  const rl = getState().app.rl;
-  assertAtBuildtime(rl !== null);
+export function initSigInt(rl: readline.Interface) {
   rl.on("SIGINT", () => {
     const apiStream = getState().abortControllers.apiStream;
     const interruptWithEditorContent =
