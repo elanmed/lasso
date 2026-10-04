@@ -1647,9 +1647,15 @@ ${formattedMessages}`;
   actions.setRecordProcessAbortController(abortController);
 
   const tempFile = await getTempFileName({ extension: "wav" });
+
   if (tempFile === null) {
     print.error("Error creating a time file to write the recording to");
     return null;
+  }
+
+  async function cleanup() {
+    assertAtBuildtime(tempFile !== null);
+    await tryCatchAsync(fsDeps.unlink(tempFile));
   }
 
   const { stop, recordingFinished } = recordInput(tempFile);
@@ -1671,16 +1677,19 @@ ${formattedMessages}`;
 
   if (!finishRecordingResult.ok) {
     if (isAbortError(finishRecordingResult.error)) {
+      await cleanup();
       return null;
     }
 
     print.error(
       `Error while prompting the user to stop recording: ${getMessageFromError(finishRecordingResult.error)}`,
     );
+    await cleanup();
     return null;
   }
 
   const readResult = await tryCatchAsync(fsDeps.readFile(tempFile));
+  await cleanup();
   if (!readResult.ok) {
     print.error(
       `Error while reading the temp file that was recorded to: ${getMessageFromError(readResult.error)}`,
