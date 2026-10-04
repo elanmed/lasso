@@ -967,7 +967,12 @@ describe("getCurrentPromptTokens", () => {
 
   it("returns the cached prompt tokens when not dirty", () => {
     actions.setPromptTokens(50);
+    actions.setPromptTokensDirty(false);
     assert.strictEqual(getCurrentPromptTokens(), 50);
+  });
+
+  it("starts with the token cache marked dirty", () => {
+    assert.strictEqual(getState().app.promptTokens.dirty, true);
   });
 
   it("returns the approx prompt tokens when dirty", () => {
@@ -999,6 +1004,7 @@ describe("getTokensByArea", () => {
   });
 
   it("returns the approx areas when the cached token count is zero", () => {
+    actions.setPromptTokensDirty(false);
     assert.deepStrictEqual(getTokensByArea(), {
       messages: 11,
       context: 3,
@@ -1010,6 +1016,7 @@ describe("getTokensByArea", () => {
 
   it("scales the areas to the cached token count when clean", () => {
     actions.setPromptTokens(1500);
+    actions.setPromptTokensDirty(false);
     assert.deepStrictEqual(getTokensByArea(), {
       messages: 1100,
       context: 300,
@@ -1044,6 +1051,7 @@ describe("getPrettyTokensByArea", () => {
 
   it("returns each area scaled to the cached token count when clean", () => {
     actions.setPromptTokens(1500);
+    actions.setPromptTokensDirty(false);
     assert.strictEqual(
       getPrettyTokensByArea(),
       `- Chat messages: 1,100

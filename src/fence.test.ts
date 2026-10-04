@@ -72,6 +72,7 @@ describe("fence", () => {
         actions.setContextWindowPerModel({ "test-model": 10_000 });
         actions.setConversationMessages([{ role: "user", content: "hi" }]);
         actions.setPromptTokens(5_000);
+        actions.setPromptTokensDirty(false);
 
         fencePrint("Output", { showSessionInfo: true });
 

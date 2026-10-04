@@ -291,6 +291,7 @@ describe("usage-format", () => {
       it("falls back to the default context window when the model has none configured", () => {
         actions.setModel("unknown-model");
         actions.setPromptTokens(1_280);
+        actions.setPromptTokensDirty(false);
         const result = getPrettyContextWindowUsage();
         assert.strictEqual(result, "1% of context window");
       });
@@ -307,6 +308,7 @@ describe("usage-format", () => {
         actions.setContextWindowPerModel({ "test-model": 10_000 });
         actions.setConversationMessages([{ role: "user", content: "hi" }]);
         actions.setPromptTokens(5_000);
+        actions.setPromptTokensDirty(false);
         const result = getPrettyContextWindowUsage();
         assert.strictEqual(result, "50% of context window");
       });
@@ -316,6 +318,7 @@ describe("usage-format", () => {
         actions.setContextWindowPerModel({ "test-model": 10_000 });
         actions.setConversationMessages([{ role: "user", content: "hi" }]);
         actions.setPromptTokens(1_666);
+        actions.setPromptTokensDirty(false);
         const result = getPrettyContextWindowUsage();
         assert.strictEqual(result, "16.66% of context window");
       });
@@ -325,6 +328,7 @@ describe("usage-format", () => {
         actions.setContextWindowPerModel({ "test-model": 10_000 });
         actions.setConversationMessages([{ role: "user", content: "hi" }]);
         actions.setPromptTokens(15_000);
+        actions.setPromptTokensDirty(false);
         const result = getPrettyContextWindowUsage();
         assert.strictEqual(result, "150% of context window");
       });

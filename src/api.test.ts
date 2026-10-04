@@ -143,6 +143,7 @@ describe("api", () => {
     describe("tracks token usage", () => {
       it("marks prompt tokens dirty on non-abort error", async () => {
         actions.setPromptTokens(50);
+        actions.setPromptTokensDirty(false);
         mock.method(aiDeps, "generateText", () =>
           Promise.reject(new Error("network error")),
         );
@@ -156,6 +157,7 @@ describe("api", () => {
 
       it("leaves the stored token value untouched when marking dirty on abort", async () => {
         actions.setPromptTokens(50);
+        actions.setPromptTokensDirty(false);
         const err = makeAbortError();
         mock.method(aiDeps, "generateText", () => Promise.reject(err));
         const result = await resolveApiCall("hello");
@@ -596,6 +598,7 @@ describe("api", () => {
       it("returns early when below the compact threshold", async () => {
         actions.setConversationMessages([{ role: "user", content: "hi" }]);
         actions.setPromptTokens(60_000);
+        actions.setPromptTokensDirty(false);
         let called = false;
         mock.method(aiDeps, "generateText", () => {
           called = true;
@@ -765,6 +768,7 @@ describe("api", () => {
         actions.setMcp({}, { mcp_tool: makeMcpTool() });
         actions.setConversationMessages([{ role: "user", content: "hi" }]);
         actions.setPromptTokens(96_000);
+        actions.setPromptTokensDirty(false);
         mock.method(aiDeps, "generateText", () =>
           Promise.resolve(
             makeGenerateTextResult({
@@ -794,6 +798,7 @@ describe("api", () => {
       it("compacts the conversation when above the threshold", async () => {
         actions.setConversationMessages([{ role: "user", content: "hi" }]);
         actions.setPromptTokens(96_000);
+        actions.setPromptTokensDirty(false);
         let capturedOpts: Record<string, unknown> | undefined;
         mock.method(aiDeps, "generateText", (opts: Record<string, unknown>) => {
           capturedOpts = opts;
@@ -851,6 +856,7 @@ describe("api", () => {
       it("compacts when the user input pushes tokens over the threshold", async () => {
         actions.setConversationMessages([{ role: "user", content: "hi" }]);
         actions.setPromptTokens(95_000);
+        actions.setPromptTokensDirty(false);
         let capturedOpts: Record<string, unknown> | undefined;
         mock.method(aiDeps, "generateText", (opts: Record<string, unknown>) => {
           capturedOpts = opts;
@@ -883,6 +889,7 @@ describe("api", () => {
         actions.setContextWindowPerModel({});
         actions.setConversationMessages([{ role: "user", content: "hi" }]);
         actions.setPromptTokens(122_000);
+        actions.setPromptTokensDirty(false);
         mock.method(aiDeps, "generateText", () =>
           Promise.resolve(
             makeGenerateTextResult({
@@ -903,6 +910,7 @@ describe("api", () => {
       it("resets messages before the api call so the summary and new user input are both sent", async () => {
         actions.setConversationMessages([{ role: "user", content: "old" }]);
         actions.setPromptTokens(96_000);
+        actions.setPromptTokensDirty(false);
         const calls: ModelMessage[][] = [];
         let callCount = 0;
         mock.method(
@@ -979,6 +987,7 @@ describe("api", () => {
       it("keeps messages when generateText fails", async () => {
         actions.setConversationMessages([{ role: "user", content: "hi" }]);
         actions.setPromptTokens(96_000);
+        actions.setPromptTokensDirty(false);
         mock.method(aiDeps, "generateText", () =>
           Promise.reject(new Error("network error")),
         );
@@ -997,6 +1006,7 @@ describe("api", () => {
         const getWrites = mockStdoutWrites();
         actions.setConversationMessages([{ role: "user", content: "hi" }]);
         actions.setPromptTokens(96_000);
+        actions.setPromptTokensDirty(false);
         actions.setRl(makeFakeRl());
         actions.setEditorInputValue("queued input");
         const err = makeAbortError();
@@ -1014,6 +1024,7 @@ describe("api", () => {
         const getWrites = mockStdoutWrites();
         actions.setConversationMessages([{ role: "user", content: "hi" }]);
         actions.setPromptTokens(96_000);
+        actions.setPromptTokensDirty(false);
         const err = makeAbortError();
         mock.method(aiDeps, "generateText", () => Promise.reject(err));
         await maybeCompact("hi");
@@ -1047,6 +1058,7 @@ describe("api", () => {
           { role: "user", content: "hi" },
         ]);
         actions.setPromptTokens(96_000);
+        actions.setPromptTokensDirty(false);
         const generate = mockGenerateTextResults([
           {
             output: { compacted: "compacted summary" },
@@ -1107,6 +1119,7 @@ describe("api", () => {
           { role: "user", content: "hi" },
         ]);
         actions.setPromptTokens(96_000);
+        actions.setPromptTokensDirty(false);
         const generate = mockGenerateTextResults([
           {
             output: { compacted: "compacted summary" },
@@ -1175,6 +1188,7 @@ describe("api", () => {
         },
       ]);
       actions.setPromptTokens(85_000);
+      actions.setPromptTokensDirty(false);
     };
 
     describe("summarizes the conversation", () => {

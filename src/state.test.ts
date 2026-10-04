@@ -70,7 +70,7 @@ skills body`,
       assert.deepStrictEqual(getState().app, {
         conversation: { summaries: [], messages: [] },
         transcript: [],
-        promptTokens: { value: 0, dirty: false },
+        promptTokens: { value: 0, dirty: true },
         editorInputValue: null,
         slashCommands: [],
         stdoutTail: "",
@@ -276,9 +276,9 @@ skills body`,
     });
 
     it("set-prompt-tokens-dirty", () => {
-      assert.equal(getState().app.promptTokens.dirty, false);
-      actions.setPromptTokensDirty(true);
       assert.equal(getState().app.promptTokens.dirty, true);
+      actions.setPromptTokensDirty(false);
+      assert.equal(getState().app.promptTokens.dirty, false);
     });
   });
 

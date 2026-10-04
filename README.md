@@ -550,13 +550,13 @@ vim.g.clipboard = {
 - [ ] Record audio with /record
 - [ ] Queue audio with /record
 - [ ] Buffer input while init is running
-- [ ] Mark tokens as stale by default
+- [x] Mark tokens as stale by default
 - [x] Move child process fns to deps.ts
-- [ ] Convert all sync deps to async
+- [x] Convert all sync deps to async
 
 ## TODO (soon)
 
-- [ ] Speed up init by running everything in parallel
+- [x] Speed up init by running everything in parallel
 - [ ] Investigate potential shell expansion issues
 - [ ] Support interrupting both compactions at once
 - [ ] Allow opening the queue editor in the background

@@ -1148,7 +1148,7 @@ l---
       });
       assert.deepStrictEqual(getState().app.promptTokens, {
         value: strToApproxTokens("abc"),
-        dirty: false,
+        dirty: true,
       });
       assert.deepStrictEqual(getWrites(), [
         `${GREY}Context cleared (0 tokens in session)${RESET}\n`,
@@ -1179,6 +1179,7 @@ l---
 
     it("prints the total scaled to the cached token count when clean", () => {
       actions.setPromptTokens(1500);
+      actions.setPromptTokensDirty(false);
       printTokens();
       assert.deepStrictEqual(getWrites(), [
         "\n",
@@ -1194,7 +1195,7 @@ l---
       printTokens();
       assert.deepStrictEqual(getWrites(), [
         "\n",
-        `${BLUE}Token count: 621 (0% of context window)${RESET}\n`,
+        `${BLUE}Token count: 621 (0.15% of context window)${RESET}\n`,
         "- Chat messages: 11\n- Context files: 3\n- Harness and MCP tools: 4\n- Base system prompt: 602\n- Skill descriptions: 1\n",
         "\n",
       ]);

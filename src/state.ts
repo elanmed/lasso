@@ -124,7 +124,7 @@ const createInitialState = (): State => ({
     transcript: [],
     promptTokens: {
       value: 0,
-      dirty: false,
+      dirty: true,
     },
     editorInputValue: null,
     slashCommands: [],
