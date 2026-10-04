@@ -57,6 +57,12 @@ export function colorPrint(
     return `${COLORS[color]}${text}${reset}${suffix}`;
   })();
 
+  const { isEditorOpen } = getState().app;
+  if (isEditorOpen) {
+    actions.appendStdoutTail(out);
+    return;
+  }
+
   const wasSpinnerActive = getState().app.loadingStateTimeout !== null;
   stopLoadingState();
   processDeps.stdout.write(out);
@@ -160,8 +166,9 @@ export function errorWithSpacing(cb: () => void) {
 }
 
 export function startLoadingState() {
-  writeLoadingStateFrame();
+  if (getState().app.isEditorOpen) return;
 
+  writeLoadingStateFrame();
   const timeout = setInterval(() => {
     writeLoadingStateFrame();
   }, getState().config.loadingStateFrameDuration);

@@ -1,5 +1,5 @@
 import { fileURLToPath } from "node:url";
-import { getMessageFromError } from "./utils.ts";
+import { getMessageFromError, sleep } from "./utils.ts";
 import { print, printNewline, printSessionStartDate } from "./print.ts";
 import { fencePrint } from "./fence.ts";
 import { executeBat, warnOnMissingBat } from "./terminal.ts";
@@ -8,6 +8,7 @@ import {
   initReadline,
   initStdin,
   initStdout,
+  pollUntilEditorClosed,
   resolveUserInput,
 } from "./input.ts";
 import { resolveApiCall, maybeCompact } from "./api.ts";
@@ -26,6 +27,7 @@ async function main() {
   let isFirstInput = true;
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
   while (true) {
+    await pollUntilEditorClosed();
     const userInput = await resolveUserInput({ isFirstInput });
     isFirstInput = false;
     if (userInput === null) continue;

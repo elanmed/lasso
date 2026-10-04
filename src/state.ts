@@ -81,6 +81,7 @@ interface State {
       dirty: boolean;
     };
     editorInputValue: string | null;
+    isEditorOpen: boolean;
     isInitializing: boolean;
     initializingBufferedInput: string;
     slashCommands: SlashCommand[];
@@ -129,6 +130,7 @@ const createInitialState = (): State => ({
       dirty: true,
     },
     editorInputValue: null,
+    isEditorOpen: false,
     isInitializing: false,
     initializingBufferedInput: "",
     slashCommands: [],
@@ -393,6 +395,12 @@ export const actions = {
     const before = state.app.editorInputValue;
     state.app.editorInputValue = value;
     logStateChange("set-editor-input-value", String(before), String(value));
+  },
+
+  setIsEditorOpen(isEditorOpen: boolean) {
+    const before = state.app.isEditorOpen;
+    state.app.isEditorOpen = isEditorOpen;
+    logStateChange("set-is-editor-open", String(before), String(isEditorOpen));
   },
 
   setIsInitializing(isInitializing: boolean) {

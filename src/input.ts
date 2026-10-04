@@ -22,6 +22,7 @@ import {
   isNullish,
   safeStringify,
   getPrettyDate,
+  sleep,
 } from "./utils.ts";
 import { truncate } from "./text.ts";
 import {
@@ -29,6 +30,8 @@ import {
   print,
   printNewline,
   printSessionStartDate,
+  startLoadingState,
+  stopLoadingState,
   successWithSpacing,
 } from "./print.ts";
 import { fencePrint, wrapInFence } from "./fence.ts";
@@ -157,6 +160,19 @@ export function initKeypress(rl: readline.Interface) {
     actions.appendStdoutTail(getState().config.promptPrefix);
   }
 
+  async function wrapToOpenNonBlockingEditor(cb: () => Promise<string | null>) {
+    actions.setIsEditorOpen(true);
+    stopLoadingState();
+    stdin.pause();
+    const editorContent = await cb();
+    stdin.resume();
+    actions.setIsEditorOpen(false);
+    if (getState().abortControllers.apiStream !== null) {
+      startLoadingState();
+    }
+    return editorContent;
+  }
+
   stdin.on("keypress", (_char, key: Key) => {
     void (async () => {
       const keymaps = getState().config.keymaps;
@@ -168,7 +184,10 @@ export function initKeypress(rl: readline.Interface) {
 
         switch (command) {
           case "edit": {
-            const editorContent = await spawnAndReadEditorContent();
+            const editorContent = await wrapToOpenNonBlockingEditor(
+              spawnAndReadEditorContent,
+            );
+
             if (editorContent === null) {
               redrawPendingQuestion();
             } else {
@@ -183,9 +202,10 @@ export function initKeypress(rl: readline.Interface) {
             return;
           }
           case "paste": {
-            const editorContent = await spawnAndReadEditorContent({
-              includeClipboardSuffix: true,
-            });
+            const editorContent = await wrapToOpenNonBlockingEditor(() =>
+              spawnAndReadEditorContent({ includeClipboardSuffix: true }),
+            );
+
             if (editorContent === null) {
               redrawPendingQuestion();
             } else {
@@ -437,6 +457,12 @@ export async function parseInputFromEditor() {
   return firstMessage;
 }
 
+export async function pollUntilEditorClosed() {
+  while (getState().app.isEditorOpen) {
+    await sleep(100);
+  }
+}
+
 export async function resolveUserInput({
   isFirstInput,
 }: {
@@ -632,7 +658,10 @@ async function resolveBuiltinSlashCommand(
 ): Promise<SlashCommandOutcome> {
   switch (command) {
     case "edit": {
+      actions.setIsEditorOpen(true);
       const content = await spawnAndReadEditorContent();
+      actions.setIsEditorOpen(false);
+
       if (content !== null) {
         await syncSessionFile({
           transcript: getAppendedTranscript({
@@ -649,9 +678,12 @@ async function resolveBuiltinSlashCommand(
       return { handled: true, inputFromCommand: null };
     }
     case "paste": {
+      actions.setIsEditorOpen(true);
       const content = await spawnAndReadEditorContent({
         includeClipboardSuffix: true,
       });
+      actions.setIsEditorOpen(false);
+
       if (content !== null)
         await syncSessionFile({
           transcript: getAppendedTranscript({
@@ -992,10 +1024,18 @@ export async function spawnAndReadEditorContent(opts?: {
 
   const statBefore = await tryCatchAsync(fsDeps.stat(tempFile));
 
-  childProcessDeps.spawnSync(editCommand, {
+  const editorProcess = childProcessDeps.spawn(editCommand, {
     shell: true,
     stdio: "inherit",
   });
+  const onceResult = await tryCatchAsync(once(editorProcess, "exit"));
+  if (!onceResult.ok) {
+    print.error(
+      `Error while spawning the editor: ${getMessageFromError(onceResult.error)}`,
+    );
+    await tryCatchAsync(fsDeps.unlink(tempFile));
+    return null;
+  }
 
   const statAfter = await tryCatchAsync(fsDeps.stat(tempFile));
 

@@ -73,6 +73,7 @@ skills body`,
         promptTokens: { value: 0, dirty: true },
         editorInputValue: null,
         isInitializing: false,
+        isEditorOpen: false,
         initializingBufferedInput: "",
         slashCommands: [],
         stdoutTail: "",
@@ -293,6 +294,14 @@ skills body`,
       assert.equal(getState().app.isInitializing, true);
       actions.setIsInitializing(false);
       assert.equal(getState().app.isInitializing, false);
+    });
+
+    it("set-is-editor-open", () => {
+      assert.equal(getState().app.isEditorOpen, false);
+      actions.setIsEditorOpen(true);
+      assert.equal(getState().app.isEditorOpen, true);
+      actions.setIsEditorOpen(false);
+      assert.equal(getState().app.isEditorOpen, false);
     });
 
     it("append-initializing-buffered-input accumulates inputs", () => {
