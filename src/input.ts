@@ -160,11 +160,13 @@ export function initKeypress(rl: readline.Interface) {
     actions.appendStdoutTail(getState().config.promptPrefix);
   }
 
-  async function wrapToOpenNonBlockingEditor(cb: () => Promise<string | null>) {
+  async function wrapToOpenNonBlockingProcess(
+    cb: () => Promise<string | null>,
+  ) {
     actions.setIsEditorOpen(true);
     stopLoadingState();
     stdin.pause();
-    const editorContent = await cb();
+    const ret = await cb();
     stdin.resume();
     actions.setIsEditorOpen(false);
     const bufferedStdout = getState().app.bufferedStdoutWhileEditorOpen;
@@ -175,7 +177,7 @@ export function initKeypress(rl: readline.Interface) {
     if (getState().abortControllers.apiStream !== null) {
       startLoadingState();
     }
-    return editorContent;
+    return ret;
   }
 
   stdin.on("keypress", (_char, key: Key) => {
@@ -189,7 +191,7 @@ export function initKeypress(rl: readline.Interface) {
 
         switch (command) {
           case "edit": {
-            const editorContent = await wrapToOpenNonBlockingEditor(
+            const editorContent = await wrapToOpenNonBlockingProcess(
               spawnAndReadEditorContent,
             );
 
@@ -201,13 +203,39 @@ export function initKeypress(rl: readline.Interface) {
 
             return;
           }
+          case "record": {
+            if (getState().abortControllers.question !== null) {
+              typeCommand(command);
+              return;
+            }
+
+            const transcriptionInput = await wrapToOpenNonBlockingProcess(
+              recordAndTranscribeInput,
+            );
+
+            if (transcriptionInput === null) {
+              redrawPendingQuestion();
+            } else {
+              const existingEditorContentPrefix = (() => {
+                const { editorInputValue } = getState().app;
+                if (editorInputValue !== null) {
+                  return `${editorInputValue}${getState().config.messageQueueDelimiter}`;
+                }
+                return "";
+              })();
+
+              const editorInputValue = `${existingEditorContentPrefix}${transcriptionInput}`;
+              actions.setEditorInputValue(editorInputValue);
+            }
+            return;
+          }
           case "editpage": {
             await pageEditStr();
             redrawPendingQuestion();
             return;
           }
           case "paste": {
-            const editorContent = await wrapToOpenNonBlockingEditor(() =>
+            const editorContent = await wrapToOpenNonBlockingProcess(() =>
               spawnAndReadEditorContent({ includeClipboardSuffix: true }),
             );
 
@@ -278,7 +306,6 @@ export function initKeypress(rl: readline.Interface) {
           case "usage":
           case "tokens":
           case "resume":
-          case "record":
           case "clear": {
             if (getState().abortControllers.question !== null) {
               typeCommand(command);
@@ -1685,6 +1712,7 @@ export async function recordAndTranscribeInput() {
     const warning = `Warning! You're missing required configuration options for /record.
 ${formattedMessages}`;
 
+    // TODO: avoid printing when rl question isn't active?
     print.warning(warning);
     return null;
   }
@@ -1753,8 +1781,8 @@ ${formattedMessages}`;
     return null;
   }
 
-  print.doing("Transcribed: ", { appendNewline: false });
-  print.plain(transcribeResult.value);
+  // print.doing("Transcribed: ", { appendNewline: false });
+  // print.plain(transcribeResult.value);
   return transcribeResult.value;
 }
 
