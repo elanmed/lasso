@@ -98,26 +98,22 @@ Object.defineProperties(mutedStdout, {
 
 export function initStdin() {
   if (stdin.isTTY) {
+    // switch the terminal out of cooked mode:
+    // - deliver each keystroke to the process as it is typed instead of after enter
+    // - stop the kernel from echoing input
+    // - stop ctrl+c from generating SIGINT so it arrives as a regular keypress
+    // after readline is initialized:
+    // - rl echos input, which is selectively muted via mutedStdout
+    // - rl has its own SIGINT handler
     stdin.setRawMode(true);
   }
 
-  process.on("exit", () => {
-    if (stdin.isTTY) {
-      stdin.setRawMode(false);
-    }
-  });
-
+  // decode raw stdin bytes into "keypress" events so the listener below receives structured keys
   emitKeypressEvents(stdin);
 
   stdin.on("keypress", (char: string, key: Key) => {
     if (!getState().app.isInitializing) return;
 
-    // at this point raw mode is on, so:
-    // - input isn't echoed by the terminal
-    // - terminal sigint has no affect
-    // after readline is initialized:
-    // - it echos input, which is selectively muted via mutedStdout
-    // - it has its own signint handler
     if (key.ctrl === true && key.name === "c") process.exit(130);
     if (key.name === "return" || key.name === "enter") return;
     if (!isTypeableKey(key)) return;
