@@ -94,17 +94,19 @@ export interface GetTempFileNameArgs {
   pathPrefix?: string | undefined;
   initialContentPath?: string | undefined;
   initialContentStr?: string | undefined;
+  extension?: string;
 }
 
 export async function getTempFileName(args?: GetTempFileNameArgs) {
-  const { pathPrefix, initialContentPath, initialContentStr } = args ?? {};
+  const { pathPrefix, initialContentPath, initialContentStr, extension } =
+    args ?? {};
   assertAtRuntime(
     initialContentPath === undefined || initialContentStr === undefined,
   );
 
   const tempFile = join(
     os.tmpdir(),
-    `${pathPrefix ?? "lasso"}-${getShortId()}.txt`,
+    `${pathPrefix ?? "lasso"}-${getShortId()}.${extension ?? "txt"}`,
   );
 
   if (initialContentPath !== undefined) {

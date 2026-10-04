@@ -1646,30 +1646,28 @@ ${formattedMessages}`;
   const abortController = new AbortController();
   actions.setRecordProcessAbortController(abortController);
 
-  const tempFile = await getTempFileName();
+  const tempFile = await getTempFileName({ extension: "wav" });
   if (tempFile === null) {
     print.error("Error creating a time file to write the recording to");
     return null;
   }
 
-  const { stop, recordingFinished } = recordInput();
+  const { stop, recordingFinished } = recordInput(tempFile);
   const recordingPromise = tryCatchAsync(recordingFinished);
 
   const finishRecordingResult = await tryCatchAsync(
-    rl.question("Press enter to stop recording", {
+    rl.question("Press enter to stop recording: ", {
       signal: abortController.signal,
     }),
   );
   stop();
-  const recordingResult = await recordingPromise;
+  await recordingPromise;
   actions.setRecordProcessAbortController(null);
 
-  if (!recordingResult.ok) {
-    print.error(
-      `Error while recording: ${getMessageFromError(recordingResult.error)}`,
-    );
-    return null;
-  }
+  // const recordingErrorOutput = getErrorOutput();
+  // if (recordingErrorOutput.length > 0) {
+  //   print.warning(`Error recording with sox: ${recordingErrorOutput}`);
+  // }
 
   if (!finishRecordingResult.ok) {
     if (isAbortError(finishRecordingResult.error)) {
@@ -1682,8 +1680,16 @@ ${formattedMessages}`;
     return null;
   }
 
+  const readResult = await tryCatchAsync(fsDeps.readFile(tempFile));
+  if (!readResult.ok) {
+    print.error(
+      `Error while reading the temp file that was recorded to: ${getMessageFromError(readResult.error)}`,
+    );
+    return null;
+  }
+
   const transcribeResult = await tryCatchAsync(
-    transcribeInput(recordingResult.value),
+    transcribeInput(readResult.value),
   );
   if (!transcribeResult.ok) {
     print.error(
@@ -1692,10 +1698,12 @@ ${formattedMessages}`;
     return null;
   }
 
+  print.doing("Transcribed: ", { appendNewline: false });
+  print.plain(transcribeResult.value);
   return transcribeResult.value;
 }
 
-export function recordInput() {
+export function recordInput(tempFile: string) {
   const abortController = getState().abortControllers.recordProcess;
   assertAtBuildtime(abortController !== null);
 
@@ -1706,30 +1714,38 @@ export function recordInput() {
     [
       "-d", // use the default audio input device as the input
       "-t",
-      "raw", // output file type: raw audio with no header, just samples
+      "wav", // output file type: raw audio with no header, just samples
       "-r",
       "16000", // output sample rate: 16000 samples per second
       "-c",
       "1", // output channels: mono
       "-b",
       "16", // output bit depth: 16 bits per sample
-      "-e",
-      "signed-integer", // output encoding: samples are signed integers
-      "-", // write the output to stdout instead of a file
+      tempFile,
     ],
-    { stdio: ["ignore", "pipe", "ignore"] },
+    { stdio: ["ignore", "pipe", "pipe"] },
   );
   recordingProcess.stdout.on("data", (chunk: Buffer) =>
     outputChunks.push(chunk),
   );
 
-  const recordingFinished = once(recordingProcess, "close").then(() =>
-    Buffer.concat(outputChunks),
+  const recordingReady = new Promise<void>((resolve) => {
+    recordingProcess.stderr.once("data", () => resolve());
+  });
+
+  const errorChunks: Buffer[] = [];
+
+  recordingProcess.stderr.on("data", (chunk: Buffer) =>
+    errorChunks.push(chunk),
   );
+
+  const recordingFinished = once(recordingProcess, "close");
 
   return {
     stop: () => recordingProcess.kill("SIGINT"),
     recordingFinished,
+    recordingReady,
+    getErrorOutput: () => Buffer.concat(errorChunks).toString("utf8"),
   };
 }
 
