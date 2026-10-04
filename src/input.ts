@@ -162,13 +162,14 @@ export function initKeypress(rl: readline.Interface) {
 
   async function wrapToOpenNonBlockingProcess(
     cb: () => Promise<string | null>,
+    { pauseStdin = true }: { pauseStdin?: boolean } = {},
   ) {
-    actions.setIsEditorOpen(true);
+    actions.setIsNonBlockingProcessOngoing(true);
     stopLoadingState();
-    stdin.pause();
+    if (pauseStdin) stdin.pause();
     const ret = await cb();
     stdin.resume();
-    actions.setIsEditorOpen(false);
+    actions.setIsNonBlockingProcessOngoing(false);
     const bufferedStdout = getState().app.bufferedStdoutWhileEditorOpen;
     if (bufferedStdout.length > 0) {
       processDeps.stdout.write(bufferedStdout);
@@ -182,6 +183,8 @@ export function initKeypress(rl: readline.Interface) {
 
   stdin.on("keypress", (_char, key: Key) => {
     void (async () => {
+      if (getState().app.isNonBlockingProcessOngoing) return;
+
       const keymaps = getState().config.keymaps;
 
       for (const command of builtinSlashCommands) {
@@ -211,6 +214,7 @@ export function initKeypress(rl: readline.Interface) {
 
             const transcriptionInput = await wrapToOpenNonBlockingProcess(
               recordAndTranscribeInput,
+              { pauseStdin: false },
             );
 
             if (transcriptionInput === null) {
@@ -489,8 +493,8 @@ export async function parseInputFromEditor() {
   return firstMessage;
 }
 
-export async function pollUntilEditorClosed() {
-  while (getState().app.isEditorOpen) {
+export async function pollUntilNonBlockingProcessClosed() {
+  while (getState().app.isNonBlockingProcessOngoing) {
     await sleep(100);
   }
 }
@@ -691,9 +695,9 @@ async function resolveBuiltinSlashCommand(
 ): Promise<SlashCommandOutcome> {
   switch (command) {
     case "edit": {
-      actions.setIsEditorOpen(true);
+      actions.setIsNonBlockingProcessOngoing(true);
       const content = await spawnAndReadEditorContent();
-      actions.setIsEditorOpen(false);
+      actions.setIsNonBlockingProcessOngoing(false);
 
       if (content !== null) {
         await syncSessionFile({
@@ -711,11 +715,11 @@ async function resolveBuiltinSlashCommand(
       return { handled: true, inputFromCommand: null };
     }
     case "paste": {
-      actions.setIsEditorOpen(true);
+      actions.setIsNonBlockingProcessOngoing(true);
       const content = await spawnAndReadEditorContent({
         includeClipboardSuffix: true,
       });
-      actions.setIsEditorOpen(false);
+      actions.setIsNonBlockingProcessOngoing(false);
 
       if (content !== null)
         await syncSessionFile({

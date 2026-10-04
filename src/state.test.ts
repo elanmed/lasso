@@ -74,7 +74,7 @@ skills body`,
         bufferedStdoutWhileEditorOpen: "",
         editorInputValue: null,
         isInitializing: false,
-        isEditorOpen: false,
+        isNonBlockingProcessOngoing: false,
         bufferedInputWhileInitializing: "",
         slashCommands: [],
         stdoutTail: "",
@@ -297,12 +297,12 @@ skills body`,
       assert.equal(getState().app.isInitializing, false);
     });
 
-    it("set-is-editor-open", () => {
-      assert.equal(getState().app.isEditorOpen, false);
-      actions.setIsEditorOpen(true);
-      assert.equal(getState().app.isEditorOpen, true);
-      actions.setIsEditorOpen(false);
-      assert.equal(getState().app.isEditorOpen, false);
+    it("set-is-non-blocking-process-ongoing", () => {
+      assert.equal(getState().app.isNonBlockingProcessOngoing, false);
+      actions.setIsNonBlockingProcessOngoing(true);
+      assert.equal(getState().app.isNonBlockingProcessOngoing, true);
+      actions.setIsNonBlockingProcessOngoing(false);
+      assert.equal(getState().app.isNonBlockingProcessOngoing, false);
     });
 
     it("append-buffered-input-while-initializing accumulates inputs", () => {

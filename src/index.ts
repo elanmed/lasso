@@ -8,7 +8,7 @@ import {
   initReadline,
   initStdin,
   initStdout,
-  pollUntilEditorClosed,
+  pollUntilNonBlockingProcessClosed,
   resolveUserInput,
 } from "./input.ts";
 import { resolveApiCall, maybeCompact } from "./api.ts";
@@ -27,7 +27,7 @@ async function main() {
   let isFirstInput = true;
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
   while (true) {
-    await pollUntilEditorClosed();
+    await pollUntilNonBlockingProcessClosed();
     const userInput = await resolveUserInput({ isFirstInput });
     isFirstInput = false;
     if (userInput === null) continue;

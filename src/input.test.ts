@@ -2656,6 +2656,18 @@ editor input
     });
 
     describe("runs edit and paste", () => {
+      it("ignores keymaps while the stop-recording question is pending", async () => {
+        actions.setKeymaps({
+          ...defaultConfig.keymaps,
+          clear: { name: "k", ctrl: true },
+        });
+        actions.setIsNonBlockingProcessOngoing(true);
+        harness.emitKey({ name: "k", ctrl: true });
+        await harness.flush();
+        assert.deepStrictEqual(harness.writes, []);
+        assert.strictEqual(getState().app.editorInputValue, null);
+      });
+
       it("runs edit command when its keymap matches", async () => {
         const prompts: boolean[] = [];
         mock.method(harness.rl, "prompt", (arg: boolean) => {
@@ -2665,11 +2677,11 @@ editor input
           testFs.writeFile("/tmp/lasso-test-uuid.txt", "  edited  ");
         });
         harness.emitKey({ name: "g", ctrl: true });
-        assert.strictEqual(getState().app.isEditorOpen, true);
+        assert.strictEqual(getState().app.isNonBlockingProcessOngoing, true);
         await harness.flush();
         assert.deepStrictEqual(prompts, []);
         assert.strictEqual(getState().app.editorInputValue, "  edited  ");
-        assert.strictEqual(getState().app.isEditorOpen, false);
+        assert.strictEqual(getState().app.isNonBlockingProcessOngoing, false);
       });
 
       it("runs paste command with clipboard when its keymap matches", async () => {
@@ -3957,10 +3969,7 @@ custom command content`,
         transcribeCalls[0].audio,
         Buffer.from("wav pcm bytes"),
       );
-      assert.deepStrictEqual(getWrites(), [
-        `${BLUE}Transcribed: ${RESET}`,
-        "hello from the mic\n",
-      ]);
+      assert.deepStrictEqual(getWrites(), []);
     });
 
     it("removes the wav temp file after a successful transcription", async () => {

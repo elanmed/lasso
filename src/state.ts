@@ -82,7 +82,7 @@ interface State {
     };
     bufferedStdoutWhileEditorOpen: string;
     editorInputValue: string | null;
-    isEditorOpen: boolean;
+    isNonBlockingProcessOngoing: boolean;
     isInitializing: boolean;
     bufferedInputWhileInitializing: string;
     slashCommands: SlashCommand[];
@@ -132,7 +132,7 @@ const createInitialState = (): State => ({
     },
     bufferedStdoutWhileEditorOpen: "",
     editorInputValue: null,
-    isEditorOpen: false,
+    isNonBlockingProcessOngoing: false,
     isInitializing: false,
     bufferedInputWhileInitializing: "",
     slashCommands: [],
@@ -399,10 +399,14 @@ export const actions = {
     logStateChange("set-editor-input-value", String(before), String(value));
   },
 
-  setIsEditorOpen(isEditorOpen: boolean) {
-    const before = state.app.isEditorOpen;
-    state.app.isEditorOpen = isEditorOpen;
-    logStateChange("set-is-editor-open", String(before), String(isEditorOpen));
+  setIsNonBlockingProcessOngoing(isNonBlockingProcessOngoing: boolean) {
+    const before = state.app.isNonBlockingProcessOngoing;
+    state.app.isNonBlockingProcessOngoing = isNonBlockingProcessOngoing;
+    logStateChange(
+      "set-is-non-blocking-process-ongoing",
+      String(before),
+      String(isNonBlockingProcessOngoing),
+    );
   },
 
   setIsInitializing(isInitializing: boolean) {

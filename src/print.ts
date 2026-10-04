@@ -57,8 +57,8 @@ export function colorPrint(
     return `${COLORS[color]}${text}${reset}${suffix}`;
   })();
 
-  const { isEditorOpen } = getState().app;
-  if (isEditorOpen) {
+  const { isNonBlockingProcessOngoing } = getState().app;
+  if (isNonBlockingProcessOngoing) {
     actions.appendBufferedStdoutWhileEditorOpen(out);
     actions.appendStdoutTail(out);
     return;
@@ -167,7 +167,7 @@ export function errorWithSpacing(cb: () => void) {
 }
 
 export function startLoadingState() {
-  if (getState().app.isEditorOpen) return;
+  if (getState().app.isNonBlockingProcessOngoing) return;
 
   writeLoadingStateFrame();
   const timeout = setInterval(() => {
