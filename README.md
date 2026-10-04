@@ -6,7 +6,7 @@ _A minimal agent harness to rein in your llm_
 
 ## Features
 
-- **Minimal**: ~6,100 lines of source code, ~13,900 lines of tests
+- **Minimal**: ~6,200 lines of source code, ~13,900 lines of tests
   - Responses are piped through `bat` to render markdown
   - Multi-line input is supported by spawning an editor of your choice
   - Messages can be queued by typing a custom delimiter (default `l---`) in the spawned editor
@@ -549,14 +549,10 @@ vim.g.clipboard = {
 
 - [ ] Record audio with /record
 - [ ] Queue audio with /record
-- [ ] Buffer input while init is running
-- [x] Mark tokens as stale by default
-- [x] Move child process fns to deps.ts
-- [x] Convert all sync deps to async
+- [x] Buffer input while init is running
 
 ## TODO (soon)
 
-- [x] Speed up init by running everything in parallel
 - [ ] Investigate potential shell expansion issues
 - [ ] Support interrupting both compactions at once
 - [ ] Allow opening the queue editor in the background

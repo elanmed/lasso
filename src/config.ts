@@ -357,6 +357,7 @@ export function getStartupLogIdToLabel(): LogIdToLabel {
 }
 
 export async function initState() {
+  actions.setIsInitializing(true);
   const { globalConfig, localConfig } = await initStateFirst();
   const debugLogPath = join(getDebugLogDir(), `debug-${getShortId()}.log`);
   actions.setDebugLogPath(debugLogPath);
@@ -376,4 +377,5 @@ export async function initState() {
     deleteExpiredSessionFiles(),
     initSessionFile(),
   ]);
+  actions.setIsInitializing(false);
 }

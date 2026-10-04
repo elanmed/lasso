@@ -1,6 +1,7 @@
 import { describe, it, beforeEach, afterEach, mock } from "node:test";
 import assert from "node:assert";
 import os from "node:os";
+import { stdin } from "node:process";
 import { actions, getState, promptDeps } from "./state.ts";
 
 import { strToApproxTokens } from "./utils.ts";
@@ -21,6 +22,7 @@ import {
   spawnAndReadEditorContent,
   resume,
   resumeWithNoArgs,
+  initBufferedInput,
   initSigInt,
   initLocalConfig,
   initGlobalConfig,
@@ -40,6 +42,7 @@ import {
   setupTestContext,
   setupKeypressTests,
   makeFakeRl,
+  makeFakeRlWithWrites,
   mockClipboardPaste,
   mockClipboardPasteFailure,
   mockExecCalls,
@@ -65,7 +68,7 @@ import {
 } from "./test-helpers.ts";
 import { childProcessDeps, fsDeps } from "./deps.ts";
 import { getGlobalConfigPath, getGlobalContextDir } from "./paths.ts";
-import { defaultConfig } from "./config-types.ts";
+import { defaultConfig, type Key } from "./config-types.ts";
 
 function getTestRl() {
   const rl = getState().app.rl;
@@ -305,6 +308,83 @@ describe("input", () => {
       initSigInt();
       assert(sigint !== undefined);
       assert.throws(sigint);
+    });
+  });
+
+  describe("initBufferedInput", () => {
+    let emitKey: (char: string | undefined, key: Key) => void;
+
+    beforeEach(() => {
+      initBufferedInput();
+      emitKey = (char, key) => {
+        stdin.emit("keypress", char, key);
+      };
+    });
+
+    afterEach(() => {
+      stdin.removeAllListeners("keypress");
+    });
+
+    it("buffers typeable characters while initializing", () => {
+      actions.setIsInitializing(true);
+      emitKey("a", { name: "a" });
+      emitKey(" ", { name: "space" });
+      assert.equal(getState().app.initializingBufferedInput, "a ");
+    });
+
+    it("ignores keypresses when not initializing", () => {
+      emitKey("a", { name: "a" });
+      assert.equal(getState().app.initializingBufferedInput, "");
+    });
+
+    it("ignores return and enter keys", () => {
+      actions.setIsInitializing(true);
+      actions.appendInitializingBufferedInput("ab");
+      emitKey("\r", { name: "return" });
+      emitKey("\n", { name: "enter" });
+      assert.equal(getState().app.initializingBufferedInput, "ab");
+    });
+
+    it("ignores keys without characters like arrow keys", () => {
+      actions.setIsInitializing(true);
+      actions.appendInitializingBufferedInput("ab");
+      emitKey(undefined, { name: "left" });
+      assert.equal(getState().app.initializingBufferedInput, "ab");
+    });
+
+    it("ignores ctrl and meta keys", () => {
+      actions.setIsInitializing(true);
+      actions.appendInitializingBufferedInput("ab");
+      emitKey("h", { name: "h", ctrl: true });
+      emitKey("f", { name: "f", meta: true });
+      assert.equal(getState().app.initializingBufferedInput, "ab");
+    });
+
+    it("exits with code 130 on ctrl c while initializing", () => {
+      const exit = mockProcessExit();
+      actions.setIsInitializing(true);
+      assert.throws(() => {
+        emitKey("c", { name: "c", ctrl: true });
+      }, /process.exit called/);
+      assert.equal(exit.mock.calls.length, 1);
+      assert.equal(exit.mock.calls[0]?.arguments[0], 130);
+    });
+  });
+
+  describe("restores buffered initialization input", () => {
+    it("writes buffered input into rl right after the question starts", () => {
+      mockStdoutWrites();
+      const { rl, writes } = makeFakeRlWithWrites({
+        question: () => new Promise(() => undefined),
+      });
+      actions.setRl(rl);
+      actions.appendInitializingBufferedInput("ab");
+      void resolveUserInput({ isFirstInput: true });
+      assert.deepStrictEqual(
+        writes.map((write) => write.chunk),
+        ["ab"],
+      );
+      assert.equal(getState().app.initializingBufferedInput, "");
     });
   });
 

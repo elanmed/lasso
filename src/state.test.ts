@@ -72,6 +72,8 @@ skills body`,
         transcript: [],
         promptTokens: { value: 0, dirty: true },
         editorInputValue: null,
+        isInitializing: false,
+        initializingBufferedInput: "",
         slashCommands: [],
         stdoutTail: "",
         batAvailable: false,
@@ -143,6 +145,8 @@ skills body`,
       actions.setPromptTokens(7);
       actions.setPromptTokensDirty(true);
       actions.setEditorInputValue("draft");
+      actions.setIsInitializing(true);
+      actions.appendInitializingBufferedInput("buffered");
       actions.setSlashCommands([
         {
           name: "custom",
@@ -279,6 +283,29 @@ skills body`,
       assert.equal(getState().app.promptTokens.dirty, true);
       actions.setPromptTokensDirty(false);
       assert.equal(getState().app.promptTokens.dirty, false);
+    });
+  });
+
+  describe("initializing state", () => {
+    it("set-is-initializing", () => {
+      assert.equal(getState().app.isInitializing, false);
+      actions.setIsInitializing(true);
+      assert.equal(getState().app.isInitializing, true);
+      actions.setIsInitializing(false);
+      assert.equal(getState().app.isInitializing, false);
+    });
+
+    it("append-initializing-buffered-input accumulates inputs", () => {
+      assert.equal(getState().app.initializingBufferedInput, "");
+      actions.appendInitializingBufferedInput("he");
+      actions.appendInitializingBufferedInput("llo");
+      assert.equal(getState().app.initializingBufferedInput, "hello");
+    });
+
+    it("reset-initializing-buffered-input", () => {
+      actions.appendInitializingBufferedInput("abc");
+      actions.resetInitializingBufferedInput();
+      assert.equal(getState().app.initializingBufferedInput, "");
     });
   });
 

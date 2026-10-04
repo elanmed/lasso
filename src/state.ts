@@ -81,6 +81,8 @@ interface State {
       dirty: boolean;
     };
     editorInputValue: string | null;
+    isInitializing: boolean;
+    initializingBufferedInput: string;
     slashCommands: SlashCommand[];
     stdoutTail: string;
     batAvailable: boolean;
@@ -127,6 +129,8 @@ const createInitialState = (): State => ({
       dirty: true,
     },
     editorInputValue: null,
+    isInitializing: false,
+    initializingBufferedInput: "",
     slashCommands: [],
     stdoutTail: "",
     batAvailable: false,
@@ -389,6 +393,32 @@ export const actions = {
     const before = state.app.editorInputValue;
     state.app.editorInputValue = value;
     logStateChange("set-editor-input-value", String(before), String(value));
+  },
+
+  setIsInitializing(isInitializing: boolean) {
+    const before = state.app.isInitializing;
+    state.app.isInitializing = isInitializing;
+    logStateChange(
+      "set-is-initializing",
+      String(before),
+      String(isInitializing),
+    );
+  },
+
+  appendInitializingBufferedInput(input: string) {
+    const before = state.app.initializingBufferedInput;
+    state.app.initializingBufferedInput += input;
+    logStateChange(
+      "append-initializing-buffered-input",
+      String(before.length),
+      String(state.app.initializingBufferedInput.length),
+    );
+  },
+
+  resetInitializingBufferedInput() {
+    const before = state.app.initializingBufferedInput;
+    state.app.initializingBufferedInput = "";
+    logStateChange("reset-initializing-buffered-input", before, "");
   },
 
   setSlashCommands(commands: SlashCommand[]) {

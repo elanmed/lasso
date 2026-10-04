@@ -75,9 +75,11 @@ const mutedStdout = new Writable({
     _encoding: BufferEncoding,
     callback: (error?: Error | null) => void,
   ) {
-    if (getState().app.loadingStateTimeout === null) {
-      stdout.write(chunk);
-    }
+    const { isInitializing, loadingStateTimeout } = getState().app;
+    const isLoading = loadingStateTimeout !== null;
+    if (isLoading || isInitializing) return callback();
+
+    stdout.write(chunk);
     callback();
   },
 });
@@ -328,6 +330,39 @@ export function initKeypress() {
   });
 }
 
+export function initBufferedInput() {
+  if (stdin.isTTY) {
+    // turn off the kernel's line discipline so bytes arrive immediately,
+    // unsolicited input is not echoed, and ctrl+c stops generating SIGINT
+    stdin.setRawMode(true);
+    // decode raw stdin bytes into "keypress" events so the listener below
+    // receives structured keys (e.g. escape sequences become key objects)
+    emitKeypressEvents(stdin);
+    // stream is paused by default until readline attaches; resume it now so
+    // typed bytes reach the listener during init instead of draining later
+    stdin.resume();
+  }
+
+  stdin.on("keypress", (char: string, key: Key) => {
+    if (!getState().app.isInitializing) return;
+    if (key.ctrl === true && key.name === "c") {
+      if (stdin.isTTY) {
+        stdin.setRawMode(false);
+      }
+      process.exit(130);
+    }
+    if (key.name === "return" || key.name === "enter") return;
+    if (!isTypeableKey(key)) return;
+    if (typeof char !== "string") return;
+    actions.appendInitializingBufferedInput(char);
+  });
+}
+
+export function isTypeableKey(key: Key) {
+  const isNotTypeable = key.ctrl === true || key.meta === true;
+  return !isNotTypeable;
+}
+
 export function initSigInt() {
   const rl = getState().app.rl;
   assertAtBuildtime(rl !== null);
@@ -448,11 +483,17 @@ export async function resolveUserInput({
   actions.setQuestionAbortController(new AbortController());
   const abortController = getState().abortControllers.question;
   assertAtBuildtime(abortController !== null);
-  const inputResult = await tryCatchAsync(
+  const initializingBufferedInput = getState().app.initializingBufferedInput;
+  const questionResult = tryCatchAsync(
     rl.question(getState().config.promptPrefix, {
       signal: abortController.signal,
     }),
   );
+  if (initializingBufferedInput.length > 0) {
+    rl.write(initializingBufferedInput);
+    actions.resetInitializingBufferedInput();
+  }
+  const inputResult = await questionResult;
   actions.setQuestionAbortController(null);
 
   if (!inputResult.ok) {
