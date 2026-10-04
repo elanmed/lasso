@@ -1,4 +1,5 @@
 import readline from "node:readline/promises";
+import { once } from "node:events";
 import { emitKeypressEvents } from "node:readline";
 import { stdin, stdout } from "node:process";
 import { Writable } from "node:stream";
@@ -1652,61 +1653,85 @@ ${formattedMessages}`;
     return null;
   }
 
-  // WIP
-  // recordInput(tempFile);
-  // const finishRecordingResult = await tryCatchAsync(
-  //   rl.question("Press enter to stop recording", {
-  //     signal: abortController.signal,
-  //   }),
-  // );
+  const { stop, recordingFinished } = recordInput();
+  const recordingPromise = tryCatchAsync(recordingFinished);
 
+  const finishRecordingResult = await tryCatchAsync(
+    rl.question("Press enter to stop recording", {
+      signal: abortController.signal,
+    }),
+  );
+  stop();
+  const recordingResult = await recordingPromise;
   actions.setRecordProcessAbortController(null);
-  return "[Recording not yet implemented]";
 
-  // WIP
-  // if (!finishRecordingResult.ok) {
-  //   if (isAbortError(finishRecordingResult.error)) {
-  //     // TODO: print error
-  //     // TODO: delete temp file
-  //     return null;
-  //   } else {
-  //     // TODO: print error
-  //     return null;
-  //   }
-  // }
-  //
-  // if (!readResult.ok) {
-  //   // TODO: print error
-  //   return null;
-  // }
-  //
-  // const transcribeResult = await tryCatchAsync(
-  //   transcribeInput(readResult.value),
-  // );
-  // if (!transcribeResult.ok) {
-  //   // TODO: print error
-  //   return null;
-  // }
-  //
-  // return transcribeResult.value;
+  if (!recordingResult.ok) {
+    print.error(
+      `Error while recording: ${getMessageFromError(recordingResult.error)}`,
+    );
+    return null;
+  }
+
+  if (!finishRecordingResult.ok) {
+    if (isAbortError(finishRecordingResult.error)) {
+      return null;
+    }
+
+    print.error(
+      `Error while prompting the user to stop recording: ${getMessageFromError(finishRecordingResult.error)}`,
+    );
+    return null;
+  }
+
+  const transcribeResult = await tryCatchAsync(
+    transcribeInput(recordingResult.value),
+  );
+  if (!transcribeResult.ok) {
+    print.error(
+      `Error while transcribing: ${getMessageFromError(transcribeResult.error)}`,
+    );
+    return null;
+  }
+
+  return transcribeResult.value;
 }
 
-// WIP
-export function recordInput(tempFile: string) {
+export function recordInput() {
   const abortController = getState().abortControllers.recordProcess;
   assertAtBuildtime(abortController !== null);
+
+  const outputChunks: Buffer[] = [];
+
   const recordingProcess = childProcessDeps.spawn(
     "sox",
-    ["-d", "-r", "16000", "-c", "1", "-b", "16", tempFile],
-    { stdio: "ignore" },
+    [
+      "-d", // use the default audio input device as the input
+      "-t",
+      "raw", // output file type: raw audio with no header, just samples
+      "-r",
+      "16000", // output sample rate: 16000 samples per second
+      "-c",
+      "1", // output channels: mono
+      "-b",
+      "16", // output bit depth: 16 bits per sample
+      "-e",
+      "signed-integer", // output encoding: samples are signed integers
+      "-", // write the output to stdout instead of a file
+    ],
+    { stdio: ["ignore", "pipe", "ignore"] },
   );
-  abortController.signal.addEventListener(
-    "abort",
-    () => recordingProcess.kill("SIGINT"),
-    {
-      once: true,
-    },
+  recordingProcess.stdout.on("data", (chunk: Buffer) =>
+    outputChunks.push(chunk),
   );
+
+  const recordingFinished = once(recordingProcess, "close").then(() =>
+    Buffer.concat(outputChunks),
+  );
+
+  return {
+    stop: () => recordingProcess.kill("SIGINT"),
+    recordingFinished,
+  };
 }
 
 // WIP
