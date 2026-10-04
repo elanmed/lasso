@@ -14,9 +14,11 @@ import {
   mcpDeps,
   processDeps,
 } from "./deps.ts";
-import { actions, promptDeps, type SessionFile } from "./state.ts";
+import { actions, getState, promptDeps, type SessionFile } from "./state.ts";
 import { initKeypress } from "./input.ts";
 import type { Key, Mcp, SdkProvider } from "./config-types.ts";
+import { getMcpLogIdToLabel } from "./config.ts";
+import { createParallelPerformanceLogger } from "./print.ts";
 import { baseBatFlags, markdownBatFlags } from "./terminal.ts";
 
 export function makeMcpTool() {
@@ -630,5 +632,12 @@ export function mockMcpClients(...clients: (MCPClient | Error)[]) {
       );
     }
     return Promise.resolve(client);
+  });
+}
+
+export function makeStartupPerformanceLogger() {
+  return createParallelPerformanceLogger({
+    logDuration: !getState().config.suppressStartupDurations,
+    logIdToLabel: getMcpLogIdToLabel(),
   });
 }

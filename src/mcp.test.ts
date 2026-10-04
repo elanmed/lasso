@@ -15,6 +15,7 @@ import {
   UP_1,
   UP_2,
   makeFakeMcpClient,
+  makeStartupPerformanceLogger,
   mockMcpClients,
   mockStdoutWrites,
   setMcps,
@@ -50,7 +51,8 @@ describe("mcp", () => {
       const secondClient = makeFakeMcpClient({ close: closeSecond });
       actions.setMcp({ first: firstClient, second: secondClient }, {});
 
-      await initMcpState();
+      const performanceLogger = makeStartupPerformanceLogger();
+      await initMcpState({ performanceLogger });
 
       assert.equal(closeFirst.mock.callCount(), 1);
       assert.equal(closeSecond.mock.callCount(), 1);
@@ -62,7 +64,8 @@ describe("mcp", () => {
       mockMcpClients(new Error("connection refused"));
       setMcps("first", "second");
 
-      await initMcpState();
+      const performanceLogger = makeStartupPerformanceLogger();
+      await initMcpState({ performanceLogger });
 
       assert.deepStrictEqual(getState().mcp.clients, {});
       assert.deepStrictEqual(getState().mcp.tools, {});
@@ -79,7 +82,8 @@ describe("mcp", () => {
       mockMcpClients(firstClient, secondClient);
       setMcps("first", "second");
 
-      await initMcpState();
+      const performanceLogger = makeStartupPerformanceLogger();
+      await initMcpState({ performanceLogger });
 
       assert.deepStrictEqual(getState().mcp.clients, {
         first: firstClient,
@@ -104,7 +108,8 @@ describe("mcp", () => {
       mockMcpClients(firstClient, secondClient);
       setMcps("first", "second");
 
-      await initMcpState();
+      const performanceLogger = makeStartupPerformanceLogger();
+      await initMcpState({ performanceLogger });
 
       assert.deepStrictEqual(getState().mcp.tools, {
         greet: { description: "says hello" },
@@ -118,7 +123,9 @@ describe("mcp", () => {
       setMcps("first");
 
       const getWrites = mockStdoutWrites({ includeSpinnerFrames: true });
-      await initMcpState();
+      const performanceLogger = makeStartupPerformanceLogger();
+      performanceLogger.printAllLabels();
+      await initMcpState({ performanceLogger });
 
       assert.deepStrictEqual(getWrites(), [
         `${BLUE}Starting first mcp server: ${RESET}\n`,
@@ -135,7 +142,9 @@ describe("mcp", () => {
       setMcps("first", "second");
 
       const getWrites = mockStdoutWrites({ includeSpinnerFrames: true });
-      await initMcpState();
+      const performanceLogger = makeStartupPerformanceLogger();
+      performanceLogger.printAllLabels();
+      await initMcpState({ performanceLogger });
 
       assert.deepStrictEqual(getWrites(), [
         `${BLUE}Starting first mcp server: ${RESET}\n`,
@@ -158,7 +167,9 @@ describe("mcp", () => {
       setMcps("first");
 
       const getWrites = mockStdoutWrites({ includeSpinnerFrames: true });
-      await initMcpState();
+      const performanceLogger = makeStartupPerformanceLogger();
+      performanceLogger.printAllLabels();
+      await initMcpState({ performanceLogger });
 
       assert.deepStrictEqual(getWrites(), [
         `${BLUE}Starting first mcp server: ${RESET}\n`,
@@ -175,7 +186,8 @@ describe("mcp", () => {
       setMcps("first");
 
       const getWrites = mockStdoutWrites({ includeSpinnerFrames: true });
-      await initMcpState();
+      const performanceLogger = makeStartupPerformanceLogger();
+      await initMcpState({ performanceLogger });
 
       assert.deepStrictEqual(getWrites(), []);
     });
@@ -187,7 +199,9 @@ describe("mcp", () => {
       setMcps("first");
 
       const getWrites = mockStdoutWrites({ includeSpinnerFrames: true });
-      await initMcpState();
+      const performanceLogger = makeStartupPerformanceLogger();
+      performanceLogger.printAllLabels();
+      await initMcpState({ performanceLogger });
 
       assert.deepStrictEqual(getWrites(), [
         `${BLUE}Starting first mcp server: ${RESET}\n`,

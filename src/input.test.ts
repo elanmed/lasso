@@ -53,6 +53,7 @@ import {
   BLUE,
   BOLD,
   BOLD_RESET,
+  GREEN,
   GREY,
   PURPLE,
   RED,
@@ -3447,11 +3448,11 @@ commands diff
 
         assert.strictEqual(result, null);
         const writes = getWrites();
-        assert.deepStrictEqual(
-          writes[0],
+        const noDiffIndex = writes.indexOf(
           `${PURPLE}No diff from reload${RESET}\n`,
         );
-        const warningWrite = writes[1];
+        assert(noDiffIndex !== -1);
+        const warningWrite = writes[noDiffIndex + 1];
         assert(warningWrite !== undefined);
         assert.ok(
           warningWrite.startsWith(
@@ -3527,6 +3528,15 @@ commands diff
         assert.strictEqual(result, null);
         assert.deepStrictEqual(getWrites(), [
           `${YELLOW}- Warning: using a default context window of 128,000 tokens because there is no \`contextWindowPerModel\` entry for the current model \`__MISSING__\`${RESET}\n`,
+          `${BLUE}Reading context files: ${RESET}\n`,
+          `${BLUE}Reading skills: ${RESET}\n`,
+          `${BLUE}Reading slash commands: ${RESET}\n`,
+          `${BLUE}Reading context files: ${RESET}`,
+          `${GREEN}0.0ms${RESET}`,
+          `${BLUE}Reading skills: ${RESET}`,
+          `${GREEN}0.0ms${RESET}`,
+          `${BLUE}Reading slash commands: ${RESET}`,
+          `${GREEN}0.0ms${RESET}`,
           `${RED}An error occurred when getting the diff: fatal${RESET}\n`,
         ]);
         assert.strictEqual(

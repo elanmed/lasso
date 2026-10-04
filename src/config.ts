@@ -333,7 +333,7 @@ export async function initStateRepeatable() {
 
   const performanceLogger = createParallelPerformanceLogger({
     logDuration: !getState().config.suppressStartupDurations,
-    logIdToLabel: getMcpLogIdToLabel(),
+    logIdToLabel: getStartupLogIdToLabel(),
   });
   performanceLogger.printAllLabels();
 
@@ -348,6 +348,14 @@ export function getMcpLogIdToLabel(): LogIdToLabel {
   return serverEntries.map(([name]) => [name, `Starting ${name} mcp server: `]);
 }
 
+export function getStartupLogIdToLabel(): LogIdToLabel {
+  return getMcpLogIdToLabel().concat([
+    ["context", "Reading context files: "],
+    ["skills", "Reading skills: "],
+    ["commands", "Reading slash commands: "],
+  ]);
+}
+
 export async function initState() {
   const { globalConfig, localConfig } = await initStateFirst();
   const debugLogPath = join(getDebugLogDir(), `debug-${getShortId()}.log`);
@@ -356,15 +364,9 @@ export async function initState() {
   initStateFromConfig({ globalConfig, localConfig });
   promptDeps.getToolsContentStr = stringifyTools;
 
-  const logIdToLabel: LogIdToLabel = getMcpLogIdToLabel().concat([
-    ["context", "Reading context files: "],
-    ["skills", "Reading skills: "],
-    ["commands", "Reading slash commands: "],
-  ]);
-
   const performanceLogger = createParallelPerformanceLogger({
     logDuration: !getState().config.suppressStartupDurations,
-    logIdToLabel,
+    logIdToLabel: getStartupLogIdToLabel(),
   });
   performanceLogger.printAllLabels();
 

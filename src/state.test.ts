@@ -6,7 +6,12 @@ import { baseAgentPrompt } from "./prompts.ts";
 import { stringify } from "./utils.ts";
 import { defaultConfig } from "./config-types.ts";
 import { MISSING } from "./missing.ts";
-import { makeFakeRl, setupTestContext, testFs } from "./test-helpers.ts";
+import {
+  makeFakeRl,
+  makeStartupPerformanceLogger,
+  setupTestContext,
+  testFs,
+} from "./test-helpers.ts";
 import { initMcpState } from "./mcp.ts";
 
 const realGetSystemContent = promptDeps.getSystemContent;
@@ -332,7 +337,8 @@ skills body`,
       const secondClient = { close: closeSecond } as unknown as MCPClient;
       actions.setMcp({ first: firstClient, second: secondClient }, {});
 
-      await initMcpState();
+      const performanceLogger = makeStartupPerformanceLogger();
+      await initMcpState({ performanceLogger });
 
       assert.equal(closeFirst.mock.callCount(), 1);
       assert.equal(closeSecond.mock.callCount(), 1);
