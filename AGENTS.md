@@ -15,23 +15,23 @@ For a high-level overview of the main loop, the `null` vs `""` return convention
 After every change, run linting, types, tests, and formatting with `./agent-pnpm-run.sh`. The agent runner can hide output from commands that exit nonzero; this wrapper captures both output streams, prints the real exit status, and keeps the diagnostics visible:
 
 ```
-./agent-pnpm-run lint
-./agent-pnpm-run types
-./agent-pnpm-run test
-./agent-pnpm-run format
+./agent-pnpm-run.sh lint
+./agent-pnpm-run.sh types
+./agent-pnpm-run.sh test
+./agent-pnpm-run.sh format
 ```
 
 Or all at once:
 
 ```
-./agent-pnpm-run ci
+./agent-pnpm-run.sh ci
 ```
 
-Use `./agent-pnpm-run <script> [args...]` instead of calling `pnpm run` directly.
+Use `./agent-pnpm-run.sh <script> [args...]` instead of calling `pnpm run` directly.
 
 ## Line counts
 
-The README states approximate source and test line counts. Run `./agent-pnpm-run cloc` after code changes; if either number has moved past the nearest-100 boundary (round the new count to the nearest hundred and compare with the README), update the README figures.
+The README states approximate source and test line counts. Run `./agent-pnpm-run.sh cloc` after code changes; if either number has moved past the nearest-100 boundary (round the new count to the nearest hundred and compare with the README), update the README figures.
 
 ## Guidelines
 
