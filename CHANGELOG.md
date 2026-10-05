@@ -1,5 +1,14 @@
 # Changelog
 
+## v0.11.0 - 2026-10-06
+
+- Add the `/record` command to record audio and transcribe it into the editor, with new `transcriptionModel`, `transcriptionSdkProvider`, and `recordCmd` config options plus a warning when `LASSO_TRANSCRIPTION_API_KEY` or related config is missing
+- Cancel an in-progress recording, the recording-stop prompt, or a transcription with C-c
+- Open the queue editor non-blocking, buffering stdout while the editor is open and flushing it when it closes
+- Buffer keypresses while initializing so input typed during startup isn't lost
+- Parallelize startup by converting fs and child-process deps to async
+- Initialize prompt tokens as stale to avoid a re-count on startup
+
 ## v0.10.0 - 2026-10-02
 
 - Show chat history newest first in the pager
