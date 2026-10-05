@@ -1039,6 +1039,53 @@ describe("api", () => {
         });
         assert.deepStrictEqual(getWrites(), [`${BLUE}Compacting…${RESET}\n`]);
       });
+
+      it("aborts the merge when the controller is aborted after summarizing", async () => {
+        for (const i of [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]) {
+          actions.setConversationSummaries([
+            ...getState().app.conversation.summaries,
+            { compacted: `summary ${String(i)}`, compactedAt: i, tokens: 100 },
+          ]);
+        }
+        actions.setConversationMessages([{ role: "user", content: "hi" }]);
+        actions.setPromptTokens(96_000);
+        actions.setPromptTokensDirty(false);
+        const calls: boolean[] = [];
+        mock.method(aiDeps, "generateText", () => {
+          const signal = getState().abortControllers.apiStream?.signal;
+          const aborted = signal?.aborted === true;
+          calls.push(aborted);
+          if (aborted) return Promise.reject(makeAbortError());
+          getState().abortControllers.apiStream?.abort();
+          return Promise.resolve(
+            makeGenerateTextResult({
+              output: { compacted: "compacted summary" },
+              usage: makeMockUsage({ outputTokens: 20 }),
+            }),
+          );
+        });
+        await maybeCompact("hi");
+        assert.strictEqual(getState().abortControllers.apiStream, null);
+        assert.deepStrictEqual(calls, [false, true]);
+        assert.deepStrictEqual(
+          getState().app.conversation.summaries.map(
+            ({ compacted }) => compacted,
+          ),
+          [
+            "summary 1",
+            "summary 2",
+            "summary 3",
+            "summary 4",
+            "summary 5",
+            "summary 6",
+            "summary 7",
+            "summary 8",
+            "summary 9",
+            "summary 10",
+            "compacted summary",
+          ],
+        );
+      });
     });
 
     describe("merges summaries", () => {
@@ -1167,6 +1214,7 @@ describe("api", () => {
 
   describe("getConversationSummary", () => {
     beforeEach(() => {
+      actions.setApiStreamAbortController(new AbortController());
       actions.setContextWindowPerModel({ "claude-sonnet-4-20250514": 100_000 });
       mock.method(Date, "now", () => 42);
     });
@@ -1342,7 +1390,7 @@ describe("api", () => {
         mock.method(aiDeps, "generateText", () => Promise.reject(err));
         const result = await getConversationSummary();
         assert.strictEqual(result, null);
-        assert.strictEqual(getState().abortControllers.apiStream, null);
+        assert.notStrictEqual(getState().abortControllers.apiStream, null);
         assert.deepStrictEqual(getState().app.conversation, {
           summaries: [
             { compacted: "prior summary", compactedAt: 1, tokens: 10 },
@@ -1369,7 +1417,7 @@ describe("api", () => {
         const result = await getConversationSummary();
         assert.strictEqual(result, null);
         assert.strictEqual(getState().app.editorInputValue, "queued input");
-        assert.strictEqual(getState().abortControllers.apiStream, null);
+        assert.notStrictEqual(getState().abortControllers.apiStream, null);
         assert.deepStrictEqual(getWrites(), [
           `${YELLOW}You have queued messages!${RESET}\n`,
         ]);
@@ -1379,6 +1427,7 @@ describe("api", () => {
 
   describe("getMergedSummaries", () => {
     beforeEach(() => {
+      actions.setApiStreamAbortController(new AbortController());
       actions.setContextWindowPerModel({ "claude-sonnet-4-20250514": 100_000 });
       mock.method(Date, "now", () => 42);
     });
@@ -1626,12 +1675,12 @@ describe("api", () => {
         ]);
       });
 
-      it("returns the existing summaries and clears the abort controller on abort error", async () => {
+      it("returns the existing summaries and leaves the abort controller set on abort error", async () => {
         seedSummaries();
         const err = makeAbortError();
         mock.method(aiDeps, "generateText", () => Promise.reject(err));
         const result = await getMergedSummaries();
-        assert.strictEqual(getState().abortControllers.apiStream, null);
+        assert.notStrictEqual(getState().abortControllers.apiStream, null);
         assert.deepStrictEqual(result, [
           { compacted: "summary 1", compactedAt: 1, tokens: 100 },
           { compacted: "summary 2", compactedAt: 2, tokens: 100 },

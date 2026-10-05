@@ -547,7 +547,7 @@ vim.g.clipboard = {
 
 ## TODO (now)
 
-- [ ] Support interrupting both compactions at once
+- [ ] Add a tool for consuming images
 
 ## TODO (soon)
 
@@ -561,4 +561,3 @@ vim.g.clipboard = {
 - [ ] Reference history file for compacted summaries (?)
 - [ ] Exit cleanly from C-d while loading
 - [ ] Add a tool for listing, providing MCP sources
-- [ ] Add a tool for consuming images

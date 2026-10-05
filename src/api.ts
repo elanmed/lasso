@@ -254,7 +254,6 @@ export async function getMergedSummaries() {
     return {};
   })();
 
-  actions.setApiStreamAbortController(new AbortController());
   startLoadingState();
   const generateTextResult = await tryCatchAsync(
     aiDeps.generateText({
@@ -266,7 +265,6 @@ export async function getMergedSummaries() {
     }),
   );
   stopLoadingState();
-  actions.setApiStreamAbortController(null);
 
   if (!generateTextResult.ok) {
     if (isAbortError(generateTextResult.error)) {
@@ -333,8 +331,6 @@ export async function getConversationSummary() {
     return {};
   })();
 
-  // TODO (not you ai): make a small helper around generateText
-  actions.setApiStreamAbortController(new AbortController());
   startLoadingState();
   const generateTextResult = await tryCatchAsync(
     aiDeps.generateText({
@@ -346,7 +342,6 @@ export async function getConversationSummary() {
     }),
   );
   stopLoadingState();
-  actions.setApiStreamAbortController(null);
 
   if (!generateTextResult.ok) {
     if (isAbortError(generateTextResult.error)) {
@@ -404,12 +399,17 @@ export async function maybeCompact(userInput: string) {
 
   print.doing("Compacting" + getUnicodeChar("…"));
 
+  actions.setApiStreamAbortController(new AbortController());
   // If summarizing the message params failed, don't reset the message params
   const conversationSummary = await getConversationSummary();
-  if (conversationSummary === null) return;
+  if (conversationSummary === null) {
+    actions.setApiStreamAbortController(null);
+    return;
+  }
 
   // If merging the existing summaries failed, use existing summaries
   const mergedSummaries = await getMergedSummaries();
+  actions.setApiStreamAbortController(null);
 
   await applyCompactedConversation([...mergedSummaries, conversationSummary]);
 
