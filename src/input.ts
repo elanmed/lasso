@@ -403,7 +403,14 @@ export function initSigInt(rl: readline.Interface) {
       getState().abortControllers.interruptWithEditorContent;
     const question = getState().abortControllers.question;
     const recordProcess = getState().abortControllers.recordProcess;
-    const controllers = [apiStream, interruptWithEditorContent, question];
+    const transcription = getState().abortControllers.transcription;
+    const controllers = [
+      apiStream,
+      interruptWithEditorContent,
+      question,
+      recordProcess,
+      transcription,
+    ];
     assertAtBuildtime(controllers.filter((c) => c !== null).length <= 1);
 
     if (apiStream !== null) {
@@ -413,6 +420,11 @@ export function initSigInt(rl: readline.Interface) {
 
     if (recordProcess !== null) {
       recordProcess.abort();
+      return;
+    }
+
+    if (transcription !== null) {
+      transcription.abort();
       return;
     }
 
@@ -1778,10 +1790,19 @@ ${formattedMessages}`;
     return null;
   }
 
+  const transcriptionAbortController = new AbortController();
+  actions.setTranscriptionAbortController(transcriptionAbortController);
   const transcribeResult = await tryCatchAsync(
     transcribeInput(readResult.value),
   );
+  actions.setTranscriptionAbortController(null);
+
   if (!transcribeResult.ok) {
+    if (isAbortError(transcribeResult.error)) {
+      await cleanup();
+      return null;
+    }
+
     print.error(
       `Error while transcribing: ${getMessageFromError(transcribeResult.error)}`,
     );
@@ -1844,12 +1865,17 @@ export function recordInput(tempFile: string) {
 }
 
 export async function transcribeInput(buffer: Buffer): Promise<string> {
+  const transcriptionAbortController =
+    getState().abortControllers.transcription;
+  assertAtBuildtime(transcriptionAbortController !== null);
+
   const { transcriptionModel } = getState().config;
   assertAtBuildtime(transcriptionModel !== undefined);
 
   const { text } = await aiDeps.transcribe({
     model: getTranscriptionProvider().transcription(transcriptionModel),
     audio: buffer,
+    abortSignal: transcriptionAbortController.signal,
   });
 
   return text;

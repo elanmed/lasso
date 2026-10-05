@@ -116,6 +116,7 @@ interface State {
     apiStream: AbortController | null;
     interruptWithEditorContent: AbortController | null;
     recordProcess: AbortController | null;
+    transcription: AbortController | null;
   };
 }
 
@@ -198,6 +199,7 @@ const createInitialState = (): State => ({
     apiStream: null,
     interruptWithEditorContent: null,
     recordProcess: null,
+    transcription: null,
   },
 });
 
@@ -377,6 +379,16 @@ export const actions = {
     state.abortControllers.interruptWithEditorContent = controller;
     logStateChange(
       "set-interrupt-with-editor-abort-controller",
+      String(before),
+      String(controller),
+    );
+  },
+
+  setTranscriptionAbortController(controller: AbortController | null) {
+    const before = state.abortControllers.transcription;
+    state.abortControllers.transcription = controller;
+    logStateChange(
+      "set-transcription-abort-controller",
       String(before),
       String(controller),
     );

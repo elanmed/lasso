@@ -139,6 +139,7 @@ skills body`,
         apiStream: null,
         interruptWithEditorContent: null,
         recordProcess: null,
+        transcription: null,
       });
     };
 
@@ -201,6 +202,7 @@ skills body`,
       actions.setApiStreamAbortController(new AbortController());
       actions.setInterruptWithEditorAbortController(new AbortController());
       actions.setRecordProcessAbortController(new AbortController());
+      actions.setTranscriptionAbortController(new AbortController());
       actions.resetState();
       clearTimeout(timeout);
 

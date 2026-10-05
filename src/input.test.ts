@@ -5,7 +5,7 @@ import { stdin } from "node:process";
 import { actions, getState, promptDeps } from "./state.ts";
 import { print } from "./print.ts";
 
-import { strToApproxTokens } from "./utils.ts";
+import { sleep, strToApproxTokens } from "./utils.ts";
 import {
   parseInputFromEditor,
   shouldMuteStdout,
@@ -183,6 +183,24 @@ describe("input", () => {
       actions.setRl(rl);
       const controller = new AbortController();
       actions.setInterruptWithEditorAbortController(controller);
+
+      initSigInt(rl);
+      assert(sigint !== undefined);
+      sigint();
+
+      assert.equal(controller.signal.aborted, true);
+    });
+
+    it("aborts the transcription", () => {
+      let sigint: (() => void) | undefined;
+      const rl = makeFakeRl({
+        on: (_event: string, listener: () => void) => {
+          sigint = listener;
+        },
+      });
+      actions.setRl(rl);
+      const controller = new AbortController();
+      actions.setTranscriptionAbortController(controller);
 
       initSigInt(rl);
       assert(sigint !== undefined);
@@ -4132,6 +4150,41 @@ custom command content`,
       assert.strictEqual(getState().abortControllers.recordProcess, null);
       assert.strictEqual(testFs._files.has("/tmp/lasso-test-uuid.wav"), false);
     });
+
+    it("aborts the transcription when the transcription is aborted", async () => {
+      actions.setTranscriptionSdkProvider("openai");
+      actions.setTranscriptionModel("gpt-4o-transcribe");
+      testProcessEnv._set("LASSO_TRANSCRIPTION_API_KEY", "key");
+      mockRecording();
+      testFs._files.set("/tmp/lasso-test-uuid.wav", "wav recording bytes");
+      let transcribeSignal: AbortSignal | undefined;
+      mock.method(
+        aiDeps,
+        "transcribe",
+        (args: { abortSignal?: AbortSignal }) => {
+          transcribeSignal = args.abortSignal;
+          return new Promise((_, reject) => {
+            args.abortSignal?.addEventListener("abort", () =>
+              reject(makeAbortError("aborted")),
+            );
+          });
+        },
+      );
+      actions.resetStdout();
+      const resultPromise = recordAndTranscribeInput();
+      while (getState().abortControllers.transcription === null) {
+        await sleep(10);
+      }
+      const controller = getState().abortControllers.transcription;
+      assert(controller !== null);
+      controller.abort();
+      const result = await resultPromise;
+      assert.strictEqual(result, null);
+      assert.strictEqual(transcribeSignal?.aborted, true);
+      assert.strictEqual(getState().abortControllers.transcription, null);
+      assert.deepStrictEqual(getWrites(), ["Press enter to stop recording:\n"]);
+      assert.strictEqual(testFs._files.has("/tmp/lasso-test-uuid.wav"), false);
+    });
   });
 
   describe("mutedStdout", () => {
@@ -4260,13 +4313,17 @@ custom command content`,
       actions.setTranscriptionSdkProvider("openai");
       actions.setTranscriptionModel("gpt-4o-transcribe");
       testProcessEnv._set("LASSO_TRANSCRIPTION_API_KEY", "key");
+      const controller = new AbortController();
+      actions.setTranscriptionAbortController(controller);
       const audio = Buffer.from("recording");
       const { transcribeCalls } = mockTranscription("hi");
       const result = await transcribeInput(audio);
       assert.strictEqual(result, "hi");
       assert.ok(transcribeCalls[0] !== undefined);
       assert.strictEqual(transcribeCalls[0].audio, audio);
+      assert.strictEqual(transcribeCalls[0].abortSignal, controller.signal);
       assert.ok(transcribeCalls[0].model !== undefined);
+      actions.setTranscriptionAbortController(null);
     });
   });
 

@@ -586,7 +586,11 @@ export function mockRecording({ chunk = "fake recording" } = {}) {
 }
 
 export function mockTranscription(text: string) {
-  const transcribeCalls: { audio: Buffer; model: unknown }[] = [];
+  const transcribeCalls: {
+    audio: Buffer;
+    model: unknown;
+    abortSignal?: AbortSignal;
+  }[] = [];
   mock.method(aiDeps, "transcribe", (args: unknown) => {
     transcribeCalls.push(args as { audio: Buffer; model: unknown });
     return Promise.resolve({ text });
