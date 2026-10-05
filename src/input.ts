@@ -1743,6 +1743,8 @@ ${formattedMessages}`;
     whileMuted: true,
   });
   const finishRecordingResult = await tryCatchAsync(
+    // rl.question writes its prompt through mutedStdout which drops output
+    // during the recording, so the banner is printed directly instead
     rl.question("", { signal: abortController.signal }),
   );
   stop();
