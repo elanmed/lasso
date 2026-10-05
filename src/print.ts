@@ -26,6 +26,7 @@ export function bold(text: string) {
 
 interface AppendNewlineOpts {
   appendNewline?: boolean;
+  whileMuted?: boolean;
 }
 
 export const print = {
@@ -56,6 +57,11 @@ export function colorPrint(
     }
     return `${COLORS[color]}${text}${reset}${suffix}`;
   })();
+
+  if (opts.whileMuted === true) {
+    processDeps.stdout.write(out);
+    return;
+  }
 
   const { isNonBlockingProcessOngoing } = getState().app;
   if (isNonBlockingProcessOngoing) {

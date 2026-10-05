@@ -8,7 +8,6 @@ import { print } from "./print.ts";
 import { strToApproxTokens } from "./utils.ts";
 import {
   parseInputFromEditor,
-  mutedPrint,
   shouldMuteStdout,
   mutedStdout,
   recordAndTranscribeInput,
@@ -184,6 +183,24 @@ describe("input", () => {
       actions.setRl(rl);
       const controller = new AbortController();
       actions.setInterruptWithEditorAbortController(controller);
+
+      initSigInt(rl);
+      assert(sigint !== undefined);
+      sigint();
+
+      assert.equal(controller.signal.aborted, true);
+    });
+
+    it("aborts the recording process and its stop question", () => {
+      let sigint: (() => void) | undefined;
+      const rl = makeFakeRl({
+        on: (_event: string, listener: () => void) => {
+          sigint = listener;
+        },
+      });
+      actions.setRl(rl);
+      const controller = new AbortController();
+      actions.setRecordProcessAbortController(controller);
 
       initSigInt(rl);
       assert(sigint !== undefined);
@@ -3972,7 +3989,11 @@ custom command content`,
         transcribeCalls[0].audio,
         Buffer.from("wav pcm bytes"),
       );
-      assert.deepStrictEqual(getWrites(), ["Press enter to stop recording:\n"]);
+      assert.deepStrictEqual(getWrites(), [
+        "Press enter to stop recording:\n",
+        `${BLUE}Transcribed: ${RESET}`,
+        "hello from the mic\n",
+      ]);
     });
 
     it("removes the wav temp file after a successful transcription", async () => {
@@ -3999,6 +4020,16 @@ custom command content`,
 `,
       ]);
       assert.strictEqual(getState().abortControllers.recordProcess, null);
+    });
+
+    it("prints the configuration warning while stdout is muted", async () => {
+      actions.resetStdout();
+      actions.setIsNonBlockingProcessOngoing(true);
+      const result = await recordAndTranscribeInput();
+      actions.setIsNonBlockingProcessOngoing(false);
+      assert.strictEqual(result, null);
+      assert.deepStrictEqual(getState().app.bufferedStdoutWhileEditorOpen, "");
+      assert.strictEqual(testFs._files.has("/tmp/lasso-test-uuid.wav"), false);
     });
 
     it("returns null and prints an error when the stop-recording question rejects", async () => {
@@ -4156,20 +4187,6 @@ custom command content`,
     });
   });
 
-  describe("mutedPrint", () => {
-    it("writes text to stdout directly", () => {
-      mutedPrint("text");
-      assert.deepStrictEqual(getWrites(), ["text"]);
-    });
-
-    it("writes text to stdout directly even while a non-blocking process is ongoing", () => {
-      actions.setIsNonBlockingProcessOngoing(true);
-      actions.resetStdout();
-      mutedPrint("text");
-      assert.deepStrictEqual(getWrites(), ["text"]);
-    });
-  });
-
   describe("recordInput", () => {
     it("spawns sox with the wav mono 16-bit output config writing to the temp file", () => {
       actions.setRecordProcessAbortController(new AbortController());
@@ -4205,6 +4222,15 @@ custom command content`,
       assert.deepStrictEqual(killSignals, ["SIGINT"]);
       const closeArgs = await recordingFinished;
       assert.deepStrictEqual(closeArgs, [0, "SIGINT"]);
+    });
+
+    it("kills the recording process when the record process is aborted", () => {
+      const controller = new AbortController();
+      actions.setRecordProcessAbortController(controller);
+      const { killSignals } = mockRecording();
+      recordInput("/tmp/lasso-test-uuid.wav");
+      controller.abort();
+      assert.deepStrictEqual(killSignals, ["SIGINT"]);
     });
 
     it("resolves recordingReady when sox first writes to stderr", async () => {

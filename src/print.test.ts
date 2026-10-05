@@ -12,7 +12,7 @@ import {
   errorWithSpacing,
   bold,
 } from "./print.ts";
-import { actions } from "./state.ts";
+import { actions, getState } from "./state.ts";
 import { processDeps } from "./deps.ts";
 import {
   BLUE,
@@ -274,6 +274,23 @@ describe("print", () => {
       const getWrites = mockStdoutWrites();
       colorPrint("hello", "blue", { appendNewline: false });
       assert.deepStrictEqual(getWrites(), [`${BLUE}hello${RESET}`]);
+    });
+  });
+
+  describe("whileMuted", () => {
+    it("writes to stdout directly while a non-blocking process is ongoing", () => {
+      actions.setIsNonBlockingProcessOngoing(true);
+      const getWrites = mockStdoutWrites();
+      colorPrint("hello", "blue", { whileMuted: true });
+      assert.deepStrictEqual(getWrites(), [`${BLUE}hello${RESET}\n`]);
+      assert.deepStrictEqual(getState().app.bufferedStdoutWhileEditorOpen, "");
+    });
+
+    it("writes to stdout directly while a loading state is active", () => {
+      actions.setLoadingStateTimeout({} as NodeJS.Timeout);
+      const getWrites = mockStdoutWrites();
+      colorPrint("hello", "blue", { whileMuted: true });
+      assert.deepStrictEqual(getWrites(), [`${BLUE}hello${RESET}\n`]);
     });
   });
 

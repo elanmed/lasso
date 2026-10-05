@@ -98,10 +98,6 @@ Object.defineProperties(mutedStdout, {
   },
 });
 
-export function mutedPrint(text: string) {
-  processDeps.stdout.write(text);
-}
-
 export function shouldMuteStdout() {
   const { loadingStateTimeout, isNonBlockingProcessOngoing } = getState().app;
   return loadingStateTimeout !== null || isNonBlockingProcessOngoing;
@@ -406,11 +402,17 @@ export function initSigInt(rl: readline.Interface) {
     const interruptWithEditorContent =
       getState().abortControllers.interruptWithEditorContent;
     const question = getState().abortControllers.question;
+    const recordProcess = getState().abortControllers.recordProcess;
     const controllers = [apiStream, interruptWithEditorContent, question];
     assertAtBuildtime(controllers.filter((c) => c !== null).length <= 1);
 
     if (apiStream !== null) {
       apiStream.abort();
+      return;
+    }
+
+    if (recordProcess !== null) {
+      recordProcess.abort();
       return;
     }
 
@@ -1713,8 +1715,7 @@ export async function recordAndTranscribeInput() {
     const warning = `Warning! You're missing required configuration options for /record.
 ${formattedMessages}`;
 
-    // TODO: avoid printing when rl question isn't active?
-    print.warning(warning);
+    print.warning(warning, { whileMuted: true });
     return null;
   }
 
@@ -1725,6 +1726,7 @@ ${formattedMessages}`;
 
   if (tempFile === null) {
     print.error("Error creating a time file to write the recording to");
+    actions.setRecordProcessAbortController(null);
     return null;
   }
 
@@ -1736,9 +1738,10 @@ ${formattedMessages}`;
   const { stop, recordingFinished } = recordInput(tempFile);
   const recordingPromise = tryCatchAsync(recordingFinished);
 
-  const banner = "Press enter to stop recording:\n";
-  if (shouldMuteStdout()) mutedPrint(banner);
-  else print.plain(banner, { appendNewline: false });
+  print.plain("Press enter to stop recording:\n", {
+    appendNewline: false,
+    whileMuted: true,
+  });
   const finishRecordingResult = await tryCatchAsync(
     rl.question("", { signal: abortController.signal }),
   );
@@ -1783,8 +1786,8 @@ ${formattedMessages}`;
     return null;
   }
 
-  // print.doing("Transcribed: ", { appendNewline: false });
-  // print.plain(transcribeResult.value);
+  print.doing("Transcribed: ", { appendNewline: false, whileMuted: true });
+  print.plain(transcribeResult.value, { whileMuted: true });
   return transcribeResult.value;
 }
 
@@ -1823,6 +1826,10 @@ export function recordInput(tempFile: string) {
   recordingProcess.stderr.on("data", (chunk: Buffer) =>
     errorChunks.push(chunk),
   );
+
+  abortController.signal.addEventListener("abort", () => {
+    recordingProcess.kill("SIGINT");
+  });
 
   const recordingFinished = once(recordingProcess, "close");
 
