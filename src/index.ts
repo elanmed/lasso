@@ -12,10 +12,12 @@ import {
   resolveUserInput,
 } from "./input.ts";
 import { resolveApiCall, maybeCompact } from "./api.ts";
-import { getState } from "./state.ts";
+import { actions, getState } from "./state.ts";
 import { warnOnLargePromptOverhead } from "./usage.ts";
 
 async function main() {
+  actions.setIsInitializing(true);
+
   initStdin();
   initStdout();
   await initState();
@@ -23,6 +25,8 @@ async function main() {
 
   await warnOnMissingBat();
   warnOnLargePromptOverhead();
+
+  actions.setIsInitializing(false);
 
   let isFirstInput = true;
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
