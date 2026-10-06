@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.11.1 - 2026-10-06
+
+- Polish `/record` prompt with a red "⏺" symbol
+- Pass `whileMuted` to all `/record` prints so nothing is lost while stdout is paused
+- Fix an extra newline when inserting transcribed `/record` input after other output
+- Print empty-state paging messages ("Editor is empty", "No available skills", "No available context files", "No chat history", "No llm messages") as warnings instead of status messages
+- Fix initialization ordering so queued keypresses aren't miscounted as "skipped during startup" lines before bat detection completes
+
 ## v0.11.0 - 2026-10-06
 
 - Add the `/record` command to record audio and transcribe it into the editor, with new `transcriptionModel`, `transcriptionSdkProvider`, and `recordCmd` config options plus a warning when `LASSO_TRANSCRIPTION_API_KEY` or related config is missing
