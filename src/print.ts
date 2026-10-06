@@ -44,18 +44,22 @@ export const print = {
     colorPrint(text, "none", opts),
 };
 
+export function wrapInColor(text: string, color: Color) {
+  const reset = "\x1b[0m";
+  return `${COLORS[color]}${text}${reset}`;
+}
+
 export function colorPrint(
   text: string,
   color: Color,
   opts: AppendNewlineOpts = {},
 ) {
-  const reset = "\x1b[0m";
   const out = (() => {
     const suffix = opts.appendNewline === false ? "" : "\n";
     if (color === "none" || shouldDisableColor()) {
       return `${text}${suffix}`;
     }
-    return `${COLORS[color]}${text}${reset}${suffix}`;
+    return `${wrapInColor(text, color)}${suffix}`;
   })();
 
   if (opts.whileMuted === true) {

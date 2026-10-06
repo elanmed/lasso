@@ -33,6 +33,7 @@ import {
   startLoadingState,
   stopLoadingState,
   successWithSpacing,
+  wrapInColor,
 } from "./print.ts";
 import { fencePrint, wrapInFence } from "./fence.ts";
 import {
@@ -834,7 +835,9 @@ async function resolveBuiltinSlashCommand(
       return { handled: true, inputFromCommand: null };
     }
     case "record": {
-      const inputFromCommand = await recordAndTranscribeInput();
+      const inputFromCommand = await recordAndTranscribeInput({
+        isTyped: true,
+      });
       if (inputFromCommand !== null) {
         await syncSessionFile({
           transcript: getAppendedTranscript({
@@ -1692,7 +1695,7 @@ ${formattedHarnessTools.concat(formattedMCPTools).join("\n")}`;
   });
 }
 
-export async function recordAndTranscribeInput() {
+export function warnOnMissingTranscribeConfig() {
   const rl = getState().app.rl;
   assertAtBuildtime(rl !== null);
 
@@ -1728,8 +1731,19 @@ export async function recordAndTranscribeInput() {
 ${formattedMessages}`;
 
     print.warning(warning, { whileMuted: true });
-    return null;
+    return true;
   }
+  return false;
+}
+
+export async function recordAndTranscribeInput({
+  isTyped = false,
+}: SpacingOpts = {}) {
+  const rl = getState().app.rl;
+  assertAtBuildtime(rl !== null);
+
+  const missingConfig = warnOnMissingTranscribeConfig();
+  if (missingConfig) return null;
 
   const abortController = new AbortController();
   actions.setRecordProcessAbortController(abortController);
@@ -1750,23 +1764,25 @@ ${formattedMessages}`;
   const { stop, recordingFinished } = recordInput(tempFile);
   const recordingPromise = tryCatchAsync(recordingFinished);
 
-  print.plain("Press enter to stop recording:\n", {
-    appendNewline: false,
-    whileMuted: true,
-  });
-  const finishRecordingResult = await tryCatchAsync(
+  const query = `${wrapInColor("⏺", "red")} Press enter to stop recording `;
+  let questionPromise: Promise<string>;
+
+  if (isTyped) {
+    questionPromise = rl.question(query, { signal: abortController.signal });
+  } else {
+    print.plain(query.concat("\n"), {
+      appendNewline: false,
+      whileMuted: true,
+    });
     // rl.question writes its prompt through mutedStdout which drops output
     // during the recording, so the banner is printed directly instead
-    rl.question("", { signal: abortController.signal }),
-  );
+    questionPromise = rl.question("", { signal: abortController.signal });
+  }
+  const finishRecordingResult = await tryCatchAsync(questionPromise);
+
   stop();
   await recordingPromise;
   actions.setRecordProcessAbortController(null);
-
-  // const recordingErrorOutput = getErrorOutput();
-  // if (recordingErrorOutput.length > 0) {
-  //   print.warning(`Error recording with sox: ${recordingErrorOutput}`);
-  // }
 
   if (!finishRecordingResult.ok) {
     if (isAbortError(finishRecordingResult.error)) {
