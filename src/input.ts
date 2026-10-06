@@ -1751,7 +1751,9 @@ export async function recordAndTranscribeInput({
   const tempFile = await getTempFileName({ extension: "wav" });
 
   if (tempFile === null) {
-    print.error("Error creating a time file to write the recording to");
+    print.error("Error creating a time file to write the recording to", {
+      whileMuted: !isTyped,
+    });
     actions.setRecordProcessAbortController(null);
     return null;
   }
@@ -1792,6 +1794,7 @@ export async function recordAndTranscribeInput({
 
     print.error(
       `Error while prompting the user to stop recording: ${getMessageFromError(finishRecordingResult.error)}`,
+      { whileMuted: !isTyped },
     );
     await cleanup();
     return null;
@@ -1802,6 +1805,7 @@ export async function recordAndTranscribeInput({
   if (!readResult.ok) {
     print.error(
       `Error while reading the temp file that was recorded to: ${getMessageFromError(readResult.error)}`,
+      { whileMuted: !isTyped },
     );
     return null;
   }
@@ -1821,6 +1825,7 @@ export async function recordAndTranscribeInput({
 
     print.error(
       `Error while transcribing: ${getMessageFromError(transcribeResult.error)}`,
+      { whileMuted: !isTyped },
     );
     return null;
   }
