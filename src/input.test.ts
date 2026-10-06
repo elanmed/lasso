@@ -1543,7 +1543,7 @@ l---
     it("prints that history is empty when the transcript is empty", () => {
       pageHistory({ isTyped: true });
       assert.deepStrictEqual(getWrites(), [
-        `${BLUE}No chat history${RESET}\n`,
+        `${YELLOW}No chat history${RESET}\n`,
         "\n",
       ]);
     });
@@ -1552,7 +1552,7 @@ l---
       await pageHistory();
       assert.deepStrictEqual(getWrites(), [
         "\n",
-        `${BLUE}No chat history${RESET}\n`,
+        `${YELLOW}No chat history${RESET}\n`,
         "\n",
       ]);
     });
@@ -1560,7 +1560,9 @@ l---
     it("does not add spacing when streaming", async () => {
       actions.setApiStreamAbortController(new AbortController());
       await pageHistory();
-      assert.deepStrictEqual(getWrites(), [`${BLUE}No chat history${RESET}\n`]);
+      assert.deepStrictEqual(getWrites(), [
+        `${YELLOW}No chat history${RESET}\n`,
+      ]);
     });
 
     it("opens the chat history newest first in a pager with a heading prepended", async () => {
@@ -1606,7 +1608,7 @@ older content
     it("prints no messages when there is no assistant response", async () => {
       await pageLastResponse({ isTyped: true });
       assert.deepStrictEqual(getWrites(), [
-        `${BLUE}No llm messages${RESET}\n`,
+        `${YELLOW}No llm messages${RESET}\n`,
         "\n",
       ]);
     });
@@ -1615,7 +1617,7 @@ older content
       await pageLastResponse();
       assert.deepStrictEqual(getWrites(), [
         "\n",
-        `${BLUE}No llm messages${RESET}\n`,
+        `${YELLOW}No llm messages${RESET}\n`,
         "\n",
       ]);
     });
@@ -1623,7 +1625,9 @@ older content
     it("does not add spacing when streaming", async () => {
       actions.setApiStreamAbortController(new AbortController());
       await pageLastResponse();
-      assert.deepStrictEqual(getWrites(), [`${BLUE}No llm messages${RESET}\n`]);
+      assert.deepStrictEqual(getWrites(), [
+        `${YELLOW}No llm messages${RESET}\n`,
+      ]);
     });
 
     it("opens the latest assistant response in a pager", async () => {
@@ -1667,7 +1671,7 @@ second
     it("prints no messages when there is no user message", () => {
       pageLastMessage({ isTyped: true });
       assert.deepStrictEqual(getWrites(), [
-        `${BLUE}No user messages${RESET}\n`,
+        `${YELLOW}No user messages${RESET}\n`,
         "\n",
       ]);
     });
@@ -1676,7 +1680,7 @@ second
       await pageLastMessage();
       assert.deepStrictEqual(getWrites(), [
         "\n",
-        `${BLUE}No user messages${RESET}\n`,
+        `${YELLOW}No user messages${RESET}\n`,
         "\n",
       ]);
     });
@@ -1685,7 +1689,7 @@ second
       actions.setApiStreamAbortController(new AbortController());
       await pageLastMessage();
       assert.deepStrictEqual(getWrites(), [
-        `${BLUE}No user messages${RESET}\n`,
+        `${YELLOW}No user messages${RESET}\n`,
       ]);
     });
 
@@ -1727,7 +1731,7 @@ latest question
     it("prints no diffs when there are no diffs", () => {
       pageLastDiff({ isTyped: true });
       assert.deepStrictEqual(getWrites(), [
-        `${BLUE}No diffs from the last turn${RESET}\n`,
+        `${YELLOW}No diffs from the last turn${RESET}\n`,
         "\n",
       ]);
     });
@@ -1736,7 +1740,7 @@ latest question
       await pageLastDiff();
       assert.deepStrictEqual(getWrites(), [
         "\n",
-        `${BLUE}No diffs from the last turn${RESET}\n`,
+        `${YELLOW}No diffs from the last turn${RESET}\n`,
         "\n",
       ]);
     });
@@ -1745,7 +1749,7 @@ latest question
       actions.setApiStreamAbortController(new AbortController());
       await pageLastDiff();
       assert.deepStrictEqual(getWrites(), [
-        `${BLUE}No diffs from the last turn${RESET}\n`,
+        `${YELLOW}No diffs from the last turn${RESET}\n`,
       ]);
     });
 
@@ -1818,7 +1822,7 @@ older summary
       pageSummaries({ isTyped: true });
 
       assert.deepStrictEqual(getWrites(), [
-        `${BLUE}No conversation summaries${RESET}\n`,
+        `${YELLOW}No conversation summaries${RESET}\n`,
         "\n",
       ]);
       assert.strictEqual(testFs._files.has("/tmp/lasso-test-uuid.txt"), false);
@@ -1828,7 +1832,7 @@ older summary
       await pageSummaries();
       assert.deepStrictEqual(getWrites(), [
         "\n",
-        `${BLUE}No conversation summaries${RESET}\n`,
+        `${YELLOW}No conversation summaries${RESET}\n`,
         "\n",
       ]);
     });
@@ -1837,7 +1841,7 @@ older summary
       actions.setApiStreamAbortController(new AbortController());
       await pageSummaries();
       assert.deepStrictEqual(getWrites(), [
-        `${BLUE}No conversation summaries${RESET}\n`,
+        `${YELLOW}No conversation summaries${RESET}\n`,
       ]);
     });
   });
@@ -1939,7 +1943,7 @@ older summary
     it("prints that history is empty when the transcript is empty", () => {
       pageHistory({ isTyped: true });
       assert.deepStrictEqual(getWrites(), [
-        `${BLUE}No chat history${RESET}\n`,
+        `${YELLOW}No chat history${RESET}\n`,
         "\n",
       ]);
     });
@@ -1948,7 +1952,7 @@ older summary
       await pageHistory();
       assert.deepStrictEqual(getWrites(), [
         "\n",
-        `${BLUE}No chat history${RESET}\n`,
+        `${YELLOW}No chat history${RESET}\n`,
         "\n",
       ]);
     });
@@ -1956,7 +1960,9 @@ older summary
     it("does not add spacing when streaming", async () => {
       actions.setApiStreamAbortController(new AbortController());
       await pageHistory();
-      assert.deepStrictEqual(getWrites(), [`${BLUE}No chat history${RESET}\n`]);
+      assert.deepStrictEqual(getWrites(), [
+        `${YELLOW}No chat history${RESET}\n`,
+      ]);
     });
 
     it("opens the chat history newest first in a pager with a heading prepended", async () => {
@@ -2002,7 +2008,7 @@ older content
     it("prints no messages when there is no assistant response", async () => {
       await pageLastResponse({ isTyped: true });
       assert.deepStrictEqual(getWrites(), [
-        `${BLUE}No llm messages${RESET}\n`,
+        `${YELLOW}No llm messages${RESET}\n`,
         "\n",
       ]);
     });
@@ -2011,7 +2017,7 @@ older content
       await pageLastResponse();
       assert.deepStrictEqual(getWrites(), [
         "\n",
-        `${BLUE}No llm messages${RESET}\n`,
+        `${YELLOW}No llm messages${RESET}\n`,
         "\n",
       ]);
     });
@@ -2019,7 +2025,9 @@ older content
     it("does not add spacing when streaming", async () => {
       actions.setApiStreamAbortController(new AbortController());
       await pageLastResponse();
-      assert.deepStrictEqual(getWrites(), [`${BLUE}No llm messages${RESET}\n`]);
+      assert.deepStrictEqual(getWrites(), [
+        `${YELLOW}No llm messages${RESET}\n`,
+      ]);
     });
 
     it("opens the latest assistant response in a pager", async () => {
@@ -2063,7 +2071,7 @@ second
     it("prints no messages when there is no user message", () => {
       pageLastMessage({ isTyped: true });
       assert.deepStrictEqual(getWrites(), [
-        `${BLUE}No user messages${RESET}\n`,
+        `${YELLOW}No user messages${RESET}\n`,
         "\n",
       ]);
     });
@@ -2072,7 +2080,7 @@ second
       await pageLastMessage();
       assert.deepStrictEqual(getWrites(), [
         "\n",
-        `${BLUE}No user messages${RESET}\n`,
+        `${YELLOW}No user messages${RESET}\n`,
         "\n",
       ]);
     });
@@ -2081,7 +2089,7 @@ second
       actions.setApiStreamAbortController(new AbortController());
       await pageLastMessage();
       assert.deepStrictEqual(getWrites(), [
-        `${BLUE}No user messages${RESET}\n`,
+        `${YELLOW}No user messages${RESET}\n`,
       ]);
     });
 
@@ -2123,7 +2131,7 @@ latest question
     it("prints no diffs when there are no diffs", () => {
       pageLastDiff({ isTyped: true });
       assert.deepStrictEqual(getWrites(), [
-        `${BLUE}No diffs from the last turn${RESET}\n`,
+        `${YELLOW}No diffs from the last turn${RESET}\n`,
         "\n",
       ]);
     });
@@ -2132,7 +2140,7 @@ latest question
       await pageLastDiff();
       assert.deepStrictEqual(getWrites(), [
         "\n",
-        `${BLUE}No diffs from the last turn${RESET}\n`,
+        `${YELLOW}No diffs from the last turn${RESET}\n`,
         "\n",
       ]);
     });
@@ -2141,7 +2149,7 @@ latest question
       actions.setApiStreamAbortController(new AbortController());
       await pageLastDiff();
       assert.deepStrictEqual(getWrites(), [
-        `${BLUE}No diffs from the last turn${RESET}\n`,
+        `${YELLOW}No diffs from the last turn${RESET}\n`,
       ]);
     });
 
@@ -2214,7 +2222,7 @@ older summary
       pageSummaries({ isTyped: true });
 
       assert.deepStrictEqual(getWrites(), [
-        `${BLUE}No conversation summaries${RESET}\n`,
+        `${YELLOW}No conversation summaries${RESET}\n`,
         "\n",
       ]);
       assert.strictEqual(testFs._files.has("/tmp/lasso-test-uuid.txt"), false);
@@ -2224,7 +2232,7 @@ older summary
       await pageSummaries();
       assert.deepStrictEqual(getWrites(), [
         "\n",
-        `${BLUE}No conversation summaries${RESET}\n`,
+        `${YELLOW}No conversation summaries${RESET}\n`,
         "\n",
       ]);
     });
@@ -2233,7 +2241,7 @@ older summary
       actions.setApiStreamAbortController(new AbortController());
       await pageSummaries();
       assert.deepStrictEqual(getWrites(), [
-        `${BLUE}No conversation summaries${RESET}\n`,
+        `${YELLOW}No conversation summaries${RESET}\n`,
       ]);
     });
   });
@@ -2247,7 +2255,7 @@ older summary
     it("prints that the editor is empty when editor input is null", () => {
       pageEditStr({ isTyped: true });
       assert.deepStrictEqual(getWrites(), [
-        `${BLUE}Editor is empty${RESET}\n`,
+        `${YELLOW}Editor is empty${RESET}\n`,
         "\n",
       ]);
     });
@@ -2256,7 +2264,7 @@ older summary
       await pageEditStr();
       assert.deepStrictEqual(getWrites(), [
         "\n",
-        `${BLUE}Editor is empty${RESET}\n`,
+        `${YELLOW}Editor is empty${RESET}\n`,
         "\n",
       ]);
     });
@@ -2264,7 +2272,9 @@ older summary
     it("does not add spacing when streaming", async () => {
       actions.setApiStreamAbortController(new AbortController());
       await pageEditStr();
-      assert.deepStrictEqual(getWrites(), [`${BLUE}Editor is empty${RESET}\n`]);
+      assert.deepStrictEqual(getWrites(), [
+        `${YELLOW}Editor is empty${RESET}\n`,
+      ]);
     });
 
     it("opens the editor input in a pager with a header", async () => {
@@ -2351,7 +2361,7 @@ editor input
     it("prints that there are no available skills when skills list is empty", () => {
       pageSkills({ isTyped: true });
       assert.deepStrictEqual(getWrites(), [
-        `${BLUE}No available skills${RESET}\n`,
+        `${YELLOW}No available skills${RESET}\n`,
         "\n",
       ]);
       assert.strictEqual(testFs._files.has("/tmp/lasso-test-uuid.txt"), false);
@@ -2361,7 +2371,7 @@ editor input
       await pageSkills();
       assert.deepStrictEqual(getWrites(), [
         "\n",
-        `${BLUE}No available skills${RESET}\n`,
+        `${YELLOW}No available skills${RESET}\n`,
         "\n",
       ]);
     });
@@ -2370,7 +2380,7 @@ editor input
       actions.setApiStreamAbortController(new AbortController());
       await pageSkills();
       assert.deepStrictEqual(getWrites(), [
-        `${BLUE}No available skills${RESET}\n`,
+        `${YELLOW}No available skills${RESET}\n`,
       ]);
     });
   });
@@ -2503,7 +2513,7 @@ editor input
     it("prints that there are no available context files when entries list is empty", () => {
       pageAvailableContextFiles({ isTyped: true });
       assert.deepStrictEqual(getWrites(), [
-        `${BLUE}No available context files${RESET}\n`,
+        `${YELLOW}No available context files${RESET}\n`,
         "\n",
       ]);
       assert.strictEqual(testFs._files.has("/tmp/lasso-test-uuid.txt"), false);
@@ -2513,7 +2523,7 @@ editor input
       await pageAvailableContextFiles();
       assert.deepStrictEqual(getWrites(), [
         "\n",
-        `${BLUE}No available context files${RESET}\n`,
+        `${YELLOW}No available context files${RESET}\n`,
         "\n",
       ]);
     });
@@ -2522,7 +2532,7 @@ editor input
       actions.setApiStreamAbortController(new AbortController());
       await pageAvailableContextFiles();
       assert.deepStrictEqual(getWrites(), [
-        `${BLUE}No available context files${RESET}\n`,
+        `${YELLOW}No available context files${RESET}\n`,
       ]);
     });
   });
@@ -3209,7 +3219,7 @@ editor input
         assert.strictEqual(result, null);
         assert.deepStrictEqual(getWrites(), [
           "\n",
-          `${BLUE}No available skills${RESET}\n`,
+          `${YELLOW}No available skills${RESET}\n`,
           "\n",
         ]);
       });
@@ -3220,7 +3230,7 @@ editor input
         assert.strictEqual(result, null);
         assert.deepStrictEqual(getWrites(), [
           "\n",
-          `${BLUE}No available context files${RESET}\n`,
+          `${YELLOW}No available context files${RESET}\n`,
           "\n",
         ]);
       });
@@ -3325,7 +3335,7 @@ log content
         const result = await resolveSlashCommand("/lastdiff");
         assert.strictEqual(result, null);
         assert.deepStrictEqual(getWrites(), [
-          `${BLUE}No diffs from the last turn${RESET}\n`,
+          `${YELLOW}No diffs from the last turn${RESET}\n`,
           "\n",
         ]);
         assert.deepStrictEqual(spawned, []);

@@ -1165,7 +1165,7 @@ export async function pageEditStr({ isTyped = false }: SpacingOpts = {}) {
   const { editorInputValue } = getState().app;
   if (editorInputValue === null) {
     streamingSupportedWithSpacing(isTyped, () =>
-      print.doing("Editor is empty"),
+      print.warning("Editor is empty"),
     );
     return;
   }
@@ -1194,7 +1194,7 @@ ${getAvailableCommandsStr()}`;
 export async function pageSkills({ isTyped = false }: SpacingOpts = {}) {
   if (getState().app.skills.length === 0) {
     streamingSupportedWithSpacing(isTyped, () =>
-      print.doing("No available skills"),
+      print.warning("No available skills"),
     );
     return;
   }
@@ -1221,7 +1221,7 @@ export async function pageAvailableContextFiles({
 }: SpacingOpts = {}) {
   if (getState().app.contextEntries.length === 0) {
     streamingSupportedWithSpacing(isTyped, () =>
-      print.doing("No available context files"),
+      print.warning("No available context files"),
     );
     return;
   }
@@ -1498,7 +1498,7 @@ export async function pageHistory({ isTyped = false }: SpacingOpts = {}) {
 
   if (transcript.length === 0) {
     streamingSupportedWithSpacing(isTyped, () =>
-      print.doing("No chat history"),
+      print.warning("No chat history"),
     );
     return;
   }
@@ -1529,7 +1529,7 @@ export async function pageLastResponse({ isTyped = false }: SpacingOpts = {}) {
 
   if (lastMessage == undefined) {
     streamingSupportedWithSpacing(isTyped, () =>
-      print.doing("No llm messages"),
+      print.warning("No llm messages"),
     );
     return;
   }
@@ -1539,7 +1539,7 @@ export async function pageLastResponse({ isTyped = false }: SpacingOpts = {}) {
   );
   if (contentStr.length === 0) {
     streamingSupportedWithSpacing(isTyped, () =>
-      print.doing("No llm messages"),
+      print.warning("No llm messages"),
     );
     return;
   }
@@ -1562,7 +1562,7 @@ export async function pageLastMessage({ isTyped = false }: SpacingOpts = {}) {
 
   if (lastMessage == undefined) {
     streamingSupportedWithSpacing(isTyped, () =>
-      print.doing("No user messages"),
+      print.warning("No user messages"),
     );
     return;
   }
@@ -1572,7 +1572,7 @@ export async function pageLastMessage({ isTyped = false }: SpacingOpts = {}) {
 
   if (contentStr.length === 0) {
     streamingSupportedWithSpacing(isTyped, () =>
-      print.doing("No user messages"),
+      print.warning("No user messages"),
     );
     return;
   }
@@ -1590,7 +1590,7 @@ ${contentStr}`;
 export async function pageSummaries({ isTyped = false }: SpacingOpts = {}) {
   if (getState().app.conversation.summaries.length === 0) {
     streamingSupportedWithSpacing(isTyped, () =>
-      print.doing("No conversation summaries"),
+      print.warning("No conversation summaries"),
     );
     return;
   }
@@ -1622,7 +1622,7 @@ export async function pageLastDiff({ isTyped = false }: SpacingOpts = {}) {
 
   if (toolEditDiffs.length === 0) {
     streamingSupportedWithSpacing(isTyped, () =>
-      print.doing("No diffs from the last turn"),
+      print.warning("No diffs from the last turn"),
     );
     return;
   }
