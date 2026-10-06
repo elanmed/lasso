@@ -46,6 +46,7 @@ export const print = {
 
 export function wrapInColor(text: string, color: Color) {
   const reset = "\x1b[0m";
+  if (color === "none") return text;
   return `${COLORS[color]}${text}${reset}`;
 }
 

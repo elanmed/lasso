@@ -4018,7 +4018,7 @@ custom command content`,
         Buffer.from("wav pcm bytes"),
       );
       assert.deepStrictEqual(getWrites(), [
-        "Press enter to stop recording:\n",
+        `${RED}⏺${RESET} Press enter to stop recording \n`,
         `${BLUE}Transcribed: ${RESET}`,
         "hello from the mic\n",
       ]);
@@ -4075,7 +4075,7 @@ custom command content`,
       const result = await recordAndTranscribeInput();
       assert.strictEqual(result, null);
       assert.deepStrictEqual(getWrites(), [
-        "Press enter to stop recording:\n",
+        `${RED}⏺${RESET} Press enter to stop recording \n`,
         `${RED}Error while prompting the user to stop recording: boom${RESET}\n`,
       ]);
       assert.strictEqual(getState().abortControllers.recordProcess, null);
@@ -4096,7 +4096,9 @@ custom command content`,
       actions.resetStdout();
       const result = await recordAndTranscribeInput();
       assert.strictEqual(result, null);
-      assert.deepStrictEqual(getWrites(), ["Press enter to stop recording:\n"]);
+      assert.deepStrictEqual(getWrites(), [
+        `${RED}⏺${RESET} Press enter to stop recording \n`,
+      ]);
       assert.strictEqual(getState().abortControllers.recordProcess, null);
       assert.strictEqual(testFs._files.has("/tmp/lasso-test-uuid.wav"), false);
     });
@@ -4114,7 +4116,7 @@ custom command content`,
       const result = await recordAndTranscribeInput();
       assert.strictEqual(result, null);
       assert.deepStrictEqual(getWrites(), [
-        "Press enter to stop recording:\n",
+        `${RED}⏺${RESET} Press enter to stop recording \n`,
         `${RED}Error while reading the temp file that was recorded to: ENOENT: no such file${RESET}\n`,
       ]);
       assert.strictEqual(getState().abortControllers.recordProcess, null);
@@ -4137,7 +4139,9 @@ custom command content`,
       const result = await recordAndTranscribeInput();
       actions.setIsNonBlockingProcessOngoing(false);
       assert.strictEqual(result, null);
-      assert.deepStrictEqual(getWrites(), ["Press enter to stop recording:\n"]);
+      assert.deepStrictEqual(getWrites(), [
+        `${RED}⏺${RESET} Press enter to stop recording \n`,
+      ]);
       assert.strictEqual(testFs._files.has("/tmp/lasso-test-uuid.wav"), false);
     });
 
@@ -4154,7 +4158,7 @@ custom command content`,
       const result = await recordAndTranscribeInput();
       assert.strictEqual(result, null);
       assert.deepStrictEqual(getWrites(), [
-        "Press enter to stop recording:\n",
+        `${RED}⏺${RESET} Press enter to stop recording \n`,
         `${RED}Error while transcribing: bad audio${RESET}\n`,
       ]);
       assert.strictEqual(getState().abortControllers.recordProcess, null);
@@ -4192,7 +4196,9 @@ custom command content`,
       assert.strictEqual(result, null);
       assert.strictEqual(transcribeSignal?.aborted, true);
       assert.strictEqual(getState().abortControllers.transcription, null);
-      assert.deepStrictEqual(getWrites(), ["Press enter to stop recording:\n"]);
+      assert.deepStrictEqual(getWrites(), [
+        `${RED}⏺${RESET} Press enter to stop recording \n`,
+      ]);
       assert.strictEqual(testFs._files.has("/tmp/lasso-test-uuid.wav"), false);
     });
   });

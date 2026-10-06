@@ -6,6 +6,7 @@ import {
   startLoadingState,
   stopLoadingState,
   colorPrint,
+  wrapInColor,
   printSessionStartDate,
   printNewline,
   successWithSpacing,
@@ -308,6 +309,16 @@ describe("print", () => {
       const getWrites = mockStdoutWrites();
       colorPrint("hello", "blue");
       assert.deepStrictEqual(getWrites(), ["hello\n"]);
+    });
+  });
+
+  describe("wrapInColor", () => {
+    it("wraps the text in color codes", () => {
+      assert.strictEqual(wrapInColor("hello", "blue"), `${BLUE}hello${RESET}`);
+    });
+
+    it("returns the text unchanged for none", () => {
+      assert.strictEqual(wrapInColor("hello", "none"), "hello");
     });
   });
 
