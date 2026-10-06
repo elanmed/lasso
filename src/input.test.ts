@@ -4201,6 +4201,50 @@ custom command content`,
       ]);
       assert.strictEqual(testFs._files.has("/tmp/lasso-test-uuid.wav"), false);
     });
+
+    it("shows the transcription error directly when stdout is muted and not typed", async () => {
+      actions.setTranscriptionSdkProvider("openai");
+      actions.setTranscriptionModel("gpt-4o-transcribe");
+      testProcessEnv._set("LASSO_TRANSCRIPTION_API_KEY", "key");
+      mockRecording();
+      testFs._files.set("/tmp/lasso-test-uuid.wav", "wav recording bytes");
+      mock.method(aiDeps, "transcribe", () =>
+        Promise.reject(new Error("bad audio")),
+      );
+      actions.setIsNonBlockingProcessOngoing(true);
+      actions.resetStdout();
+      const result = await recordAndTranscribeInput();
+      actions.setIsNonBlockingProcessOngoing(false);
+      assert.strictEqual(result, null);
+      assert.deepStrictEqual(getWrites(), [
+        `${RED}⏺${RESET} Press enter to stop recording \n`,
+        `${RED}Error while transcribing: bad audio${RESET}\n`,
+      ]);
+      assert.deepStrictEqual(getState().app.bufferedStdoutWhileEditorOpen, "");
+      assert.strictEqual(testFs._files.has("/tmp/lasso-test-uuid.wav"), false);
+    });
+
+    it("buffers the transcription error when stdout is muted and typed", async () => {
+      actions.setTranscriptionSdkProvider("openai");
+      actions.setTranscriptionModel("gpt-4o-transcribe");
+      testProcessEnv._set("LASSO_TRANSCRIPTION_API_KEY", "key");
+      mockRecording();
+      testFs._files.set("/tmp/lasso-test-uuid.wav", "wav recording bytes");
+      mock.method(aiDeps, "transcribe", () =>
+        Promise.reject(new Error("bad audio")),
+      );
+      actions.setIsNonBlockingProcessOngoing(true);
+      actions.resetStdout();
+      const result = await recordAndTranscribeInput({ isTyped: true });
+      actions.setIsNonBlockingProcessOngoing(false);
+      assert.strictEqual(result, null);
+      assert.deepStrictEqual(getWrites(), []);
+      assert.deepStrictEqual(
+        getState().app.bufferedStdoutWhileEditorOpen,
+        `${RED}Error while transcribing: bad audio${RESET}\n`,
+      );
+      assert.strictEqual(testFs._files.has("/tmp/lasso-test-uuid.wav"), false);
+    });
   });
 
   describe("mutedStdout", () => {
