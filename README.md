@@ -557,4 +557,3 @@ vim.g.clipboard = {
 - [ ] Use native ai sdk v7 timeouts
 - [ ] Move all config validation into blockOnMissingConfig, don't throw at start
   - [ ] Separate error message for no config (`initlocal` and `initglobal`)
-- [ ] Reference history file for compacted summaries (?)
