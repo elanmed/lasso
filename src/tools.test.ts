@@ -6,6 +6,7 @@ import {
   bashToolInputSchema,
   executeBashTool,
   executeWebFetchHtmlTool,
+  executeReadImageTool,
   executeWebFetchJsonTool,
   loadSkillTool,
   createSubagentTool,
@@ -481,6 +482,94 @@ describe("tools", () => {
     });
   });
 
+  describe("executeReadImageTool", () => {
+    it("returns base64 data and the media type for an image file", async () => {
+      testFs.writeFile("/test/cwd/image.png", "png bytes");
+      const result = await executeReadImageTool({
+        filePath: "/test/cwd/image.png",
+      });
+      assert.deepStrictEqual(result, {
+        isError: false,
+        base64Data: "cG5nIGJ5dGVz",
+        mediaType: "image/png",
+      });
+    });
+
+    it("matches the extension case-insensitively", async () => {
+      testFs.writeFile("/test/cwd/photo.JPEG", "jpeg bytes");
+      const result = await executeReadImageTool({
+        filePath: "/test/cwd/photo.JPEG",
+      });
+      assert.deepStrictEqual(result, {
+        isError: false,
+        base64Data: Buffer.from("jpeg bytes").toString("base64"),
+        mediaType: "image/jpeg",
+      });
+    });
+
+    it("passes the model output through in toModelOutput", async () => {
+      const { toModelOutput } = harnessTools.read_image;
+      assert(toModelOutput !== undefined);
+      const result = await toModelOutput({
+        toolCallId: "tool-id",
+        input: { filePath: "/test/cwd/image.png" },
+        output: {
+          isError: false,
+          base64Data: "cG5nIGJ5dGVz",
+          mediaType: "image/png",
+        },
+      } as never);
+      assert.deepStrictEqual(result, {
+        type: "content",
+        value: [
+          {
+            type: "file",
+            data: { type: "data", data: "cG5nIGJ5dGVz" },
+            mediaType: "image/png",
+          },
+        ],
+      });
+    });
+
+    it("maps an error output to text in toModelOutput", async () => {
+      const { toModelOutput } = harnessTools.read_image;
+      assert(toModelOutput !== undefined);
+      const result = await toModelOutput({
+        toolCallId: "tool-id",
+        input: { filePath: "/test/cwd/notes.txt" },
+        output: {
+          isError: true,
+          content: "Unsupported image file type: .txt",
+        },
+      } as never);
+      assert.deepStrictEqual(result, {
+        type: "text",
+        value: "Unsupported image file type: .txt",
+      });
+    });
+
+    it("returns isError for an unsupported file extension", async () => {
+      testFs.writeFile("/test/cwd/notes.txt", "text");
+      const result = await executeReadImageTool({
+        filePath: "/test/cwd/notes.txt",
+      });
+      assert.deepStrictEqual(result, {
+        isError: true,
+        content: "Unsupported image file type: .txt",
+      });
+    });
+
+    it("returns isError when the file does not exist", async () => {
+      const result = await executeReadImageTool({
+        filePath: "/test/cwd/missing.png",
+      });
+      assert.deepStrictEqual(result, {
+        isError: true,
+        content: "ENOENT: /test/cwd/missing.png",
+      });
+    });
+  });
+
   describe("TOOLS", () => {
     it("registers tools under the names referenced by the system prompt", () => {
       assert.deepStrictEqual(Object.keys(harnessTools), [
@@ -488,6 +577,7 @@ describe("tools", () => {
         "web_fetch_json",
         "load_skill",
         "bash",
+        "read_image",
         "create_subagent",
       ]);
     });
@@ -687,6 +777,7 @@ describe("tools", () => {
           "web_fetch_json",
           "load_skill",
           "bash",
+          "read_image",
         ]);
         assert.strictEqual(firstMessage.role, "user");
       });
@@ -704,6 +795,7 @@ describe("tools", () => {
             "web_fetch_json",
             "load_skill",
             "bash",
+            "read_image",
             "mcp_tool",
           ]);
           const onStart = options["onToolExecutionStart"] as (

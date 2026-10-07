@@ -6,7 +6,7 @@ _A minimal agent harness to rein in your llm_
 
 ## Features
 
-- **Minimal**: ~6,600 lines of source code, ~14,700 lines of tests
+- **Minimal**: ~6,700 lines of source code, ~14,800 lines of tests
   - Responses are piped through `bat` to render markdown
   - Multi-line input is supported by spawning an editor of your choice
   - Messages can be queued by typing a custom delimiter (default `l---`) in the spawned editor
@@ -440,6 +440,7 @@ Available skills are listed in the system prompt, the LLM can use the `load_skil
 ## Tools
 
 - `bash` — run bash commands. All CRUD operations are performed via this tool
+- `read_image` — read an image file from disk so the model can look at it
 - `web_fetch_html` — fetch a URL and return extracted article content
 - `web_fetch_json` — fetch a JSON API endpoint and return parsed data
 - `load_skill` — load a skill to get specialized instructions
@@ -547,7 +548,7 @@ vim.g.clipboard = {
 
 ## TODO (now)
 
-- [ ] Add a tool for consuming images
+- [ ] Add a tool for listing, providing MCP sources
 
 ## TODO (soon)
 
@@ -560,4 +561,3 @@ vim.g.clipboard = {
   - [ ] Separate error message for no config (`initlocal` and `initglobal`)
 - [ ] Reference history file for compacted summaries (?)
 - [ ] Exit cleanly from C-d while loading
-- [ ] Add a tool for listing, providing MCP sources

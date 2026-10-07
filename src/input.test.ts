@@ -2406,6 +2406,7 @@ editor input
 - **[lasso] web_fetch_json**: Fetch a JSON API endpoint by URL and return the parsed JSON response.
 - **[lasso] load_skill**: Load a skill to get specialized instructions
 - **[lasso] bash**: Execute a bash command and return its output.
+- **[lasso] read_image**: Read an image file from disk so you can look at it
 - **[lasso] create_subagent**: Launch parallel subagents for independent investigation or implementation. Prefer read-only subagents for parallel work to avoid conflicts. Read-only subagents can fetch web content, inspect files, and load skills; read-write subagents can modify files or execute commands.
 
 `,
@@ -2442,6 +2443,7 @@ editor input
 - **[lasso] web_fetch_json**: Fetch a JSON API endpoint by URL and return the parsed JSON response.
 - **[lasso] load_skill**: Load a skill to get specialized instructions
 - **[lasso] bash**: Execute a bash command and return its output.
+- **[lasso] read_image**: Read an image file from disk so you can look at it
 - **[lasso] create_subagent**: Launch parallel subagents for independent investigation or implementation. Prefer read-only subagents for parallel work to avoid conflicts. Read-only subagents can fetch web content, inspect files, and load skills; read-write subagents can modify files or execute commands.
 - **[first mcp] mcp_tool**: [no description available]
 - **[first mcp] described_tool**: A described MCP tool
@@ -3129,6 +3131,7 @@ editor input
 - **[lasso] web_fetch_json**: Fetch a JSON API endpoint by URL and return the parsed JSON response.
 - **[lasso] load_skill**: Load a skill to get specialized instructions
 - **[lasso] bash**: Execute a bash command and return its output.
+- **[lasso] read_image**: Read an image file from disk so you can look at it
 - **[lasso] create_subagent**: Launch parallel subagents for independent investigation or implementation. Prefer read-only subagents for parallel work to avoid conflicts. Read-only subagents can fetch web content, inspect files, and load skills; read-write subagents can modify files or execute commands.
 
 `,
@@ -3761,7 +3764,7 @@ commands diff
         assert(warningWrite !== undefined);
         assert.ok(
           warningWrite.startsWith(
-            `${YELLOW}The current set of context, skills, and tools is 71.09% of the 100,000 token context window!`,
+            `${YELLOW}The current set of context, skills, and tools is 71.18% of the 100,000 token context window!`,
           ),
         );
       });
@@ -3819,7 +3822,7 @@ commands diff
         assert.ok(
           getWrites().some((w) =>
             w.includes(
-              "The current set of context, skills, and tools is 71.09% of the 100,000 token context window!",
+              "The current set of context, skills, and tools is 71.18% of the 100,000 token context window!",
             ),
           ),
         );

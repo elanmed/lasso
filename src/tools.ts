@@ -1,3 +1,4 @@
+import { extname } from "node:path";
 import { tool, type ModelMessage } from "ai";
 import { z } from "zod";
 import { Window } from "happy-dom";
@@ -16,7 +17,7 @@ import { createToolCallDiffer } from "./differ.ts";
 import { print, bold } from "./print.ts";
 import { getState } from "./state.ts";
 import { getLanguageModel } from "./model.ts";
-import { aiDeps, childProcessDeps } from "./deps.ts";
+import { aiDeps, childProcessDeps, fsDeps } from "./deps.ts";
 import { appendModelUsage } from "./usage.ts";
 import { getSubagentPrompt } from "./prompts.ts";
 
@@ -556,6 +557,52 @@ export async function createSubagentTool(
   };
 }
 
+const mediaTypeByExtension: Record<string, string> = {
+  ".png": "image/png",
+  ".jpg": "image/jpeg",
+  ".jpeg": "image/jpeg",
+  ".gif": "image/gif",
+  ".webp": "image/webp",
+};
+
+const readImageSchema = z.object({ filePath: z.string() });
+export type ReadImageTool = z.infer<typeof readImageSchema>;
+
+export type ReadImageResult =
+  | { isError: true; content: string }
+  | { isError: false; base64Data: string; mediaType: string };
+
+export async function executeReadImageTool(
+  { filePath }: ReadImageTool,
+  signal?: AbortSignal,
+): Promise<ReadImageResult> {
+  const readFileResult = await tryCatchAsync(
+    fsDeps.readFile(filePath, { signal }),
+  );
+  if (!readFileResult.ok) {
+    if (isAbortError(readFileResult.error)) {
+      throw readFileResult.error;
+    }
+
+    return {
+      isError: true,
+      content: getMessageFromError(readFileResult.error),
+    };
+  }
+  const mediaType = mediaTypeByExtension[extname(filePath).toLowerCase()];
+  if (mediaType === undefined) {
+    return {
+      isError: true,
+      content: `Unsupported image file type: ${extname(filePath)}`,
+    };
+  }
+  return {
+    isError: false,
+    base64Data: readFileResult.value.toString("base64"),
+    mediaType,
+  };
+}
+
 const subagentSafeTools = {
   web_fetch_html: tool({
     description:
@@ -578,6 +625,27 @@ const subagentSafeTools = {
     description: "Execute a bash command and return its output.",
     inputSchema: bashToolInputSchema,
     execute: (args, opts) => executeBashTool(args, opts.abortSignal),
+  }),
+  read_image: tool({
+    description: "Read an image file from disk so you can look at it",
+    inputSchema: readImageSchema,
+    execute: (args, opts) => executeReadImageTool(args, opts.abortSignal),
+    toModelOutput: ({ output }) => {
+      if (output.isError) {
+        return { type: "text", value: output.content };
+      }
+
+      return {
+        type: "content",
+        value: [
+          {
+            type: "file",
+            data: { type: "data", data: output.base64Data },
+            mediaType: output.mediaType,
+          },
+        ],
+      };
+    },
   }),
 };
 
