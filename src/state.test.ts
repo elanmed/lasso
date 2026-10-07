@@ -75,6 +75,7 @@ skills body`,
         editorInputValue: null,
         isInitializing: false,
         isNonBlockingProcessOngoing: false,
+        isRecording: false,
         bufferedInputWhileInitializing: "",
         slashCommands: [],
         stdoutTail: "",
@@ -287,6 +288,16 @@ skills body`,
       assert.equal(getState().app.promptTokens.dirty, true);
       actions.setPromptTokensDirty(false);
       assert.equal(getState().app.promptTokens.dirty, false);
+    });
+  });
+
+  describe("recording state", () => {
+    it("set-is-recording", () => {
+      assert.equal(getState().app.isRecording, false);
+      actions.setIsRecording(true);
+      assert.equal(getState().app.isRecording, true);
+      actions.setIsRecording(false);
+      assert.equal(getState().app.isRecording, false);
     });
   });
 

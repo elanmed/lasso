@@ -2716,6 +2716,49 @@ editor input
         assert.strictEqual(getState().app.editorInputValue, null);
       });
 
+      it("ignores keymaps while recording", async () => {
+        actions.setKeymaps({
+          ...defaultConfig.keymaps,
+          clear: { name: "k", ctrl: true },
+        });
+        actions.setIsRecording(true);
+        harness.emitKey({ name: "k", ctrl: true });
+        await harness.flush();
+        assert.deepStrictEqual(harness.writes, []);
+      });
+
+      it("runs the record keymap and toggles isRecording around it", async () => {
+        let recordingDuringQuestion: boolean | undefined;
+        actions.setQuestionAbortController(null);
+        actions.setKeymaps({
+          ...defaultConfig.keymaps,
+          record: { name: "r", ctrl: true },
+        });
+        testProcessEnv._set("LASSO_TRANSCRIPTION_API_KEY", "key");
+        actions.setTranscriptionSdkProvider("openai");
+        actions.setTranscriptionModel("gpt-4o-transcribe");
+        actions.setRl(
+          makeFakeRl({
+            question: () => {
+              recordingDuringQuestion = getState().app.isRecording;
+              return Promise.resolve("");
+            },
+          }),
+        );
+        actions.resetStdout();
+        mockRecording();
+        mockTranscription("hello from the mic");
+        harness.emitKey({ name: "r", ctrl: true });
+        assert.strictEqual(getState().app.isRecording, true);
+        await harness.flush();
+        assert.strictEqual(recordingDuringQuestion, true);
+        assert.strictEqual(getState().app.isRecording, false);
+        assert.strictEqual(
+          getState().app.editorInputValue,
+          "hello from the mic",
+        );
+      });
+
       it("runs edit command when its keymap matches", async () => {
         const prompts: boolean[] = [];
         mock.method(harness.rl, "prompt", (arg: boolean) => {
@@ -3242,12 +3285,23 @@ editor input
         actions.setTranscriptionSdkProvider("openai");
         actions.setTranscriptionModel("gpt-4o-transcribe");
         actions.resetStdout();
-        actions.setRl(makeFakeRlWithWrites().rl);
+        let recordingDuringQuestion: boolean | undefined;
+        actions.setRl(
+          makeFakeRlWithWrites({
+            question: () => {
+              recordingDuringQuestion = getState().app.isRecording;
+              return Promise.resolve("");
+            },
+          }).rl,
+        );
+        assert.strictEqual(getState().app.isRecording, false);
         mockRecording();
         mockTranscription("hello from the mic");
         testFs._files.set("/tmp/lasso-test-uuid.wav", "wav recording bytes");
         const result = await resolveSlashCommand("/record");
         assert.strictEqual(result, "hello from the mic");
+        assert.strictEqual(recordingDuringQuestion, true);
+        assert.strictEqual(getState().app.isRecording, false);
         assert.deepStrictEqual(getState().app.transcript, [
           {
             timestamp: 0,

@@ -84,6 +84,7 @@ interface State {
     editorInputValue: string | null;
     isNonBlockingProcessOngoing: boolean;
     isInitializing: boolean;
+    isRecording: boolean;
     bufferedInputWhileInitializing: string;
     slashCommands: SlashCommand[];
     stdoutTail: string;
@@ -135,6 +136,7 @@ const createInitialState = (): State => ({
     editorInputValue: null,
     isNonBlockingProcessOngoing: false,
     isInitializing: false,
+    isRecording: false,
     bufferedInputWhileInitializing: "",
     slashCommands: [],
     stdoutTail: "",
@@ -440,6 +442,12 @@ export const actions = {
       String(before),
       String(isInitializing),
     );
+  },
+
+  setIsRecording(isRecording: boolean) {
+    const before = state.app.isRecording;
+    state.app.isRecording = isRecording;
+    logStateChange("set-is-recording", String(before), String(isRecording));
   },
 
   appendBufferedInputWhileInitializing(input: string) {

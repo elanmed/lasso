@@ -189,6 +189,7 @@ export function initKeypress(rl: readline.Interface) {
   stdin.on("keypress", (_char, key: Key) => {
     void (async () => {
       if (getState().app.isNonBlockingProcessOngoing) return;
+      if (getState().app.isRecording) return;
 
       const keymaps = getState().config.keymaps;
 
@@ -217,10 +218,12 @@ export function initKeypress(rl: readline.Interface) {
               return;
             }
 
+            actions.setIsRecording(true);
             const transcriptionInput = await wrapToOpenNonBlockingProcess(
               recordAndTranscribeInput,
               { pauseStdin: false },
             );
+            actions.setIsRecording(false);
 
             if (transcriptionInput !== null) {
               actions.appendEditorInputValue(transcriptionInput);
@@ -409,7 +412,6 @@ export function initSigInt(rl: readline.Interface) {
       apiStream,
       interruptWithEditorContent,
       question,
-      recordProcess,
       transcription,
     ];
     assertAtBuildtime(controllers.filter((c) => c !== null).length <= 1);
@@ -835,9 +837,12 @@ async function resolveBuiltinSlashCommand(
       return { handled: true, inputFromCommand: null };
     }
     case "record": {
+      actions.setIsRecording(true);
       const inputFromCommand = await recordAndTranscribeInput({
         isTyped: true,
       });
+      actions.setIsRecording(false);
+
       if (inputFromCommand !== null) {
         await syncSessionFile({
           transcript: getAppendedTranscript({
