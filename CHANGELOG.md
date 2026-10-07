@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.11.2 - 2026-10-07
+
+- Add a `read_image` tool for attaching image files to the conversation
+- Add `mcp_list_resources` and `mcp_read_resource` tools, and list available MCP servers in the base prompt
+- Print warnings for misc failed actions as errors instead (unreadable config, agent and skill files, temp files, session logging)
+- Ignore keymap commands while `/record` is running, and allow interrupting an api stream while the record process is running
+- Exit cleanly on C-d in every state: while loading, while a process is running, and when readline is already closed, stopping the loading spinner on exit so trailing output isn't garbled
+
 ## v0.11.1 - 2026-10-06
 
 - Polish `/record` prompt with a red "⏺" symbol
