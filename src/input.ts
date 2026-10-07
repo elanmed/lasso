@@ -9,6 +9,7 @@ import type { AssistantContent, Tool } from "ai";
 import { assertAtBuildtime } from "./assert.ts";
 import {
   isAbortError,
+  isReadlineClosedError,
   tryCatchAsync,
   getMessageFromError,
   normalizeNewline,
@@ -560,6 +561,10 @@ export async function resolveUserInput({
   actions.setQuestionAbortController(null);
 
   if (!inputResult.ok) {
+    if (isReadlineClosedError(inputResult.error)) {
+      await exitSession();
+    }
+
     if (!isAbortError(inputResult.error)) {
       print.error(getMessageFromError(inputResult.error));
       return null;
@@ -622,10 +627,10 @@ export function shouldResolveSlashCommand(
 }
 
 async function exitSession({ isTyped = false }: SpacingOpts = {}) {
+  stopLoadingState();
   const rl = getState().app.rl;
   assertAtBuildtime(rl !== null);
   rl.close();
-  // TODO: can we flush stdout?
   streamingSupportedWithSpacing(isTyped, () => printSessionStartDate());
   await getState().mcp.close();
   process.exit(0);
@@ -646,7 +651,10 @@ async function resolveExitConfirmation() {
   actions.setQuestionAbortController(null);
 
   if (!exitResult.ok) {
-    if (isAbortError(exitResult.error)) {
+    if (
+      isAbortError(exitResult.error) ||
+      isReadlineClosedError(exitResult.error)
+    ) {
       await exitSession({ isTyped: true });
     }
 

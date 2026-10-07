@@ -548,8 +548,6 @@ vim.g.clipboard = {
 
 ## TODO (now)
 
-- [ ] Exit cleanly from C-d while loading
-
 ## TODO (soon)
 
 - [ ] Investigate potential shell expansion issues
@@ -560,4 +558,3 @@ vim.g.clipboard = {
 - [ ] Move all config validation into blockOnMissingConfig, don't throw at start
   - [ ] Separate error message for no config (`initlocal` and `initglobal`)
 - [ ] Reference history file for compacted summaries (?)
-- [ ] Exit cleanly from C-d while loading

@@ -1,6 +1,11 @@
 import { fileURLToPath } from "node:url";
 import { getMessageFromError } from "./utils.ts";
-import { print, printNewline, printSessionStartDate } from "./print.ts";
+import {
+  print,
+  printNewline,
+  printSessionStartDate,
+  stopLoadingState,
+} from "./print.ts";
 import { fencePrint } from "./fence.ts";
 import { executeBat, warnOnMissingBat } from "./terminal.ts";
 import { initState, blockOnMissingConfig } from "./config.ts";
@@ -61,6 +66,7 @@ async function main() {
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   main().catch(async (error: unknown) => {
     print.error(getMessageFromError(error));
+    stopLoadingState();
     printSessionStartDate();
     await getState().mcp.close();
     process.exit(1);
