@@ -89,24 +89,18 @@ describe("prompts", () => {
       it("formats the base agent prompt with mcp server bullets", () => {
         const prompt = getBaseAgentPrompt(["alpha", "beta"]);
         assert(
-          prompt.includes(
-            "## [lasso] Available MCP Servers\n\n- alpha\n- beta\n\n",
-          ),
+          prompt.includes("## [lasso] MCP Servers\n\n- alpha\n- beta\n\n"),
         );
       });
 
       it("formats the read-only subagent prompt with mcp server bullets", () => {
         const prompt = getSubagentPrompt("read-only", ["alpha"]);
-        assert(
-          prompt.includes("## [lasso] Available MCP Servers\n\n- alpha\n\n"),
-        );
+        assert(prompt.includes("## [lasso] MCP Servers\n\n- alpha\n\n"));
       });
 
       it("formats the read-write subagent prompt with mcp server bullets", () => {
         const prompt = getSubagentPrompt("read-write", ["alpha"]);
-        assert(
-          prompt.includes("## [lasso] Available MCP Servers\n\n- alpha\n\n"),
-        );
+        assert(prompt.includes("## [lasso] MCP Servers\n\n- alpha\n\n"));
       });
 
       it("uses No available MCP servers as the list when there are none", () => {
@@ -114,7 +108,7 @@ describe("prompts", () => {
 
         assert(
           prompt.includes(
-            "## [lasso] Available MCP Servers\n\nNo available MCP servers\n\n",
+            "## [lasso] MCP Servers\n\nNo available MCP servers\n\n",
           ),
         );
       });

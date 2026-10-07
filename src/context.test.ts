@@ -1,6 +1,7 @@
 import { describe, it, beforeEach, afterEach, mock } from "node:test";
 import assert from "node:assert";
 import {
+  mockGitLsFilesRejection,
   mockStdoutWrites,
   RED,
   RESET,
@@ -598,11 +599,7 @@ would benefit from specialized instructions.
       });
 
       it("warns when listing the agent files with git fails", async () => {
-        mock.method(
-          fsDeps,
-          "gitLsFiles",
-          () => Promise.reject(new Error("git failed")) as unknown as string[],
-        );
+        mockGitLsFilesRejection();
         const writes = mockStdoutWrites();
 
         const result = await getSkills();

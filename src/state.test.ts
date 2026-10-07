@@ -1,12 +1,12 @@
 import { describe, it, beforeEach, afterEach, mock } from "node:test";
 import assert from "node:assert";
-import type { MCPClient } from "@ai-sdk/mcp";
 import { actions, getState, promptDeps, SessionFileSchema } from "./state.ts";
 import { getBaseAgentPrompt } from "./prompts.ts";
 import { stringify } from "./utils.ts";
 import { defaultConfig } from "./config-types.ts";
 import { MISSING } from "./missing.ts";
 import {
+  makeFakeMcpClient,
   makeFakeRl,
   makeStartupPerformanceLogger,
   setupTestContext,
@@ -396,8 +396,8 @@ skills body`,
     it("mcp state closes all clients when initialized", async () => {
       const closeFirst = mock.fn(() => undefined);
       const closeSecond = mock.fn(() => undefined);
-      const firstClient = { close: closeFirst } as unknown as MCPClient;
-      const secondClient = { close: closeSecond } as unknown as MCPClient;
+      const firstClient = makeFakeMcpClient({ close: closeFirst });
+      const secondClient = makeFakeMcpClient({ close: closeSecond });
       actions.setMcp({ first: firstClient, second: secondClient }, {});
 
       const performanceLogger = makeStartupPerformanceLogger();

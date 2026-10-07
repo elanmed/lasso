@@ -16,7 +16,13 @@ import {
   mcpDeps,
   processDeps,
 } from "./deps.ts";
-import { actions, getState, promptDeps, type SessionFile } from "./state.ts";
+import {
+  actions,
+  getState,
+  promptDeps,
+  type MCPToolSet,
+  type SessionFile,
+} from "./state.ts";
 import { initKeypress } from "./input.ts";
 import type { Key, Mcp, SdkProvider } from "./config-types.ts";
 import { getMcpLogIdToLabel } from "./config.ts";
@@ -675,11 +681,48 @@ export async function drainTimerCallbacks(
 export function makeFakeMcpClient({
   tools,
   close,
-}: { tools?: () => Promise<unknown>; close?: () => void } = {}) {
+  listResources,
+  readResource,
+}: {
+  tools?: () => Promise<unknown>;
+  close?: () => void;
+  listResources?: (options?: {
+    params?: { cursor: string };
+  }) => Promise<unknown>;
+  readResource?: (args: { uri: string }) => Promise<unknown>;
+} = {}) {
   return {
     tools: tools ?? (() => Promise.resolve({})),
     close: close ?? (() => undefined),
+    listResources: listResources ?? (() => Promise.resolve({})),
+    readResource: readResource ?? (() => Promise.resolve({})),
   } as unknown as MCPClient;
+}
+
+export function setMcpClients({
+  clients,
+  tools = {},
+}: {
+  clients: Record<string, unknown>;
+  tools?: Record<string, unknown>;
+}) {
+  actions.setMcp(clients as Record<string, MCPClient>, tools as MCPToolSet);
+}
+
+export function makeFakeMcpToolSet(tools: Record<string, unknown>) {
+  return tools as unknown as MCPToolSet;
+}
+
+export function makeInvalidString(): string {
+  return null as unknown as string;
+}
+
+export function mockGitLsFilesRejection() {
+  mock.method(
+    fsDeps,
+    "gitLsFiles",
+    () => Promise.reject(new Error("git failed")) as unknown as string[],
+  );
 }
 
 export function setMcps(...names: string[]) {

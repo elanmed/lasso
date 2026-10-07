@@ -11,6 +11,7 @@ import {
 } from "./terminal.ts";
 import {
   batPagerCmd,
+  makeInvalidString,
   mockExec,
   mockSpawnSync,
   mockStdoutWrites,
@@ -176,7 +177,7 @@ describe("terminal", () => {
 
     it("returns original content and warns when formatting fails", async () => {
       const getWrites = mockStdoutWrites();
-      const invalid = null as unknown as string;
+      const invalid = makeInvalidString();
       const result = await formatMarkdown(invalid);
       assert.equal(result, invalid);
       assert.deepStrictEqual(getWrites(), [

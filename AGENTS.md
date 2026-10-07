@@ -42,6 +42,7 @@ The README states approximate source and test line counts. Run `./agent-pnpm-run
 - Minimize diffs — only change what's necessary
 - All changes must have test coverage
 - Prefer `assert.deepStrictEqual` over multiple individual field assertions — check the whole object in one call
+- Never write `as unknown as ...` casts inline in tests — when a fake value must satisfy a broad interface type, add a helper in `test-helpers.ts` that performs the cast once and use that helper in the test
 - Never use `content: result.content` in deepStrictEqual assertions — it's a tautology. Inline the actual expected value
 - Inline numbers and strings in test expectations instead of interpolating them from variables or computing them at runtime — the expected value should be written out literally
 - It is fine to interpolate shared ANSI escape sequence constants (e.g. `BLUE`, `UP_1`, `CR`) in test expectations instead of writing the escapes out literally

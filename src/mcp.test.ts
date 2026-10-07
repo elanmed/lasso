@@ -1,7 +1,6 @@
 import { afterEach, beforeEach, describe, it, mock } from "node:test";
 import assert from "node:assert";
-import type { MCPClient } from "@ai-sdk/mcp";
-import { actions, getState, type MCPToolSet } from "./state.ts";
+import { actions, getState } from "./state.ts";
 import { initMcpState } from "./mcp.ts";
 import {
   executeMcpListResourcesTool,
@@ -20,9 +19,11 @@ import {
   UP_1,
   UP_2,
   makeFakeMcpClient,
+  makeFakeMcpToolSet,
   makeStartupPerformanceLogger,
   mockMcpClients,
   mockStdoutWrites,
+  setMcpClients,
   setMcps,
   setupTestContext,
 } from "./test-helpers.ts";
@@ -37,12 +38,12 @@ describe("mcp", () => {
   });
 
   it("sets clients and tools", () => {
-    const firstClient = {} as MCPClient;
-    const secondClient = {} as MCPClient;
+    const firstClient = makeFakeMcpClient();
+    const secondClient = makeFakeMcpClient();
     const clients = { first: firstClient, second: secondClient };
-    const tools = {} as MCPToolSet;
+    const tools = makeFakeMcpToolSet({});
 
-    actions.setMcp(clients, tools);
+    setMcpClients({ clients, tools });
 
     assert.strictEqual(getState().mcp.clients, clients);
     assert.strictEqual(getState().mcp.tools, tools);
@@ -50,9 +51,9 @@ describe("mcp", () => {
 
   describe("executeMcpListResourcesTool", () => {
     it("returns the resources of the given server", async () => {
-      actions.setMcp(
-        {
-          first: {
+      setMcpClients({
+        clients: {
+          first: makeFakeMcpClient({
             listResources: () =>
               Promise.resolve({
                 resources: [
@@ -65,10 +66,9 @@ describe("mcp", () => {
                 ],
                 nextCursor: "cursor-2",
               }),
-          } as unknown as MCPClient,
+          }),
         },
-        {},
-      );
+      });
 
       const result = await executeMcpListResourcesTool({ server: "first" });
 
@@ -96,7 +96,9 @@ describe("mcp", () => {
           return Promise.resolve({ resources: [{ uri: "file:///a.txt" }] });
         },
       );
-      actions.setMcp({ first: { listResources } as unknown as MCPClient }, {});
+      setMcpClients({
+        clients: { first: makeFakeMcpClient({ listResources }) },
+      });
 
       const result = await executeMcpListResourcesTool({
         server: "first",
@@ -122,14 +124,13 @@ describe("mcp", () => {
     });
 
     it("returns isError when listing fails", async () => {
-      actions.setMcp(
-        {
-          first: {
+      setMcpClients({
+        clients: {
+          first: makeFakeMcpClient({
             listResources: () => Promise.reject(new Error("boom")),
-          } as unknown as MCPClient,
+          }),
         },
-        {},
-      );
+      });
 
       const result = await executeMcpListResourcesTool({ server: "first" });
       assert.deepStrictEqual(result, {
@@ -141,19 +142,18 @@ describe("mcp", () => {
 
   describe("executeMcpReadResourceTool", () => {
     it("returns the text contents of the given resource", async () => {
-      actions.setMcp(
-        {
-          first: {
+      setMcpClients({
+        clients: {
+          first: makeFakeMcpClient({
             readResource: ({ uri }: { uri: string }) =>
               Promise.resolve({
                 contents: [
                   { uri, mimeType: "text/plain", text: "resource text" },
                 ],
               }),
-          } as unknown as MCPClient,
+          }),
         },
-        {},
-      );
+      });
 
       const result = await executeMcpReadResourceTool({
         server: "first",
@@ -174,17 +174,16 @@ describe("mcp", () => {
     });
 
     it("returns blob contents as base64", async () => {
-      actions.setMcp(
-        {
-          first: {
+      setMcpClients({
+        clients: {
+          first: makeFakeMcpClient({
             readResource: () =>
               Promise.resolve({
                 contents: [{ uri: "file:///a.png", blob: "aGVsbG8=" }],
               }),
-          } as unknown as MCPClient,
+          }),
         },
-        {},
-      );
+      });
 
       const result = await executeMcpReadResourceTool({
         server: "first",
@@ -216,14 +215,13 @@ describe("mcp", () => {
     });
 
     it("returns isError when reading fails", async () => {
-      actions.setMcp(
-        {
-          first: {
+      setMcpClients({
+        clients: {
+          first: makeFakeMcpClient({
             readResource: () => Promise.reject(new Error("boom")),
-          } as unknown as MCPClient,
+          }),
         },
-        {},
-      );
+      });
 
       const result = await executeMcpReadResourceTool({
         server: "first",
@@ -242,7 +240,7 @@ describe("mcp", () => {
       const closeSecond = mock.fn(() => undefined);
       const firstClient = makeFakeMcpClient({ close: closeFirst });
       const secondClient = makeFakeMcpClient({ close: closeSecond });
-      actions.setMcp({ first: firstClient, second: secondClient }, {});
+      setMcpClients({ clients: { first: firstClient, second: secondClient } });
 
       const performanceLogger = makeStartupPerformanceLogger();
       await initMcpState({ performanceLogger });
@@ -289,9 +287,9 @@ describe("mcp", () => {
     });
 
     it("keeps the tools of clients whose tools() call succeeds", async () => {
-      const tools = {
+      const tools = makeFakeMcpToolSet({
         greet: { description: "says hello" },
-      } as unknown as MCPToolSet;
+      });
       const firstClient = makeFakeMcpClient({
         tools: () => Promise.reject(new Error("boom")),
       });
