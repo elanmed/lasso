@@ -46,7 +46,7 @@ export async function syncSessionFile({
       fsDeps.mkdir(sessionDir, { recursive: true }),
     );
     if (!mkdirResult.ok) {
-      print.warning(`Failed to create the directory: ${sessionDir}`);
+      print.error(`Failed to create the directory: ${sessionDir}`);
       return;
     }
   }
@@ -63,7 +63,7 @@ export async function syncSessionFile({
 
   const stringifyResult = tryCatch(() => JSON.stringify(next));
   if (!stringifyResult.ok) {
-    print.warning("Failed to stringify the session file");
+    print.error("Failed to stringify the session file");
     return;
   }
 
@@ -71,7 +71,7 @@ export async function syncSessionFile({
     fsDeps.writeFile(sessionFilePath, stringifyResult.value),
   );
   if (!writeResult.ok) {
-    print.warning(`Failed to write the session file to ${sessionFilePath}`);
+    print.error(`Failed to write the session file to ${sessionFilePath}`);
     return;
   }
 }
@@ -117,7 +117,7 @@ export async function initSessionFile() {
       fsDeps.mkdir(sessionDir, { recursive: true }),
     );
     if (!mkDirResult.ok) {
-      print.warning(`Failed to create the directory: ${sessionDir}`);
+      print.error(`Failed to create the directory: ${sessionDir}`);
       return;
     }
   }
@@ -131,7 +131,7 @@ export async function initSessionFile() {
     fsDeps.writeFile(sessionFilePath, ""),
   );
   if (!writeResult.ok) {
-    print.warning(`Failed to write the session file to ${sessionFilePath}`);
+    print.error(`Failed to write the session file to ${sessionFilePath}`);
   }
 }
 

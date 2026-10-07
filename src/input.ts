@@ -1379,12 +1379,23 @@ async function reload() {
   );
   const diffResults = [];
   for (let i = 0; i < reloadTempFilePrefixes.length; i++) {
+    const prefix = reloadTempFilePrefixes[i];
+    assertAtBuildtime(prefix !== undefined);
+
     const beforeFile = beforeFiles[i];
-    if (beforeFile === null || beforeFile === undefined) continue;
+    if (beforeFile === null || beforeFile === undefined) {
+      print.error(
+        `Failed to create a before temp file for the reload diff of ${prefix}`,
+      );
+      continue;
+    }
 
     const afterFile = afterFiles[i];
     if (afterFile === null || afterFile === undefined) {
       await tryCatchAsync(fsDeps.unlink(beforeFile));
+      print.warning(
+        `Failed to create an after temp file for the reload diff of ${prefix}`,
+      );
       continue;
     }
 
@@ -1408,8 +1419,6 @@ async function reload() {
     }
 
     if (diffResult.value.stdout.length > 0) {
-      const prefix = reloadTempFilePrefixes[i];
-      assertAtBuildtime(prefix !== undefined);
       diffResults.push(
         `${getReloadTempFileDiffTitle()[prefix]}
 ${normalizeNewline(diffResult.value.stdout)}`,

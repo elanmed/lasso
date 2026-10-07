@@ -3565,6 +3565,8 @@ log content
           { stdout: "delta 0.18.2" },
           { stdout: "commands diff\n" },
         ]);
+        const writes = mockStdoutWrites();
+
         const result = await resolveSlashCommand("/reload");
         assert.strictEqual(result, null);
         assert.strictEqual(
@@ -3590,6 +3592,19 @@ commands diff
           testFs._files.has("/tmp/lasso-global-after-test-uuid.txt"),
           false,
         );
+        assert.deepStrictEqual(writes(), [
+          `${YELLOW}- Warning: using a default context window of 128,000 tokens because there is no \`contextWindowPerModel\` entry for the current model \`__MISSING__\`${RESET}\n`,
+          `${BLUE}Reading context files: ${RESET}\n`,
+          `${BLUE}Reading skills: ${RESET}\n`,
+          `${BLUE}Reading slash commands: ${RESET}\n`,
+          `${BLUE}Reading context files: ${RESET}`,
+          `${GREEN}0.0ms${RESET}`,
+          `${BLUE}Reading skills: ${RESET}`,
+          `${GREEN}0.0ms${RESET}`,
+          `${BLUE}Reading slash commands: ${RESET}`,
+          `${GREEN}0.0ms${RESET}`,
+          `${YELLOW}Failed to create a before temp file for the reload diff of global${RESET}\n`,
+        ]);
       });
 
       it("unlinks the before temp file when the after temp file cannot be created", async () => {
@@ -3613,6 +3628,8 @@ commands diff
           { stdout: "delta 0.18.2" },
           { stdout: "commands diff\n" },
         ]);
+        const writes = mockStdoutWrites();
+
         const result = await resolveSlashCommand("/reload");
         assert.strictEqual(result, null);
         assert.strictEqual(
@@ -3638,6 +3655,19 @@ commands diff
 
 `,
         );
+        assert.deepStrictEqual(writes(), [
+          `${YELLOW}- Warning: using a default context window of 128,000 tokens because there is no \`contextWindowPerModel\` entry for the current model \`__MISSING__\`${RESET}\n`,
+          `${BLUE}Reading context files: ${RESET}\n`,
+          `${BLUE}Reading skills: ${RESET}\n`,
+          `${BLUE}Reading slash commands: ${RESET}\n`,
+          `${BLUE}Reading context files: ${RESET}`,
+          `${GREEN}0.0ms${RESET}`,
+          `${BLUE}Reading skills: ${RESET}`,
+          `${GREEN}0.0ms${RESET}`,
+          `${BLUE}Reading slash commands: ${RESET}`,
+          `${GREEN}0.0ms${RESET}`,
+          `${YELLOW}Failed to create an after temp file for the reload diff of global${RESET}\n`,
+        ]);
       });
 
       it("warns on large prompt overhead when reload produces no diff", async () => {

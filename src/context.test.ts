@@ -597,6 +597,37 @@ would benefit from specialized instructions.
         ]);
       });
 
+      it("warns when listing the agent files with git fails", async () => {
+        mock.method(
+          fsDeps,
+          "gitLsFiles",
+          () => Promise.reject(new Error("git failed")) as unknown as string[],
+        );
+        const writes = mockStdoutWrites();
+
+        const result = await getSkills();
+
+        assert.deepStrictEqual(result, []);
+        assert.deepStrictEqual(writes(), [
+          `${YELLOW}Failed to list the agent files with git${RESET}\n`,
+        ]);
+      });
+
+      it("warns when listing the skill files in a dir fails", async () => {
+        mock.method(fsDeps, "glob", () =>
+          Promise.reject(new Error("glob failed")),
+        );
+        const writes = mockStdoutWrites();
+
+        const result = await getSkills();
+
+        assert.deepStrictEqual(result, []);
+        assert.deepStrictEqual(writes(), [
+          `${YELLOW}Failed to list the skill files in /test-cwd/.lasso/skills${RESET}\n`,
+          `${YELLOW}Failed to list the skill files in /fake-home/.config/lasso/skills${RESET}\n`,
+        ]);
+      });
+
       it("returns skills from skill directories with front matter stripped", async () => {
         testFs._globResults.set("/fake-home/.config/lasso/skills/**/SKILL.md", [
           "/fake-home/.config/lasso/skills/my-skill/SKILL.md",
@@ -788,9 +819,15 @@ description: A valid skill
   });
 
   describe("getSkillJSON", () => {
-    it("returns null when file does not exist", async () => {
+    it("warns and returns null when the file does not exist", async () => {
+      const writes = mockStdoutWrites();
+
       const result = await getSkillJSON("/some/dir/SKILL.md");
+
       assert.equal(result, null);
+      assert.deepStrictEqual(writes(), [
+        `${YELLOW}Failed to read the skill at /some/dir/SKILL.md${RESET}\n`,
+      ]);
     });
 
     it("parses valid SKILL.md front matter", async () => {

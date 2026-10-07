@@ -72,7 +72,7 @@ export async function getAvailableSlashCommands() {
     const glob = join(dir, "**/*.md");
     const globResult = await tryCatchAsync(fsDeps.glob(glob));
     if (!globResult.ok) {
-      print.warning(`Failed to list the slash command files in ${dir}`);
+      print.error(`Failed to list the slash command files in ${dir}`);
       continue;
     }
     slashCommandFilePaths.push(...globResult.value);
@@ -81,7 +81,7 @@ export async function getAvailableSlashCommands() {
   for (const filePath of slashCommandFilePaths) {
     const readResult = await tryCatchAsync(fsDeps.readFile(filePath, "utf8"));
     if (!readResult.ok) {
-      print.warning(`Failed to read the slash command file at ${filePath}`);
+      print.error(`Failed to read the slash command file at ${filePath}`);
       continue;
     }
     const name = basename(filePath, extname(filePath));

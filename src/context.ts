@@ -43,7 +43,7 @@ export async function getContextEntries() {
     if (!fsDeps.existsSync(filePath)) continue;
     const readResult = await tryCatchAsync(fsDeps.readFile(filePath, "utf8"));
     if (!readResult.ok) {
-      print.warning(`Failed to read the agent file at ${filePath}`);
+      print.error(`Failed to read the agent file at ${filePath}`);
       continue;
     }
     entries.push({ filePath, content: readResult.value });
@@ -93,7 +93,10 @@ export async function getSkills() {
   for (const skillGrandparentDir of skillGrandparentDirs) {
     const glob = join(skillGrandparentDir, "**/SKILL.md");
     const globResult = await tryCatchAsync(fsDeps.glob(glob));
-    if (!globResult.ok) continue;
+    if (!globResult.ok) {
+      print.error(`Failed to list the skill files in ${skillGrandparentDir}`);
+      continue;
+    }
     skillPaths.push(...globResult.value);
   }
 
@@ -109,7 +112,10 @@ export async function getSkills() {
   const agentFileGlobResult = await tryCatchAsync(
     fsDeps.gitLsFiles("**/AGENTS.md"),
   );
-  if (!agentFileGlobResult.ok) return skills;
+  if (!agentFileGlobResult.ok) {
+    print.error("Failed to list the agent files with git");
+    return skills;
+  }
 
   for (const agentFilePath of agentFileGlobResult.value) {
     const isRootAgentsMd = agentFilePath === "AGENTS.md";
@@ -118,7 +124,7 @@ export async function getSkills() {
       fsDeps.readFile(agentFilePath, "utf8"),
     );
     if (!readResult.ok) {
-      print.warning(`Failed to read the agent file at ${agentFilePath}`);
+      print.error(`Failed to read the agent file at ${agentFilePath}`);
       continue;
     }
     const dir = dirname(agentFilePath);
@@ -155,7 +161,10 @@ export function parseFrontMatter(content: string) {
 
 export async function getSkillJSON(skillMdPath: string) {
   const readResult = await tryCatchAsync(fsDeps.readFile(skillMdPath, "utf8"));
-  if (!readResult.ok) return null;
+  if (!readResult.ok) {
+    print.error(`Failed to read the skill at ${skillMdPath}`);
+    return null;
+  }
 
   const parsed = parseFrontMatter(readResult.value);
   if (parsed === null) {

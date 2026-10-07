@@ -140,7 +140,7 @@ export async function syncInitialModelUsageForLimitWindow() {
     const lockUtils = createLockUtils(getUsageLogLockPath());
     const created = await lockUtils.createLock();
     if (!created) {
-      return print.warning(
+      return print.error(
         `Failed to acquire a lock for ${getUsageLogLockPath()}`,
       );
     }
@@ -184,7 +184,7 @@ export async function syncNewModelUsageForLimitWindow(
       fsDeps.mkdir(dir, { recursive: true }),
     );
     if (!mkDirResult.ok) {
-      print.warning(`Failed to create the directory: ${dir}`);
+      print.error(`Failed to create the directory: ${dir}`);
       return;
     }
   }
@@ -193,7 +193,7 @@ export async function syncNewModelUsageForLimitWindow(
     const lockUtils = createLockUtils(getUsageLogLockPath());
     const created = await lockUtils.createLock();
     if (!created) {
-      return print.warning(
+      return print.error(
         `Failed to acquire a lock for ${getUsageLogLockPath()}`,
       );
     }

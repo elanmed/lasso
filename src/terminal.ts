@@ -55,7 +55,7 @@ export async function formatMarkdown(content: string): Promise<string> {
     format(content, { parser: "markdown" }),
   );
   if (formatResult.ok) return formatResult.value;
-  print.warning(
+  print.error(
     `Outputting raw content, markdown formatting failed: ${getMessageFromError(formatResult.error)}`,
   );
   return content;
@@ -102,7 +102,10 @@ export async function openWithPager({
 }): Promise<void> {
   initialContentStr = normalizeNewline(initialContentStr, { count: 2 });
   const tempFile = await getTempFileName({ initialContentStr });
-  if (tempFile === null) return;
+  if (tempFile === null) {
+    print.error("Failed to create a temp file to open the pager");
+    return;
+  }
 
   const pagerCommand = (() => {
     const lassoDefaultPagerEnvValue = processDeps.env.get("LASSO_PAGER");

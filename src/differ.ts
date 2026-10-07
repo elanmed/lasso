@@ -58,7 +58,10 @@ export function createToolCallDiffer() {
   async function setTempFileBefore(toolCallId: string, path: string) {
     if (isToolCallDiffIgnoredPath(path)) return;
     const tempFileBefore = await getTempFileName({ initialContentPath: path });
-    if (tempFileBefore === null) return;
+    if (tempFileBefore === null) {
+      print.error(`Failed to create the before diff temp file for ${path}`);
+      return;
+    }
     toolCallIdToTempFileBefore.set(toolCallId, tempFileBefore);
   }
 
@@ -73,6 +76,7 @@ export function createToolCallDiffer() {
       initialContentPath: path,
     });
     if (tempFileAfterPath === null) {
+      print.error(`Failed to create the after diff temp file for ${path}`);
       if (toolCallIdToTempFileBefore.has(toolCallId)) {
         await cleanupTempFileBefore(toolCallId);
       }

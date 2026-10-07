@@ -144,11 +144,17 @@ describe("terminal", () => {
         mock.method(fsDeps, "writeFile", () =>
           Promise.reject(new Error("write failed")),
         );
+        const writes = mockStdoutWrites();
+
         await openWithPager({
           initialContentStr: "content",
           contentType: "markdown",
         });
+
         assert.deepStrictEqual(spawned, []);
+        assert.deepStrictEqual(writes(), [
+          `${RED}Failed to create a temp file to open the pager${RESET}\n`,
+        ]);
       });
     });
   });

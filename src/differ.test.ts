@@ -1,6 +1,7 @@
 import { describe, it, beforeEach, afterEach, mock } from "node:test";
 import assert from "node:assert";
 import { createToolCallDiffer, execGitDiff } from "./differ.ts";
+import { fsDeps } from "./deps.ts";
 import { actions, getState } from "./state.ts";
 import {
   BOLD,
@@ -12,6 +13,7 @@ import {
   RESET,
   setupTestContext,
   testFs,
+  YELLOW,
 } from "./test-helpers.ts";
 
 describe("differ", () => {
@@ -50,6 +52,24 @@ describe("differ", () => {
           differ.toolCallIdToTempFileBefore.has("call-1"),
           false,
         );
+      });
+
+      it("warns when the before temp file cannot be created", async () => {
+        testFs._files.set("/test/file.txt", "original content");
+        mock.method(fsDeps, "writeFile", () =>
+          Promise.reject(new Error("write failed")),
+        );
+        const writes = mockStdoutWrites();
+
+        const differ = createToolCallDiffer();
+        await differ.setTempFileBefore("call-1", "/test/file.txt");
+        await differ.diffAndCleanup("call-1", "/test/file.txt");
+
+        assert.deepStrictEqual(writes(), [
+          `${YELLOW}Failed to create the before diff temp file for /test/file.txt${RESET}\n`,
+          `${YELLOW}Failed to create the after diff temp file for /test/file.txt${RESET}\n`,
+        ]);
+        assert.deepStrictEqual(getState().app.toolEditDiffs, []);
       });
 
       it("registers an empty snapshot when the source file does not exist", async () => {
@@ -426,6 +446,23 @@ describe("differ", () => {
       await differ.diffAndCleanup("call-1", "/test/file.txt");
       assert.deepStrictEqual(getWrites(), [
         `${RED}An error occurred when getting the diff for /test/file.txt: fatal${RESET}\n`,
+      ]);
+      assert.deepStrictEqual(getState().app.toolEditDiffs, []);
+    });
+
+    it("warns when the after temp file cannot be created", async () => {
+      const writes = mockStdoutWrites();
+      testFs._files.set("/test/file.txt", "original content");
+      const differ = createToolCallDiffer();
+      await differ.setTempFileBefore("call-1", "/test/file.txt");
+      mock.method(fsDeps, "writeFile", () =>
+        Promise.reject(new Error("write failed")),
+      );
+
+      await differ.diffAndCleanup("call-1", "/test/file.txt");
+
+      assert.deepStrictEqual(writes(), [
+        `${YELLOW}Failed to create the after diff temp file for /test/file.txt${RESET}\n`,
       ]);
       assert.deepStrictEqual(getState().app.toolEditDiffs, []);
     });

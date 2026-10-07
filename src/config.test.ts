@@ -8,6 +8,7 @@ import {
   initStateFirst,
   initStateRepeatable,
   blockOnMissingConfig,
+  readConfigFileStr,
 } from "./config.ts";
 import { stringifyTools } from "./tools.ts";
 import { defaultConfig, DefaultedConfigSchema } from "./config-types.ts";
@@ -1857,6 +1858,21 @@ hello
       assert.strictEqual(getState().app.localConfigStr, localConfigStr);
       assert.strictEqual(globalConfig.model, testConfig.model);
       assert.strictEqual(localConfig.promptPrefix, ">>> ");
+    });
+
+    it("warns when reading an existing config file fails", async () => {
+      testFs._files.set(getGlobalConfigPath(), "model: gpt-4");
+      mock.method(fsDeps, "readFile", () =>
+        Promise.reject(new Error("read failed")),
+      );
+      const writes = mockStdoutWrites();
+
+      const globalConfigStr = await readConfigFileStr(getGlobalConfigPath());
+
+      assert.strictEqual(globalConfigStr, "{}");
+      assert.deepStrictEqual(writes(), [
+        `${YELLOW}Failed to read the config file at /fake-home/.config/lasso/settings.yaml${RESET}\n`,
+      ]);
     });
   });
 

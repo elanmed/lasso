@@ -37,7 +37,10 @@ export async function readConfigFileStr(path: string) {
   if (!fsDeps.existsSync(path)) return "{}";
 
   const readResult = await tryCatchAsync(fsDeps.readFile(path, "utf8"));
-  if (!readResult.ok) return "{}";
+  if (!readResult.ok) {
+    print.error(`Failed to read the config file at ${path}`);
+    return "{}";
+  }
 
   return readResult.value;
 }
