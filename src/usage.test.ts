@@ -81,11 +81,11 @@ describe("usage", () => {
         ],
       };
       assert.deepStrictEqual(
-        getState().app.modelUsageForLimitWindow,
+        getState().usage.modelUsageForLimitWindow,
         expectedUsage,
       );
       assert.deepStrictEqual(
-        getState().app.modelUsageForSession,
+        getState().usage.modelUsageForSession,
         expectedUsage,
       );
     });
@@ -132,11 +132,11 @@ describe("usage", () => {
         ],
       };
       assert.deepStrictEqual(
-        getState().app.modelUsageForLimitWindow,
+        getState().usage.modelUsageForLimitWindow,
         expectedUsage,
       );
       assert.deepStrictEqual(
-        getState().app.modelUsageForSession,
+        getState().usage.modelUsageForSession,
         expectedUsage,
       );
     });
@@ -186,11 +186,11 @@ describe("usage", () => {
         ],
       };
       assert.deepStrictEqual(
-        getState().app.modelUsageForLimitWindow,
+        getState().usage.modelUsageForLimitWindow,
         expectedUsage,
       );
       assert.deepStrictEqual(
-        getState().app.modelUsageForSession,
+        getState().usage.modelUsageForSession,
         expectedUsage,
       );
     });
@@ -219,11 +219,11 @@ describe("usage", () => {
         ],
       };
       assert.deepStrictEqual(
-        getState().app.modelUsageForLimitWindow,
+        getState().usage.modelUsageForLimitWindow,
         expectedUsage,
       );
       assert.deepStrictEqual(
-        getState().app.modelUsageForSession,
+        getState().usage.modelUsageForSession,
         expectedUsage,
       );
     });
@@ -242,7 +242,7 @@ describe("usage", () => {
         },
       } as LanguageModelUsage);
 
-      assert.deepStrictEqual(getState().app.modelUsageForSession, {
+      assert.deepStrictEqual(getState().usage.modelUsageForSession, {
         "gpt-4": [
           {
             inputTokens: 100,
@@ -253,7 +253,7 @@ describe("usage", () => {
           },
         ],
       });
-      assert.deepStrictEqual(getState().app.modelUsageForLimitWindow, {});
+      assert.deepStrictEqual(getState().usage.modelUsageForLimitWindow, {});
       assert.strictEqual(testFs._files.has(getUsageLogPath()), false);
     });
   });
@@ -286,10 +286,10 @@ describe("usage", () => {
 
         await syncNewModelUsageForLimitWindow("gpt-4", usage);
 
-        assert.deepStrictEqual(getState().app.modelUsageForLimitWindow, {
+        assert.deepStrictEqual(getState().usage.modelUsageForLimitWindow, {
           "gpt-4": [usage],
         });
-        assert.deepStrictEqual(getState().app.modelUsageForSession, {});
+        assert.deepStrictEqual(getState().usage.modelUsageForSession, {});
         assert.strictEqual(
           testFs._files.get(getUsageLogPath()),
           JSON.stringify({ "gpt-4": [usage] }),
@@ -315,7 +315,7 @@ describe("usage", () => {
         assert.deepStrictEqual(getWrites(), [
           `${RED}Failed to create the directory: ${dirname(getUsageLogPath())}${RESET}\n`,
         ]);
-        assert.deepStrictEqual(getState().app.modelUsageForLimitWindow, {});
+        assert.deepStrictEqual(getState().usage.modelUsageForLimitWindow, {});
         assert.strictEqual(testFs._files.has(getUsageLogPath()), false);
       });
 
@@ -344,7 +344,7 @@ describe("usage", () => {
 
         await syncNewModelUsageForLimitWindow("gpt-4", usage);
 
-        assert.deepStrictEqual(getState().app.modelUsageForLimitWindow, {
+        assert.deepStrictEqual(getState().usage.modelUsageForLimitWindow, {
           "gpt-4": [
             {
               inputTokens: 5,
@@ -394,7 +394,7 @@ describe("usage", () => {
           syncNewModelUsageForLimitWindow("gpt-4", secondUsage),
         ]);
 
-        assert.deepStrictEqual(getState().app.modelUsageForLimitWindow, {
+        assert.deepStrictEqual(getState().usage.modelUsageForLimitWindow, {
           "gpt-4": [firstUsage, secondUsage],
         });
         assert.strictEqual(
@@ -415,7 +415,7 @@ describe("usage", () => {
 
         await syncNewModelUsageForLimitWindow("gpt-4", usage);
 
-        assert.deepStrictEqual(getState().app.modelUsageForLimitWindow, {
+        assert.deepStrictEqual(getState().usage.modelUsageForLimitWindow, {
           "gpt-4": [usage],
         });
         assert.strictEqual(
@@ -443,7 +443,7 @@ describe("usage", () => {
 
         await syncNewModelUsageForLimitWindow("gpt-4", usage);
 
-        assert.deepStrictEqual(getState().app.modelUsageForLimitWindow, {
+        assert.deepStrictEqual(getState().usage.modelUsageForLimitWindow, {
           "gpt-4": [usage],
         });
       });
@@ -463,7 +463,7 @@ describe("usage", () => {
 
         await syncNewModelUsageForLimitWindow("gpt-4", usage);
 
-        assert.deepStrictEqual(getState().app.modelUsageForLimitWindow, {});
+        assert.deepStrictEqual(getState().usage.modelUsageForLimitWindow, {});
         assert.strictEqual(testFs._files.has(getUsageLogPath()), false);
       });
 
@@ -479,7 +479,7 @@ describe("usage", () => {
 
         await syncNewModelUsageForLimitWindow("gpt-4", usage);
 
-        assert.deepStrictEqual(getState().app.modelUsageForLimitWindow, {});
+        assert.deepStrictEqual(getState().usage.modelUsageForLimitWindow, {});
         assert.strictEqual(testFs._files.has(getUsageLogPath()), false);
       });
     });
@@ -517,7 +517,7 @@ describe("usage", () => {
 
         await syncNewModelUsageForLimitWindow("gpt-4", usage);
 
-        assert.deepStrictEqual(getState().app.modelUsageForLimitWindow, {
+        assert.deepStrictEqual(getState().usage.modelUsageForLimitWindow, {
           "gpt-4": [
             {
               inputTokens: 5,
@@ -571,7 +571,7 @@ describe("usage", () => {
 
         await syncNewModelUsageForLimitWindow("gpt-4", usage);
 
-        assert.deepStrictEqual(getState().app.modelUsageForLimitWindow, {
+        assert.deepStrictEqual(getState().usage.modelUsageForLimitWindow, {
           "gpt-4": [
             {
               inputTokens: 5,
@@ -619,7 +619,7 @@ describe("usage", () => {
 
         await syncNewModelUsageForLimitWindow("gpt-4", usage);
 
-        assert.deepStrictEqual(getState().app.modelUsageForLimitWindow, {
+        assert.deepStrictEqual(getState().usage.modelUsageForLimitWindow, {
           "gpt-4": [
             {
               inputTokens: 5,
@@ -656,7 +656,7 @@ describe("usage", () => {
 
       await syncInitialModelUsageForLimitWindow();
 
-      assert.deepStrictEqual(getState().app.modelUsageForLimitWindow, {});
+      assert.deepStrictEqual(getState().usage.modelUsageForLimitWindow, {});
     });
 
     it("does nothing when the model has no pricing configured", async () => {
@@ -679,14 +679,14 @@ describe("usage", () => {
 
       await syncInitialModelUsageForLimitWindow();
 
-      assert.deepStrictEqual(getState().app.modelUsageForLimitWindow, {});
+      assert.deepStrictEqual(getState().usage.modelUsageForLimitWindow, {});
       assert.strictEqual(testFs._files.has(getUsageLogPath()), true);
     });
 
     it("does nothing when the usage log directory does not exist", async () => {
       await syncInitialModelUsageForLimitWindow();
 
-      assert.deepStrictEqual(getState().app.modelUsageForLimitWindow, {});
+      assert.deepStrictEqual(getState().usage.modelUsageForLimitWindow, {});
     });
 
     it("filters modelUsage according to each duration suffix", async () => {
@@ -733,7 +733,7 @@ describe("usage", () => {
 
         await syncInitialModelUsageForLimitWindow();
 
-        assert.deepStrictEqual(getState().app.modelUsageForLimitWindow, {
+        assert.deepStrictEqual(getState().usage.modelUsageForLimitWindow, {
           "gpt-4": [recent],
         });
         assert.strictEqual(
@@ -760,7 +760,7 @@ describe("usage", () => {
 
       await syncInitialModelUsageForLimitWindow();
 
-      assert.deepStrictEqual(getState().app.modelUsageForLimitWindow, {
+      assert.deepStrictEqual(getState().usage.modelUsageForLimitWindow, {
         "gpt-4": [boundary],
       });
       assert.strictEqual(
@@ -775,7 +775,7 @@ describe("usage", () => {
 
       await syncInitialModelUsageForLimitWindow();
 
-      assert.deepStrictEqual(getState().app.modelUsageForLimitWindow, {});
+      assert.deepStrictEqual(getState().usage.modelUsageForLimitWindow, {});
       assert.strictEqual(testFs._files.get(getUsageLogPath()), `{}`);
       assert.strictEqual(testFs._files.has(getUsageLogLockPath()), false);
     });
@@ -788,7 +788,7 @@ describe("usage", () => {
 
       await syncInitialModelUsageForLimitWindow();
 
-      assert.deepStrictEqual(getState().app.modelUsageForLimitWindow, {});
+      assert.deepStrictEqual(getState().usage.modelUsageForLimitWindow, {});
       assert.strictEqual(testFs._files.get(getUsageLogPath()), `{}`);
       assert.strictEqual(testFs._files.has(getUsageLogLockPath()), false);
     });
@@ -973,7 +973,7 @@ describe("getCurrentPromptTokens", () => {
   });
 
   it("starts with the token cache marked dirty", () => {
-    assert.strictEqual(getState().app.promptTokens.dirty, true);
+    assert.strictEqual(getState().usage.promptTokens.dirty, true);
   });
 
   it("returns the approx prompt tokens when dirty", () => {

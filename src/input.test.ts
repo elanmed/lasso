@@ -81,7 +81,7 @@ import { getGlobalConfigPath, getGlobalContextDir } from "./paths.ts";
 import { defaultConfig, type Key } from "./config-types.ts";
 
 function getTestRl() {
-  const rl = getState().app.rl;
+  const rl = getState().terminal.rl;
   assert(rl !== null);
   return rl;
 }
@@ -140,17 +140,17 @@ describe("input", () => {
 
     it("clears queued editor input when c is entered", async () => {
       await resolveInterruptWithAnswer("c");
-      assert.strictEqual(getState().app.editorInputValue, null);
+      assert.strictEqual(getState().terminal.editorInputValue, null);
     });
 
     it("clears queued editor input when clear is entered", async () => {
       await resolveInterruptWithAnswer("clear");
-      assert.strictEqual(getState().app.editorInputValue, null);
+      assert.strictEqual(getState().terminal.editorInputValue, null);
     });
 
     it("keeps queued editor input when the answer is not c or clear", async () => {
       await resolveInterruptWithAnswer("e");
-      assert.strictEqual(getState().app.editorInputValue, "queued input");
+      assert.strictEqual(getState().terminal.editorInputValue, "queued input");
     });
 
     it("returns normally when interrupted", async () => {
@@ -370,12 +370,12 @@ describe("input", () => {
       actions.setIsInitializing(true);
       emitKey("a", { name: "a" });
       emitKey(" ", { name: "space" });
-      assert.equal(getState().app.bufferedInputWhileInitializing, "a ");
+      assert.equal(getState().terminal.bufferedInputWhileInitializing, "a ");
     });
 
     it("ignores keypresses when not initializing", () => {
       emitKey("a", { name: "a" });
-      assert.equal(getState().app.bufferedInputWhileInitializing, "");
+      assert.equal(getState().terminal.bufferedInputWhileInitializing, "");
     });
 
     it("ignores return and enter keys", () => {
@@ -383,14 +383,14 @@ describe("input", () => {
       actions.appendBufferedInputWhileInitializing("ab");
       emitKey("\r", { name: "return" });
       emitKey("\n", { name: "enter" });
-      assert.equal(getState().app.bufferedInputWhileInitializing, "ab");
+      assert.equal(getState().terminal.bufferedInputWhileInitializing, "ab");
     });
 
     it("ignores keys without characters like arrow keys", () => {
       actions.setIsInitializing(true);
       actions.appendBufferedInputWhileInitializing("ab");
       emitKey(undefined, { name: "left" });
-      assert.equal(getState().app.bufferedInputWhileInitializing, "ab");
+      assert.equal(getState().terminal.bufferedInputWhileInitializing, "ab");
     });
 
     it("ignores ctrl and meta keys", () => {
@@ -398,7 +398,7 @@ describe("input", () => {
       actions.appendBufferedInputWhileInitializing("ab");
       emitKey("h", { name: "h", ctrl: true });
       emitKey("f", { name: "f", meta: true });
-      assert.equal(getState().app.bufferedInputWhileInitializing, "ab");
+      assert.equal(getState().terminal.bufferedInputWhileInitializing, "ab");
     });
 
     it("exits with code 130 on ctrl c while initializing", () => {
@@ -425,7 +425,7 @@ describe("input", () => {
         writes.map((write) => write.chunk),
         ["ab"],
       );
-      assert.equal(getState().app.bufferedInputWhileInitializing, "");
+      assert.equal(getState().terminal.bufferedInputWhileInitializing, "");
     });
   });
 
@@ -511,7 +511,7 @@ describe("input", () => {
         });
         const result = await spawnAndReadEditorContent();
         assert.strictEqual(result, null);
-        assert.strictEqual(getState().app.editorInputValue, null);
+        assert.strictEqual(getState().terminal.editorInputValue, null);
       });
 
       it("returns null without state changes when the editor result is whitespace only and there was no prefill", async () => {
@@ -520,7 +520,7 @@ describe("input", () => {
         });
         const result = await spawnAndReadEditorContent();
         assert.strictEqual(result, null);
-        assert.strictEqual(getState().app.editorInputValue, null);
+        assert.strictEqual(getState().terminal.editorInputValue, null);
       });
 
       it("returns normalized content", async () => {
@@ -529,7 +529,7 @@ describe("input", () => {
         });
         const result = await spawnAndReadEditorContent();
         assert.strictEqual(result, "  hello\n");
-        assert.strictEqual(getState().app.editorInputValue, "  hello  ");
+        assert.strictEqual(getState().terminal.editorInputValue, "  hello  ");
       });
 
       it("returns normalized content when editor saves unchanged content", async () => {
@@ -648,8 +648,8 @@ describe("input", () => {
         actions.setEditorInputValue("editor content");
         const result = await resolveUserInput({ isFirstInput: false });
         assert.strictEqual(result, "editor content");
-        assert.strictEqual(getState().app.editorInputValue, null);
-        assert.deepStrictEqual(getState().app.transcript, [
+        assert.strictEqual(getState().terminal.editorInputValue, null);
+        assert.deepStrictEqual(getState().conversation.transcript, [
           { timestamp: 0, role: "user", message: "editor content" },
         ]);
       });
@@ -660,8 +660,8 @@ describe("input", () => {
         const result = await resolveUserInput({ isFirstInput: false });
         assert.strictEqual(result, null);
         assert.strictEqual(getState().config.model, "new-model");
-        assert.strictEqual(getState().app.editorInputValue, null);
-        assert.deepStrictEqual(getState().app.transcript, [
+        assert.strictEqual(getState().terminal.editorInputValue, null);
+        assert.deepStrictEqual(getState().conversation.transcript, [
           { timestamp: 0, role: "user", message: "/model new-model" },
         ]);
       });
@@ -670,8 +670,8 @@ describe("input", () => {
         actions.setEditorInputValue("first\nl---\nsecond\n");
         const result = await resolveUserInput({ isFirstInput: false });
         assert.strictEqual(result, "first\n");
-        assert.strictEqual(getState().app.editorInputValue, "second\n");
-        assert.deepStrictEqual(getState().app.transcript, [
+        assert.strictEqual(getState().terminal.editorInputValue, "second\n");
+        assert.deepStrictEqual(getState().conversation.transcript, [
           { timestamp: 0, role: "user", message: "first\n" },
         ]);
       });
@@ -689,7 +689,7 @@ second
           await resolveUserInput({ isFirstInput: false }),
           "second\n",
         );
-        assert.strictEqual(getState().app.editorInputValue, null);
+        assert.strictEqual(getState().terminal.editorInputValue, null);
       });
     });
 
@@ -704,7 +704,7 @@ second
           "\n",
           `${YELLOW}━━ ${BOLD}Input${BOLD_RESET} ━━${RESET}\n`,
         ]);
-        assert.deepStrictEqual(getState().app.transcript, [
+        assert.deepStrictEqual(getState().conversation.transcript, [
           { timestamp: 0, role: "user", message: "  hello  " },
         ]);
       });
@@ -718,7 +718,7 @@ second
         const result = await resolveUserInput({ isFirstInput: false });
         assert.strictEqual(result, null);
         assert.strictEqual(getState().config.model, "new-model");
-        assert.deepStrictEqual(getState().app.transcript, [
+        assert.deepStrictEqual(getState().conversation.transcript, [
           { timestamp: 0, role: "user", message: "/model new-model" },
         ]);
       });
@@ -746,8 +746,8 @@ second
         });
         const result = await resolveUserInput({ isFirstInput: false });
         assert.strictEqual(result, "from editor");
-        assert.strictEqual(getState().app.editorInputValue, null);
-        assert.deepStrictEqual(getState().app.transcript, [
+        assert.strictEqual(getState().terminal.editorInputValue, null);
+        assert.deepStrictEqual(getState().conversation.transcript, [
           { timestamp: 0, role: "user", message: "from editor" },
         ]);
       });
@@ -800,7 +800,7 @@ second
         const intervalCallbacks = mockSetInterval();
         mockClearInterval(intervalCallbacks);
         startLoadingState();
-        assert.notStrictEqual(getState().app.loadingStateTimeout, null);
+        assert.notStrictEqual(getState().terminal.loadingStateTimeout, null);
         actions.setRl(makeFakeRl());
         actions.resetStdout();
         const err = makeAbortError("This operation was aborted");
@@ -812,8 +812,8 @@ second
           resolveUserInput({ isFirstInput: false }),
           /process.exit called/,
         );
-        assert.strictEqual(getState().app.loadingStateTimeout, null);
-        assert.strictEqual(getState().app.loadingStateFrameIdx, 0);
+        assert.strictEqual(getState().terminal.loadingStateTimeout, null);
+        assert.strictEqual(getState().terminal.loadingStateFrameIdx, 0);
         assert.deepStrictEqual(getWrites(), [
           "\n",
           `${YELLOW}━━ ${BOLD}Input${BOLD_RESET} ━━${RESET}\n`,
@@ -888,8 +888,8 @@ second
         actions.setEditorInputValue("editor content");
         const result = await parseInputFromEditor();
         assert.strictEqual(result, "editor content");
-        assert.strictEqual(getState().app.editorInputValue, null);
-        assert.deepStrictEqual(getState().app.transcript, [
+        assert.strictEqual(getState().terminal.editorInputValue, null);
+        assert.deepStrictEqual(getState().conversation.transcript, [
           { timestamp: 0, role: "user", message: "editor content" },
         ]);
       });
@@ -904,13 +904,13 @@ third
         const result = await parseInputFromEditor();
         assert.strictEqual(result, "first\n");
         assert.strictEqual(
-          getState().app.editorInputValue,
+          getState().terminal.editorInputValue,
           `second
 l---
 third
 `,
         );
-        assert.deepStrictEqual(getState().app.transcript, [
+        assert.deepStrictEqual(getState().conversation.transcript, [
           { timestamp: 0, role: "user", message: "first\n" },
         ]);
       });
@@ -925,7 +925,7 @@ third
         assert.strictEqual(await parseInputFromEditor(), "first\n");
         assert.strictEqual(await parseInputFromEditor(), "second\n");
         assert.strictEqual(await parseInputFromEditor(), "third\n");
-        assert.strictEqual(getState().app.editorInputValue, null);
+        assert.strictEqual(getState().terminal.editorInputValue, null);
       });
 
       it("filters empty parts around the delimiter", async () => {
@@ -935,7 +935,7 @@ l---
 `);
         const result = await parseInputFromEditor();
         assert.strictEqual(result, "msg\n");
-        assert.strictEqual(getState().app.editorInputValue, null);
+        assert.strictEqual(getState().terminal.editorInputValue, null);
       });
 
       it("returns null when the editor value is nothing but delimiters", async () => {
@@ -943,7 +943,7 @@ l---
 l---
 `);
         assert.strictEqual(await parseInputFromEditor(), null);
-        assert.strictEqual(getState().app.editorInputValue, null);
+        assert.strictEqual(getState().terminal.editorInputValue, null);
       });
     });
 
@@ -960,8 +960,8 @@ l---
 /cwd
 `);
         assert.strictEqual(await parseInputFromEditor(), "message 2\n");
-        assert.strictEqual(getState().app.editorInputValue, "/cwd\n");
-        assert.deepStrictEqual(getState().app.transcript, [
+        assert.strictEqual(getState().terminal.editorInputValue, "/cwd\n");
+        assert.deepStrictEqual(getState().conversation.transcript, [
           { timestamp: 0, role: "user", message: "message 2\n" },
         ]);
       });
@@ -984,7 +984,7 @@ line three
           "line one\nline two\n",
         );
         assert.strictEqual(
-          getState().app.editorInputValue,
+          getState().terminal.editorInputValue,
           `/cwd
 l---
 line three
@@ -998,7 +998,7 @@ line three
 `);
         assert.strictEqual(await parseInputFromEditor(), "context\n");
         assert.strictEqual(
-          getState().app.editorInputValue,
+          getState().terminal.editorInputValue,
           "/model new-model\n",
         );
       });
@@ -1014,7 +1014,7 @@ line three
         actions.setEditorInputValue(`/cwd
 rest`);
         assert.strictEqual(await parseInputFromEditor(), "/cwd\n");
-        assert.strictEqual(getState().app.editorInputValue, "rest");
+        assert.strictEqual(getState().terminal.editorInputValue, "rest");
       });
 
       it("splits multiple slash commands within a single chunk", async () => {
@@ -1037,7 +1037,7 @@ second
 `);
         assert.strictEqual(await parseInputFromEditor(), "first\n");
         assert.strictEqual(
-          getState().app.editorInputValue,
+          getState().terminal.editorInputValue,
           `/cwd
 l---
 second
@@ -1069,7 +1069,7 @@ l---
         assert.strictEqual(await parseInputFromEditor(), "first\n");
         assert.strictEqual(await parseInputFromEditor(), "/cwd\n");
         assert.strictEqual(await parseInputFromEditor(), "/pwd\n");
-        assert.strictEqual(getState().app.editorInputValue, null);
+        assert.strictEqual(getState().terminal.editorInputValue, null);
       });
     });
   });
@@ -1204,7 +1204,7 @@ l---
       actions.setModel("old-model");
       setModelCommand("/model new-model");
       assert.strictEqual(getState().config.model, "new-model");
-      assert.strictEqual(getState().app.promptTokens.dirty, true);
+      assert.strictEqual(getState().usage.promptTokens.dirty, true);
       assert.deepStrictEqual(getWrites(), [
         `${BLUE}Model updated from \`old-model\` to \`new-model\`${RESET}\n`,
       ]);
@@ -1289,11 +1289,9 @@ l---
       ]);
       mock.method(promptDeps, "getSystemContent", () => "abc");
       await clearCommand();
-      assert.deepStrictEqual(getState().app.conversation, {
-        summaries: [],
-        messages: [],
-      });
-      assert.deepStrictEqual(getState().app.promptTokens, {
+      assert.deepStrictEqual(getState().conversation.summaries, []);
+      assert.deepStrictEqual(getState().conversation.messages, []);
+      assert.deepStrictEqual(getState().usage.promptTokens, {
         value: strToApproxTokens("abc"),
         dirty: true,
       });
@@ -1415,14 +1413,14 @@ l---
       const result = await resume("/resume 1234567890000");
 
       assert.strictEqual(result, "Continue");
-      assert.deepStrictEqual(getState().app.conversation, {
-        summaries: [],
-        messages: [{ role: "user", content: "hello" }],
-      });
-      assert.deepStrictEqual(getState().app.transcript, [
+      assert.deepStrictEqual(getState().conversation.summaries, []);
+      assert.deepStrictEqual(getState().conversation.messages, [
+        { role: "user", content: "hello" },
+      ]);
+      assert.deepStrictEqual(getState().conversation.transcript, [
         { timestamp: 0, role: "user", message: "transcript content" },
       ]);
-      assert.deepStrictEqual(getState().app.promptTokens, {
+      assert.deepStrictEqual(getState().usage.promptTokens, {
         value: 0,
         dirty: true,
       });
@@ -1503,11 +1501,13 @@ l---
       const result = await resumeWithNoArgs();
 
       assert.strictEqual(result, "Continue");
-      assert.deepStrictEqual(getState().app.conversation, {
-        summaries: [{ compacted: "summary", compactedAt: 123, tokens: 456 }],
-        messages: [{ role: "assistant", content: "newer" }],
-      });
-      assert.deepStrictEqual(getState().app.transcript, [
+      assert.deepStrictEqual(getState().conversation.summaries, [
+        { compacted: "summary", compactedAt: 123, tokens: 456 },
+      ]);
+      assert.deepStrictEqual(getState().conversation.messages, [
+        { role: "assistant", content: "newer" },
+      ]);
+      assert.deepStrictEqual(getState().conversation.transcript, [
         { timestamp: 0, role: "user", message: "newer transcript" },
       ]);
     });
@@ -1532,11 +1532,11 @@ l---
       const result = await resumeWithNoArgs();
 
       assert.strictEqual(result, "Continue");
-      assert.deepStrictEqual(getState().app.conversation, {
-        summaries: [],
-        messages: [{ role: "user", content: "older" }],
-      });
-      assert.deepStrictEqual(getState().app.transcript, []);
+      assert.deepStrictEqual(getState().conversation.summaries, []);
+      assert.deepStrictEqual(getState().conversation.messages, [
+        { role: "user", content: "older" },
+      ]);
+      assert.deepStrictEqual(getState().conversation.transcript, []);
     });
 
     it("prints an error when the current session is the only session", async () => {
@@ -1903,11 +1903,13 @@ older summary
       const result = await resumeWithNoArgs();
 
       assert.strictEqual(result, "Continue");
-      assert.deepStrictEqual(getState().app.conversation, {
-        summaries: [{ compacted: "summary", compactedAt: 123, tokens: 456 }],
-        messages: [{ role: "assistant", content: "newer" }],
-      });
-      assert.deepStrictEqual(getState().app.transcript, [
+      assert.deepStrictEqual(getState().conversation.summaries, [
+        { compacted: "summary", compactedAt: 123, tokens: 456 },
+      ]);
+      assert.deepStrictEqual(getState().conversation.messages, [
+        { role: "assistant", content: "newer" },
+      ]);
+      assert.deepStrictEqual(getState().conversation.transcript, [
         { timestamp: 0, role: "user", message: "newer transcript" },
       ]);
     });
@@ -1932,11 +1934,11 @@ older summary
       const result = await resumeWithNoArgs();
 
       assert.strictEqual(result, "Continue");
-      assert.deepStrictEqual(getState().app.conversation, {
-        summaries: [],
-        messages: [{ role: "user", content: "older" }],
-      });
-      assert.deepStrictEqual(getState().app.transcript, []);
+      assert.deepStrictEqual(getState().conversation.summaries, []);
+      assert.deepStrictEqual(getState().conversation.messages, [
+        { role: "user", content: "older" },
+      ]);
+      assert.deepStrictEqual(getState().conversation.transcript, []);
     });
 
     it("prints an error when the current session is the only session", async () => {
@@ -2744,7 +2746,7 @@ editor input
         harness.emitKey({ name: "k", ctrl: true });
         await harness.flush();
         assert.deepStrictEqual(harness.writes, []);
-        assert.strictEqual(getState().app.editorInputValue, null);
+        assert.strictEqual(getState().terminal.editorInputValue, null);
       });
 
       it("ignores keymaps while recording", async () => {
@@ -2771,7 +2773,7 @@ editor input
         actions.setRl(
           makeFakeRl({
             question: () => {
-              recordingDuringQuestion = getState().app.isRecording;
+              recordingDuringQuestion = getState().terminal.isRecording;
               return Promise.resolve("");
             },
           }),
@@ -2780,12 +2782,12 @@ editor input
         mockRecording();
         mockTranscription("hello from the mic");
         harness.emitKey({ name: "r", ctrl: true });
-        assert.strictEqual(getState().app.isRecording, true);
+        assert.strictEqual(getState().terminal.isRecording, true);
         await harness.flush();
         assert.strictEqual(recordingDuringQuestion, true);
-        assert.strictEqual(getState().app.isRecording, false);
+        assert.strictEqual(getState().terminal.isRecording, false);
         assert.strictEqual(
-          getState().app.editorInputValue,
+          getState().terminal.editorInputValue,
           `\n${defaultConfig.messageQueueDelimiter}hello from the mic`,
         );
       });
@@ -2799,11 +2801,17 @@ editor input
           testFs.writeFile("/tmp/lasso-test-uuid.txt", "  edited  ");
         });
         harness.emitKey({ name: "g", ctrl: true });
-        assert.strictEqual(getState().app.isNonBlockingProcessOngoing, true);
+        assert.strictEqual(
+          getState().terminal.isNonBlockingProcessOngoing,
+          true,
+        );
         await harness.flush();
         assert.deepStrictEqual(prompts, []);
-        assert.strictEqual(getState().app.editorInputValue, "  edited  ");
-        assert.strictEqual(getState().app.isNonBlockingProcessOngoing, false);
+        assert.strictEqual(getState().terminal.editorInputValue, "  edited  ");
+        assert.strictEqual(
+          getState().terminal.isNonBlockingProcessOngoing,
+          false,
+        );
       });
 
       it("runs paste command with clipboard when its keymap matches", async () => {
@@ -2821,7 +2829,7 @@ editor input
         harness.emitKey({ name: "v", ctrl: true });
         await harness.flush();
         assert.strictEqual(
-          getState().app.editorInputValue,
+          getState().terminal.editorInputValue,
           "  hello world modified  \n",
         );
       });
@@ -2835,7 +2843,10 @@ editor input
         harness.emitKey({ name: "g", ctrl: true });
         await harness.flush();
 
-        assert.strictEqual(getState().app.bufferedStdoutWhileEditorOpen, "");
+        assert.strictEqual(
+          getState().terminal.bufferedStdoutWhileEditorOpen,
+          "",
+        );
         assert.deepStrictEqual(getWrites(), [
           `${PURPLE}during editor${RESET}\n`,
         ]);
@@ -2892,7 +2903,7 @@ editor input
         harness.emitKey({ name: "g", ctrl: true });
         await harness.flush();
         assert.deepStrictEqual(prompts, [true]);
-        assert.strictEqual(getState().app.editorInputValue, null);
+        assert.strictEqual(getState().terminal.editorInputValue, null);
       });
     });
 
@@ -3247,7 +3258,7 @@ editor input
         });
         const result = await resolveSlashCommand("/edit");
         assert.strictEqual(result, "from editor\n");
-        assert.deepStrictEqual(getState().app.transcript, [
+        assert.deepStrictEqual(getState().conversation.transcript, [
           { timestamp: 0, role: "user", message: "from editor\n" },
         ]);
       });
@@ -3259,7 +3270,7 @@ editor input
         });
         const result = await resolveSlashCommand("/paste");
         assert.strictEqual(result, "pasted content\n");
-        assert.deepStrictEqual(getState().app.transcript, [
+        assert.deepStrictEqual(getState().conversation.transcript, [
           { timestamp: 0, role: "user", message: "pasted content\n" },
         ]);
       });
@@ -3323,20 +3334,20 @@ editor input
         actions.setRl(
           makeFakeRlWithWrites({
             question: () => {
-              recordingDuringQuestion = getState().app.isRecording;
+              recordingDuringQuestion = getState().terminal.isRecording;
               return Promise.resolve("");
             },
           }).rl,
         );
-        assert.strictEqual(getState().app.isRecording, false);
+        assert.strictEqual(getState().terminal.isRecording, false);
         mockRecording();
         mockTranscription("hello from the mic");
         testFs._files.set("/tmp/lasso-test-uuid.wav", "wav recording bytes");
         const result = await resolveSlashCommand("/record");
         assert.strictEqual(result, "hello from the mic");
         assert.strictEqual(recordingDuringQuestion, true);
-        assert.strictEqual(getState().app.isRecording, false);
-        assert.deepStrictEqual(getState().app.transcript, [
+        assert.strictEqual(getState().terminal.isRecording, false);
+        assert.deepStrictEqual(getState().conversation.transcript, [
           {
             timestamp: 0,
             role: "user",
@@ -3613,7 +3624,7 @@ log content
         );
         const result = await resolveSlashCommand("/resume");
         assert.strictEqual(result, "Continue");
-        assert.deepStrictEqual(getState().app.transcript, [
+        assert.deepStrictEqual(getState().conversation.transcript, [
           { timestamp: 0, role: "user", message: "Continue" },
         ]);
       });
@@ -3630,7 +3641,7 @@ log content
         );
         const result = await resolveSlashCommand("/resume 1234567890000");
         assert.strictEqual(result, "Continue");
-        assert.deepStrictEqual(getState().app.transcript, [
+        assert.deepStrictEqual(getState().conversation.transcript, [
           { timestamp: 0, role: "user", message: "Continue" },
         ]);
       });
@@ -4179,7 +4190,10 @@ custom command content`,
       const result = await recordAndTranscribeInput();
       actions.setIsNonBlockingProcessOngoing(false);
       assert.strictEqual(result, null);
-      assert.deepStrictEqual(getState().app.bufferedStdoutWhileEditorOpen, "");
+      assert.deepStrictEqual(
+        getState().terminal.bufferedStdoutWhileEditorOpen,
+        "",
+      );
       assert.strictEqual(testFs._files.has("/tmp/lasso-test-uuid.wav"), false);
     });
 
@@ -4343,7 +4357,10 @@ custom command content`,
         `${RED}⏺${RESET} Press enter to stop recording \n`,
         `${RED}Error while transcribing: bad audio${RESET}\n`,
       ]);
-      assert.deepStrictEqual(getState().app.bufferedStdoutWhileEditorOpen, "");
+      assert.deepStrictEqual(
+        getState().terminal.bufferedStdoutWhileEditorOpen,
+        "",
+      );
       assert.strictEqual(testFs._files.has("/tmp/lasso-test-uuid.wav"), false);
     });
 
@@ -4363,7 +4380,7 @@ custom command content`,
       assert.strictEqual(result, null);
       assert.deepStrictEqual(getWrites(), []);
       assert.deepStrictEqual(
-        getState().app.bufferedStdoutWhileEditorOpen,
+        getState().terminal.bufferedStdoutWhileEditorOpen,
         `${RED}Error while transcribing: bad audio${RESET}\n`,
       );
       assert.strictEqual(testFs._files.has("/tmp/lasso-test-uuid.wav"), false);

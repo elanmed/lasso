@@ -308,7 +308,7 @@ describe("terminal", () => {
 
       await warnOnMissingBat();
 
-      assert.strictEqual(getState().app.batAvailable, false);
+      assert.strictEqual(getState().content.batAvailable, false);
       assert.deepStrictEqual(getWrites(), [
         `${YELLOW}\`bat\` is not available, consider installing it to properly render markdown responses in the terminal. Suppress this warning with \`suppressBatUnavailableWarning: true\` in ${getGlobalConfigPath()} or ${getLocalConfigPath()}${RESET}\n`,
       ]);
@@ -321,7 +321,7 @@ describe("terminal", () => {
 
       await warnOnMissingBat();
 
-      assert.strictEqual(getState().app.batAvailable, true);
+      assert.strictEqual(getState().content.batAvailable, true);
       assert.deepStrictEqual(getWrites(), []);
     });
 
@@ -333,7 +333,7 @@ describe("terminal", () => {
 
       await warnOnMissingBat();
 
-      assert.strictEqual(getState().app.batAvailable, false);
+      assert.strictEqual(getState().content.batAvailable, false);
       assert.deepStrictEqual(getWrites(), []);
     });
   });

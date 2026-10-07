@@ -55,7 +55,7 @@ describe("api", () => {
       it("returns text on success", async () => {
         const result = await resolveApiCall("hello");
         assert.strictEqual(result, "response text");
-        assert.deepStrictEqual(getState().app.transcript, [
+        assert.deepStrictEqual(getState().conversation.transcript, [
           { timestamp: 0, role: "assistant", message: "response text" },
         ]);
       });
@@ -149,7 +149,7 @@ describe("api", () => {
         );
         const result = await resolveApiCall("hello");
         assert.strictEqual(result, null);
-        assert.deepStrictEqual(getState().app.promptTokens, {
+        assert.deepStrictEqual(getState().usage.promptTokens, {
           value: 50,
           dirty: true,
         });
@@ -162,7 +162,7 @@ describe("api", () => {
         mock.method(aiDeps, "generateText", () => Promise.reject(err));
         const result = await resolveApiCall("hello");
         assert.strictEqual(result, null);
-        assert.deepStrictEqual(getState().app.promptTokens, {
+        assert.deepStrictEqual(getState().usage.promptTokens, {
           value: 50,
           dirty: true,
         });
@@ -186,7 +186,7 @@ describe("api", () => {
           ),
         );
         await resolveApiCall("hello");
-        assert.deepStrictEqual(getState().app.modelUsageForSession, {
+        assert.deepStrictEqual(getState().usage.modelUsageForSession, {
           "claude-sonnet-4-20250514": [
             {
               inputTokens: 42,
@@ -197,16 +197,14 @@ describe("api", () => {
             },
           ],
         });
-        assert.deepStrictEqual(getState().app.modelUsageForLimitWindow, {});
-        assert.deepStrictEqual(getState().app.conversation, {
-          summaries: [],
-          messages: [
-            { role: "user", content: "hello" },
-            { role: "assistant", content: "tool call" },
-            { role: "tool", content: "tool result" },
-          ],
-        });
-        assert.deepStrictEqual(getState().app.promptTokens, {
+        assert.deepStrictEqual(getState().usage.modelUsageForLimitWindow, {});
+        assert.deepStrictEqual(getState().conversation.summaries, []);
+        assert.deepStrictEqual(getState().conversation.messages, [
+          { role: "user", content: "hello" },
+          { role: "assistant", content: "tool call" },
+          { role: "tool", content: "tool result" },
+        ]);
+        assert.deepStrictEqual(getState().usage.promptTokens, {
           value: 49,
           dirty: false,
         });
@@ -214,7 +212,7 @@ describe("api", () => {
 
       it("sets tokens to input plus output tokens on each call", async () => {
         await resolveApiCall("first");
-        assert.strictEqual(getState().app.promptTokens.value, 15);
+        assert.strictEqual(getState().usage.promptTokens.value, 15);
 
         mock.method(aiDeps, "generateText", () =>
           Promise.resolve(
@@ -225,15 +223,13 @@ describe("api", () => {
           ),
         );
         await resolveApiCall("second");
-        assert.deepStrictEqual(getState().app.conversation, {
-          summaries: [],
-          messages: [
-            { role: "user", content: "first" },
-            { role: "user", content: "second" },
-            { role: "assistant", content: "answer" },
-          ],
-        });
-        assert.deepStrictEqual(getState().app.promptTokens, {
+        assert.deepStrictEqual(getState().conversation.summaries, []);
+        assert.deepStrictEqual(getState().conversation.messages, [
+          { role: "user", content: "first" },
+          { role: "user", content: "second" },
+          { role: "assistant", content: "answer" },
+        ]);
+        assert.deepStrictEqual(getState().usage.promptTokens, {
           value: 17,
           dirty: false,
         });
@@ -257,15 +253,13 @@ describe("api", () => {
           ),
         );
         await resolveApiCall("hello");
-        assert.deepStrictEqual(getState().app.conversation, {
-          summaries: [],
-          messages: [
-            { role: "user", content: "existing" },
-            { role: "user", content: "hello" },
-            { role: "assistant", content: "answer" },
-          ],
-        });
-        assert.deepStrictEqual(getState().app.promptTokens, {
+        assert.deepStrictEqual(getState().conversation.summaries, []);
+        assert.deepStrictEqual(getState().conversation.messages, [
+          { role: "user", content: "existing" },
+          { role: "user", content: "hello" },
+          { role: "assistant", content: "answer" },
+        ]);
+        assert.deepStrictEqual(getState().usage.promptTokens, {
           value: 55,
           dirty: false,
         });
@@ -389,7 +383,7 @@ describe("api", () => {
         });
         mockGenerateText(() => Promise.resolve(makeGenerateTextResult()));
         await resolveApiCall("hello");
-        assert.deepStrictEqual(getState().app.toolEditDiffs, []);
+        assert.deepStrictEqual(getState().conversation.toolEditDiffs, []);
       });
 
       it("creates temp file on tool call start for writing bash tools", async () => {
@@ -555,7 +549,10 @@ describe("api", () => {
         const getWrites = mockStdoutWrites();
         const result = await resolveApiCall("hello");
         assert.strictEqual(result, null);
-        assert.strictEqual(getState().app.editorInputValue, "queued input");
+        assert.strictEqual(
+          getState().terminal.editorInputValue,
+          "queued input",
+        );
         assert.deepStrictEqual(getWrites(), [
           `${YELLOW}You have queued messages!${RESET}\n`,
         ]);
@@ -566,17 +563,15 @@ describe("api", () => {
         mock.method(aiDeps, "generateText", () => Promise.reject(err));
         const result = await resolveApiCall("hello");
         assert.strictEqual(result, null);
-        assert.deepStrictEqual(getState().app.conversation, {
-          summaries: [],
-          messages: [
-            { role: "user", content: "hello" },
-            {
-              role: "assistant",
-              content: "[Interrupted before a response was generated]",
-            },
-          ],
-        });
-        assert.deepStrictEqual(getState().app.promptTokens, {
+        assert.deepStrictEqual(getState().conversation.summaries, []);
+        assert.deepStrictEqual(getState().conversation.messages, [
+          { role: "user", content: "hello" },
+          {
+            role: "assistant",
+            content: "[Interrupted before a response was generated]",
+          },
+        ]);
+        assert.deepStrictEqual(getState().usage.promptTokens, {
           value: 0,
           dirty: true,
         });
@@ -606,11 +601,11 @@ describe("api", () => {
         });
         await maybeCompact("hi");
         assert.strictEqual(called, false);
-        assert.deepStrictEqual(getState().app.conversation, {
-          summaries: [],
-          messages: [{ role: "user", content: "hi" }],
-        });
-        assert.deepStrictEqual(getState().app.promptTokens, {
+        assert.deepStrictEqual(getState().conversation.summaries, []);
+        assert.deepStrictEqual(getState().conversation.messages, [
+          { role: "user", content: "hi" },
+        ]);
+        assert.deepStrictEqual(getState().usage.promptTokens, {
           value: 60_000,
           dirty: false,
         });
@@ -639,13 +634,13 @@ describe("api", () => {
         const getMessages = () => getCapturedMessages(capturedOpts);
         await maybeCompact("hi");
         assert.strictEqual(getMessages().length, 1);
-        assert.deepStrictEqual(getState().app.conversation, {
-          summaries: [
-            { compacted: "compacted summary", compactedAt: 0, tokens: 25_000 },
-          ],
-          messages: [{ role: "assistant", content: "compacted summary" }],
-        });
-        assert.deepStrictEqual(getState().app.promptTokens, {
+        assert.deepStrictEqual(getState().conversation.summaries, [
+          { compacted: "compacted summary", compactedAt: 0, tokens: 25_000 },
+        ]);
+        assert.deepStrictEqual(getState().conversation.messages, [
+          { role: "assistant", content: "compacted summary" },
+        ]);
+        assert.deepStrictEqual(getState().usage.promptTokens, {
           value: 25_000 + getApproxAdditions(),
           dirty: false,
         });
@@ -668,11 +663,11 @@ describe("api", () => {
         });
         await maybeCompact("hi");
         assert.strictEqual(called, false);
-        assert.deepStrictEqual(getState().app.conversation, {
-          summaries: [],
-          messages: [{ role: "user", content: longUserContent }],
-        });
-        assert.deepStrictEqual(getState().app.promptTokens, {
+        assert.deepStrictEqual(getState().conversation.summaries, []);
+        assert.deepStrictEqual(getState().conversation.messages, [
+          { role: "user", content: longUserContent },
+        ]);
+        assert.deepStrictEqual(getState().usage.promptTokens, {
           value: 2_000,
           dirty: true,
         });
@@ -782,13 +777,13 @@ describe("api", () => {
           safeStringify({ ...harnessTools, ...getState().mcp.tools }),
         );
         const withoutMcpTools = strToApproxTokens(safeStringify(harnessTools));
-        assert.deepStrictEqual(getState().app.conversation, {
-          summaries: [
-            { compacted: "compacted summary", compactedAt: 0, tokens: 25_000 },
-          ],
-          messages: [{ role: "assistant", content: "compacted summary" }],
-        });
-        assert.deepStrictEqual(getState().app.promptTokens, {
+        assert.deepStrictEqual(getState().conversation.summaries, [
+          { compacted: "compacted summary", compactedAt: 0, tokens: 25_000 },
+        ]);
+        assert.deepStrictEqual(getState().conversation.messages, [
+          { role: "assistant", content: "compacted summary" },
+        ]);
+        assert.deepStrictEqual(getState().usage.promptTokens, {
           value: 25_000 + withMcpTools,
           dirty: false,
         });
@@ -830,17 +825,17 @@ describe("api", () => {
 [{"role":"user","content":"hi"}]
 \`\`\``,
         );
-        assert.deepStrictEqual(getState().app.conversation, {
-          summaries: [
-            { compacted: "compacted summary", compactedAt: 0, tokens: 25_000 },
-          ],
-          messages: [{ role: "assistant", content: "compacted summary" }],
-        });
-        assert.deepStrictEqual(getState().app.promptTokens, {
+        assert.deepStrictEqual(getState().conversation.summaries, [
+          { compacted: "compacted summary", compactedAt: 0, tokens: 25_000 },
+        ]);
+        assert.deepStrictEqual(getState().conversation.messages, [
+          { role: "assistant", content: "compacted summary" },
+        ]);
+        assert.deepStrictEqual(getState().usage.promptTokens, {
           value: 25_000 + getApproxAdditions(),
           dirty: false,
         });
-        assert.deepStrictEqual(getState().app.modelUsageForSession, {
+        assert.deepStrictEqual(getState().usage.modelUsageForSession, {
           "claude-sonnet-4-20250514": [
             {
               inputTokens: 0,
@@ -873,13 +868,13 @@ describe("api", () => {
         await maybeCompact("x".repeat(300));
 
         assert.strictEqual(getMessages().length, 1);
-        assert.deepStrictEqual(getState().app.conversation, {
-          summaries: [
-            { compacted: "compacted summary", compactedAt: 0, tokens: 25_000 },
-          ],
-          messages: [{ role: "assistant", content: "compacted summary" }],
-        });
-        assert.deepStrictEqual(getState().app.promptTokens, {
+        assert.deepStrictEqual(getState().conversation.summaries, [
+          { compacted: "compacted summary", compactedAt: 0, tokens: 25_000 },
+        ]);
+        assert.deepStrictEqual(getState().conversation.messages, [
+          { role: "assistant", content: "compacted summary" },
+        ]);
+        assert.deepStrictEqual(getState().usage.promptTokens, {
           value: 25_000 + getApproxAdditions(),
           dirty: false,
         });
@@ -899,12 +894,12 @@ describe("api", () => {
           ),
         );
         await maybeCompact("hi");
-        assert.deepStrictEqual(getState().app.conversation, {
-          summaries: [
-            { compacted: "compacted summary", compactedAt: 0, tokens: 25_000 },
-          ],
-          messages: [{ role: "assistant", content: "compacted summary" }],
-        });
+        assert.deepStrictEqual(getState().conversation.summaries, [
+          { compacted: "compacted summary", compactedAt: 0, tokens: 25_000 },
+        ]);
+        assert.deepStrictEqual(getState().conversation.messages, [
+          { role: "assistant", content: "compacted summary" },
+        ]);
       });
 
       it("resets messages before the api call so the summary and new user input are both sent", async () => {
@@ -939,17 +934,15 @@ describe("api", () => {
         );
         await maybeCompact("new input");
         await resolveApiCall("new input");
-        assert.deepStrictEqual(getState().app.conversation, {
-          summaries: [
-            { compacted: "compacted summary", compactedAt: 0, tokens: 25 },
-          ],
-          messages: [
-            { role: "assistant", content: "compacted summary" },
-            { role: "user", content: "new input" },
-            { role: "assistant", content: "answer text" },
-          ],
-        });
-        assert.deepStrictEqual(getState().app.promptTokens, {
+        assert.deepStrictEqual(getState().conversation.summaries, [
+          { compacted: "compacted summary", compactedAt: 0, tokens: 25 },
+        ]);
+        assert.deepStrictEqual(getState().conversation.messages, [
+          { role: "assistant", content: "compacted summary" },
+          { role: "user", content: "new input" },
+          { role: "assistant", content: "answer text" },
+        ]);
+        assert.deepStrictEqual(getState().usage.promptTokens, {
           value: 25,
           dirty: false,
         });
@@ -992,11 +985,11 @@ describe("api", () => {
           Promise.reject(new Error("network error")),
         );
         await maybeCompact("hi");
-        assert.deepStrictEqual(getState().app.conversation, {
-          summaries: [],
-          messages: [{ role: "user", content: "hi" }],
-        });
-        assert.deepStrictEqual(getState().app.promptTokens, {
+        assert.deepStrictEqual(getState().conversation.summaries, []);
+        assert.deepStrictEqual(getState().conversation.messages, [
+          { role: "user", content: "hi" },
+        ]);
+        assert.deepStrictEqual(getState().usage.promptTokens, {
           value: 96_000,
           dirty: false,
         });
@@ -1013,7 +1006,10 @@ describe("api", () => {
         mock.method(aiDeps, "generateText", () => Promise.reject(err));
         await maybeCompact("hi");
         assert.strictEqual(getState().abortControllers.apiStream, null);
-        assert.strictEqual(getState().app.editorInputValue, "queued input");
+        assert.strictEqual(
+          getState().terminal.editorInputValue,
+          "queued input",
+        );
         assert.deepStrictEqual(getWrites(), [
           `${BLUE}Compacting…${RESET}\n`,
           `${YELLOW}You have queued messages!${RESET}\n`,
@@ -1029,11 +1025,11 @@ describe("api", () => {
         mock.method(aiDeps, "generateText", () => Promise.reject(err));
         await maybeCompact("hi");
         assert.strictEqual(getState().abortControllers.apiStream, null);
-        assert.deepStrictEqual(getState().app.conversation, {
-          summaries: [],
-          messages: [{ role: "user", content: "hi" }],
-        });
-        assert.deepStrictEqual(getState().app.promptTokens, {
+        assert.deepStrictEqual(getState().conversation.summaries, []);
+        assert.deepStrictEqual(getState().conversation.messages, [
+          { role: "user", content: "hi" },
+        ]);
+        assert.deepStrictEqual(getState().usage.promptTokens, {
           value: 96_000,
           dirty: false,
         });
@@ -1043,7 +1039,7 @@ describe("api", () => {
       it("aborts the merge when the controller is aborted after summarizing", async () => {
         for (const i of [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]) {
           actions.setConversationSummaries([
-            ...getState().app.conversation.summaries,
+            ...getState().conversation.summaries,
             { compacted: `summary ${String(i)}`, compactedAt: i, tokens: 100 },
           ]);
         }
@@ -1068,9 +1064,7 @@ describe("api", () => {
         assert.strictEqual(getState().abortControllers.apiStream, null);
         assert.deepStrictEqual(calls, [false, true]);
         assert.deepStrictEqual(
-          getState().app.conversation.summaries.map(
-            ({ compacted }) => compacted,
-          ),
+          getState().conversation.summaries.map(({ compacted }) => compacted),
           [
             "summary 1",
             "summary 2",
@@ -1092,16 +1086,16 @@ describe("api", () => {
       it("merges existing summaries when at the summary max during compaction", async () => {
         for (const i of [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]) {
           actions.setConversationSummaries([
-            ...getState().app.conversation.summaries,
+            ...getState().conversation.summaries,
             { compacted: `summary ${String(i)}`, compactedAt: i, tokens: 100 },
           ]);
           actions.setConversationMessages([
-            ...getState().app.conversation.messages,
+            ...getState().conversation.messages,
             { role: "assistant", content: `summary ${String(i)}` },
           ]);
         }
         actions.setConversationMessages([
-          ...getState().app.conversation.messages,
+          ...getState().conversation.messages,
           { role: "user", content: "hi" },
         ]);
         actions.setPromptTokens(96_000);
@@ -1118,33 +1112,31 @@ describe("api", () => {
         ]);
         await maybeCompact("hi");
         assert.strictEqual(generate.callCount(), 2);
-        assert.deepStrictEqual(getState().app.conversation, {
-          summaries: [
-            { compacted: "merged summary", compactedAt: 0, tokens: 15 },
-            { compacted: "summary 3", compactedAt: 3, tokens: 100 },
-            { compacted: "summary 4", compactedAt: 4, tokens: 100 },
-            { compacted: "summary 5", compactedAt: 5, tokens: 100 },
-            { compacted: "summary 6", compactedAt: 6, tokens: 100 },
-            { compacted: "summary 7", compactedAt: 7, tokens: 100 },
-            { compacted: "summary 8", compactedAt: 8, tokens: 100 },
-            { compacted: "summary 9", compactedAt: 9, tokens: 100 },
-            { compacted: "summary 10", compactedAt: 10, tokens: 100 },
-            { compacted: "compacted summary", compactedAt: 0, tokens: 20 },
-          ],
-          messages: [
-            { role: "assistant", content: "merged summary" },
-            { role: "assistant", content: "summary 3" },
-            { role: "assistant", content: "summary 4" },
-            { role: "assistant", content: "summary 5" },
-            { role: "assistant", content: "summary 6" },
-            { role: "assistant", content: "summary 7" },
-            { role: "assistant", content: "summary 8" },
-            { role: "assistant", content: "summary 9" },
-            { role: "assistant", content: "summary 10" },
-            { role: "assistant", content: "compacted summary" },
-          ],
-        });
-        assert.deepStrictEqual(getState().app.promptTokens, {
+        assert.deepStrictEqual(getState().conversation.summaries, [
+          { compacted: "merged summary", compactedAt: 0, tokens: 15 },
+          { compacted: "summary 3", compactedAt: 3, tokens: 100 },
+          { compacted: "summary 4", compactedAt: 4, tokens: 100 },
+          { compacted: "summary 5", compactedAt: 5, tokens: 100 },
+          { compacted: "summary 6", compactedAt: 6, tokens: 100 },
+          { compacted: "summary 7", compactedAt: 7, tokens: 100 },
+          { compacted: "summary 8", compactedAt: 8, tokens: 100 },
+          { compacted: "summary 9", compactedAt: 9, tokens: 100 },
+          { compacted: "summary 10", compactedAt: 10, tokens: 100 },
+          { compacted: "compacted summary", compactedAt: 0, tokens: 20 },
+        ]);
+        assert.deepStrictEqual(getState().conversation.messages, [
+          { role: "assistant", content: "merged summary" },
+          { role: "assistant", content: "summary 3" },
+          { role: "assistant", content: "summary 4" },
+          { role: "assistant", content: "summary 5" },
+          { role: "assistant", content: "summary 6" },
+          { role: "assistant", content: "summary 7" },
+          { role: "assistant", content: "summary 8" },
+          { role: "assistant", content: "summary 9" },
+          { role: "assistant", content: "summary 10" },
+          { role: "assistant", content: "compacted summary" },
+        ]);
+        assert.deepStrictEqual(getState().usage.promptTokens, {
           value: 15 + 800 + 20 + getApproxAdditions(),
           dirty: false,
         });
@@ -1153,16 +1145,16 @@ describe("api", () => {
       it("keeps the existing summaries when merging fails during compaction", async () => {
         for (const i of [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]) {
           actions.setConversationSummaries([
-            ...getState().app.conversation.summaries,
+            ...getState().conversation.summaries,
             { compacted: `summary ${String(i)}`, compactedAt: i, tokens: 100 },
           ]);
           actions.setConversationMessages([
-            ...getState().app.conversation.messages,
+            ...getState().conversation.messages,
             { role: "assistant", content: `summary ${String(i)}` },
           ]);
         }
         actions.setConversationMessages([
-          ...getState().app.conversation.messages,
+          ...getState().conversation.messages,
           { role: "user", content: "hi" },
         ]);
         actions.setPromptTokens(96_000);
@@ -1176,35 +1168,33 @@ describe("api", () => {
         ]);
         await maybeCompact("hi");
         assert.strictEqual(generate.callCount(), 2);
-        assert.deepStrictEqual(getState().app.conversation, {
-          summaries: [
-            { compacted: "summary 1", compactedAt: 1, tokens: 100 },
-            { compacted: "summary 2", compactedAt: 2, tokens: 100 },
-            { compacted: "summary 3", compactedAt: 3, tokens: 100 },
-            { compacted: "summary 4", compactedAt: 4, tokens: 100 },
-            { compacted: "summary 5", compactedAt: 5, tokens: 100 },
-            { compacted: "summary 6", compactedAt: 6, tokens: 100 },
-            { compacted: "summary 7", compactedAt: 7, tokens: 100 },
-            { compacted: "summary 8", compactedAt: 8, tokens: 100 },
-            { compacted: "summary 9", compactedAt: 9, tokens: 100 },
-            { compacted: "summary 10", compactedAt: 10, tokens: 100 },
-            { compacted: "compacted summary", compactedAt: 0, tokens: 20 },
-          ],
-          messages: [
-            { role: "assistant", content: "summary 1" },
-            { role: "assistant", content: "summary 2" },
-            { role: "assistant", content: "summary 3" },
-            { role: "assistant", content: "summary 4" },
-            { role: "assistant", content: "summary 5" },
-            { role: "assistant", content: "summary 6" },
-            { role: "assistant", content: "summary 7" },
-            { role: "assistant", content: "summary 8" },
-            { role: "assistant", content: "summary 9" },
-            { role: "assistant", content: "summary 10" },
-            { role: "assistant", content: "compacted summary" },
-          ],
-        });
-        assert.deepStrictEqual(getState().app.promptTokens, {
+        assert.deepStrictEqual(getState().conversation.summaries, [
+          { compacted: "summary 1", compactedAt: 1, tokens: 100 },
+          { compacted: "summary 2", compactedAt: 2, tokens: 100 },
+          { compacted: "summary 3", compactedAt: 3, tokens: 100 },
+          { compacted: "summary 4", compactedAt: 4, tokens: 100 },
+          { compacted: "summary 5", compactedAt: 5, tokens: 100 },
+          { compacted: "summary 6", compactedAt: 6, tokens: 100 },
+          { compacted: "summary 7", compactedAt: 7, tokens: 100 },
+          { compacted: "summary 8", compactedAt: 8, tokens: 100 },
+          { compacted: "summary 9", compactedAt: 9, tokens: 100 },
+          { compacted: "summary 10", compactedAt: 10, tokens: 100 },
+          { compacted: "compacted summary", compactedAt: 0, tokens: 20 },
+        ]);
+        assert.deepStrictEqual(getState().conversation.messages, [
+          { role: "assistant", content: "summary 1" },
+          { role: "assistant", content: "summary 2" },
+          { role: "assistant", content: "summary 3" },
+          { role: "assistant", content: "summary 4" },
+          { role: "assistant", content: "summary 5" },
+          { role: "assistant", content: "summary 6" },
+          { role: "assistant", content: "summary 7" },
+          { role: "assistant", content: "summary 8" },
+          { role: "assistant", content: "summary 9" },
+          { role: "assistant", content: "summary 10" },
+          { role: "assistant", content: "compacted summary" },
+        ]);
+        assert.deepStrictEqual(getState().usage.promptTokens, {
           value: 1000 + 20 + getApproxAdditions(),
           dirty: false,
         });
@@ -1291,7 +1281,7 @@ describe("api", () => {
           compactedAt: 42,
           tokens: 25_000,
         });
-        assert.deepStrictEqual(getState().app.modelUsageForSession, {
+        assert.deepStrictEqual(getState().usage.modelUsageForSession, {
           "claude-sonnet-4-20250514": [
             {
               inputTokens: 0,
@@ -1368,16 +1358,14 @@ describe("api", () => {
         );
         const result = await getConversationSummary();
         assert.strictEqual(result, null);
-        assert.deepStrictEqual(getState().app.conversation, {
-          summaries: [
-            { compacted: "prior summary", compactedAt: 1, tokens: 10 },
-          ],
-          messages: [
-            { role: "assistant", content: "prior summary" },
-            { role: "user", content: "not yet summarized" },
-          ],
-        });
-        assert.deepStrictEqual(getState().app.promptTokens, {
+        assert.deepStrictEqual(getState().conversation.summaries, [
+          { compacted: "prior summary", compactedAt: 1, tokens: 10 },
+        ]);
+        assert.deepStrictEqual(getState().conversation.messages, [
+          { role: "assistant", content: "prior summary" },
+          { role: "user", content: "not yet summarized" },
+        ]);
+        assert.deepStrictEqual(getState().usage.promptTokens, {
           value: 85_000,
           dirty: false,
         });
@@ -1391,16 +1379,14 @@ describe("api", () => {
         const result = await getConversationSummary();
         assert.strictEqual(result, null);
         assert.notStrictEqual(getState().abortControllers.apiStream, null);
-        assert.deepStrictEqual(getState().app.conversation, {
-          summaries: [
-            { compacted: "prior summary", compactedAt: 1, tokens: 10 },
-          ],
-          messages: [
-            { role: "assistant", content: "prior summary" },
-            { role: "user", content: "not yet summarized" },
-          ],
-        });
-        assert.deepStrictEqual(getState().app.promptTokens, {
+        assert.deepStrictEqual(getState().conversation.summaries, [
+          { compacted: "prior summary", compactedAt: 1, tokens: 10 },
+        ]);
+        assert.deepStrictEqual(getState().conversation.messages, [
+          { role: "assistant", content: "prior summary" },
+          { role: "user", content: "not yet summarized" },
+        ]);
+        assert.deepStrictEqual(getState().usage.promptTokens, {
           value: 85_000,
           dirty: false,
         });
@@ -1416,7 +1402,10 @@ describe("api", () => {
         mock.method(aiDeps, "generateText", () => Promise.reject(err));
         const result = await getConversationSummary();
         assert.strictEqual(result, null);
-        assert.strictEqual(getState().app.editorInputValue, "queued input");
+        assert.strictEqual(
+          getState().terminal.editorInputValue,
+          "queued input",
+        );
         assert.notStrictEqual(getState().abortControllers.apiStream, null);
         assert.deepStrictEqual(getWrites(), [
           `${YELLOW}You have queued messages!${RESET}\n`,
@@ -1437,7 +1426,7 @@ describe("api", () => {
     const seedSummaries = () => {
       for (const i of [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]) {
         actions.setConversationSummaries([
-          ...getState().app.conversation.summaries,
+          ...getState().conversation.summaries,
           { compacted: `summary ${String(i)}`, compactedAt: i, tokens: 100 },
         ]);
         actions.setConversationMessages([
@@ -1512,7 +1501,7 @@ describe("api", () => {
           { compacted: "summary 9", compactedAt: 9, tokens: 100 },
           { compacted: "summary 10", compactedAt: 10, tokens: 100 },
         ]);
-        assert.deepStrictEqual(getState().app.conversation.summaries, [
+        assert.deepStrictEqual(getState().conversation.summaries, [
           { compacted: "summary 1", compactedAt: 1, tokens: 100 },
           { compacted: "summary 2", compactedAt: 2, tokens: 100 },
           { compacted: "summary 3", compactedAt: 3, tokens: 100 },
@@ -1524,7 +1513,7 @@ describe("api", () => {
           { compacted: "summary 9", compactedAt: 9, tokens: 100 },
           { compacted: "summary 10", compactedAt: 10, tokens: 100 },
         ]);
-        assert.deepStrictEqual(getState().app.modelUsageForSession, {
+        assert.deepStrictEqual(getState().usage.modelUsageForSession, {
           "claude-sonnet-4-20250514": [
             {
               inputTokens: 0,
@@ -1570,7 +1559,7 @@ describe("api", () => {
           ),
         );
         await getMergedSummaries();
-        assert.deepStrictEqual(getState().app.conversation.summaries, [
+        assert.deepStrictEqual(getState().conversation.summaries, [
           { compacted: "summary 1", compactedAt: 1, tokens: 100 },
           { compacted: "summary 2", compactedAt: 2, tokens: 100 },
           { compacted: "summary 3", compactedAt: 3, tokens: 100 },
@@ -1660,8 +1649,8 @@ describe("api", () => {
           Promise.reject(new Error("network error")),
         );
         const result = await getMergedSummaries();
-        assert.strictEqual(result, getState().app.conversation.summaries);
-        assert.deepStrictEqual(getState().app.conversation.summaries, [
+        assert.strictEqual(result, getState().conversation.summaries);
+        assert.deepStrictEqual(getState().conversation.summaries, [
           { compacted: "summary 1", compactedAt: 1, tokens: 100 },
           { compacted: "summary 2", compactedAt: 2, tokens: 100 },
           { compacted: "summary 3", compactedAt: 3, tokens: 100 },

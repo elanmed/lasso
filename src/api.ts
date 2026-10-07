@@ -78,7 +78,7 @@ export async function resolveApiCall(userInput: string) {
       model: getLanguageModel(getState().config.model),
       reasoning: getState().config.reasoning,
       instructions: systemContent,
-      messages: [...getState().app.conversation.messages] as ModelMessage[],
+      messages: [...getState().conversation.messages] as ModelMessage[],
       tools: getBaseAgentTools(),
       stopWhen: aiDeps.isLoopFinished(),
       abortSignal: getApiStreamAbortSignal(),
@@ -171,7 +171,7 @@ export async function resolveApiCall(userInput: string) {
         messages: getAppendedConversationMessages(interruptMessage),
       });
 
-      if (getState().app.editorInputValue !== null) {
+      if (getState().terminal.editorInputValue !== null) {
         await resolveInterruptWithEditor();
       }
       return null;
@@ -204,12 +204,12 @@ export async function resolveApiCall(userInput: string) {
 }
 
 export async function getMergedSummaries() {
-  const { summaries } = getState().app.conversation;
+  const { summaries } = getState().conversation;
   const maxNumberSummaries = getMaxNumberSummaries();
   assertAtBuildtime(maxNumberSummaries !== null);
 
   if (summaries.length < maxNumberSummaries) {
-    return getState().app.conversation.summaries;
+    return getState().conversation.summaries;
   }
 
   let smallestSecondSummaryIdx = -1;
@@ -280,14 +280,14 @@ export async function getMergedSummaries() {
 
   if (!generateTextResult.ok) {
     if (isAbortError(generateTextResult.error)) {
-      if (getState().app.editorInputValue !== null) {
+      if (getState().terminal.editorInputValue !== null) {
         await resolveInterruptWithEditor();
       }
-      return getState().app.conversation.summaries;
+      return getState().conversation.summaries;
     }
 
     print.error(getMessageFromError(generateTextResult.error));
-    return getState().app.conversation.summaries;
+    return getState().conversation.summaries;
   }
 
   const { usage, output, text } = generateTextResult.value;
@@ -320,8 +320,8 @@ export async function getConversationSummary() {
     conversation: markdownFence(
       "json",
       JSON.stringify(
-        getState().app.conversation.messages.slice(
-          getState().app.conversation.summaries.length,
+        getState().conversation.messages.slice(
+          getState().conversation.summaries.length,
         ),
       ),
     ),
@@ -357,7 +357,7 @@ export async function getConversationSummary() {
 
   if (!generateTextResult.ok) {
     if (isAbortError(generateTextResult.error)) {
-      if (getState().app.editorInputValue !== null) {
+      if (getState().terminal.editorInputValue !== null) {
         await resolveInterruptWithEditor();
       }
       return null;
@@ -426,7 +426,7 @@ export async function maybeCompact(userInput: string) {
   await applyCompactedConversation([...mergedSummaries, conversationSummary]);
 
   const summaryTokens = getState()
-    .app.conversation.summaries.map(({ tokens }) => tokens)
+    .conversation.summaries.map(({ tokens }) => tokens)
     .reduce((accum, curr) => accum + curr, 0);
   actions.setPromptTokens(summaryTokens + promptOverheadTokensApprox);
   actions.setPromptTokensDirty(false);

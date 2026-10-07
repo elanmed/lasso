@@ -1652,7 +1652,7 @@ describe("config", () => {
       );
 
       await initState();
-      assert.equal(getState().app.debugLog, true);
+      assert.equal(getState().debug.debugLog, true);
     });
 
     it("sets contextStr from dep", async () => {
@@ -1670,7 +1670,7 @@ describe("config", () => {
 
       await initState();
       assert.equal(
-        getState().app.contextStr,
+        getState().content.contextStr,
         `# [lasso] AGENTS.md context files
 
 ## Path: /fake-home/.config/lasso/context/AGENTS.md
@@ -1692,11 +1692,11 @@ hello
 
       await initState();
       assert.equal(
-        getState().app.globalConfigStr,
+        getState().content.globalConfigStr,
         JSON.stringify({ model: "gpt-4" }),
       );
       assert.equal(
-        getState().app.localConfigStr,
+        getState().content.localConfigStr,
         JSON.stringify({ model: "gpt-4", sdkProvider: "anthropic" }),
       );
     });
@@ -1710,7 +1710,7 @@ hello
       );
 
       await initState();
-      assert.equal(getState().app.localConfigStr, "{}");
+      assert.equal(getState().content.localConfigStr, "{}");
     });
 
     it("sets skillsStr from dep", async () => {
@@ -1722,11 +1722,11 @@ hello
       );
 
       await initState();
-      assert.equal(getState().app.skillsStr, "");
+      assert.equal(getState().content.skillsStr, "");
     });
 
     it("preserves the initialized sessionStartDate", async () => {
-      const sessionStartDate = getState().app.sessionStartDate;
+      const sessionStartDate = getState().session.sessionStartDate;
       testFs._files.set(
         getGlobalConfigPath(),
         JSON.stringify({
@@ -1735,7 +1735,7 @@ hello
       );
 
       await initState();
-      assert.strictEqual(getState().app.sessionStartDate, sessionStartDate);
+      assert.strictEqual(getState().session.sessionStartDate, sessionStartDate);
     });
 
     it("sets debug log path", async () => {
@@ -1748,7 +1748,7 @@ hello
 
       await initState();
       assert.strictEqual(
-        getState().app.debugLogPath,
+        getState().debug.debugLogPath,
         "/fake-home/.local/state/lasso/debug/debug-test-uuid.log",
       );
     });
@@ -1772,8 +1772,8 @@ hello
       );
 
       await initState();
-      assert.deepStrictEqual(getState().app.modelUsageForLimitWindow, {});
-      assert.deepStrictEqual(getState().app.modelUsageForSession, {});
+      assert.deepStrictEqual(getState().usage.modelUsageForLimitWindow, {});
+      assert.deepStrictEqual(getState().usage.modelUsageForSession, {});
     });
 
     it("loads recent model usages from the usage log", async () => {
@@ -1815,7 +1815,7 @@ hello
 
       await initState();
 
-      assert.deepStrictEqual(getState().app.modelUsageForLimitWindow, {
+      assert.deepStrictEqual(getState().usage.modelUsageForLimitWindow, {
         "gpt-4": [recent],
       });
     });
@@ -1828,13 +1828,13 @@ hello
 
       await initStateFirst();
 
-      assert.strictEqual(getState().app.debugLog, true);
+      assert.strictEqual(getState().debug.debugLog, true);
     });
 
     it("keeps debug flag off when DEBUG is not set", async () => {
       await initStateFirst();
 
-      assert.strictEqual(getState().app.debugLog, false);
+      assert.strictEqual(getState().debug.debugLog, false);
     });
 
     it("reads each config file once and reuses the same read for parsing", async () => {
@@ -1855,8 +1855,8 @@ hello
 
       assert.strictEqual(globalReads, 1);
       assert.strictEqual(localReads, 1);
-      assert.strictEqual(getState().app.globalConfigStr, globalConfigStr);
-      assert.strictEqual(getState().app.localConfigStr, localConfigStr);
+      assert.strictEqual(getState().content.globalConfigStr, globalConfigStr);
+      assert.strictEqual(getState().content.localConfigStr, localConfigStr);
       assert.strictEqual(globalConfig.model, testConfig.model);
       assert.strictEqual(localConfig.promptPrefix, ">>> ");
     });
@@ -1879,7 +1879,7 @@ hello
 
   describe("initStateRepeatable", () => {
     it("updates config and context without resetting session start date", async () => {
-      const sessionStartDate = getState().app.sessionStartDate;
+      const sessionStartDate = getState().session.sessionStartDate;
       testFs._files.set(
         getGlobalConfigPath(),
         JSON.stringify({
@@ -1888,7 +1888,7 @@ hello
       );
 
       await initState();
-      assert.strictEqual(getState().app.sessionStartDate, sessionStartDate);
+      assert.strictEqual(getState().session.sessionStartDate, sessionStartDate);
 
       const globalConfigStr = JSON.stringify({
         ...testConfig,
@@ -1898,13 +1898,13 @@ hello
 
       await initStateRepeatable();
 
-      assert.strictEqual(getState().app.sessionStartDate, sessionStartDate);
-      assert.strictEqual(getState().app.globalConfigStr, globalConfigStr);
+      assert.strictEqual(getState().session.sessionStartDate, sessionStartDate);
+      assert.strictEqual(getState().content.globalConfigStr, globalConfigStr);
       assert.strictEqual(getState().config.model, "claude-haiku-4-5");
     });
 
     it("does not reset the session start date or debug log path", async () => {
-      const sessionStartDate = getState().app.sessionStartDate;
+      const sessionStartDate = getState().session.sessionStartDate;
       testFs._files.set(
         getGlobalConfigPath(),
         JSON.stringify({
@@ -1914,8 +1914,8 @@ hello
 
       await initStateRepeatable();
 
-      assert.strictEqual(getState().app.sessionStartDate, sessionStartDate);
-      assert.strictEqual(getState().app.debugLogPath, "");
+      assert.strictEqual(getState().session.sessionStartDate, sessionStartDate);
+      assert.strictEqual(getState().debug.debugLogPath, "");
     });
 
     it("wires the tools content string for token counting", async () => {

@@ -69,81 +69,107 @@ export interface McpState {
   close: () => Promise<void>;
 }
 
-interface State {
-  app: {
-    conversation: {
-      messages: ModelMessage[];
-      summaries: ModelSummary[];
-    };
-    transcript: TranscriptEntry[];
-    promptTokens: {
-      value: number;
-      dirty: boolean;
-    };
-    bufferedStdoutWhileEditorOpen: string;
-    editorInputValue: string | null;
-    isNonBlockingProcessOngoing: boolean;
-    isInitializing: boolean;
-    isRecording: boolean;
-    bufferedInputWhileInitializing: string;
-    slashCommands: SlashCommand[];
-    stdoutTail: string;
-    batAvailable: boolean;
-    debugLog: boolean;
-    debugLogPath: string;
-    sessionFilePath: string;
-    contextEntries: ContextEntry[];
-    contextStr: string;
-    globalConfigStr: string;
-    localConfigStr: string;
-    skillsStr: string;
-    skills: Skill[];
-    subagentModels: string[];
-    toolEditDiffs: ToolEditDiff[];
-    rl: readline.Interface | null;
-    loadingStateTimeout: NodeJS.Timeout | null;
-    loadingStateFrameIdx: number;
-    apiStartTime: bigint | null;
-    apiEndTime: bigint | null;
-    modelUsageForLimitWindow: Record<string, ModelUsage[]>;
-    modelUsageForSession: Record<string, ModelUsage[]>;
-    sessionStartDate: number;
-    sessionId: string;
+interface DebugState {
+  debugLog: boolean;
+  debugLogPath: string;
+}
+
+interface SessionState {
+  sessionFilePath: string;
+  sessionStartDate: number;
+  sessionId: string;
+}
+
+interface UsageState {
+  promptTokens: {
+    value: number;
+    dirty: boolean;
   };
+  modelUsageForSession: Record<string, ModelUsage[]>;
+  modelUsageForLimitWindow: Record<string, ModelUsage[]>;
+  apiStartTime: bigint | null;
+  apiEndTime: bigint | null;
+}
+
+interface ContentState {
+  contextEntries: ContextEntry[];
+  contextStr: string;
+  globalConfigStr: string;
+  localConfigStr: string;
+  skillsStr: string;
+  skills: Skill[];
+  subagentModels: string[];
+  slashCommands: SlashCommand[];
+  batAvailable: boolean;
+}
+
+interface TerminalState {
+  rl: readline.Interface | null;
+  loadingStateTimeout: NodeJS.Timeout | null;
+  loadingStateFrameIdx: number;
+  isNonBlockingProcessOngoing: boolean;
+  isInitializing: boolean;
+  isRecording: boolean;
+  bufferedInputWhileInitializing: string;
+  bufferedStdoutWhileEditorOpen: string;
+  stdoutTail: string;
+  editorInputValue: string | null;
+}
+
+interface ConversationState {
+  messages: ModelMessage[];
+  summaries: ModelSummary[];
+  transcript: TranscriptEntry[];
+  toolEditDiffs: ToolEditDiff[];
+}
+
+interface AbortControllersState {
+  question: AbortController | null;
+  apiStream: AbortController | null;
+  interruptWithEditorContent: AbortController | null;
+  recordProcess: AbortController | null;
+  transcription: AbortController | null;
+}
+
+interface State {
+  debug: DebugState;
+  session: SessionState;
+  conversation: ConversationState;
+  usage: UsageState;
+  content: ContentState;
+  terminal: TerminalState;
   config: DefaultedConfig;
   mcp: McpState;
-  abortControllers: {
-    question: AbortController | null;
-    apiStream: AbortController | null;
-    interruptWithEditorContent: AbortController | null;
-    recordProcess: AbortController | null;
-    transcription: AbortController | null;
-  };
+  abortControllers: AbortControllersState;
 }
 
 const createInitialState = (): State => ({
-  app: {
-    conversation: {
-      messages: [],
-      summaries: [],
-    },
+  debug: {
+    debugLog: false,
+    debugLogPath: "",
+  },
+  session: {
+    sessionFilePath: "",
+    sessionStartDate: Date.now(),
+    sessionId: getShortId(),
+  },
+  conversation: {
+    messages: [],
+    summaries: [],
     transcript: [],
+    toolEditDiffs: [],
+  },
+  usage: {
     promptTokens: {
       value: 0,
       dirty: true,
     },
-    bufferedStdoutWhileEditorOpen: "",
-    editorInputValue: null,
-    isNonBlockingProcessOngoing: false,
-    isInitializing: false,
-    isRecording: false,
-    bufferedInputWhileInitializing: "",
-    slashCommands: [],
-    stdoutTail: "",
-    batAvailable: false,
-    debugLog: false,
-    debugLogPath: "",
-    sessionFilePath: "",
+    modelUsageForLimitWindow: {},
+    modelUsageForSession: {},
+    apiStartTime: null,
+    apiEndTime: null,
+  },
+  content: {
     contextEntries: [],
     contextStr: "",
     globalConfigStr: "",
@@ -151,16 +177,20 @@ const createInitialState = (): State => ({
     skillsStr: "",
     skills: [],
     subagentModels: [],
-    toolEditDiffs: [],
+    slashCommands: [],
+    batAvailable: false,
+  },
+  terminal: {
+    bufferedStdoutWhileEditorOpen: "",
+    editorInputValue: null,
+    isNonBlockingProcessOngoing: false,
+    isInitializing: false,
+    isRecording: false,
+    bufferedInputWhileInitializing: "",
+    stdoutTail: "",
     rl: null,
     loadingStateTimeout: null,
     loadingStateFrameIdx: 0,
-    apiStartTime: null,
-    apiEndTime: null,
-    modelUsageForLimitWindow: {},
-    modelUsageForSession: {},
-    sessionStartDate: Date.now(),
-    sessionId: getShortId(),
   },
   config: {
     model: MISSING,
@@ -213,24 +243,24 @@ export const promptDeps = {
   getSystemContent: () =>
     [
       getBaseAgentPrompt(Object.keys(state.mcp.clients)),
-      getState().app.contextStr,
-      getState().app.skillsStr,
+      getState().content.contextStr,
+      getState().content.skillsStr,
     ].join("\n\n"),
   getToolsContentStr: () => "",
 };
 
 const logStateChange = (actionType: string, before: string, after: string) => {
   void debugLog(
-    state.app.debugLog,
-    state.app.debugLogPath,
+    state.debug.debugLog,
+    state.debug.debugLogPath,
     `dispatch ${actionType}: before=${before}, after=${after}`,
   );
 };
 
 export const actions = {
   setConversationSummaries(summaries: ModelSummary[]) {
-    const before = state.app.conversation.summaries;
-    state.app.conversation.summaries = summaries;
+    const before = state.conversation.summaries;
+    state.conversation.summaries = summaries;
     logStateChange(
       "set-conversation-summaries",
       stringify(before),
@@ -239,8 +269,8 @@ export const actions = {
   },
 
   setConversationMessages(messages: ModelMessage[]) {
-    const before = state.app.conversation.messages;
-    state.app.conversation.messages = messages;
+    const before = state.conversation.messages;
+    state.conversation.messages = messages;
     logStateChange(
       "set-conversation-messages",
       String(before.length),
@@ -249,8 +279,8 @@ export const actions = {
   },
 
   setTranscript(transcript: TranscriptEntry[]) {
-    const before = state.app.transcript;
-    state.app.transcript = transcript;
+    const before = state.conversation.transcript;
+    state.conversation.transcript = transcript;
     logStateChange(
       "set-transcript",
       String(before.length),
@@ -259,20 +289,20 @@ export const actions = {
   },
 
   setSessionFilePath(sessionFilePath: string) {
-    const before = state.app.sessionFilePath;
-    state.app.sessionFilePath = sessionFilePath;
+    const before = state.session.sessionFilePath;
+    state.session.sessionFilePath = sessionFilePath;
     logStateChange("set-session-file-path", before, sessionFilePath);
   },
 
   setPromptTokens(tokens: number) {
-    const before = state.app.promptTokens.value;
-    state.app.promptTokens.value = tokens;
+    const before = state.usage.promptTokens.value;
+    state.usage.promptTokens.value = tokens;
     logStateChange("set-prompt-tokens", String(before), String(tokens));
   },
 
   setPromptTokensDirty(tokensStale: boolean) {
-    const before = state.app.promptTokens.dirty;
-    state.app.promptTokens.dirty = tokensStale;
+    const before = state.usage.promptTokens.dirty;
+    state.usage.promptTokens.dirty = tokensStale;
     logStateChange(
       "set-prompt-tokens-dirty",
       String(before),
@@ -410,22 +440,22 @@ export const actions = {
 
   setEditorInputValue(value: string | null) {
     assertAtRuntime(value !== "");
-    const before = state.app.editorInputValue;
-    state.app.editorInputValue = value;
+    const before = state.terminal.editorInputValue;
+    state.terminal.editorInputValue = value;
     logStateChange("set-editor-input-value", String(before), String(value));
   },
 
   appendEditorInputValue(value: string) {
     assertAtRuntime(value !== "");
-    const before = state.app.editorInputValue;
+    const before = state.terminal.editorInputValue;
     const appended = before === null ? value : `${before}${value}`;
-    state.app.editorInputValue = appended;
+    state.terminal.editorInputValue = appended;
     logStateChange("append-editor-input-value", String(before), appended);
   },
 
   setIsNonBlockingProcessOngoing(isNonBlockingProcessOngoing: boolean) {
-    const before = state.app.isNonBlockingProcessOngoing;
-    state.app.isNonBlockingProcessOngoing = isNonBlockingProcessOngoing;
+    const before = state.terminal.isNonBlockingProcessOngoing;
+    state.terminal.isNonBlockingProcessOngoing = isNonBlockingProcessOngoing;
     logStateChange(
       "set-is-non-blocking-process-ongoing",
       String(before),
@@ -434,8 +464,8 @@ export const actions = {
   },
 
   setIsInitializing(isInitializing: boolean) {
-    const before = state.app.isInitializing;
-    state.app.isInitializing = isInitializing;
+    const before = state.terminal.isInitializing;
+    state.terminal.isInitializing = isInitializing;
     logStateChange(
       "set-is-initializing",
       String(before),
@@ -444,40 +474,40 @@ export const actions = {
   },
 
   setIsRecording(isRecording: boolean) {
-    const before = state.app.isRecording;
-    state.app.isRecording = isRecording;
+    const before = state.terminal.isRecording;
+    state.terminal.isRecording = isRecording;
     logStateChange("set-is-recording", String(before), String(isRecording));
   },
 
   appendBufferedInputWhileInitializing(input: string) {
-    const before = state.app.bufferedInputWhileInitializing;
-    state.app.bufferedInputWhileInitializing += input;
+    const before = state.terminal.bufferedInputWhileInitializing;
+    state.terminal.bufferedInputWhileInitializing += input;
     logStateChange(
       "append-buffered-input-while-initializing",
       String(before.length),
-      String(state.app.bufferedInputWhileInitializing.length),
+      String(state.terminal.bufferedInputWhileInitializing.length),
     );
   },
 
   resetBufferedInputWhileInitializing() {
-    const before = state.app.bufferedInputWhileInitializing;
-    state.app.bufferedInputWhileInitializing = "";
+    const before = state.terminal.bufferedInputWhileInitializing;
+    state.terminal.bufferedInputWhileInitializing = "";
     logStateChange("reset-buffered-input-while-initializing", before, "");
   },
 
   appendBufferedStdoutWhileEditorOpen(line: string) {
-    const before = state.app.bufferedStdoutWhileEditorOpen;
-    state.app.bufferedStdoutWhileEditorOpen += line;
+    const before = state.terminal.bufferedStdoutWhileEditorOpen;
+    state.terminal.bufferedStdoutWhileEditorOpen += line;
     logStateChange(
       "append-buffered-stdout-while-editor-open",
       String(before.length),
-      String(state.app.bufferedStdoutWhileEditorOpen.length),
+      String(state.terminal.bufferedStdoutWhileEditorOpen.length),
     );
   },
 
   resetBufferedStdoutWhileEditorOpen() {
-    const before = state.app.bufferedStdoutWhileEditorOpen;
-    state.app.bufferedStdoutWhileEditorOpen = "";
+    const before = state.terminal.bufferedStdoutWhileEditorOpen;
+    state.terminal.bufferedStdoutWhileEditorOpen = "";
     logStateChange(
       "reset-buffered-stdout-while-editor-open",
       String(before.length),
@@ -486,8 +516,8 @@ export const actions = {
   },
 
   setSlashCommands(commands: SlashCommand[]) {
-    const before = state.app.slashCommands;
-    state.app.slashCommands = commands;
+    const before = state.content.slashCommands;
+    state.content.slashCommands = commands;
     logStateChange("set-slash-commands", String(before), String(commands));
   },
 
@@ -508,53 +538,53 @@ export const actions = {
   },
 
   resetStdout() {
-    const before = state.app.stdoutTail;
-    state.app.stdoutTail = "";
+    const before = state.terminal.stdoutTail;
+    state.terminal.stdoutTail = "";
     logStateChange("reset-stdout-tail", before, "");
   },
 
   appendStdoutTail(line: string) {
-    const before = state.app.stdoutTail;
-    state.app.stdoutTail += line;
-    state.app.stdoutTail = state.app.stdoutTail.slice(-2);
+    const before = state.terminal.stdoutTail;
+    state.terminal.stdoutTail += line;
+    state.terminal.stdoutTail = state.terminal.stdoutTail.slice(-2);
     logStateChange(
       "append-stdout-tail",
       String(before.length),
-      String(state.app.stdoutTail.length),
+      String(state.terminal.stdoutTail.length),
     );
   },
 
   setBatAvailable(batAvailable: boolean) {
-    const before = state.app.batAvailable;
-    state.app.batAvailable = batAvailable;
+    const before = state.content.batAvailable;
+    state.content.batAvailable = batAvailable;
     logStateChange("set-bat-available", String(before), String(batAvailable));
   },
 
   setDebugLog(debugLog: boolean) {
     // `logStateChange` returns early when `debugLog=false`
     // so it can't be called in the fn where `debugLog` is set
-    state.app.debugLog = debugLog;
+    state.debug.debugLog = debugLog;
   },
 
   setDebugLogPath(debugLogPath: string) {
-    const before = state.app.debugLogPath;
-    state.app.debugLogPath = debugLogPath;
+    const before = state.debug.debugLogPath;
+    state.debug.debugLogPath = debugLogPath;
     logStateChange("set-debug-log-path", before, debugLogPath);
   },
 
   setContextEntries(contextEntries: ContextEntry[]) {
-    const before = state.app.contextEntries.length;
-    state.app.contextEntries = contextEntries;
+    const before = state.content.contextEntries.length;
+    state.content.contextEntries = contextEntries;
     logStateChange(
       "set-context-entries",
       String(before),
-      String(state.app.contextEntries.length),
+      String(state.content.contextEntries.length),
     );
   },
 
   setContextStr(contextStr: string) {
-    const before = state.app.contextStr;
-    state.app.contextStr = contextStr;
+    const before = state.content.contextStr;
+    state.content.contextStr = contextStr;
     logStateChange(
       "set-context-str",
       String(before.length),
@@ -563,8 +593,8 @@ export const actions = {
   },
 
   setGlobalConfigStr(globalConfigStr: string) {
-    const before = state.app.globalConfigStr;
-    state.app.globalConfigStr = globalConfigStr;
+    const before = state.content.globalConfigStr;
+    state.content.globalConfigStr = globalConfigStr;
     logStateChange(
       "set-global-config-str",
       String(before.length),
@@ -573,8 +603,8 @@ export const actions = {
   },
 
   setLocalConfigStr(localConfigStr: string) {
-    const before = state.app.localConfigStr;
-    state.app.localConfigStr = localConfigStr;
+    const before = state.content.localConfigStr;
+    state.content.localConfigStr = localConfigStr;
     logStateChange(
       "set-local-config-str",
       String(before.length),
@@ -583,8 +613,8 @@ export const actions = {
   },
 
   setSkillsStr(skillsStr: string) {
-    const before = state.app.skillsStr;
-    state.app.skillsStr = skillsStr;
+    const before = state.content.skillsStr;
+    state.content.skillsStr = skillsStr;
     logStateChange(
       "set-skills-str",
       String(before.length),
@@ -593,76 +623,76 @@ export const actions = {
   },
 
   setSkills(skills: Skill[]) {
-    const before = state.app.skills.length;
-    state.app.skills = skills;
+    const before = state.content.skills.length;
+    state.content.skills = skills;
     logStateChange(
       "set-skills",
       String(before),
-      String(state.app.skills.length),
+      String(state.content.skills.length),
     );
   },
 
   appendToolEditDiff(diff: ToolEditDiff) {
-    state.app.toolEditDiffs.push(diff);
+    state.conversation.toolEditDiffs.push(diff);
     logStateChange(
       "append-tool-edit-diff",
-      String(state.app.toolEditDiffs.length - 1),
-      String(state.app.toolEditDiffs.length),
+      String(state.conversation.toolEditDiffs.length - 1),
+      String(state.conversation.toolEditDiffs.length),
     );
   },
 
   resetToolEditDiffs() {
-    state.app.toolEditDiffs = [];
+    state.conversation.toolEditDiffs = [];
     logStateChange("reset-tool-edit-diffs", "", "");
   },
 
   setModelUsageForLimitWindow(
     modelUsageForLimitWindow: Record<string, ModelUsage[]>,
   ) {
-    const before = state.app.modelUsageForLimitWindow;
-    state.app.modelUsageForLimitWindow = modelUsageForLimitWindow;
+    const before = state.usage.modelUsageForLimitWindow;
+    state.usage.modelUsageForLimitWindow = modelUsageForLimitWindow;
 
     logStateChange(
       "set-model-usage-for-limit-window",
       String(Object.keys(before).length),
-      String(Object.keys(state.app.modelUsageForLimitWindow).length),
+      String(Object.keys(state.usage.modelUsageForLimitWindow).length),
     );
   },
 
   setModelUsageForSession(modelUsageForSession: Record<string, ModelUsage[]>) {
-    const before = state.app.modelUsageForSession;
-    state.app.modelUsageForSession = modelUsageForSession;
+    const before = state.usage.modelUsageForSession;
+    state.usage.modelUsageForSession = modelUsageForSession;
 
     logStateChange(
       "set-model-usage-for-session",
       String(Object.keys(before).length),
-      String(Object.keys(state.app.modelUsageForSession).length),
+      String(Object.keys(state.usage.modelUsageForSession).length),
     );
   },
 
   appendToModelUsageForSession(usage: ModelUsage) {
     const model = state.config.model;
-    state.app.modelUsageForSession[model] ??= [];
+    state.usage.modelUsageForSession[model] ??= [];
 
-    const before = state.app.modelUsageForSession[model];
-    state.app.modelUsageForSession[model].push(usage);
+    const before = state.usage.modelUsageForSession[model];
+    state.usage.modelUsageForSession[model].push(usage);
 
     logStateChange(
       "append-to-model-usage-for-session",
       String(before.length),
-      String(state.app.modelUsageForSession[model].length),
+      String(state.usage.modelUsageForSession[model].length),
     );
   },
 
   setRl(rl: readline.Interface | null) {
-    const before = state.app.rl;
-    state.app.rl = rl;
+    const before = state.terminal.rl;
+    state.terminal.rl = rl;
     logStateChange("set-rl", String(before), String(rl));
   },
 
   setLoadingStateTimeout(timeout: NodeJS.Timeout | null) {
-    const before = state.app.loadingStateTimeout;
-    state.app.loadingStateTimeout = timeout;
+    const before = state.terminal.loadingStateTimeout;
+    state.terminal.loadingStateTimeout = timeout;
     logStateChange(
       "set-loading-state-timeout",
       String(before),
@@ -671,16 +701,16 @@ export const actions = {
   },
 
   setApiStartTime() {
-    const before = state.app.apiStartTime;
+    const before = state.usage.apiStartTime;
     const now = process.hrtime.bigint();
-    state.app.apiStartTime = now;
+    state.usage.apiStartTime = now;
     logStateChange("set-api-start-time", String(before), String(now));
   },
 
   setApiEndTime() {
-    const before = state.app.apiEndTime;
+    const before = state.usage.apiEndTime;
     const now = process.hrtime.bigint();
-    state.app.apiEndTime = now;
+    state.usage.apiEndTime = now;
     logStateChange("set-api-end-time", String(before), String(now));
   },
 
@@ -695,9 +725,9 @@ export const actions = {
   },
 
   incrementLoadingStateFrameIdx() {
-    const before = state.app.loadingStateFrameIdx;
-    state.app.loadingStateFrameIdx++;
-    const after = state.app.loadingStateFrameIdx;
+    const before = state.terminal.loadingStateFrameIdx;
+    state.terminal.loadingStateFrameIdx++;
+    const after = state.terminal.loadingStateFrameIdx;
     logStateChange(
       "set-loading-state-frame-idx",
       String(before),
@@ -706,12 +736,12 @@ export const actions = {
   },
 
   resetLoadingStateFrameIdx() {
-    const before = state.app.loadingStateFrameIdx;
-    state.app.loadingStateFrameIdx = 0;
+    const before = state.terminal.loadingStateFrameIdx;
+    state.terminal.loadingStateFrameIdx = 0;
     logStateChange(
       "set-loading-state-frame-idx",
       String(before),
-      String(state.app.loadingStateFrameIdx),
+      String(state.terminal.loadingStateFrameIdx),
     );
   },
 

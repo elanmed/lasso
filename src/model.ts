@@ -10,7 +10,7 @@ import { processDeps } from "./deps.ts";
 export function getHeaders() {
   const headers: Record<string, string> = {};
   if (getState().config.gateway === "opencode") {
-    headers["x-opencode-session"] = getState().app.sessionId;
+    headers["x-opencode-session"] = getState().session.sessionId;
     headers["x-opencode-client"] = "lasso";
   }
   return headers;

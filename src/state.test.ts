@@ -67,40 +67,48 @@ skills body`,
     });
 
     const assertInitialState = () => {
-      assert.deepStrictEqual(getState().app, {
-        conversation: { summaries: [], messages: [] },
-        transcript: [],
-        promptTokens: { value: 0, dirty: true },
-        bufferedStdoutWhileEditorOpen: "",
-        editorInputValue: null,
-        isInitializing: false,
-        isNonBlockingProcessOngoing: false,
-        isRecording: false,
-        bufferedInputWhileInitializing: "",
-        slashCommands: [],
-        stdoutTail: "",
-        batAvailable: false,
-        debugLog: false,
-        debugLogPath: "",
-        sessionFilePath: "",
-        contextEntries: [],
-        contextStr: "",
-        globalConfigStr: "",
-        localConfigStr: "",
-        skillsStr: "",
-        skills: [],
-        subagentModels: [],
-        toolEditDiffs: [],
-        rl: null,
-        loadingStateTimeout: null,
-        loadingStateFrameIdx: 0,
-        apiStartTime: null,
-        apiEndTime: null,
-        modelUsageForLimitWindow: {},
-        modelUsageForSession: {},
-        sessionStartDate: 0,
-        sessionId: "test-uuid",
+      assert.equal(getState().debug.debugLog, false);
+      assert.equal(getState().debug.debugLogPath, "");
+      assert.equal(getState().session.sessionFilePath, "");
+      assert.equal(getState().session.sessionStartDate, 0);
+      assert.equal(getState().session.sessionId, "test-uuid");
+      assert.deepStrictEqual(getState().conversation.messages, []);
+      assert.deepStrictEqual(getState().conversation.summaries, []);
+      assert.deepStrictEqual(getState().conversation.transcript, []);
+      assert.deepStrictEqual(getState().conversation.toolEditDiffs, []);
+      assert.deepStrictEqual(getState().usage.promptTokens, {
+        value: 0,
+        dirty: true,
       });
+      assert.deepStrictEqual(getState().usage.modelUsageForSession, {});
+      assert.deepStrictEqual(getState().usage.modelUsageForLimitWindow, {});
+      assert.strictEqual(getState().usage.apiStartTime, null);
+      assert.strictEqual(getState().usage.apiEndTime, null);
+      assert.deepStrictEqual(getState().content.contextEntries, []);
+      assert.strictEqual(getState().content.contextStr, "");
+      assert.strictEqual(getState().content.globalConfigStr, "");
+      assert.strictEqual(getState().content.localConfigStr, "");
+      assert.strictEqual(getState().content.skillsStr, "");
+      assert.deepStrictEqual(getState().content.skills, []);
+      assert.deepStrictEqual(getState().content.subagentModels, []);
+      assert.deepStrictEqual(getState().content.slashCommands, []);
+      assert.strictEqual(getState().content.batAvailable, false);
+      assert.strictEqual(getState().terminal.bufferedStdoutWhileEditorOpen, "");
+      assert.strictEqual(getState().terminal.editorInputValue, null);
+      assert.strictEqual(getState().terminal.isInitializing, false);
+      assert.strictEqual(
+        getState().terminal.isNonBlockingProcessOngoing,
+        false,
+      );
+      assert.strictEqual(getState().terminal.isRecording, false);
+      assert.strictEqual(
+        getState().terminal.bufferedInputWhileInitializing,
+        "",
+      );
+      assert.strictEqual(getState().terminal.stdoutTail, "");
+      assert.strictEqual(getState().terminal.rl, null);
+      assert.strictEqual(getState().terminal.loadingStateTimeout, null);
+      assert.strictEqual(getState().terminal.loadingStateFrameIdx, 0);
       assert.deepStrictEqual(getState().config, {
         model: MISSING,
         baseURL: undefined,
@@ -215,24 +223,24 @@ skills body`,
 
   describe("conversation state", () => {
     it("set-session-file-path", () => {
-      assert.equal(getState().app.sessionFilePath, "");
+      assert.equal(getState().session.sessionFilePath, "");
       actions.setSessionFilePath("/tmp/session.json");
-      assert.equal(getState().app.sessionFilePath, "/tmp/session.json");
+      assert.equal(getState().session.sessionFilePath, "/tmp/session.json");
     });
 
     it("set-conversation-messages", () => {
-      assert.deepStrictEqual(getState().app.conversation.messages, []);
+      assert.deepStrictEqual(getState().conversation.messages, []);
       actions.setConversationMessages([{ role: "user", content: "hello" }]);
-      assert.deepStrictEqual(getState().app.conversation, {
-        summaries: [],
-        messages: [{ role: "user", content: "hello" }],
-      });
+      assert.deepStrictEqual(getState().conversation.summaries, []);
+      assert.deepStrictEqual(getState().conversation.messages, [
+        { role: "user", content: "hello" },
+      ]);
     });
 
     it("set-transcript", () => {
-      assert.deepStrictEqual(getState().app.transcript, []);
+      assert.deepStrictEqual(getState().conversation.transcript, []);
       actions.setTranscript([{ timestamp: 0, role: "user", message: "hello" }]);
-      assert.deepStrictEqual(getState().app.transcript, [
+      assert.deepStrictEqual(getState().conversation.transcript, [
         { timestamp: 0, role: "user", message: "hello" },
       ]);
     });
@@ -279,69 +287,69 @@ skills body`,
 
   describe("prompt tokens", () => {
     it("set-prompt-tokens", () => {
-      assert.equal(getState().app.promptTokens.value, 0);
+      assert.equal(getState().usage.promptTokens.value, 0);
       actions.setPromptTokens(42);
-      assert.equal(getState().app.promptTokens.value, 42);
+      assert.equal(getState().usage.promptTokens.value, 42);
     });
 
     it("set-prompt-tokens-dirty", () => {
-      assert.equal(getState().app.promptTokens.dirty, true);
+      assert.equal(getState().usage.promptTokens.dirty, true);
       actions.setPromptTokensDirty(false);
-      assert.equal(getState().app.promptTokens.dirty, false);
+      assert.equal(getState().usage.promptTokens.dirty, false);
     });
   });
 
   describe("recording state", () => {
     it("set-is-recording", () => {
-      assert.equal(getState().app.isRecording, false);
+      assert.equal(getState().terminal.isRecording, false);
       actions.setIsRecording(true);
-      assert.equal(getState().app.isRecording, true);
+      assert.equal(getState().terminal.isRecording, true);
       actions.setIsRecording(false);
-      assert.equal(getState().app.isRecording, false);
+      assert.equal(getState().terminal.isRecording, false);
     });
   });
 
   describe("initializing state", () => {
     it("set-is-initializing", () => {
-      assert.equal(getState().app.isInitializing, false);
+      assert.equal(getState().terminal.isInitializing, false);
       actions.setIsInitializing(true);
-      assert.equal(getState().app.isInitializing, true);
+      assert.equal(getState().terminal.isInitializing, true);
       actions.setIsInitializing(false);
-      assert.equal(getState().app.isInitializing, false);
+      assert.equal(getState().terminal.isInitializing, false);
     });
 
     it("set-is-non-blocking-process-ongoing", () => {
-      assert.equal(getState().app.isNonBlockingProcessOngoing, false);
+      assert.equal(getState().terminal.isNonBlockingProcessOngoing, false);
       actions.setIsNonBlockingProcessOngoing(true);
-      assert.equal(getState().app.isNonBlockingProcessOngoing, true);
+      assert.equal(getState().terminal.isNonBlockingProcessOngoing, true);
       actions.setIsNonBlockingProcessOngoing(false);
-      assert.equal(getState().app.isNonBlockingProcessOngoing, false);
+      assert.equal(getState().terminal.isNonBlockingProcessOngoing, false);
     });
 
     it("append-buffered-input-while-initializing accumulates inputs", () => {
-      assert.equal(getState().app.bufferedInputWhileInitializing, "");
+      assert.equal(getState().terminal.bufferedInputWhileInitializing, "");
       actions.appendBufferedInputWhileInitializing("he");
       actions.appendBufferedInputWhileInitializing("llo");
-      assert.equal(getState().app.bufferedInputWhileInitializing, "hello");
+      assert.equal(getState().terminal.bufferedInputWhileInitializing, "hello");
     });
 
     it("reset-buffered-input-while-initializing", () => {
       actions.appendBufferedInputWhileInitializing("abc");
       actions.resetBufferedInputWhileInitializing();
-      assert.equal(getState().app.bufferedInputWhileInitializing, "");
+      assert.equal(getState().terminal.bufferedInputWhileInitializing, "");
     });
 
     it("append-buffered-stdout-while-editor-open accumulates lines", () => {
-      assert.equal(getState().app.bufferedStdoutWhileEditorOpen, "");
+      assert.equal(getState().terminal.bufferedStdoutWhileEditorOpen, "");
       actions.appendBufferedStdoutWhileEditorOpen("he");
       actions.appendBufferedStdoutWhileEditorOpen("llo");
-      assert.equal(getState().app.bufferedStdoutWhileEditorOpen, "hello");
+      assert.equal(getState().terminal.bufferedStdoutWhileEditorOpen, "hello");
     });
 
     it("reset-buffered-stdout-while-editor-open", () => {
       actions.appendBufferedStdoutWhileEditorOpen("abc");
       actions.resetBufferedStdoutWhileEditorOpen();
-      assert.equal(getState().app.bufferedStdoutWhileEditorOpen, "");
+      assert.equal(getState().terminal.bufferedStdoutWhileEditorOpen, "");
     });
   });
 
@@ -479,23 +487,23 @@ skills body`,
     });
 
     it("set-editor-input-value", () => {
-      assert.equal(getState().app.editorInputValue, null);
+      assert.equal(getState().terminal.editorInputValue, null);
       actions.setEditorInputValue("test content");
-      assert.equal(getState().app.editorInputValue, "test content");
+      assert.equal(getState().terminal.editorInputValue, "test content");
       actions.setEditorInputValue(null);
-      assert.equal(getState().app.editorInputValue, null);
+      assert.equal(getState().terminal.editorInputValue, null);
       assert.throws(() => actions.setEditorInputValue(""));
     });
 
     it("append-editor-input-value sets when null and appends by concatenating", () => {
-      assert.equal(getState().app.editorInputValue, null);
+      assert.equal(getState().terminal.editorInputValue, null);
       actions.appendEditorInputValue("first");
-      assert.equal(getState().app.editorInputValue, "first");
+      assert.equal(getState().terminal.editorInputValue, "first");
       actions.appendEditorInputValue(
         `${defaultConfig.messageQueueDelimiter}second`,
       );
       assert.strictEqual(
-        getState().app.editorInputValue,
+        getState().terminal.editorInputValue,
         `first${defaultConfig.messageQueueDelimiter}second`,
       );
       assert.throws(() => actions.appendEditorInputValue(""));
@@ -504,16 +512,16 @@ skills body`,
 
   describe("debug log", () => {
     it("set-debug-log", () => {
-      assert.equal(getState().app.debugLog, false);
+      assert.equal(getState().debug.debugLog, false);
       actions.setDebugLog(true);
-      assert.equal(getState().app.debugLog, true);
+      assert.equal(getState().debug.debugLog, true);
     });
 
     it("set-debug-log-path", () => {
-      assert.equal(getState().app.debugLogPath, "");
+      assert.equal(getState().debug.debugLogPath, "");
       actions.setDebugLogPath("/fake-home/.config/lasso/debug-test-uuid.log");
       assert.equal(
-        getState().app.debugLogPath,
+        getState().debug.debugLogPath,
         "/fake-home/.config/lasso/debug-test-uuid.log",
       );
     });
@@ -521,42 +529,42 @@ skills body`,
 
   describe("config strings", () => {
     it("set-context-str", () => {
-      assert.equal(getState().app.contextStr, "");
+      assert.equal(getState().content.contextStr, "");
       actions.setContextStr("FILEPATH: context\nhello");
       assert.equal(
-        getState().app.contextStr,
+        getState().content.contextStr,
         `FILEPATH: context
 hello`,
       );
     });
 
     it("set-global-config-str", () => {
-      assert.equal(getState().app.globalConfigStr, "");
+      assert.equal(getState().content.globalConfigStr, "");
       actions.setGlobalConfigStr("model: gpt-4");
-      assert.equal(getState().app.globalConfigStr, "model: gpt-4");
+      assert.equal(getState().content.globalConfigStr, "model: gpt-4");
     });
 
     it("set-local-config-str", () => {
-      assert.equal(getState().app.localConfigStr, "");
+      assert.equal(getState().content.localConfigStr, "");
       actions.setLocalConfigStr("model: claude");
-      assert.equal(getState().app.localConfigStr, "model: claude");
+      assert.equal(getState().content.localConfigStr, "model: claude");
     });
 
     it("set-skills-str", () => {
-      assert.equal(getState().app.skillsStr, "");
+      assert.equal(getState().content.skillsStr, "");
       actions.setSkillsStr("- skill: desc");
-      assert.equal(getState().app.skillsStr, "- skill: desc");
+      assert.equal(getState().content.skillsStr, "- skill: desc");
     });
   });
 
   describe("append-tool-edit-diff", () => {
     it("appends a single diff", () => {
-      assert.deepStrictEqual(getState().app.toolEditDiffs, []);
+      assert.deepStrictEqual(getState().conversation.toolEditDiffs, []);
       actions.appendToolEditDiff({
         fileName: "/test/file.ts",
         diffStdout: "diff output",
       });
-      assert.deepStrictEqual(getState().app.toolEditDiffs, [
+      assert.deepStrictEqual(getState().conversation.toolEditDiffs, [
         {
           fileName: "/test/file.ts",
           diffStdout: "diff output",
@@ -567,7 +575,7 @@ hello`,
     it("appends multiple diffs in order", () => {
       actions.appendToolEditDiff({ fileName: "/a.ts", diffStdout: "a diff" });
       actions.appendToolEditDiff({ fileName: "/b.ts", diffStdout: "b diff" });
-      assert.deepStrictEqual(getState().app.toolEditDiffs, [
+      assert.deepStrictEqual(getState().conversation.toolEditDiffs, [
         { fileName: "/a.ts", diffStdout: "a diff" },
         { fileName: "/b.ts", diffStdout: "b diff" },
       ]);
@@ -576,16 +584,16 @@ hello`,
 
   it("reset-tool-edit-diffs", () => {
     actions.resetToolEditDiffs();
-    assert.deepStrictEqual(getState().app.toolEditDiffs, []);
+    assert.deepStrictEqual(getState().conversation.toolEditDiffs, []);
   });
 
   describe("set-context-entries", () => {
     it("sets the context entries array", () => {
-      assert.deepStrictEqual(getState().app.contextEntries, []);
+      assert.deepStrictEqual(getState().content.contextEntries, []);
       actions.setContextEntries([
         { filePath: "/test/AGENTS.md", content: "# Instructions" },
       ]);
-      assert.deepStrictEqual(getState().app.contextEntries, [
+      assert.deepStrictEqual(getState().content.contextEntries, [
         { filePath: "/test/AGENTS.md", content: "# Instructions" },
       ]);
     });
@@ -593,8 +601,8 @@ hello`,
     it("replaces existing context entries", () => {
       actions.setContextEntries([{ filePath: "/a/AGENTS.md", content: "A" }]);
       actions.setContextEntries([{ filePath: "/b/AGENTS.md", content: "B" }]);
-      assert.equal(getState().app.contextEntries.length, 1);
-      const entry = getState().app.contextEntries[0];
+      assert.equal(getState().content.contextEntries.length, 1);
+      const entry = getState().content.contextEntries[0];
       assert(entry !== undefined);
       assert.equal(entry.filePath, "/b/AGENTS.md");
     });
@@ -602,7 +610,7 @@ hello`,
 
   describe("set-skills", () => {
     it("sets the skills array", () => {
-      assert.deepStrictEqual(getState().app.skills, []);
+      assert.deepStrictEqual(getState().content.skills, []);
       actions.setSkills([
         {
           name: "deploy",
@@ -611,7 +619,7 @@ hello`,
           content: "# Deploy instructions",
         },
       ]);
-      assert.deepStrictEqual(getState().app.skills, [
+      assert.deepStrictEqual(getState().content.skills, [
         {
           name: "deploy",
           description: "Deploy skill",
@@ -638,8 +646,8 @@ hello`,
           content: "content b",
         },
       ]);
-      assert.equal(getState().app.skills.length, 1);
-      const skill = getState().app.skills[0];
+      assert.equal(getState().content.skills.length, 1);
+      const skill = getState().content.skills[0];
       assert(skill !== undefined);
       assert.equal(skill.name, "b");
     });
@@ -647,12 +655,12 @@ hello`,
 
   describe("slash commands and skills", () => {
     it("set-slash-commands", () => {
-      assert.deepStrictEqual(getState().app.slashCommands, []);
+      assert.deepStrictEqual(getState().content.slashCommands, []);
       actions.setSlashCommands([
         { name: "test", filePath: "/test.md", content: "test content" },
         { name: "deploy", filePath: "/deploy.md", content: "deploy content" },
       ]);
-      assert.deepStrictEqual(getState().app.slashCommands, [
+      assert.deepStrictEqual(getState().content.slashCommands, [
         { name: "test", filePath: "/test.md", content: "test content" },
         { name: "deploy", filePath: "/deploy.md", content: "deploy content" },
       ]);
@@ -680,47 +688,47 @@ hello`,
   it("reset-stdout-tail", () => {
     actions.appendStdoutTail("line1\n");
     actions.appendStdoutTail("line2\n");
-    assert.equal(getState().app.stdoutTail, "2\n");
+    assert.equal(getState().terminal.stdoutTail, "2\n");
     actions.resetStdout();
-    assert.equal(getState().app.stdoutTail, "");
+    assert.equal(getState().terminal.stdoutTail, "");
   });
 
   describe("append-stdout-tail", () => {
     it("appends single line", () => {
-      assert.equal(getState().app.stdoutTail, "");
+      assert.equal(getState().terminal.stdoutTail, "");
       actions.appendStdoutTail("line1\n");
-      assert.equal(getState().app.stdoutTail, "1\n");
+      assert.equal(getState().terminal.stdoutTail, "1\n");
     });
 
     it("appends multiple lines in order", () => {
-      assert.equal(getState().app.stdoutTail, "");
+      assert.equal(getState().terminal.stdoutTail, "");
       actions.appendStdoutTail("line1\n");
       actions.appendStdoutTail("line2\n");
       actions.appendStdoutTail("line3\n");
-      assert.equal(getState().app.stdoutTail, "3\n");
+      assert.equal(getState().terminal.stdoutTail, "3\n");
     });
   });
 
   describe("readline and api timing", () => {
     it("set-rl", () => {
-      assert.equal(getState().app.rl, null);
+      assert.equal(getState().terminal.rl, null);
       const fakeRl = makeFakeRl();
       actions.setRl(fakeRl);
-      assert.equal(getState().app.rl, fakeRl);
+      assert.equal(getState().terminal.rl, fakeRl);
     });
 
     it("set-api-start-time", () => {
       mock.method(process.hrtime, "bigint", () => BigInt(42_000_000_000));
-      assert.equal(getState().app.apiStartTime, null);
+      assert.equal(getState().usage.apiStartTime, null);
       actions.setApiStartTime();
-      assert.strictEqual(getState().app.apiStartTime, 42_000_000_000n);
+      assert.strictEqual(getState().usage.apiStartTime, 42_000_000_000n);
     });
 
     it("set-api-end-time", () => {
       mock.method(process.hrtime, "bigint", () => BigInt(99_000_000_000));
-      assert.equal(getState().app.apiEndTime, null);
+      assert.equal(getState().usage.apiEndTime, null);
       actions.setApiEndTime();
-      assert.strictEqual(getState().app.apiEndTime, 99_000_000_000n);
+      assert.strictEqual(getState().usage.apiEndTime, 99_000_000_000n);
     });
   });
 
@@ -808,7 +816,7 @@ hello`,
     });
 
     it("set-model-usage-for-limit-window", () => {
-      assert.deepStrictEqual(getState().app.modelUsageForLimitWindow, {});
+      assert.deepStrictEqual(getState().usage.modelUsageForLimitWindow, {});
 
       actions.setModelUsageForLimitWindow({
         "gpt-4": [
@@ -822,7 +830,7 @@ hello`,
         ],
       });
 
-      assert.deepStrictEqual(getState().app.modelUsageForLimitWindow, {
+      assert.deepStrictEqual(getState().usage.modelUsageForLimitWindow, {
         "gpt-4": [
           {
             inputTokens: 10,
@@ -836,7 +844,7 @@ hello`,
     });
 
     it("set-model-usage-for-session", () => {
-      assert.deepStrictEqual(getState().app.modelUsageForSession, {});
+      assert.deepStrictEqual(getState().usage.modelUsageForSession, {});
 
       actions.setModelUsageForSession({
         "gpt-4": [
@@ -850,7 +858,7 @@ hello`,
         ],
       });
 
-      assert.deepStrictEqual(getState().app.modelUsageForSession, {
+      assert.deepStrictEqual(getState().usage.modelUsageForSession, {
         "gpt-4": [
           {
             inputTokens: 10,
@@ -884,7 +892,7 @@ hello`,
       };
       actions.appendToModelUsageForSession(second);
 
-      assert.deepStrictEqual(getState().app.modelUsageForSession, {
+      assert.deepStrictEqual(getState().usage.modelUsageForSession, {
         "gpt-4": [first],
         claude: [second],
       });
@@ -895,19 +903,19 @@ hello`,
     it("reset-loading-state-frame-idx", () => {
       actions.incrementLoadingStateFrameIdx();
       actions.incrementLoadingStateFrameIdx();
-      assert.strictEqual(getState().app.loadingStateFrameIdx, 2);
+      assert.strictEqual(getState().terminal.loadingStateFrameIdx, 2);
       actions.resetLoadingStateFrameIdx();
-      assert.strictEqual(getState().app.loadingStateFrameIdx, 0);
+      assert.strictEqual(getState().terminal.loadingStateFrameIdx, 0);
     });
 
     it("set-loading-state-timeout", () => {
-      assert.equal(getState().app.loadingStateTimeout, null);
+      assert.equal(getState().terminal.loadingStateTimeout, null);
       const timeout = setTimeout(() => undefined, 1_000);
       actions.setLoadingStateTimeout(timeout);
-      assert.equal(getState().app.loadingStateTimeout, timeout);
+      assert.equal(getState().terminal.loadingStateTimeout, timeout);
       clearTimeout(timeout);
       actions.setLoadingStateTimeout(null);
-      assert.equal(getState().app.loadingStateTimeout, null);
+      assert.equal(getState().terminal.loadingStateTimeout, null);
     });
   });
 

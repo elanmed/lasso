@@ -68,7 +68,7 @@ describe("differ", () => {
           `${RED}Failed to create the before diff temp file for /test/file.txt${RESET}\n`,
           `${RED}Failed to create the after diff temp file for /test/file.txt${RESET}\n`,
         ]);
-        assert.deepStrictEqual(getState().app.toolEditDiffs, []);
+        assert.deepStrictEqual(getState().conversation.toolEditDiffs, []);
       });
 
       it("registers an empty snapshot when the source file does not exist", async () => {
@@ -152,7 +152,7 @@ describe("differ", () => {
 
         assert.equal(commands.length, 0);
         assert.deepStrictEqual(getWrites(), []);
-        assert.deepStrictEqual(getState().app.toolEditDiffs, []);
+        assert.deepStrictEqual(getState().conversation.toolEditDiffs, []);
       });
     });
 
@@ -176,7 +176,7 @@ describe("differ", () => {
           `${GREY}━━ ${BOLD}File change: /test/new-file.txt${BOLD_RESET} ━━${RESET}\n`,
           "+created content\n\n",
         ]);
-        assert.deepStrictEqual(getState().app.toolEditDiffs, [
+        assert.deepStrictEqual(getState().conversation.toolEditDiffs, [
           { fileName: "/test/new-file.txt", diffStdout: "+created content\n" },
         ]);
         assert.equal(testFs._files.has("/tmp/lasso-test-uuid.txt"), false);
@@ -199,7 +199,7 @@ describe("differ", () => {
 
         assert.equal(commands.length, 2);
         assert.deepStrictEqual(getWrites(), []);
-        assert.deepStrictEqual(getState().app.toolEditDiffs, [
+        assert.deepStrictEqual(getState().conversation.toolEditDiffs, [
           { fileName: "/test/new-file.txt", diffStdout: "+created content\n" },
         ]);
         assert.equal(testFs._files.has("/tmp/lasso-test-uuid.txt"), false);
@@ -219,7 +219,7 @@ describe("differ", () => {
         await differ.diffAndCleanup("call-1", "/missing/after.txt");
 
         assert.equal(commands.length, 2);
-        assert.deepStrictEqual(getState().app.toolEditDiffs, [
+        assert.deepStrictEqual(getState().conversation.toolEditDiffs, [
           { fileName: "/missing/after.txt", diffStdout: "diff output" },
         ]);
         assert.equal(testFs._files.has("/tmp/lasso-test-uuid.txt"), false);
@@ -250,7 +250,7 @@ describe("differ", () => {
           differ.toolCallIdToTempFileBefore.has("call-1"),
           false,
         );
-        assert.deepStrictEqual(getState().app.toolEditDiffs, [
+        assert.deepStrictEqual(getState().conversation.toolEditDiffs, [
           { fileName: "/test/file.txt", diffStdout: "diff output" },
         ]);
       });
@@ -446,7 +446,7 @@ describe("differ", () => {
       assert.deepStrictEqual(getWrites(), [
         `${RED}An error occurred when getting the diff for /test/file.txt: fatal${RESET}\n`,
       ]);
-      assert.deepStrictEqual(getState().app.toolEditDiffs, []);
+      assert.deepStrictEqual(getState().conversation.toolEditDiffs, []);
     });
 
     it("warns when the after temp file cannot be created", async () => {
@@ -463,7 +463,7 @@ describe("differ", () => {
       assert.deepStrictEqual(writes(), [
         `${RED}Failed to create the after diff temp file for /test/file.txt${RESET}\n`,
       ]);
-      assert.deepStrictEqual(getState().app.toolEditDiffs, []);
+      assert.deepStrictEqual(getState().conversation.toolEditDiffs, []);
     });
 
     it("does not append or print when the diff stdout is empty", async () => {
@@ -474,7 +474,7 @@ describe("differ", () => {
       await differ.setTempFileBefore("call-1", "/test/file.txt");
       await differ.diffAndCleanup("call-1", "/test/file.txt");
       assert.deepStrictEqual(getWrites(), []);
-      assert.deepStrictEqual(getState().app.toolEditDiffs, []);
+      assert.deepStrictEqual(getState().conversation.toolEditDiffs, []);
     });
   });
 });

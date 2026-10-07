@@ -70,7 +70,7 @@ export function getPrettyTokenUsage() {
   const { model } = getState().config;
   const pricing = getState().config.pricingPerModel[model];
   const tokenUsageForSession = sumUsageTokens(
-    getState().app.modelUsageForSession[model] ?? [],
+    getState().usage.modelUsageForSession[model] ?? [],
   );
 
   if (pricing === undefined) {
@@ -78,7 +78,7 @@ export function getPrettyTokenUsage() {
   }
 
   const tokenUsageForLimitWindow = sumUsageTokens(
-    getState().app.modelUsageForLimitWindow[model] ?? [],
+    getState().usage.modelUsageForLimitWindow[model] ?? [],
   );
 
   const costForSession = getUsageMoneyForModel(tokenUsageForSession, model);

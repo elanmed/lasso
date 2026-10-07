@@ -39,7 +39,7 @@ describe("log", () => {
         true,
       );
       assert.equal(
-        getState().app.sessionFilePath,
+        getState().session.sessionFilePath,
         "/fake-home/.local/state/lasso/sessions/session-1234567890000.json",
       );
       assert.equal(
@@ -62,7 +62,7 @@ describe("log", () => {
       assert.deepStrictEqual(getWrites(), [
         `${RED}Failed to create the directory: /fake-home/.local/state/lasso/sessions${RESET}\n`,
       ]);
-      assert.equal(getState().app.sessionFilePath, "");
+      assert.equal(getState().session.sessionFilePath, "");
     });
 
     it("warns when the initial write fails", async () => {
@@ -81,7 +81,7 @@ describe("log", () => {
     it("generates correct log path with session start date", async () => {
       await initSessionFile();
       assert.equal(
-        getState().app.sessionFilePath,
+        getState().session.sessionFilePath,
         "/fake-home/.local/state/lasso/sessions/session-1234567890000.json",
       );
       assert.equal(
@@ -230,10 +230,10 @@ describe("log", () => {
         ),
         '{"messages":[{"role":"assistant","content":"reply"}],"summaries":[],"transcript":[]}',
       );
-      assert.deepStrictEqual(getState().app.conversation, {
-        summaries: [],
-        messages: [{ role: "assistant", content: "reply" }],
-      });
+      assert.deepStrictEqual(getState().conversation.summaries, []);
+      assert.deepStrictEqual(getState().conversation.messages, [
+        { role: "assistant", content: "reply" },
+      ]);
     });
 
     it("creates the directory when it does not exist", async () => {
@@ -255,7 +255,7 @@ describe("log", () => {
       assert.deepStrictEqual(getWrites(), [
         `${RED}Failed to write the session file to /fake-home/.local/state/lasso/sessions/session-1234567890000.json${RESET}\n`,
       ]);
-      assert.deepStrictEqual(getState().app.conversation.messages, []);
+      assert.deepStrictEqual(getState().conversation.messages, []);
     });
 
     it("warns and updates state when stringifying fails", async () => {
@@ -276,7 +276,7 @@ describe("log", () => {
         ),
         false,
       );
-      assert.deepStrictEqual(getState().app.conversation.messages, [
+      assert.deepStrictEqual(getState().conversation.messages, [
         { role: "user", content: circularContent },
       ]);
     });
@@ -304,14 +304,16 @@ describe("log", () => {
       const result = await resumeFromSessionFile("/test/session.json");
 
       assert.equal(result, true);
-      assert.deepStrictEqual(getState().app.conversation, {
-        summaries: [{ compacted: "summary", compactedAt: 123, tokens: 456 }],
-        messages: [{ role: "user", content: "hello" }],
-      });
-      assert.deepStrictEqual(getState().app.transcript, [
+      assert.deepStrictEqual(getState().conversation.summaries, [
+        { compacted: "summary", compactedAt: 123, tokens: 456 },
+      ]);
+      assert.deepStrictEqual(getState().conversation.messages, [
+        { role: "user", content: "hello" },
+      ]);
+      assert.deepStrictEqual(getState().conversation.transcript, [
         { timestamp: 0, role: "user", message: "hello" },
       ]);
-      assert.deepStrictEqual(getState().app.promptTokens, {
+      assert.deepStrictEqual(getState().usage.promptTokens, {
         value: 100,
         dirty: true,
       });

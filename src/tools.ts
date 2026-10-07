@@ -361,7 +361,9 @@ export const loadSkillToolSchema = z.object({
 export type LoadSkillTool = z.infer<typeof loadSkillToolSchema>;
 
 export function loadSkillTool({ name }: LoadSkillTool): ToolResult {
-  const foundSkill = getState().app.skills.find((skill) => skill.name === name);
+  const foundSkill = getState().content.skills.find(
+    (skill) => skill.name === name,
+  );
   if (foundSkill === undefined) {
     return {
       isError: true,
@@ -439,8 +441,8 @@ export async function createSubagentTool(
           subagentSchema.access,
           Object.keys(getState().mcp.clients),
         ),
-        getState().app.contextStr,
-        getState().app.skillsStr,
+        getState().content.contextStr,
+        getState().content.skillsStr,
       ]
         .filter((content) => content.length > 0)
         .join("\n\n");

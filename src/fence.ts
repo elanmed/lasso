@@ -71,9 +71,9 @@ export function fencePrint(text: string, opts: FencePrintOpts = {}) {
 export function getPrettyApiDuration({
   includeMicroseconds = false,
 }: { includeMicroseconds?: boolean } = {}) {
-  const startTime = getState().app.apiStartTime;
+  const startTime = getState().usage.apiStartTime;
   assertAtRuntime(startTime !== null);
-  const endTime = getState().app.apiEndTime;
+  const endTime = getState().usage.apiEndTime;
   assertAtRuntime(endTime !== null);
 
   return getPrettyDuration(startTime, endTime, { includeMicroseconds });

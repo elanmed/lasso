@@ -68,14 +68,14 @@ export function colorPrint(
     return;
   }
 
-  const { isNonBlockingProcessOngoing } = getState().app;
+  const { isNonBlockingProcessOngoing } = getState().terminal;
   if (isNonBlockingProcessOngoing) {
     actions.appendBufferedStdoutWhileEditorOpen(out);
     actions.appendStdoutTail(out);
     return;
   }
 
-  const wasSpinnerActive = getState().app.loadingStateTimeout !== null;
+  const wasSpinnerActive = getState().terminal.loadingStateTimeout !== null;
   stopLoadingState();
   processDeps.stdout.write(out);
   if (wasSpinnerActive) startLoadingState();
@@ -162,7 +162,7 @@ export function createParallelPerformanceLogger({
 }
 
 export function printNewline() {
-  if (getState().app.stdoutTail.endsWith("\n\n")) return;
+  if (getState().terminal.stdoutTail.endsWith("\n\n")) return;
   colorPrint("", "none");
 }
 
@@ -178,7 +178,7 @@ export function errorWithSpacing(cb: () => void) {
 }
 
 export function startLoadingState() {
-  if (getState().app.isNonBlockingProcessOngoing) return;
+  if (getState().terminal.isNonBlockingProcessOngoing) return;
 
   writeLoadingStateFrame();
   const timeout = setInterval(() => {
@@ -190,13 +190,13 @@ export function startLoadingState() {
 function writeLoadingStateFrame() {
   const { loadingStateFrames } = getState().config;
   processDeps.stdout.write(
-    `\r${String(loadingStateFrames[getState().app.loadingStateFrameIdx % loadingStateFrames.length])}`,
+    `\r${String(loadingStateFrames[getState().terminal.loadingStateFrameIdx % loadingStateFrames.length])}`,
   );
   actions.incrementLoadingStateFrameIdx();
 }
 
 export function stopLoadingState() {
-  const { loadingStateTimeout } = getState().app;
+  const { loadingStateTimeout } = getState().terminal;
   if (loadingStateTimeout === null) return;
 
   clearInterval(loadingStateTimeout);
@@ -210,6 +210,6 @@ export function stopLoadingState() {
 
 export function printSessionStartDate() {
   print.info(
-    `Resume this session with /resume ${String(getState().app.sessionStartDate)}`,
+    `Resume this session with /resume ${String(getState().session.sessionStartDate)}`,
   );
 }

@@ -33,7 +33,7 @@ export const builtinSlashCommands = [
 export type BuiltinSlashCommand = (typeof builtinSlashCommands)[number];
 
 export function getAvailableCommandsStr() {
-  const customCommandsFormatted = getState().app.slashCommands.map(
+  const customCommandsFormatted = getState().content.slashCommands.map(
     (command) => `- ${command.filePath}`,
   );
   const builtinCommandsFormatted = builtinSlashCommands.map(
@@ -44,7 +44,7 @@ export function getAvailableCommandsStr() {
 
 export function getCustomSlashCommandsStr() {
   const contents = getState()
-    .app.slashCommands.map(
+    .content.slashCommands.map(
       ({ content, filePath }) => `## ${filePath}
 
 ${normalizeNewline(content, { count: 0 })}`,

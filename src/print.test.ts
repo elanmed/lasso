@@ -284,7 +284,10 @@ describe("print", () => {
       const getWrites = mockStdoutWrites();
       colorPrint("hello", "blue", { whileMuted: true });
       assert.deepStrictEqual(getWrites(), [`${BLUE}hello${RESET}\n`]);
-      assert.deepStrictEqual(getState().app.bufferedStdoutWhileEditorOpen, "");
+      assert.deepStrictEqual(
+        getState().terminal.bufferedStdoutWhileEditorOpen,
+        "",
+      );
     });
 
     it("writes to stdout directly while a loading state is active", () => {

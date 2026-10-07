@@ -245,16 +245,16 @@ Lasso reserves ${decimalToPercent(dedicatedSummaryRatio)} of the context window 
 
 export function getApproxPromptTokens() {
   return (
-    getApproxTokensFromMessages(getState().app.conversation.messages) +
+    getApproxTokensFromMessages(getState().conversation.messages) +
     getPromptOverheadTokensApprox()
   );
 }
 
 export function getCurrentPromptTokens() {
-  if (getState().app.promptTokens.dirty) {
+  if (getState().usage.promptTokens.dirty) {
     return getApproxPromptTokens();
   }
-  return getState().app.promptTokens.value;
+  return getState().usage.promptTokens.value;
 }
 
 interface TokensByArea {
@@ -285,20 +285,20 @@ export function getPrettyTokensByArea() {
 
 export function getTokensByArea(): TokensByArea {
   const tokensByAreaApprox: TokensByArea = {
-    messages: getApproxTokensFromMessages(getState().app.conversation.messages),
-    context: strToApproxTokens(getState().app.contextStr),
+    messages: getApproxTokensFromMessages(getState().conversation.messages),
+    context: strToApproxTokens(getState().content.contextStr),
     tools: strToApproxTokens(promptDeps.getToolsContentStr()),
     basePrompt: strToApproxTokens(
       getBaseAgentPrompt(Object.keys(getState().mcp.clients)),
     ),
-    skills: strToApproxTokens(getState().app.skillsStr),
+    skills: strToApproxTokens(getState().content.skillsStr),
   };
 
-  if (getState().app.promptTokens.dirty) {
+  if (getState().usage.promptTokens.dirty) {
     return tokensByAreaApprox;
   }
 
-  const realTokens = getState().app.promptTokens.value;
+  const realTokens = getState().usage.promptTokens.value;
   const approxTotal = getApproxPromptTokens();
   if (realTokens === 0 || approxTotal === 0) {
     return tokensByAreaApprox;

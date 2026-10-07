@@ -16,30 +16,30 @@ import { errorWithSpacing, print } from "./print.ts";
 
 export function debugLog(content: string) {
   void writeDebugLog(
-    getState().app.debugLog,
-    getState().app.debugLogPath,
+    getState().debug.debugLog,
+    getState().debug.debugLogPath,
     content,
   );
 }
 
 export function getAppendedConversationMessages(...messages: ModelMessage[]) {
-  return [...getState().app.conversation.messages, ...messages];
+  return [...getState().conversation.messages, ...messages];
 }
 
 export function getAppendedTranscript(...transcriptEntries: TranscriptEntry[]) {
-  return [...getState().app.transcript, ...transcriptEntries];
+  return [...getState().conversation.transcript, ...transcriptEntries];
 }
 
 export async function syncSessionFile({
-  messages = getState().app.conversation.messages,
-  summaries = getState().app.conversation.summaries,
-  transcript = getState().app.transcript,
+  messages = getState().conversation.messages,
+  summaries = getState().conversation.summaries,
+  transcript = getState().conversation.transcript,
 }: {
   messages?: ModelMessage[];
   summaries?: ModelSummary[];
   transcript?: TranscriptEntry[];
 } = {}) {
-  const { sessionFilePath } = getState().app;
+  const sessionFilePath = getState().session.sessionFilePath;
   const sessionDir = getSessionDir();
   if (!fsDeps.existsSync(sessionDir)) {
     const mkdirResult = await tryCatchAsync(
@@ -124,7 +124,7 @@ export async function initSessionFile() {
 
   const sessionFilePath = join(
     sessionDir,
-    `session-${getState().app.sessionStartDate.toString()}.json`,
+    `session-${getState().session.sessionStartDate.toString()}.json`,
   );
   actions.setSessionFilePath(sessionFilePath);
   const writeResult = await tryCatchAsync(
@@ -140,7 +140,7 @@ export async function deleteExpiredSessionFiles() {
 
   for (const { absolutePath, timestampMs } of sessionFiles) {
     const oneDay = 1_000 * 60 * 60 * 24;
-    if (timestampMs + oneDay < getState().app.sessionStartDate) {
+    if (timestampMs + oneDay < getState().session.sessionStartDate) {
       await tryCatchAsync(fsDeps.unlink(absolutePath));
     }
   }

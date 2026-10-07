@@ -100,7 +100,8 @@ Object.defineProperties(mutedStdout, {
 });
 
 export function shouldMuteStdout() {
-  const { loadingStateTimeout, isNonBlockingProcessOngoing } = getState().app;
+  const { loadingStateTimeout, isNonBlockingProcessOngoing } =
+    getState().terminal;
   return loadingStateTimeout !== null || isNonBlockingProcessOngoing;
 }
 
@@ -120,7 +121,7 @@ export function initStdin() {
   emitKeypressEvents(stdin);
 
   stdin.on("keypress", (char: string, key: Key) => {
-    if (!getState().app.isInitializing) return;
+    if (!getState().terminal.isInitializing) return;
 
     if (key.ctrl === true && key.name === "c") process.exit(130);
     if (key.name === "return" || key.name === "enter") return;
@@ -175,7 +176,7 @@ export function initKeypress(rl: readline.Interface) {
     const ret = await cb();
     stdin.resume();
     actions.setIsNonBlockingProcessOngoing(false);
-    const bufferedStdout = getState().app.bufferedStdoutWhileEditorOpen;
+    const bufferedStdout = getState().terminal.bufferedStdoutWhileEditorOpen;
     if (bufferedStdout.length > 0) {
       processDeps.stdout.write(bufferedStdout);
       actions.resetBufferedStdoutWhileEditorOpen();
@@ -193,8 +194,8 @@ export function initKeypress(rl: readline.Interface) {
         return;
       }
 
-      if (getState().app.isNonBlockingProcessOngoing) return;
-      if (getState().app.isRecording) return;
+      if (getState().terminal.isNonBlockingProcessOngoing) return;
+      if (getState().terminal.isRecording) return;
 
       const keymaps = getState().config.keymaps;
 
@@ -326,7 +327,7 @@ export function initKeypress(rl: readline.Interface) {
         }
       }
 
-      for (const slashCommand of getState().app.slashCommands) {
+      for (const slashCommand of getState().content.slashCommands) {
         const keymap = keymaps[slashCommand.name];
         if (keymap === undefined) continue;
         if (!isSameKey(key, keymap)) continue;
@@ -338,7 +339,7 @@ export function initKeypress(rl: readline.Interface) {
       }
 
       // mutedStdout prevents echoing, but readline's internal state still needs to be cleared
-      if (getState().app.loadingStateTimeout !== null) {
+      if (getState().terminal.loadingStateTimeout !== null) {
         rl.write(null, { ctrl: true, name: "u" });
       }
     })();
@@ -352,7 +353,7 @@ function getDefaultPasteCmd() {
 }
 
 function getPrefilledEditorContent() {
-  const editorInputValue = getState().app.editorInputValue;
+  const editorInputValue = getState().terminal.editorInputValue;
   if (editorInputValue !== null) return normalizeNewline(editorInputValue);
   return "";
 }
@@ -365,7 +366,7 @@ function getReadlineContent(rl: readline.Interface) {
 async function getEditorInitialContent(opts: {
   includeClipboardSuffix: boolean;
 }) {
-  const rl = getState().app.rl;
+  const rl = getState().terminal.rl;
   assertAtBuildtime(rl !== null);
 
   const prefilledEditorContent = getPrefilledEditorContent();
@@ -457,7 +458,7 @@ function filterIfLength(str: string) {
 }
 
 export async function parseInputFromEditor() {
-  const editorInputValue = getState().app.editorInputValue;
+  const editorInputValue = getState().terminal.editorInputValue;
   assertAtBuildtime(editorInputValue !== null);
   const splitByDelimiterEditorInputValue = editorInputValue
     .split(getState().config.messageQueueDelimiter)
@@ -515,7 +516,7 @@ export async function parseInputFromEditor() {
 }
 
 export async function pollUntilNonBlockingProcessClosed() {
-  while (getState().app.isNonBlockingProcessOngoing) {
+  while (getState().terminal.isNonBlockingProcessOngoing) {
     await sleep(100);
   }
 }
@@ -525,10 +526,10 @@ export async function resolveUserInput({
 }: {
   isFirstInput: boolean;
 }) {
-  const rl = getState().app.rl;
+  const rl = getState().terminal.rl;
   assertAtBuildtime(rl !== null);
 
-  if (getState().app.editorInputValue !== null) {
+  if (getState().terminal.editorInputValue !== null) {
     const editorInput = await parseInputFromEditor();
     if (
       editorInput !== null &&
@@ -549,7 +550,7 @@ export async function resolveUserInput({
   const abortController = getState().abortControllers.question;
   assertAtBuildtime(abortController !== null);
   const bufferedInputWhileInitializing =
-    getState().app.bufferedInputWhileInitializing;
+    getState().terminal.bufferedInputWhileInitializing;
   const questionResult = tryCatchAsync(
     rl.question(getState().config.promptPrefix, {
       signal: abortController.signal,
@@ -572,7 +573,7 @@ export async function resolveUserInput({
       return null;
     }
 
-    const abortedByEditor = getState().app.editorInputValue !== null;
+    const abortedByEditor = getState().terminal.editorInputValue !== null;
     if (abortedByEditor) {
       const editorInput = await parseInputFromEditor();
       if (
@@ -621,7 +622,9 @@ export function shouldResolveSlashCommand(
   if (forceKnownCommand) {
     const command =
       spaceIdx === -1 ? trimmed.slice(1) : trimmed.slice(1, spaceIdx);
-    const customSlashCommands = getState().app.slashCommands.map((c) => c.name);
+    const customSlashCommands = getState().content.slashCommands.map(
+      (c) => c.name,
+    );
     return [...builtinSlashCommands, ...customSlashCommands].includes(command);
   }
 
@@ -630,7 +633,7 @@ export function shouldResolveSlashCommand(
 
 async function exitSession({ isTyped = false }: SpacingOpts = {}) {
   stopLoadingState();
-  const rl = getState().app.rl;
+  const rl = getState().terminal.rl;
   assertAtBuildtime(rl !== null);
   rl.close();
   streamingSupportedWithSpacing(isTyped, () => printSessionStartDate());
@@ -639,7 +642,7 @@ async function exitSession({ isTyped = false }: SpacingOpts = {}) {
 }
 
 async function resolveExitConfirmation() {
-  const rl = getState().app.rl;
+  const rl = getState().terminal.rl;
   assertAtBuildtime(rl !== null);
 
   actions.setQuestionAbortController(new AbortController());
@@ -676,7 +679,7 @@ async function resolveExitConfirmation() {
 }
 
 export async function resolveInterruptWithEditor() {
-  const rl = getState().app.rl;
+  const rl = getState().terminal.rl;
   assertAtBuildtime(rl !== null);
 
   actions.setInterruptWithEditorAbortController(new AbortController());
@@ -920,7 +923,7 @@ function resolveCustomSlashCommand(commandStr: string): SlashCommandOutcome {
     return commandStr.slice(spaceIdx).trimStart();
   })();
 
-  const slashCommands = getState().app.slashCommands;
+  const slashCommands = getState().content.slashCommands;
   const matchedCommand = slashCommands.find((c) => c.name === command);
 
   if (matchedCommand === undefined) {
@@ -992,10 +995,10 @@ export function printUsage() {
   const { model } = getState().config;
   const pricing = getState().config.pricingPerModel[model];
   const tokenUsageForSession = sumUsageTokens(
-    getState().app.modelUsageForSession[model] ?? [],
+    getState().usage.modelUsageForSession[model] ?? [],
   );
   const tokenUsageForLimitWindow = sumUsageTokens(
-    getState().app.modelUsageForLimitWindow[model] ?? [],
+    getState().usage.modelUsageForLimitWindow[model] ?? [],
   );
   const { usageLimit } = getState().config;
 
@@ -1178,7 +1181,7 @@ function streamingSupportedWithSpacing(isTyped: boolean, cb: () => void) {
 }
 
 export async function pageEditStr({ isTyped = false }: SpacingOpts = {}) {
-  const { editorInputValue } = getState().app;
+  const { editorInputValue } = getState().terminal;
   if (editorInputValue === null) {
     streamingSupportedWithSpacing(isTyped, () =>
       print.warning("Editor is empty"),
@@ -1208,7 +1211,7 @@ ${getAvailableCommandsStr()}`;
 }
 
 export async function pageSkills({ isTyped = false }: SpacingOpts = {}) {
-  if (getState().app.skills.length === 0) {
+  if (getState().content.skills.length === 0) {
     streamingSupportedWithSpacing(isTyped, () =>
       print.warning("No available skills"),
     );
@@ -1216,7 +1219,7 @@ export async function pageSkills({ isTyped = false }: SpacingOpts = {}) {
   }
 
   const skillsList = getState()
-    .app.skills.filter(
+    .content.skills.filter(
       (skill) => !skill.name.startsWith(contextFileSkillNamePrefix),
     )
     .map(
@@ -1235,19 +1238,19 @@ ${skillsList}`;
 export async function pageAvailableContextFiles({
   isTyped = false,
 }: SpacingOpts = {}) {
-  if (getState().app.contextEntries.length === 0) {
+  if (getState().content.contextEntries.length === 0) {
     streamingSupportedWithSpacing(isTyped, () =>
       print.warning("No available context files"),
     );
     return;
   }
 
-  const contextFiles = getState().app.contextEntries.map(
+  const contextFiles = getState().content.contextEntries.map(
     (context) => `- ${context.filePath}`,
   );
 
   const contextSkillFiles = getState()
-    .app.skills.filter((skill) =>
+    .content.skills.filter((skill) =>
       skill.name.startsWith(contextFileSkillNamePrefix),
     )
     .map((skill) => `- ${join(skill.dir, "AGENTS.md")} (as a skill)`);
@@ -1262,7 +1265,7 @@ ${formatted}`;
 
 export async function resumeWithNoArgs() {
   const sessionFiles = (await listSessionFiles()).filter(
-    ({ absolutePath }) => getState().app.sessionFilePath !== absolutePath,
+    ({ absolutePath }) => getState().session.sessionFilePath !== absolutePath,
   );
   if (sessionFiles.length === 0) {
     errorWithSpacing(() => print.error("No sessions to resume"));
@@ -1328,11 +1331,11 @@ function getAllPrettyConfig() {
 
   return `# ${globalConfigTitle}
 
-${markdownFence("yaml", getState().app.globalConfigStr)}
+${markdownFence("yaml", getState().content.globalConfigStr)}
 
 # ${localConfigTitle}
 
-${markdownFence("yaml", getState().app.localConfigStr)}
+${markdownFence("yaml", getState().content.localConfigStr)}
 
 # Applied config
 
@@ -1362,12 +1365,12 @@ const getReloadTempFileDiffTitle = (): Record<
 });
 
 const getReloadTempFileStr = (): Record<ReloadTempFilePrefixes, string> => ({
-  global: markdownFence("yaml", getState().app.globalConfigStr),
-  local: markdownFence("yaml", getState().app.localConfigStr),
+  global: markdownFence("yaml", getState().content.globalConfigStr),
+  local: markdownFence("yaml", getState().content.localConfigStr),
   applied: markdownFence("json", stringify(getState().config)),
-  context: getState().app.contextStr,
+  context: getState().content.contextStr,
   commands: getCustomSlashCommandsStr(),
-  skills: getState().app.skillsStr,
+  skills: getState().content.skillsStr,
 });
 
 async function reload() {
@@ -1519,7 +1522,7 @@ export async function initGlobalConfig() {
 }
 
 export async function pageHistory({ isTyped = false }: SpacingOpts = {}) {
-  const { transcript } = getState().app;
+  const { transcript } = getState().conversation;
 
   if (transcript.length === 0) {
     streamingSupportedWithSpacing(isTyped, () =>
@@ -1547,7 +1550,7 @@ ${formattedTranscript}`;
 }
 
 export async function pageLastResponse({ isTyped = false }: SpacingOpts = {}) {
-  const { messages } = getState().app.conversation;
+  const { messages } = getState().conversation;
   const lastMessage = messages.findLast(
     (message) => message.role === "assistant",
   );
@@ -1582,7 +1585,7 @@ ${formattedContentStr}`;
 }
 
 export async function pageLastMessage({ isTyped = false }: SpacingOpts = {}) {
-  const { messages } = getState().app.conversation;
+  const { messages } = getState().conversation;
   const lastMessage = messages.findLast((message) => message.role === "user");
 
   if (lastMessage == undefined) {
@@ -1613,7 +1616,7 @@ ${contentStr}`;
 }
 
 export async function pageSummaries({ isTyped = false }: SpacingOpts = {}) {
-  if (getState().app.conversation.summaries.length === 0) {
+  if (getState().conversation.summaries.length === 0) {
     streamingSupportedWithSpacing(isTyped, () =>
       print.warning("No conversation summaries"),
     );
@@ -1621,7 +1624,7 @@ export async function pageSummaries({ isTyped = false }: SpacingOpts = {}) {
   }
 
   const summariesStr = getState()
-    .app.conversation.summaries.map(
+    .conversation.summaries.map(
       (
         summary,
         idx,
@@ -1643,7 +1646,7 @@ ${summariesStr}`;
 }
 
 export async function pageLastDiff({ isTyped = false }: SpacingOpts = {}) {
-  const { toolEditDiffs } = getState().app;
+  const { toolEditDiffs } = getState().conversation;
 
   if (toolEditDiffs.length === 0) {
     streamingSupportedWithSpacing(isTyped, () =>
@@ -1665,7 +1668,7 @@ ${diffStdout}`,
 }
 
 export function clearRlLine(): readline.Interface | null {
-  const rl = getState().app.rl;
+  const rl = getState().terminal.rl;
   assertAtBuildtime(rl !== null);
   rl.write(null, { ctrl: true, name: "e" });
   rl.write(null, { ctrl: true, name: "u" });
@@ -1718,7 +1721,7 @@ ${formattedHarnessTools.concat(formattedMCPTools).join("\n")}`;
 }
 
 export function warnOnMissingTranscribeConfig() {
-  const rl = getState().app.rl;
+  const rl = getState().terminal.rl;
   assertAtBuildtime(rl !== null);
 
   const transcriptionApiKey = processDeps.env.get(
@@ -1761,7 +1764,7 @@ ${formattedMessages}`;
 export async function recordAndTranscribeInput({
   isTyped = false,
 }: SpacingOpts = {}) {
-  const rl = getState().app.rl;
+  const rl = getState().terminal.rl;
   assertAtBuildtime(rl !== null);
 
   const missingConfig = warnOnMissingTranscribeConfig();

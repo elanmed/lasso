@@ -64,7 +64,7 @@ export async function formatMarkdown(content: string): Promise<string> {
 export async function executeBat(content: string) {
   content = await formatMarkdown(content);
   content = normalizeNewline(content);
-  if (!getState().app.batAvailable) {
+  if (!getState().content.batAvailable) {
     return print.plain(content);
   }
 
@@ -118,7 +118,7 @@ export async function openWithPager({
       return `${defaultPagerEnvValue} "${tempFile}"`;
     }
 
-    if (getState().app.batAvailable) {
+    if (getState().content.batAvailable) {
       const batFlags =
         contentType === "diff"
           ? baseBatFlags()
