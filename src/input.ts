@@ -9,7 +9,6 @@ import type { AssistantContent, Tool } from "ai";
 import { assertAtBuildtime } from "./assert.ts";
 import {
   isAbortError,
-  isReadlineClosedError,
   tryCatchAsync,
   getMessageFromError,
   normalizeNewline,
@@ -188,6 +187,11 @@ export function initKeypress(rl: readline.Interface) {
 
   stdin.on("keypress", (_char, key: Key) => {
     void (async () => {
+      if (key.ctrl === true && key.name === "d") {
+        await exitSession();
+        return;
+      }
+
       if (getState().app.isNonBlockingProcessOngoing) return;
       if (getState().app.isRecording) return;
 
@@ -556,10 +560,6 @@ export async function resolveUserInput({
   actions.setQuestionAbortController(null);
 
   if (!inputResult.ok) {
-    if (isReadlineClosedError(inputResult.error)) {
-      await exitSession();
-    }
-
     if (!isAbortError(inputResult.error)) {
       print.error(getMessageFromError(inputResult.error));
       return null;
@@ -621,11 +621,12 @@ export function shouldResolveSlashCommand(
   return true;
 }
 
-async function exitSession() {
+async function exitSession({ isTyped = false }: SpacingOpts = {}) {
   const rl = getState().app.rl;
   assertAtBuildtime(rl !== null);
   rl.close();
-  printSessionStartDate();
+  // TODO: can we flush stdout?
+  streamingSupportedWithSpacing(isTyped, () => printSessionStartDate());
   await getState().mcp.close();
   process.exit(0);
 }
@@ -645,11 +646,8 @@ async function resolveExitConfirmation() {
   actions.setQuestionAbortController(null);
 
   if (!exitResult.ok) {
-    if (
-      isAbortError(exitResult.error) ||
-      isReadlineClosedError(exitResult.error)
-    ) {
-      await exitSession();
+    if (isAbortError(exitResult.error)) {
+      await exitSession({ isTyped: true });
     }
 
     print.error(getMessageFromError(exitResult.error));
@@ -661,7 +659,7 @@ async function resolveExitConfirmation() {
       `${getState().config.promptPrefix}${exitResult.value}\n`,
     );
 
-    await exitSession();
+    await exitSession({ isTyped: true });
   }
 
   return;

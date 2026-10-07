@@ -3,7 +3,6 @@ import assert from "node:assert";
 import {
   isAbortError,
   isNullish,
-  isReadlineClosedError,
   tryCatch,
   safeStringify,
   strToApproxTokens,
@@ -205,32 +204,6 @@ describe("utils", () => {
 
     it("returns false for a non-nullish value", () => {
       assert.equal(isNullish("vi"), false);
-    });
-  });
-
-  describe("isReadlineClosedError", () => {
-    it("returns true for an error with the readline closed code", () => {
-      assert.equal(
-        isReadlineClosedError(
-          makeErrnoError("ERR_USE_AFTER_CLOSE", "readline was closed"),
-        ),
-        true,
-      );
-    });
-
-    it("returns false for an abort error", () => {
-      assert.equal(
-        isReadlineClosedError(makeAbortError("Aborted with Ctrl+D")),
-        false,
-      );
-    });
-
-    it("returns false for a plain Error", () => {
-      assert.equal(isReadlineClosedError(new Error("plain")), false);
-    });
-
-    it("returns false for null", () => {
-      assert.equal(isReadlineClosedError(null), false);
     });
   });
 

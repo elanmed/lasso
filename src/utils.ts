@@ -40,13 +40,6 @@ export function isAbortError(error: unknown): boolean {
   return error instanceof Error && error.name === "AbortError";
 }
 
-export function isReadlineClosedError(error: unknown): boolean {
-  return (
-    error instanceof Error &&
-    (error as NodeJS.ErrnoException).code === "ERR_USE_AFTER_CLOSE"
-  );
-}
-
 export function getMessageFromError(error: unknown) {
   if (error instanceof Error) {
     return error.message;

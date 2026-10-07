@@ -812,61 +812,7 @@ second
           "\n",
           `${YELLOW}━━ ${BOLD}Input${BOLD_RESET} ━━${RESET}\n`,
           `${PURPLE}Resume this session with /resume 42000${RESET}\n`,
-        ]);
-      });
-
-      it("exits on ctrl-d when readline closes", async () => {
-        mock.restoreAll();
-        setupTestContext({ now: 42_000 });
-        getWrites = mockStdoutWrites();
-        mockProcessExit();
-        actions.setRl(makeFakeRl());
-        actions.resetStdout();
-        const questionMock = mock.method(getTestRl(), "question", () =>
-          Promise.reject(
-            makeErrnoError("ERR_USE_AFTER_CLOSE", "readline was closed"),
-          ),
-        );
-        questionMock.mock.mockImplementationOnce(() =>
-          Promise.reject(makeAbortError("Aborted with Ctrl+D")),
-        );
-
-        await assert.rejects(
-          resolveUserInput({ isFirstInput: false }),
-          /process.exit called/,
-        );
-
-        assert.strictEqual(questionMock.mock.callCount(), 2);
-        assert.deepStrictEqual(getWrites(), [
           "\n",
-          `${YELLOW}━━ ${BOLD}Input${BOLD_RESET} ━━${RESET}\n`,
-          `${PURPLE}Resume this session with /resume 42000${RESET}\n`,
-        ]);
-      });
-
-      it("exits when the prompt fails after readline closed", async () => {
-        mock.restoreAll();
-        setupTestContext({ now: 42_000 });
-        getWrites = mockStdoutWrites();
-        mockProcessExit();
-        actions.setRl(makeFakeRl());
-        actions.resetStdout();
-        const questionMock = mock.method(getTestRl(), "question", () =>
-          Promise.reject(
-            makeErrnoError("ERR_USE_AFTER_CLOSE", "readline was closed"),
-          ),
-        );
-
-        await assert.rejects(
-          resolveUserInput({ isFirstInput: false }),
-          /process.exit called/,
-        );
-
-        assert.strictEqual(questionMock.mock.callCount(), 1);
-        assert.deepStrictEqual(getWrites(), [
-          "\n",
-          `${YELLOW}━━ ${BOLD}Input${BOLD_RESET} ━━${RESET}\n`,
-          `${PURPLE}Resume this session with /resume 42000${RESET}\n`,
         ]);
       });
     });
