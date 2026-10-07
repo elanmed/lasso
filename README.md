@@ -548,7 +548,7 @@ vim.g.clipboard = {
 
 ## TODO (now)
 
-- [ ] Add a tool for listing, providing MCP sources
+- [ ] Exit cleanly from C-d while loading
 
 ## TODO (soon)
 
