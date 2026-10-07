@@ -13,7 +13,6 @@ import {
   RESET,
   setupTestContext,
   testFs,
-  YELLOW,
 } from "./test-helpers.ts";
 
 describe("differ", () => {
@@ -66,8 +65,8 @@ describe("differ", () => {
         await differ.diffAndCleanup("call-1", "/test/file.txt");
 
         assert.deepStrictEqual(writes(), [
-          `${YELLOW}Failed to create the before diff temp file for /test/file.txt${RESET}\n`,
-          `${YELLOW}Failed to create the after diff temp file for /test/file.txt${RESET}\n`,
+          `${RED}Failed to create the before diff temp file for /test/file.txt${RESET}\n`,
+          `${RED}Failed to create the after diff temp file for /test/file.txt${RESET}\n`,
         ]);
         assert.deepStrictEqual(getState().app.toolEditDiffs, []);
       });
@@ -462,7 +461,7 @@ describe("differ", () => {
       await differ.diffAndCleanup("call-1", "/test/file.txt");
 
       assert.deepStrictEqual(writes(), [
-        `${YELLOW}Failed to create the after diff temp file for /test/file.txt${RESET}\n`,
+        `${RED}Failed to create the after diff temp file for /test/file.txt${RESET}\n`,
       ]);
       assert.deepStrictEqual(getState().app.toolEditDiffs, []);
     });

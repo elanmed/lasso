@@ -14,7 +14,6 @@ import {
   RESET,
   setupTestContext,
   testFs,
-  YELLOW,
 } from "./test-helpers.ts";
 import { fsDeps } from "./deps.ts";
 
@@ -61,7 +60,7 @@ describe("log", () => {
       await initSessionFile();
 
       assert.deepStrictEqual(getWrites(), [
-        `${YELLOW}Failed to create the directory: /fake-home/.local/state/lasso/sessions${RESET}\n`,
+        `${RED}Failed to create the directory: /fake-home/.local/state/lasso/sessions${RESET}\n`,
       ]);
       assert.equal(getState().app.sessionFilePath, "");
     });
@@ -75,7 +74,7 @@ describe("log", () => {
       await initSessionFile();
 
       assert.deepStrictEqual(getWrites(), [
-        `${YELLOW}Failed to write the session file to /fake-home/.local/state/lasso/sessions/session-1234567890000.json${RESET}\n`,
+        `${RED}Failed to write the session file to /fake-home/.local/state/lasso/sessions/session-1234567890000.json${RESET}\n`,
       ]);
     });
 
@@ -254,7 +253,7 @@ describe("log", () => {
       await syncSessionFile();
 
       assert.deepStrictEqual(getWrites(), [
-        `${YELLOW}Failed to write the session file to /fake-home/.local/state/lasso/sessions/session-1234567890000.json${RESET}\n`,
+        `${RED}Failed to write the session file to /fake-home/.local/state/lasso/sessions/session-1234567890000.json${RESET}\n`,
       ]);
       assert.deepStrictEqual(getState().app.conversation.messages, []);
     });
@@ -269,7 +268,7 @@ describe("log", () => {
       });
 
       assert.deepStrictEqual(getWrites(), [
-        `${YELLOW}Failed to stringify the session file${RESET}\n`,
+        `${RED}Failed to stringify the session file${RESET}\n`,
       ]);
       assert.equal(
         testFs._files.has(

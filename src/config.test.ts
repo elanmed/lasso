@@ -26,6 +26,7 @@ import {
   BLUE,
   GREEN,
   mockStdoutWrites,
+  RED,
   RESET,
   YELLOW,
 } from "./test-helpers.ts";
@@ -1871,7 +1872,7 @@ hello
 
       assert.strictEqual(globalConfigStr, "{}");
       assert.deepStrictEqual(writes(), [
-        `${YELLOW}Failed to read the config file at /fake-home/.config/lasso/settings.yaml${RESET}\n`,
+        `${RED}Failed to read the config file at /fake-home/.config/lasso/settings.yaml${RESET}\n`,
       ]);
     });
   });

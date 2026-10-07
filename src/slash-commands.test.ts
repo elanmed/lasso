@@ -9,10 +9,10 @@ import { actions } from "./state.ts";
 import { fsDeps } from "./deps.ts";
 import {
   mockStdoutWrites,
+  RED,
   RESET,
   setupTestContext,
   testFs,
-  YELLOW,
 } from "./test-helpers.ts";
 
 describe("getAvailableSlashCommands", () => {
@@ -143,8 +143,8 @@ describe("getAvailableSlashCommands", () => {
 
       assert.deepStrictEqual(result, []);
       assert.deepStrictEqual(getWrites(), [
-        `${YELLOW}Failed to list the slash command files in /test-cwd/.lasso/commands${RESET}\n`,
-        `${YELLOW}Failed to list the slash command files in /fake-home/.config/lasso/commands${RESET}\n`,
+        `${RED}Failed to list the slash command files in /test-cwd/.lasso/commands${RESET}\n`,
+        `${RED}Failed to list the slash command files in /fake-home/.config/lasso/commands${RESET}\n`,
       ]);
     });
 
@@ -163,7 +163,7 @@ describe("getAvailableSlashCommands", () => {
 
       assert.deepStrictEqual(result, []);
       assert.deepStrictEqual(getWrites(), [
-        `${YELLOW}Failed to read the slash command file at /test-cwd/.lasso/commands/bad.md${RESET}\n`,
+        `${RED}Failed to read the slash command file at /test-cwd/.lasso/commands/bad.md${RESET}\n`,
       ]);
     });
   });

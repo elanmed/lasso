@@ -2,10 +2,10 @@ import { describe, it, beforeEach, afterEach, mock } from "node:test";
 import assert from "node:assert";
 import {
   mockStdoutWrites,
+  RED,
   RESET,
   setupTestContext,
   testFs,
-  YELLOW,
 } from "./test-helpers.ts";
 import { fsDeps } from "./deps.ts";
 import { getGlobalContextDir } from "./paths.ts";
@@ -522,7 +522,7 @@ would benefit from specialized instructions.
 
       assert.deepStrictEqual(result, []);
       assert.deepStrictEqual(getWrites(), [
-        `${YELLOW}Failed to read the agent file at /test-cwd/AGENTS.md${RESET}\n`,
+        `${RED}Failed to read the agent file at /test-cwd/AGENTS.md${RESET}\n`,
       ]);
     });
 
@@ -593,7 +593,7 @@ would benefit from specialized instructions.
 
         assert.deepStrictEqual(result, []);
         assert.deepStrictEqual(getWrites(), [
-          `${YELLOW}Failed to read the agent file at /repo/src/AGENTS.md${RESET}\n`,
+          `${RED}Failed to read the agent file at /repo/src/AGENTS.md${RESET}\n`,
         ]);
       });
 
@@ -609,7 +609,7 @@ would benefit from specialized instructions.
 
         assert.deepStrictEqual(result, []);
         assert.deepStrictEqual(writes(), [
-          `${YELLOW}Failed to list the agent files with git${RESET}\n`,
+          `${RED}Failed to list the agent files with git${RESET}\n`,
         ]);
       });
 
@@ -623,8 +623,8 @@ would benefit from specialized instructions.
 
         assert.deepStrictEqual(result, []);
         assert.deepStrictEqual(writes(), [
-          `${YELLOW}Failed to list the skill files in /test-cwd/.lasso/skills${RESET}\n`,
-          `${YELLOW}Failed to list the skill files in /fake-home/.config/lasso/skills${RESET}\n`,
+          `${RED}Failed to list the skill files in /test-cwd/.lasso/skills${RESET}\n`,
+          `${RED}Failed to list the skill files in /fake-home/.config/lasso/skills${RESET}\n`,
         ]);
       });
 
@@ -826,7 +826,7 @@ description: A valid skill
 
       assert.equal(result, null);
       assert.deepStrictEqual(writes(), [
-        `${YELLOW}Failed to read the skill at /some/dir/SKILL.md${RESET}\n`,
+        `${RED}Failed to read the skill at /some/dir/SKILL.md${RESET}\n`,
       ]);
     });
 

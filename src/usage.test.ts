@@ -26,6 +26,7 @@ import {
   setupTestContext,
   testFs,
   YELLOW,
+  RED,
   RESET,
 } from "./test-helpers.ts";
 import { getUsageLogLockPath, getUsageLogPath } from "./paths.ts";
@@ -312,7 +313,7 @@ describe("usage", () => {
         await syncNewModelUsageForLimitWindow("gpt-4", usage);
 
         assert.deepStrictEqual(getWrites(), [
-          `${YELLOW}Failed to create the directory: ${dirname(getUsageLogPath())}${RESET}\n`,
+          `${RED}Failed to create the directory: ${dirname(getUsageLogPath())}${RESET}\n`,
         ]);
         assert.deepStrictEqual(getState().app.modelUsageForLimitWindow, {});
         assert.strictEqual(testFs._files.has(getUsageLogPath()), false);

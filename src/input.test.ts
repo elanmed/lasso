@@ -3603,7 +3603,7 @@ commands diff
           `${GREEN}0.0ms${RESET}`,
           `${BLUE}Reading slash commands: ${RESET}`,
           `${GREEN}0.0ms${RESET}`,
-          `${YELLOW}Failed to create a before temp file for the reload diff of global${RESET}\n`,
+          `${RED}Failed to create a before temp file for the reload diff of global${RESET}\n`,
         ]);
       });
 

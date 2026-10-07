@@ -180,7 +180,7 @@ describe("terminal", () => {
       const result = await formatMarkdown(invalid);
       assert.equal(result, invalid);
       assert.deepStrictEqual(getWrites(), [
-        `${YELLOW}Outputting raw content, markdown formatting failed: Cannot read properties of null (reading 'length')${RESET}\n`,
+        `${RED}Outputting raw content, markdown formatting failed: Cannot read properties of null (reading 'length')${RESET}\n`,
       ]);
     });
   });
