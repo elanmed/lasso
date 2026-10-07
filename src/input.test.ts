@@ -2786,7 +2786,7 @@ editor input
         assert.strictEqual(getState().app.isRecording, false);
         assert.strictEqual(
           getState().app.editorInputValue,
-          "hello from the mic",
+          `\n${defaultConfig.messageQueueDelimiter}hello from the mic`,
         );
       });
 

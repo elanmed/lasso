@@ -487,11 +487,13 @@ skills body`,
       assert.throws(() => actions.setEditorInputValue(""));
     });
 
-    it("append-editor-input-value sets when null and appends with the delimiter", () => {
+    it("append-editor-input-value sets when null and appends by concatenating", () => {
       assert.equal(getState().app.editorInputValue, null);
       actions.appendEditorInputValue("first");
       assert.equal(getState().app.editorInputValue, "first");
-      actions.appendEditorInputValue("second");
+      actions.appendEditorInputValue(
+        `${defaultConfig.messageQueueDelimiter}second`,
+      );
       assert.strictEqual(
         getState().app.editorInputValue,
         `first${defaultConfig.messageQueueDelimiter}second`,

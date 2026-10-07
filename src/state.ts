@@ -418,10 +418,7 @@ export const actions = {
   appendEditorInputValue(value: string) {
     assertAtRuntime(value !== "");
     const before = state.app.editorInputValue;
-    const appended =
-      before === null
-        ? value
-        : `${before}${state.config.messageQueueDelimiter}${value}`;
+    const appended = before === null ? value : `${before}${value}`;
     state.app.editorInputValue = appended;
     logStateChange("append-editor-input-value", String(before), appended);
   },

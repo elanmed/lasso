@@ -231,7 +231,9 @@ export function initKeypress(rl: readline.Interface) {
             actions.setIsRecording(false);
 
             if (transcriptionInput !== null) {
-              actions.appendEditorInputValue(transcriptionInput);
+              actions.appendEditorInputValue(
+                `\n${getState().config.messageQueueDelimiter}${transcriptionInput}`,
+              );
             }
             return;
           }
