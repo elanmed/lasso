@@ -1,7 +1,7 @@
 import assert from "node:assert";
 import { describe, it } from "node:test";
 import {
-  baseAgentPrompt,
+  getBaseAgentPrompt,
   getConversationSummaryPrompt,
   getMergeSummariesPrompt,
   getSubagentPrompt,
@@ -11,7 +11,7 @@ describe("prompts", () => {
   describe("system prompts", () => {
     it("formats the base agent prompt exactly", () => {
       assert.strictEqual(
-        baseAgentPrompt,
+        getBaseAgentPrompt([]),
         [
           "# [lasso] Base system prompt",
           "",
@@ -22,6 +22,10 @@ describe("prompts", () => {
           "- For debugging: give 1 command at a time, never multiple",
           "- All responses are piped through bat as markdown — always emit valid markdown",
           "- After a successful file-modifying tool (bash with fileSystemAccessType create-update-delete): the CLI auto-outputs a diff. Do NOT repeat the code, file contents, or a diff of the change in your response — summarize in prose only. Verification via a targeted read (e.g. sed -n) is fine, but don't re-echo what the diff already showed",
+          "",
+          "## [lasso] MCP Servers",
+          "",
+          "No available MCP servers",
           "",
           "## Filesystem actions (via bash)",
           "",
@@ -81,14 +85,53 @@ describe("prompts", () => {
       );
     });
 
+    describe("mcp servers", () => {
+      it("formats the base agent prompt with mcp server bullets", () => {
+        const prompt = getBaseAgentPrompt(["alpha", "beta"]);
+        assert(
+          prompt.includes(
+            "## [lasso] Available MCP Servers\n\n- alpha\n- beta\n\n",
+          ),
+        );
+      });
+
+      it("formats the read-only subagent prompt with mcp server bullets", () => {
+        const prompt = getSubagentPrompt("read-only", ["alpha"]);
+        assert(
+          prompt.includes("## [lasso] Available MCP Servers\n\n- alpha\n\n"),
+        );
+      });
+
+      it("formats the read-write subagent prompt with mcp server bullets", () => {
+        const prompt = getSubagentPrompt("read-write", ["alpha"]);
+        assert(
+          prompt.includes("## [lasso] Available MCP Servers\n\n- alpha\n\n"),
+        );
+      });
+
+      it("uses No available MCP servers as the list when there are none", () => {
+        const prompt = getBaseAgentPrompt([]);
+
+        assert(
+          prompt.includes(
+            "## [lasso] Available MCP Servers\n\nNo available MCP servers\n\n",
+          ),
+        );
+      });
+    });
+
     it("formats a read-only subagent prompt exactly", () => {
       assert.strictEqual(
-        getSubagentPrompt("read-only"),
+        getSubagentPrompt("read-only", []),
         [
           "# [lasso] Base system prompt",
           "",
           "## [lasso] Core principles",
           "- You are a read-only subagent. Although you have access to a bash tool, you must NOT use it to perform any modifications to the file system.",
+          "",
+          "## [lasso] MCP Servers",
+          "",
+          "No available MCP servers",
           "",
           "## Filesystem actions (via bash)",
           "",
@@ -114,12 +157,16 @@ describe("prompts", () => {
 
     it("formats a read-write subagent prompt exactly", () => {
       assert.strictEqual(
-        getSubagentPrompt("read-write"),
+        getSubagentPrompt("read-write", []),
         [
           "# [lasso] Base system prompt",
           "",
           "## [lasso] Core principles",
           "- You are a subagent with read-write access.",
+          "",
+          "## [lasso] MCP Servers",
+          "",
+          "No available MCP servers",
           "",
           "## Filesystem actions (via bash)",
           "",

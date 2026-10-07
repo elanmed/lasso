@@ -435,7 +435,10 @@ export async function createSubagentTool(
       const model = subagentSchema.model;
 
       const systemContent = [
-        getSubagentPrompt(subagentSchema.access),
+        getSubagentPrompt(
+          subagentSchema.access,
+          Object.keys(getState().mcp.clients),
+        ),
         getState().app.contextStr,
         getState().app.skillsStr,
       ]
@@ -455,7 +458,11 @@ export async function createSubagentTool(
           // Subagents should always use the provider's default reasoning
           instructions: systemContent,
           messages: [userMessage],
-          tools: { ...subagentSafeTools, ...getState().mcp.tools },
+          tools: {
+            ...subagentSafeTools,
+            ...mcpResourceTools,
+            ...getState().mcp.tools,
+          },
           stopWhen: aiDeps.isLoopFinished(),
           abortSignal: controller.signal,
           onToolExecutionStart: async ({ toolCall }) => {
@@ -568,6 +575,85 @@ const mediaTypeByExtension: Record<string, string> = {
 const readImageSchema = z.object({ filePath: z.string() });
 export type ReadImageTool = z.infer<typeof readImageSchema>;
 
+export const mcpListResourcesSchema = z.object({
+  server: z
+    .string()
+    .describe("The name of the mcp server to list resources from"),
+  cursor: z
+    .string()
+    .optional()
+    .describe("The cursor from a previous list to continue paging"),
+});
+export type McpListResourcesTool = z.infer<typeof mcpListResourcesSchema>;
+
+export async function executeMcpListResourcesTool({
+  server,
+  cursor,
+}: McpListResourcesTool): Promise<ToolResult> {
+  const client = getState().mcp.clients[server];
+  if (client === undefined) {
+    return {
+      isError: true,
+      content: `Unknown mcp server: ${server}`,
+    };
+  }
+  const listResult = await tryCatchAsync(
+    client.listResources(cursor === undefined ? {} : { params: { cursor } }),
+  );
+  if (!listResult.ok) {
+    return {
+      isError: true,
+      content: getMessageFromError(listResult.error),
+    };
+  }
+  return {
+    isError: false,
+    content: stringify({
+      resources: listResult.value.resources,
+      nextCursor: listResult.value.nextCursor ?? null,
+    }),
+  };
+}
+
+export const mcpReadResourceSchema = z.object({
+  server: z
+    .string()
+    .describe("The name of the mcp server to read the resource from"),
+  uri: z.string().describe("The uri of the resource to read"),
+});
+export type McpReadResourceTool = z.infer<typeof mcpReadResourceSchema>;
+
+export async function executeMcpReadResourceTool({
+  server,
+  uri,
+}: McpReadResourceTool): Promise<ToolResult> {
+  const client = getState().mcp.clients[server];
+  if (client === undefined) {
+    return {
+      isError: true,
+      content: `Unknown mcp server: ${server}`,
+    };
+  }
+  const readResult = await tryCatchAsync(client.readResource({ uri }));
+  if (!readResult.ok) {
+    return {
+      isError: true,
+      content: getMessageFromError(readResult.error),
+    };
+  }
+  return {
+    isError: false,
+    content: stringify(
+      readResult.value.contents.map((entry) => ({
+        uri: entry.uri,
+        mimeType: entry.mimeType ?? null,
+        text: entry.text ?? null,
+        blob: entry.blob ?? null,
+      })),
+    ),
+  };
+}
+
 export type ReadImageResult =
   | { isError: true; content: string }
   | { isError: false; base64Data: string; mediaType: string };
@@ -602,6 +688,19 @@ export async function executeReadImageTool(
     mediaType,
   };
 }
+
+const mcpResourceTools = {
+  mcp_list_resources: tool({
+    description: "List the resources of an mcp server",
+    inputSchema: mcpListResourcesSchema,
+    execute: (args) => executeMcpListResourcesTool(args),
+  }),
+  mcp_read_resource: tool({
+    description: "Read a resource from an mcp server",
+    inputSchema: mcpReadResourceSchema,
+    execute: (args) => executeMcpReadResourceTool(args),
+  }),
+};
 
 const subagentSafeTools = {
   web_fetch_html: tool({
@@ -660,6 +759,7 @@ const baseAgentTools = {
 
 export const harnessTools = {
   ...subagentSafeTools,
+  ...mcpResourceTools,
   ...baseAgentTools,
 };
 

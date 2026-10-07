@@ -999,7 +999,7 @@ describe("getTokensByArea", () => {
       messages: 11,
       context: 3,
       tools: 4,
-      basePrompt: 602,
+      basePrompt: 622,
       skills: 1,
     });
   });
@@ -1010,7 +1010,7 @@ describe("getTokensByArea", () => {
       messages: 11,
       context: 3,
       tools: 4,
-      basePrompt: 602,
+      basePrompt: 622,
       skills: 1,
     });
   });
@@ -1022,7 +1022,7 @@ describe("getTokensByArea", () => {
       messages: 1100,
       context: 300,
       tools: 400,
-      basePrompt: 60200,
+      basePrompt: 62200,
       skills: 100,
     });
   });
@@ -1045,7 +1045,7 @@ describe("getPrettyTokensByArea", () => {
       `- Chat messages: 11
 - Context files: 3
 - Harness and MCP tools: 4
-- Base system prompt: 602
+- Base system prompt: 622
 - Skill descriptions: 1`,
     );
   });
@@ -1058,7 +1058,7 @@ describe("getPrettyTokensByArea", () => {
       `- Chat messages: 1,100
 - Context files: 300
 - Harness and MCP tools: 400
-- Base system prompt: 60,200
+- Base system prompt: 62,200
 - Skill descriptions: 100`,
     );
   });

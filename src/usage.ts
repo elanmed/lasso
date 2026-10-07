@@ -17,7 +17,7 @@ import {
 import { fsDeps } from "./deps.ts";
 import { getUsageLogLockPath, getUsageLogPath } from "./paths.ts";
 import { print } from "./print.ts";
-import { baseAgentPrompt } from "./prompts.ts";
+import { getBaseAgentPrompt } from "./prompts.ts";
 import { MISSING } from "./missing.ts";
 
 export const compactTriggerRatio = 0.95;
@@ -288,7 +288,9 @@ export function getTokensByArea(): TokensByArea {
     messages: getApproxTokensFromMessages(getState().app.conversation.messages),
     context: strToApproxTokens(getState().app.contextStr),
     tools: strToApproxTokens(promptDeps.getToolsContentStr()),
-    basePrompt: strToApproxTokens(baseAgentPrompt),
+    basePrompt: strToApproxTokens(
+      getBaseAgentPrompt(Object.keys(getState().mcp.clients)),
+    ),
     skills: strToApproxTokens(getState().app.skillsStr),
   };
 

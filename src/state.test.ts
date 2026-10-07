@@ -2,7 +2,7 @@ import { describe, it, beforeEach, afterEach, mock } from "node:test";
 import assert from "node:assert";
 import type { MCPClient } from "@ai-sdk/mcp";
 import { actions, getState, promptDeps, SessionFileSchema } from "./state.ts";
-import { baseAgentPrompt } from "./prompts.ts";
+import { getBaseAgentPrompt } from "./prompts.ts";
 import { stringify } from "./utils.ts";
 import { defaultConfig } from "./config-types.ts";
 import { MISSING } from "./missing.ts";
@@ -33,7 +33,7 @@ describe("state", () => {
       actions.setSkillsStr("skills body");
       assert.strictEqual(
         promptDeps.getSystemContent(),
-        `${baseAgentPrompt}
+        `${getBaseAgentPrompt([])}
 
 ctx body
 

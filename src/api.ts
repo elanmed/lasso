@@ -35,6 +35,8 @@ import {
   webFetchToolSchema,
   loadSkillToolSchema,
   createSubagentToolSchema,
+  mcpListResourcesSchema,
+  mcpReadResourceSchema,
 } from "./tools.ts";
 import { MISSING } from "./missing.ts";
 import type { ModelSummary } from "./state.ts";
@@ -101,6 +103,16 @@ export async function resolveApiCall(userInput: string) {
           case "web_fetch_json": {
             const input = webFetchToolSchema.parse(toolCall.input);
             toolPrint("web_fetch_json", input.href);
+            break;
+          }
+          case "mcp_list_resources": {
+            const input = mcpListResourcesSchema.parse(toolCall.input);
+            toolPrint("mcp_list_resources", input.server);
+            break;
+          }
+          case "mcp_read_resource": {
+            const input = mcpReadResourceSchema.parse(toolCall.input);
+            toolPrint("mcp_read_resource", `${input.server} ${input.uri}`);
             break;
           }
           case "load_skill": {

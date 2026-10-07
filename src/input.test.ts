@@ -1308,8 +1308,13 @@ l---
       printTokens();
       assert.deepStrictEqual(getWrites(), [
         "\n",
-        `${BLUE}Token count: 621 (0.012% of context window)${RESET}\n`,
-        "- Chat messages: 11\n- Context files: 3\n- Harness and MCP tools: 4\n- Base system prompt: 602\n- Skill descriptions: 1\n",
+        `${BLUE}Token count: 641 (0.012% of context window)${RESET}\n`,
+        `- Chat messages: 11
+- Context files: 3
+- Harness and MCP tools: 4
+- Base system prompt: 622
+- Skill descriptions: 1
+`,
         "\n",
       ]);
     });
@@ -1320,8 +1325,13 @@ l---
       printTokens();
       assert.deepStrictEqual(getWrites(), [
         "\n",
-        `${BLUE}Token count: 62,100 (1.172% of context window)${RESET}\n`,
-        "- Chat messages: 1,100\n- Context files: 300\n- Harness and MCP tools: 400\n- Base system prompt: 60,200\n- Skill descriptions: 100\n",
+        `${BLUE}Token count: 64,100 (1.172% of context window)${RESET}\n`,
+        `- Chat messages: 1,100
+- Context files: 300
+- Harness and MCP tools: 400
+- Base system prompt: 62,200
+- Skill descriptions: 100
+`,
         "\n",
       ]);
     });
@@ -1332,8 +1342,13 @@ l---
       printTokens();
       assert.deepStrictEqual(getWrites(), [
         "\n",
-        `${BLUE}Token count: 621 (0.15% of context window)${RESET}\n`,
-        "- Chat messages: 11\n- Context files: 3\n- Harness and MCP tools: 4\n- Base system prompt: 602\n- Skill descriptions: 1\n",
+        `${BLUE}Token count: 641 (0.15% of context window)${RESET}\n`,
+        `- Chat messages: 11
+- Context files: 3
+- Harness and MCP tools: 4
+- Base system prompt: 622
+- Skill descriptions: 1
+`,
         "\n",
       ]);
     });
@@ -2407,6 +2422,8 @@ editor input
 - **[lasso] load_skill**: Load a skill to get specialized instructions
 - **[lasso] bash**: Execute a bash command and return its output.
 - **[lasso] read_image**: Read an image file from disk so you can look at it
+- **[lasso] mcp_list_resources**: List the resources of an mcp server
+- **[lasso] mcp_read_resource**: Read a resource from an mcp server
 - **[lasso] create_subagent**: Launch parallel subagents for independent investigation or implementation. Prefer read-only subagents for parallel work to avoid conflicts. Read-only subagents can fetch web content, inspect files, and load skills; read-write subagents can modify files or execute commands.
 
 `,
@@ -2444,6 +2461,8 @@ editor input
 - **[lasso] load_skill**: Load a skill to get specialized instructions
 - **[lasso] bash**: Execute a bash command and return its output.
 - **[lasso] read_image**: Read an image file from disk so you can look at it
+- **[lasso] mcp_list_resources**: List the resources of an mcp server
+- **[lasso] mcp_read_resource**: Read a resource from an mcp server
 - **[lasso] create_subagent**: Launch parallel subagents for independent investigation or implementation. Prefer read-only subagents for parallel work to avoid conflicts. Read-only subagents can fetch web content, inspect files, and load skills; read-write subagents can modify files or execute commands.
 - **[first mcp] mcp_tool**: [no description available]
 - **[first mcp] described_tool**: A described MCP tool
@@ -3132,6 +3151,8 @@ editor input
 - **[lasso] load_skill**: Load a skill to get specialized instructions
 - **[lasso] bash**: Execute a bash command and return its output.
 - **[lasso] read_image**: Read an image file from disk so you can look at it
+- **[lasso] mcp_list_resources**: List the resources of an mcp server
+- **[lasso] mcp_read_resource**: Read a resource from an mcp server
 - **[lasso] create_subagent**: Launch parallel subagents for independent investigation or implementation. Prefer read-only subagents for parallel work to avoid conflicts. Read-only subagents can fetch web content, inspect files, and load skills; read-write subagents can modify files or execute commands.
 
 `,
@@ -3558,8 +3579,13 @@ log content
         assert.strictEqual(result, null);
         assert.deepStrictEqual(getWrites(), [
           "\n",
-          `${BLUE}Token count: 602 (0% of context window)${RESET}\n`,
-          "- Chat messages: 0\n- Context files: 0\n- Harness and MCP tools: 0\n- Base system prompt: 602\n- Skill descriptions: 0\n",
+          `${BLUE}Token count: 622 (0% of context window)${RESET}\n`,
+          `- Chat messages: 0
+- Context files: 0
+- Harness and MCP tools: 0
+- Base system prompt: 622
+- Skill descriptions: 0
+`,
           "\n",
         ]);
       });
@@ -3764,7 +3790,7 @@ commands diff
         assert(warningWrite !== undefined);
         assert.ok(
           warningWrite.startsWith(
-            `${YELLOW}The current set of context, skills, and tools is 71.18% of the 100,000 token context window!`,
+            `${YELLOW}The current set of context, skills, and tools is 71.42% of the 100,000 token context window!`,
           ),
         );
       });
@@ -3822,7 +3848,7 @@ commands diff
         assert.ok(
           getWrites().some((w) =>
             w.includes(
-              "The current set of context, skills, and tools is 71.18% of the 100,000 token context window!",
+              "The current set of context, skills, and tools is 71.42% of the 100,000 token context window!",
             ),
           ),
         );

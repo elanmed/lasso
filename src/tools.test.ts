@@ -578,6 +578,8 @@ describe("tools", () => {
         "load_skill",
         "bash",
         "read_image",
+        "mcp_list_resources",
+        "mcp_read_resource",
         "create_subagent",
       ]);
     });
@@ -778,6 +780,8 @@ describe("tools", () => {
           "load_skill",
           "bash",
           "read_image",
+          "mcp_list_resources",
+          "mcp_read_resource",
         ]);
         assert.strictEqual(firstMessage.role, "user");
       });
@@ -796,6 +800,8 @@ describe("tools", () => {
             "load_skill",
             "bash",
             "read_image",
+            "mcp_list_resources",
+            "mcp_read_resource",
             "mcp_tool",
           ]);
           const onStart = options["onToolExecutionStart"] as (
@@ -869,7 +875,7 @@ describe("tools", () => {
         assert(firstCall !== undefined);
         assert.strictEqual(
           firstCall["instructions"],
-          `${getSubagentPrompt("read-only")}
+          `${getSubagentPrompt("read-only", [])}
 
 ctx body
 

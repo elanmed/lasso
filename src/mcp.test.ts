@@ -4,6 +4,11 @@ import type { MCPClient } from "@ai-sdk/mcp";
 import { actions, getState, type MCPToolSet } from "./state.ts";
 import { initMcpState } from "./mcp.ts";
 import {
+  executeMcpListResourcesTool,
+  executeMcpReadResourceTool,
+} from "./tools.ts";
+import { stringify } from "./utils.ts";
+import {
   BLUE,
   CLEAR_LINE,
   CR,
@@ -41,6 +46,194 @@ describe("mcp", () => {
 
     assert.strictEqual(getState().mcp.clients, clients);
     assert.strictEqual(getState().mcp.tools, tools);
+  });
+
+  describe("executeMcpListResourcesTool", () => {
+    it("returns the resources of the given server", async () => {
+      actions.setMcp(
+        {
+          first: {
+            listResources: () =>
+              Promise.resolve({
+                resources: [
+                  {
+                    uri: "file:///a.txt",
+                    name: "a",
+                    description: "File a",
+                    mimeType: "text/plain",
+                  },
+                ],
+                nextCursor: "cursor-2",
+              }),
+          } as unknown as MCPClient,
+        },
+        {},
+      );
+
+      const result = await executeMcpListResourcesTool({ server: "first" });
+
+      assert.deepStrictEqual(result, {
+        isError: false,
+        content: stringify({
+          resources: [
+            {
+              uri: "file:///a.txt",
+              name: "a",
+              description: "File a",
+              mimeType: "text/plain",
+            },
+          ],
+          nextCursor: "cursor-2",
+        }),
+      });
+    });
+
+    it("passes the cursor to the client and returns no next cursor", async () => {
+      let capturedCursor: string | undefined;
+      const listResources = mock.fn(
+        (options?: { params?: { cursor: string } }) => {
+          capturedCursor = options?.params?.cursor;
+          return Promise.resolve({ resources: [{ uri: "file:///a.txt" }] });
+        },
+      );
+      actions.setMcp({ first: { listResources } as unknown as MCPClient }, {});
+
+      const result = await executeMcpListResourcesTool({
+        server: "first",
+        cursor: "cursor-1",
+      });
+
+      assert.strictEqual(capturedCursor, "cursor-1");
+      assert.deepStrictEqual(result, {
+        isError: false,
+        content: stringify({
+          resources: [{ uri: "file:///a.txt" }],
+          nextCursor: null,
+        }),
+      });
+    });
+
+    it("returns an error for an unknown server", async () => {
+      const result = await executeMcpListResourcesTool({ server: "missing" });
+      assert.deepStrictEqual(result, {
+        isError: true,
+        content: "Unknown mcp server: missing",
+      });
+    });
+
+    it("returns isError when listing fails", async () => {
+      actions.setMcp(
+        {
+          first: {
+            listResources: () => Promise.reject(new Error("boom")),
+          } as unknown as MCPClient,
+        },
+        {},
+      );
+
+      const result = await executeMcpListResourcesTool({ server: "first" });
+      assert.deepStrictEqual(result, {
+        isError: true,
+        content: "boom",
+      });
+    });
+  });
+
+  describe("executeMcpReadResourceTool", () => {
+    it("returns the text contents of the given resource", async () => {
+      actions.setMcp(
+        {
+          first: {
+            readResource: ({ uri }: { uri: string }) =>
+              Promise.resolve({
+                contents: [
+                  { uri, mimeType: "text/plain", text: "resource text" },
+                ],
+              }),
+          } as unknown as MCPClient,
+        },
+        {},
+      );
+
+      const result = await executeMcpReadResourceTool({
+        server: "first",
+        uri: "file:///a.txt",
+      });
+
+      assert.deepStrictEqual(result, {
+        isError: false,
+        content: stringify([
+          {
+            uri: "file:///a.txt",
+            mimeType: "text/plain",
+            text: "resource text",
+            blob: null,
+          },
+        ]),
+      });
+    });
+
+    it("returns blob contents as base64", async () => {
+      actions.setMcp(
+        {
+          first: {
+            readResource: () =>
+              Promise.resolve({
+                contents: [{ uri: "file:///a.png", blob: "aGVsbG8=" }],
+              }),
+          } as unknown as MCPClient,
+        },
+        {},
+      );
+
+      const result = await executeMcpReadResourceTool({
+        server: "first",
+        uri: "file:///a.png",
+      });
+
+      assert.deepStrictEqual(result, {
+        isError: false,
+        content: stringify([
+          {
+            uri: "file:///a.png",
+            mimeType: null,
+            text: null,
+            blob: "aGVsbG8=",
+          },
+        ]),
+      });
+    });
+
+    it("returns an error for an unknown server", async () => {
+      const result = await executeMcpReadResourceTool({
+        server: "missing",
+        uri: "file:///a.txt",
+      });
+      assert.deepStrictEqual(result, {
+        isError: true,
+        content: "Unknown mcp server: missing",
+      });
+    });
+
+    it("returns isError when reading fails", async () => {
+      actions.setMcp(
+        {
+          first: {
+            readResource: () => Promise.reject(new Error("boom")),
+          } as unknown as MCPClient,
+        },
+        {},
+      );
+
+      const result = await executeMcpReadResourceTool({
+        server: "first",
+        uri: "file:///a.txt",
+      });
+      assert.deepStrictEqual(result, {
+        isError: true,
+        content: "boom",
+      });
+    });
   });
 
   describe("initMcpState", () => {

@@ -59,7 +59,17 @@ const headingOne = `# [lasso] Base system prompt`;
 
 const corePrinciplesHeading = `## [lasso] Core principles`;
 
-export const baseAgentPrompt = `${headingOne}
+const mcpHeadingTwo = `## [lasso] MCP Servers`;
+
+const getMcpLis = (mcpClientNames: string[]) => {
+  if (mcpClientNames.length === 0) {
+    return `No available MCP servers`;
+  }
+
+  return mcpClientNames.map((name) => `- ${name}`).join("\n");
+};
+
+export const getBaseAgentPrompt = (mcpClientNames: string[]) => `${headingOne}
 
 ${corePrinciplesHeading}
 
@@ -69,18 +79,29 @@ ${corePrinciplesHeading}
 - All responses are piped through bat as markdown — always emit valid markdown
 ${toolDiffLi}
 
+${mcpHeadingTwo}
+
+${getMcpLis(mcpClientNames)}
+
 ${bashIntroHeadingTwo}
 
 ${readInstructions}
 
 ${writeInstructions}`;
 
-export const getSubagentPrompt = (access: "read-only" | "read-write") => {
+export const getSubagentPrompt = (
+  access: "read-only" | "read-write",
+  mcpClientNames: string[],
+) => {
   if (access === "read-only") {
     return `${headingOne}
 
 ${corePrinciplesHeading}
 - You are a read-only subagent. Although you have access to a bash tool, you must NOT use it to perform any modifications to the file system.
+
+${mcpHeadingTwo}
+
+${getMcpLis(mcpClientNames)}
 
 ${bashIntroHeadingTwo}
 
@@ -91,6 +112,10 @@ ${readInstructions}`;
 
 ${corePrinciplesHeading}
 - You are a subagent with read-write access.
+
+${mcpHeadingTwo}
+
+${getMcpLis(mcpClientNames)}
 
 ${bashIntroHeadingTwo}
 

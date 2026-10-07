@@ -13,7 +13,7 @@ import {
   type Reasoning,
 } from "./config-types.ts";
 import { MISSING } from "./missing.ts";
-import { baseAgentPrompt } from "./prompts.ts";
+import { getBaseAgentPrompt } from "./prompts.ts";
 import { getShortId, stringify } from "./utils.ts";
 import { debugLog } from "./debug-log.ts";
 import type { ModelUsage } from "./usage.ts";
@@ -211,9 +211,11 @@ export const getState = () => state;
 
 export const promptDeps = {
   getSystemContent: () =>
-    [baseAgentPrompt, getState().app.contextStr, getState().app.skillsStr].join(
-      "\n\n",
-    ),
+    [
+      getBaseAgentPrompt(Object.keys(state.mcp.clients)),
+      getState().app.contextStr,
+      getState().app.skillsStr,
+    ].join("\n\n"),
   getToolsContentStr: () => "",
 };
 
