@@ -110,7 +110,7 @@ export const bashToolInputSchema = z
       .string()
       .optional()
       .describe(
-        "Target file path; required when fileSystemAccessType is create-update-delete. Temporary files used only as intermediates do not count.",
+        "Target file path of the project file being written; must point to a file, not a directory. Required when fileSystemAccessType is create-update-delete. Temporary scratch files used only as intermediates should not be listed.",
       ),
     command: z.string().describe("The bash command to run"),
   })
