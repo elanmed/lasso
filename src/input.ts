@@ -424,13 +424,13 @@ export function initSigInt(rl: readline.Interface) {
     ];
     assertAtBuildtime(controllers.filter((c) => c !== null).length <= 1);
 
-    if (apiStream !== null) {
-      apiStream.abort();
+    if (recordProcess !== null) {
+      recordProcess.abort();
       return;
     }
 
-    if (recordProcess !== null) {
-      recordProcess.abort();
+    if (apiStream !== null) {
+      apiStream.abort();
       return;
     }
 
@@ -1813,6 +1813,7 @@ export async function recordAndTranscribeInput({
 
   if (!finishRecordingResult.ok) {
     if (isAbortError(finishRecordingResult.error)) {
+      print.warning("Cancelled");
       await cleanup();
       return null;
     }
