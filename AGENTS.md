@@ -36,7 +36,7 @@ The README states approximate source and test line counts. Run `./agent-pnpm-run
 ## Guidelines
 
 - After every turn, look for abstractions that can be extracted into test-helpers.ts for tests, and extract them
-- Never add comments
+- Don't add comments unless explicitly told
 - When you would create a new file to break a cyclic import chain, first check whether an existing small/leaf module fits, even if the name is a stretch. Only create a new file if no reasonable existing module works
 - When moving a function between files, always move its tests to the new file's test file too
 - Minimize diffs — only change what's necessary
