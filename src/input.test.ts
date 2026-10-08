@@ -573,7 +573,7 @@ describe("input", () => {
       it("falls back to EDITOR env var when LASSO_EDIT is not set", async () => {
         testProcessEnv._set("EDITOR", "vim");
         await spawnAndReadEditorContent();
-        assert.strictEqual(spawned[0], "vim /tmp/lasso-test-uuid.txt");
+        assert.strictEqual(spawned[0], "vim '/tmp/lasso-test-uuid.txt'");
       });
 
       it("uses EDITOR env var with __FILE__ when LASSO_EDIT is not set", async () => {
@@ -584,7 +584,13 @@ describe("input", () => {
 
       it("falls back to vi when no editor env vars are set", async () => {
         await spawnAndReadEditorContent();
-        assert.strictEqual(spawned[0], "vi /tmp/lasso-test-uuid.txt");
+        assert.strictEqual(spawned[0], "vi '/tmp/lasso-test-uuid.txt'");
+      });
+
+      it("falls back to vi when EDITOR is whitespace-only", async () => {
+        testProcessEnv._set("EDITOR", "   ");
+        await spawnAndReadEditorContent();
+        assert.strictEqual(spawned[0], "vi '/tmp/lasso-test-uuid.txt'");
       });
     });
 

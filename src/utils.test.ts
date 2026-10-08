@@ -21,6 +21,8 @@ import {
   getDurationColor,
   shouldDisableColor,
   decimalToPercent,
+  shellQuote,
+  isShellSafePath,
 } from "./utils.ts";
 import {
   testFs,
@@ -768,6 +770,34 @@ describe("utils", () => {
       assert.equal(approxTokensToCharLen(0), 0);
       assert.equal(approxTokensToCharLen(1), 3);
       assert.equal(approxTokensToCharLen(250), 750);
+    });
+  });
+
+  describe("shellQuote", () => {
+    it("wraps a safe path in single quotes", () => {
+      assert.strictEqual(
+        shellQuote("/tmp/lasso-abc.txt"),
+        "'/tmp/lasso-abc.txt'",
+      );
+    });
+
+    it("escapes single quotes in the path", () => {
+      assert.strictEqual(
+        shellQuote("/tmp/it's a file"),
+        "'/tmp/it'\\''s a file'",
+      );
+    });
+  });
+
+  describe("isShellSafePath", () => {
+    it("accepts word characters, slashes, dots, underscores, and dashes", () => {
+      assert.strictEqual(isShellSafePath("/tmp/lasso-test-uuid.txt"), true);
+    });
+
+    it("rejects spaces, quotes, and shell metacharacters", () => {
+      assert.strictEqual(isShellSafePath("/tmp/my file;x.txt"), false);
+      assert.strictEqual(isShellSafePath("/tmp/a'b.txt"), false);
+      assert.strictEqual(isShellSafePath("/tmp/a`ls`.txt"), false);
     });
   });
 });

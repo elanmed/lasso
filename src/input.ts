@@ -15,6 +15,7 @@ import {
   normalizeNewline,
   getTempFileName,
   isExisty,
+  shellQuote,
   listSessionFiles,
   stringify,
   getStrFromAssistantContent,
@@ -1049,19 +1050,23 @@ export function printTokens() {
 }
 
 function getEditCommand(tempFile: string) {
+  const quotedTempFile = shellQuote(tempFile);
+
   const lassoEditEnvValue = processDeps.env.get("LASSO_EDIT");
   if (isExisty(lassoEditEnvValue)) {
     return lassoEditEnvValue.replace("__FILE__", tempFile);
   }
 
   const editorEnvValue = processDeps.env.get("EDITOR");
-  if (isNullish(editorEnvValue)) return `vi ${tempFile}`;
+  if (isNullish(editorEnvValue) || editorEnvValue.trim() === "") {
+    return `vi ${quotedTempFile}`;
+  }
 
   if (editorEnvValue.includes("__FILE__")) {
     return editorEnvValue.replace("__FILE__", tempFile);
   }
 
-  return `${editorEnvValue} ${tempFile}`;
+  return `${editorEnvValue} ${quotedTempFile}`;
 }
 
 export async function spawnAndReadEditorContent(opts?: {

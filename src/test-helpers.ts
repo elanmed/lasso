@@ -28,6 +28,7 @@ import type { Key, Mcp, SdkProvider } from "./config-types.ts";
 import { getMcpLogIdToLabel } from "./config.ts";
 import { createParallelPerformanceLogger } from "./print.ts";
 import { baseBatFlags, markdownBatFlags } from "./terminal.ts";
+import { shellQuote } from "./utils.ts";
 
 export function makeMcpTool() {
   return {
@@ -612,7 +613,7 @@ export function batPagerCmd(
     contentType === "diff"
       ? baseBatFlags()
       : baseBatFlags().concat(markdownBatFlags);
-  return `bat ${batFlags.join(" ")} --paging=always "${tempFile}"`;
+  return `bat ${batFlags.join(" ")} --paging=always ${shellQuote(tempFile)}`;
 }
 
 export function setupKeypressTests() {

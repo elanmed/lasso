@@ -90,6 +90,23 @@ export function getShortId(): string {
   return crypto.randomBytes(9).toString("base64url");
 }
 
+export function shellQuote(str: string) {
+  const quote = "'";
+  const escapedQuote = "'\\''";
+  return quote + str.replaceAll(quote, escapedQuote) + quote;
+}
+
+export function isShellSafePath(str: string) {
+  // ^: start of string
+  // \w: letters, digits, underscore
+  // /: path separator
+  // .: extension dot
+  // -: dash
+  // +: one or more of those
+  // $: end of string
+  return /^[\w./-]+$/.test(str);
+}
+
 export interface GetTempFileNameArgs {
   pathPrefix?: string | undefined;
   initialContentPath?: string | undefined;
@@ -108,6 +125,8 @@ export async function getTempFileName(args?: GetTempFileNameArgs) {
     os.tmpdir(),
     `${pathPrefix ?? "lasso"}-${getShortId()}.${extension ?? "txt"}`,
   );
+
+  assertAtRuntime(isShellSafePath(tempFile));
 
   if (initialContentPath !== undefined) {
     const existsResult = tryCatch(() => fsDeps.existsSync(initialContentPath));

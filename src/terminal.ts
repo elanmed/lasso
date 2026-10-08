@@ -9,6 +9,7 @@ import {
   tryCatch,
   tryCatchAsync,
   shouldDisableColor,
+  shellQuote,
 } from "./utils.ts";
 import { print } from "./print.ts";
 
@@ -115,7 +116,7 @@ export async function openWithPager({
 
     const defaultPagerEnvValue = processDeps.env.get("PAGER");
     if (isExisty(defaultPagerEnvValue)) {
-      return `${defaultPagerEnvValue} "${tempFile}"`;
+      return `${defaultPagerEnvValue} ${shellQuote(tempFile)}`;
     }
 
     if (getState().content.batAvailable) {
@@ -124,10 +125,10 @@ export async function openWithPager({
           ? baseBatFlags()
           : baseBatFlags().concat(markdownBatFlags);
 
-      return `bat ${batFlags.join(" ")} --paging=always "${tempFile}"`;
+      return `bat ${batFlags.join(" ")} --paging=always ${shellQuote(tempFile)}`;
     }
 
-    return `less "${tempFile}"`;
+    return `less ${shellQuote(tempFile)}`;
   })();
 
   childProcessDeps.spawnSync(pagerCommand, {

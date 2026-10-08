@@ -71,7 +71,7 @@ describe("terminal", () => {
           initialContentStr: "",
           contentType: "markdown",
         });
-        assert.strictEqual(spawned[0], `more "/tmp/lasso-test-uuid.txt"`);
+        assert.strictEqual(spawned[0], `more '/tmp/lasso-test-uuid.txt'`);
       });
 
       it("falls back to bat", async () => {
@@ -88,7 +88,7 @@ describe("terminal", () => {
           initialContentStr: "",
           contentType: "markdown",
         });
-        assert.strictEqual(spawned[0], `less "/tmp/lasso-test-uuid.txt"`);
+        assert.strictEqual(spawned[0], `less '/tmp/lasso-test-uuid.txt'`);
       });
     });
 
