@@ -245,6 +245,27 @@ describe("input", () => {
       assert.equal(controller.signal.aborted, true);
     });
 
+    it("aborts the recording process instead of the API stream when both are set", () => {
+      let sigint: (() => void) | undefined;
+      const rl = makeFakeRl({
+        on: (_event: string, listener: () => void) => {
+          sigint = listener;
+        },
+      });
+      actions.setRl(rl);
+      const streamController = new AbortController();
+      actions.setApiStreamAbortController(streamController);
+      const recordController = new AbortController();
+      actions.setRecordProcessAbortController(recordController);
+
+      initSigInt(rl);
+      assert(sigint !== undefined);
+      sigint();
+
+      assert.equal(recordController.signal.aborted, true);
+      assert.equal(streamController.signal.aborted, false);
+    });
+
     it("clears readline input for an active question", () => {
       let sigint: (() => void) | undefined;
       let writeCount = 0;
@@ -4235,6 +4256,7 @@ custom command content`,
       assert.strictEqual(result, null);
       assert.deepStrictEqual(getWrites(), [
         `${RED}⏺${RESET} Press enter to stop recording \n`,
+        `${YELLOW}Cancelled${RESET}\n`,
       ]);
       assert.strictEqual(getState().abortControllers.recordProcess, null);
       assert.strictEqual(testFs._files.has("/tmp/lasso-test-uuid.wav"), false);
@@ -4279,6 +4301,10 @@ custom command content`,
       assert.deepStrictEqual(getWrites(), [
         `${RED}⏺${RESET} Press enter to stop recording \n`,
       ]);
+      assert.strictEqual(
+        getState().terminal.bufferedStdoutWhileEditorOpen,
+        `${YELLOW}Cancelled${RESET}\n`,
+      );
       assert.strictEqual(testFs._files.has("/tmp/lasso-test-uuid.wav"), false);
     });
 
