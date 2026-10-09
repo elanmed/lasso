@@ -1,25 +1,17 @@
 import { describe, it, beforeEach, afterEach, mock } from "node:test";
 import assert from "node:assert";
 import { childProcessDeps, fsDeps } from "./deps.ts";
-import { getGlobalConfigPath, getLocalConfigPath } from "./paths.ts";
-import { actions, getState } from "./state.ts";
-import {
-  executeBat,
-  formatMarkdown,
-  openWithPager,
-  warnOnMissingBat,
-} from "./terminal.ts";
+import { actions } from "./state.ts";
+import { executeBat, formatMarkdown, openWithPager } from "./terminal.ts";
 import {
   batPagerCmd,
   makeInvalidString,
-  mockExec,
   mockSpawnSync,
   mockStdoutWrites,
   mockPagerSpawn,
   setupTestContext,
   testFs,
   testProcessEnv,
-  YELLOW,
   RED,
   RESET,
 } from "./test-helpers.ts";
@@ -292,49 +284,6 @@ describe("terminal", () => {
           "test content\n\n",
         ]);
       });
-    });
-  });
-
-  describe("warnOnMissingBat", () => {
-    beforeEach(() => {
-      mock.restoreAll();
-      actions.resetState();
-    });
-
-    it("warns when bat is not available", async () => {
-      mockExec({ stdout: "", error: new Error("not found") });
-
-      const getWrites = mockStdoutWrites();
-
-      await warnOnMissingBat();
-
-      assert.strictEqual(getState().content.batAvailable, false);
-      assert.deepStrictEqual(getWrites(), [
-        `${YELLOW}\`bat\` is not available, consider installing it to properly render markdown responses in the terminal. Suppress this warning with \`suppressBatUnavailableWarning: true\` in ${getGlobalConfigPath()} or ${getLocalConfigPath()}${RESET}\n`,
-      ]);
-    });
-
-    it("does not warn when bat is available", async () => {
-      mockExec({ stdout: "bat 0.25.0" });
-
-      const getWrites = mockStdoutWrites();
-
-      await warnOnMissingBat();
-
-      assert.strictEqual(getState().content.batAvailable, true);
-      assert.deepStrictEqual(getWrites(), []);
-    });
-
-    it("does not warn when bat is unavailable and the warning is suppressed", async () => {
-      mockExec({ stdout: "", error: new Error("not found") });
-      actions.setSuppressBatUnavailableWarning(true);
-
-      const getWrites = mockStdoutWrites();
-
-      await warnOnMissingBat();
-
-      assert.strictEqual(getState().content.batAvailable, false);
-      assert.deepStrictEqual(getWrites(), []);
     });
   });
 });

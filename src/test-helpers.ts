@@ -605,6 +605,12 @@ export function mockTranscription(text: string) {
   return { transcribeCalls };
 }
 
+export function first<T>(array: T[]): T {
+  const [item] = array;
+  assert(item !== undefined);
+  return item;
+}
+
 export function batPagerCmd(
   tempFile: string,
   contentType: "diff" | "markdown" = "markdown",

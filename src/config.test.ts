@@ -9,6 +9,7 @@ import {
   initStateRepeatable,
   blockOnMissingConfig,
   readConfigFileStr,
+  warnOnMissingConfig,
 } from "./config.ts";
 import { stringifyTools } from "./tools.ts";
 import { defaultConfig, DefaultedConfigSchema } from "./config-types.ts";
@@ -23,8 +24,7 @@ import {
   testFs,
   testProcessEnv,
   setupTestContext,
-  BLUE,
-  GREEN,
+  first,
   mockStdoutWrites,
   RED,
   RESET,
@@ -551,8 +551,13 @@ describe("config", () => {
           }),
         );
 
-        await assert.rejects(
-          initState(),
+        await initState();
+        const messages = getState().content.configErrorMessages.filter(
+          (message) => message.includes("keymaps must be unique"),
+        );
+        assert.strictEqual(messages.length, 1);
+        assert.match(
+          first(messages),
           /keymaps must be unique: `edit` and `clear` are both bound to/,
         );
       });
@@ -569,8 +574,14 @@ describe("config", () => {
           }),
         );
 
-        await assert.rejects(
-          initState(),
+        await initState();
+        const messages = getState().content.configErrorMessages;
+        const keymapMessages = messages.filter((message) =>
+          message.includes("keymaps must be unique"),
+        );
+        assert.strictEqual(keymapMessages.length, 1);
+        assert.match(
+          first(keymapMessages),
           /keymaps must be unique: `clear` and `history` are both bound to/,
         );
       });
@@ -714,28 +725,25 @@ describe("config", () => {
         assert.strictEqual(getState().config.suppressStartupDurations, false);
       });
 
-      it("uses its suppressBatUnavailableWarning over the global config, default config", async () => {
+      it("uses its suppressConfigWarnings over the global config, default config", async () => {
         testFs._files.set(
           getGlobalConfigPath(),
           JSON.stringify({
             ...testConfig,
-            suppressBatUnavailableWarning: true,
+            suppressConfigWarnings: true,
           }),
         );
         testFs._files.set(
           getLocalConfigPath(),
           JSON.stringify({
             ...testConfig,
-            suppressBatUnavailableWarning: false,
+            suppressConfigWarnings: false,
           }),
         );
 
         await initState();
 
-        assert.strictEqual(
-          getState().config.suppressBatUnavailableWarning,
-          false,
-        );
+        assert.strictEqual(getState().config.suppressConfigWarnings, false);
       });
 
       it("uses its suppressToolEditDiffs over the global config, default config", async () => {
@@ -854,7 +862,13 @@ describe("config", () => {
           }),
         );
 
-        await assert.rejects(initState(), /Invalid option/);
+        await initState();
+        const invalidOptionMessages =
+          getState().content.configErrorMessages.filter((message) =>
+            message.includes("has an invalid option"),
+          );
+        assert.strictEqual(invalidOptionMessages.length, 1);
+        assert.match(first(invalidOptionMessages), /Invalid option/);
       });
 
       it("rejects an empty messageQueueDelimiter", async () => {
@@ -872,8 +886,14 @@ describe("config", () => {
           }),
         );
 
-        await assert.rejects(
-          initState(),
+        await initState();
+        const invalidOptionMessages =
+          getState().content.configErrorMessages.filter((message) =>
+            message.includes("has an invalid option"),
+          );
+        assert.strictEqual(invalidOptionMessages.length, 1);
+        assert.match(
+          first(invalidOptionMessages),
           /Invalid string: must end with \\"\\n\\"/,
         );
       });
@@ -893,8 +913,14 @@ describe("config", () => {
           }),
         );
 
-        await assert.rejects(
-          initState(),
+        await initState();
+        const invalidOptionMessages =
+          getState().content.configErrorMessages.filter((message) =>
+            message.includes("has an invalid option"),
+          );
+        assert.strictEqual(invalidOptionMessages.length, 1);
+        assert.match(
+          first(invalidOptionMessages),
           /Invalid string: must end with \\"\\n\\"/,
         );
       });
@@ -914,7 +940,13 @@ describe("config", () => {
           }),
         );
 
-        await assert.rejects(initState(), /Unrecognized key/);
+        await initState();
+        const invalidOptionMessages =
+          getState().content.configErrorMessages.filter((message) =>
+            message.includes("has an invalid option"),
+          );
+        assert.strictEqual(invalidOptionMessages.length, 1);
+        assert.match(first(invalidOptionMessages), /Unrecognized key/);
       });
     });
 
@@ -981,7 +1013,16 @@ describe("config", () => {
           }),
         );
 
-        await assert.rejects(initState(), /Invalid input: expected string/);
+        await initState();
+        const invalidOptionMessages =
+          getState().content.configErrorMessages.filter((message) =>
+            message.includes("has an invalid option"),
+          );
+        assert.strictEqual(invalidOptionMessages.length, 1);
+        assert.match(
+          first(invalidOptionMessages),
+          /Invalid input: expected string/,
+        );
       });
 
       it("rejects usageLimit without dollarAmount", async () => {
@@ -999,7 +1040,16 @@ describe("config", () => {
           }),
         );
 
-        await assert.rejects(initState(), /Invalid input: expected number/);
+        await initState();
+        const invalidOptionMessages =
+          getState().content.configErrorMessages.filter((message) =>
+            message.includes("has an invalid option"),
+          );
+        assert.strictEqual(invalidOptionMessages.length, 1);
+        assert.match(
+          first(invalidOptionMessages),
+          /Invalid input: expected number/,
+        );
       });
     });
 
@@ -1013,7 +1063,16 @@ describe("config", () => {
           }),
         );
 
-        await assert.rejects(initState(), /Invalid input: expected string/);
+        await initState();
+        const invalidOptionMessages =
+          getState().content.configErrorMessages.filter((message) =>
+            message.includes("has an invalid option"),
+          );
+        assert.strictEqual(invalidOptionMessages.length, 1);
+        assert.match(
+          first(invalidOptionMessages),
+          /Invalid input: expected string/,
+        );
       });
 
       it("rejects usageLimit.duration with an invalid suffix", async () => {
@@ -1025,8 +1084,14 @@ describe("config", () => {
           }),
         );
 
-        await assert.rejects(
-          initState(),
+        await initState();
+        const invalidOptionMessages =
+          getState().content.configErrorMessages.filter((message) =>
+            message.includes("has an invalid option"),
+          );
+        assert.strictEqual(invalidOptionMessages.length, 1);
+        assert.match(
+          first(invalidOptionMessages),
           /usageLimit\.duration must be of the format/,
         );
       });
@@ -1040,8 +1105,14 @@ describe("config", () => {
           }),
         );
 
-        await assert.rejects(
-          initState(),
+        await initState();
+        const invalidOptionMessages =
+          getState().content.configErrorMessages.filter((message) =>
+            message.includes("has an invalid option"),
+          );
+        assert.strictEqual(invalidOptionMessages.length, 1);
+        assert.match(
+          first(invalidOptionMessages),
           /usageLimit\.duration must be of the format/,
         );
       });
@@ -1055,8 +1126,14 @@ describe("config", () => {
           }),
         );
 
-        await assert.rejects(
-          initState(),
+        await initState();
+        const invalidOptionMessages =
+          getState().content.configErrorMessages.filter((message) =>
+            message.includes("has an invalid option"),
+          );
+        assert.strictEqual(invalidOptionMessages.length, 1);
+        assert.match(
+          first(invalidOptionMessages),
           /usageLimit\.duration must be of the format/,
         );
       });
@@ -1070,8 +1147,14 @@ describe("config", () => {
           }),
         );
 
-        await assert.rejects(
-          initState(),
+        await initState();
+        const invalidOptionMessages =
+          getState().content.configErrorMessages.filter((message) =>
+            message.includes("has an invalid option"),
+          );
+        assert.strictEqual(invalidOptionMessages.length, 1);
+        assert.match(
+          first(invalidOptionMessages),
           /usageLimit\.duration must be of the format/,
         );
       });
@@ -1085,7 +1168,16 @@ describe("config", () => {
           }),
         );
 
-        await assert.rejects(initState(), /Invalid input: expected number/);
+        await initState();
+        const invalidOptionMessages =
+          getState().content.configErrorMessages.filter((message) =>
+            message.includes("has an invalid option"),
+          );
+        assert.strictEqual(invalidOptionMessages.length, 1);
+        assert.match(
+          first(invalidOptionMessages),
+          /Invalid input: expected number/,
+        );
       });
     });
 
@@ -1099,7 +1191,16 @@ describe("config", () => {
           }),
         );
 
-        await assert.rejects(initState(), /Invalid input: expected boolean/);
+        await initState();
+        const invalidOptionMessages =
+          getState().content.configErrorMessages.filter((message) =>
+            message.includes("has an invalid option"),
+          );
+        assert.strictEqual(invalidOptionMessages.length, 1);
+        assert.match(
+          first(invalidOptionMessages),
+          /Invalid input: expected boolean/,
+        );
       });
 
       it("rejects non-boolean suppressStartupDurations", async () => {
@@ -1111,7 +1212,16 @@ describe("config", () => {
           }),
         );
 
-        await assert.rejects(initState(), /Invalid input: expected boolean/);
+        await initState();
+        const invalidOptionMessages =
+          getState().content.configErrorMessages.filter((message) =>
+            message.includes("has an invalid option"),
+          );
+        assert.strictEqual(invalidOptionMessages.length, 1);
+        assert.match(
+          first(invalidOptionMessages),
+          /Invalid input: expected boolean/,
+        );
       });
 
       it("rejects non-boolean compactWithStructuredOutput", async () => {
@@ -1123,7 +1233,16 @@ describe("config", () => {
           }),
         );
 
-        await assert.rejects(initState(), /Invalid input: expected boolean/);
+        await initState();
+        const invalidOptionMessages =
+          getState().content.configErrorMessages.filter((message) =>
+            message.includes("has an invalid option"),
+          );
+        assert.strictEqual(invalidOptionMessages.length, 1);
+        assert.match(
+          first(invalidOptionMessages),
+          /Invalid input: expected boolean/,
+        );
       });
 
       it("rejects non-boolean suppressToolEditDiffs", async () => {
@@ -1135,19 +1254,37 @@ describe("config", () => {
           }),
         );
 
-        await assert.rejects(initState(), /Invalid input: expected boolean/);
+        await initState();
+        const invalidOptionMessages =
+          getState().content.configErrorMessages.filter((message) =>
+            message.includes("has an invalid option"),
+          );
+        assert.strictEqual(invalidOptionMessages.length, 1);
+        assert.match(
+          first(invalidOptionMessages),
+          /Invalid input: expected boolean/,
+        );
       });
 
-      it("rejects non-boolean suppressBatUnavailableWarning", async () => {
+      it("rejects non-boolean suppressConfigWarnings", async () => {
         testFs._files.set(
           getGlobalConfigPath(),
           JSON.stringify({
             ...testConfig,
-            suppressBatUnavailableWarning: "yes",
+            suppressConfigWarnings: "yes",
           }),
         );
 
-        await assert.rejects(initState(), /Invalid input: expected boolean/);
+        await initState();
+        const invalidOptionMessages =
+          getState().content.configErrorMessages.filter((message) =>
+            message.includes("has an invalid option"),
+          );
+        assert.strictEqual(invalidOptionMessages.length, 1);
+        assert.match(
+          first(invalidOptionMessages),
+          /Invalid input: expected boolean/,
+        );
       });
     });
   });
@@ -1184,29 +1321,41 @@ describe("config", () => {
         it("warns when the model has no contextWindowPerModel entry", async () => {
           testFs._files.set(
             getGlobalConfigPath(),
-            JSON.stringify({ model: testConfig.model }),
+            JSON.stringify({
+              model: testConfig.model,
+              suppressStartupDurations: true,
+            }),
           );
 
-          const getWrites = mockStdoutWrites({ includeSpinnerFrames: true });
+          const getWrites = mockStdoutWrites();
           await initState();
-          assert.deepStrictEqual(getWrites(), [
-            `${YELLOW}- Warning: using a default context window of 128,000 tokens because there is no \`contextWindowPerModel\` entry for the current model \`claude-sonnet-4-6\`${RESET}\n`,
-            `${BLUE}Reading context files: ${RESET}\n`,
-            `${BLUE}Reading skills: ${RESET}\n`,
-            `${BLUE}Reading slash commands: ${RESET}\n`,
-            `\x1b[3A\x1b[2K\r`,
-            `${BLUE}Reading context files: ${RESET}`,
-            `${GREEN}0.0ms${RESET}`,
-            `\x1b[3B\r`,
-            `\x1b[2A\x1b[2K\r`,
-            `${BLUE}Reading skills: ${RESET}`,
-            `${GREEN}0.0ms${RESET}`,
-            `\x1b[2B\r`,
-            `\x1b[1A\x1b[2K\r`,
-            `${BLUE}Reading slash commands: ${RESET}`,
-            `${GREEN}0.0ms${RESET}`,
-            `\x1b[1B\r`,
+          assert.deepStrictEqual(getState().content.configWarningMessages, [
+            "Using a default context window of 128,000 tokens because there is no `contextWindowPerModel` entry for the current model `claude-sonnet-4-6`",
           ]);
+          warnOnMissingConfig();
+          assert.deepStrictEqual(getWrites(), [
+            `${YELLOW}- Using a default context window of 128,000 tokens because there is no \`contextWindowPerModel\` entry for the current model \`claude-sonnet-4-6\`${RESET}\n`,
+            `${YELLOW}Suppress these warnings via the \`suppressConfigWarnings\` config option${RESET}\n`,
+          ]);
+        });
+
+        it("when suppressConfigWarnings is true it suppresses the warnings", async () => {
+          testFs._files.set(
+            getGlobalConfigPath(),
+            JSON.stringify({
+              model: testConfig.model,
+              sdkProvider: "anthropic",
+              contextWindowPerModel: { "claude-sonnet-4-6": 200_000 },
+              suppressStartupDurations: true,
+              suppressConfigWarnings: true,
+            }),
+          );
+
+          const getWrites = mockStdoutWrites();
+          await initState();
+          assert.deepStrictEqual(getState().content.configWarningMessages, []);
+          warnOnMissingConfig();
+          assert.deepStrictEqual(getWrites(), []);
         });
 
         it("does not warn when the model has a contextWindowPerModel entry", async () => {
@@ -1237,9 +1386,10 @@ describe("config", () => {
 
           const getWrites = mockStdoutWrites();
           await initState();
-          assert.deepStrictEqual(getWrites(), [
-            `${YELLOW}- Warning: usage limit is disabled because there is no \`pricingPerModel\` entry for the current model \`claude-sonnet-4-6\`${RESET}\n`,
+          assert.deepStrictEqual(getState().content.configWarningMessages, [
+            "Usage limit is disabled because there is no `pricingPerModel` entry for the current model `claude-sonnet-4-6`",
           ]);
+          assert.deepStrictEqual(getWrites(), []);
         });
 
         it("uses its pricingPerModel over the default config", async () => {
@@ -1355,9 +1505,7 @@ describe("config", () => {
 
           const getWrites = mockStdoutWrites({ includeSpinnerFrames: true });
           await initState();
-          assert.deepStrictEqual(getWrites(), [
-            `${YELLOW}- Warning: using a default context window of 128,000 tokens because there is no \`contextWindowPerModel\` entry for the current model \`claude-sonnet-4-6\`${RESET}\n`,
-          ]);
+          assert.deepStrictEqual(getWrites(), []);
         });
 
         it("uses its promptPrefix over the default config", async () => {
@@ -1388,21 +1536,18 @@ describe("config", () => {
           assert.strictEqual(getState().config.suppressStartupDurations, true);
         });
 
-        it("uses its suppressBatUnavailableWarning over the default config", async () => {
+        it("uses its suppressConfigWarnings over the default config", async () => {
           testFs._files.set(
             getGlobalConfigPath(),
             JSON.stringify({
               ...testConfig,
-              suppressBatUnavailableWarning: true,
+              suppressConfigWarnings: true,
             }),
           );
 
           await initState();
 
-          assert.strictEqual(
-            getState().config.suppressBatUnavailableWarning,
-            true,
-          );
+          assert.strictEqual(getState().config.suppressConfigWarnings, true);
         });
 
         it("uses its asciiOnly over the default config", async () => {
@@ -1518,8 +1663,11 @@ describe("config", () => {
             sdkProvider: "openai-compatible",
           }),
         );
-        await assert.rejects(
-          initState(),
+        await initState();
+        const messages = getState().content.configErrorMessages;
+        assert.strictEqual(messages.length, 1);
+        assert.match(
+          first(messages),
           /A `baseURL` is required when `sdkProvider=openai-compatible`/,
         );
       });
@@ -1536,8 +1684,14 @@ describe("config", () => {
         }),
       );
 
-      await assert.rejects(
-        initState(),
+      await initState();
+      const invalidOptionMessages =
+        getState().content.configErrorMessages.filter((message) =>
+          message.includes("has an invalid option"),
+        );
+      assert.strictEqual(invalidOptionMessages.length, 1);
+      assert.match(
+        first(invalidOptionMessages),
         /All loadingStateFrames strings must be the same length/,
       );
     });
@@ -1551,8 +1705,14 @@ describe("config", () => {
         }),
       );
 
-      await assert.rejects(
-        initState(),
+      await initState();
+      const invalidOptionMessages =
+        getState().content.configErrorMessages.filter((message) =>
+          message.includes("has an invalid option"),
+        );
+      assert.strictEqual(invalidOptionMessages.length, 1);
+      assert.match(
+        first(invalidOptionMessages),
         /loadingStateFrames must be at least length 2/,
       );
     });
@@ -1566,8 +1726,14 @@ describe("config", () => {
         }),
       );
 
-      await assert.rejects(
-        initState(),
+      await initState();
+      const invalidOptionMessages =
+        getState().content.configErrorMessages.filter((message) =>
+          message.includes("has an invalid option"),
+        );
+      assert.strictEqual(invalidOptionMessages.length, 1);
+      assert.match(
+        first(invalidOptionMessages),
         /loadingStateFrames must be at least length 2/,
       );
     });
@@ -1594,53 +1760,73 @@ describe("config", () => {
     it("throws on invalid YAML in global config", async () => {
       testFs._files.set(getGlobalConfigPath(), "key: [unclosed");
 
-      await assert.rejects(
-        initState(),
-        /`\/fake-home\/\.config\/lasso\/settings\.yaml` is invalid YAML!/,
+      await initState();
+      const messages = getState().content.configErrorMessages.filter(
+        (message) => message.includes("is invalid YAML"),
+      );
+      assert.strictEqual(messages.length, 1);
+      assert.match(
+        first(messages),
+        /`\/fake-home\/.config\/lasso\/settings.yaml` is invalid YAML/,
       );
     });
 
     it("throws on invalid YAML in local config", async () => {
       testFs._files.set(getLocalConfigPath(), "key: [unclosed");
 
-      await assert.rejects(
-        initState(),
-        /`\/test-cwd\/\.lasso\/settings\.yaml` is invalid YAML!/,
+      await initState();
+      const messages = getState().content.configErrorMessages.filter(
+        (message) => message.includes("is invalid YAML"),
+      );
+      assert.strictEqual(messages.length, 1);
+      assert.match(
+        first(messages),
+        /`\/test-cwd\/.lasso\/settings.yaml` is invalid YAML/,
       );
     });
 
-    it("throws on invalid global config option", async () => {
-      testFs._files.set(
-        getGlobalConfigPath(),
-        JSON.stringify({
-          ...testConfig,
-          invalidOption: true,
-        }),
-      );
+    describe("throws on invalid config", () => {
+      it("throws on invalid global config option", async () => {
+        testFs._files.set(
+          getGlobalConfigPath(),
+          JSON.stringify({
+            ...testConfig,
+            invalidOption: true,
+          }),
+        );
 
-      await assert.rejects(
-        initState(),
-        /Config at `\/fake-home\/\.config\/lasso\/settings\.yaml` has an invalid option!/,
-      );
+        await initState();
+        const messages = getState().content.configErrorMessages.filter(
+          (message) => message.includes("has an invalid option"),
+        );
+        assert.strictEqual(messages.length, 1);
+        assert.match(
+          first(messages),
+          /Config at `\/fake-home\/.config\/lasso\/settings\.yaml` has an invalid option/,
+        );
+      });
+
+      it("throws on invalid local config option", async () => {
+        testFs._files.set(
+          getLocalConfigPath(),
+          JSON.stringify({
+            ...testConfig,
+            invalidOption: true,
+          }),
+        );
+
+        await initState();
+        const messages = getState().content.configErrorMessages.filter(
+          (message) => message.includes("has an invalid option"),
+        );
+        assert.strictEqual(messages.length, 1);
+        assert.match(
+          first(messages),
+          /Config at `\/test-cwd\/.lasso\/settings\.yaml` has an invalid option/,
+        );
+      });
     });
 
-    it("throws on invalid local config option", async () => {
-      testFs._files.set(
-        getLocalConfigPath(),
-        JSON.stringify({
-          ...testConfig,
-          invalidOption: true,
-        }),
-      );
-
-      await assert.rejects(
-        initState(),
-        /Config at `\/test-cwd\/\.lasso\/settings\.yaml` has an invalid option!/,
-      );
-    });
-  });
-
-  describe("initializes state", () => {
     it("sets debug from DEBUG env var", async () => {
       testProcessEnv._clear();
       testProcessEnv._set("DEBUG", "1");
@@ -1871,8 +2057,9 @@ hello
       const globalConfigStr = await readConfigFileStr(getGlobalConfigPath());
 
       assert.strictEqual(globalConfigStr, "{}");
-      assert.deepStrictEqual(writes(), [
-        `${RED}Failed to read the config file at /fake-home/.config/lasso/settings.yaml${RESET}\n`,
+      assert.deepStrictEqual(writes(), []);
+      assert.deepStrictEqual(getState().content.configWarningMessages, [
+        "Failed to read the config file at /fake-home/.config/lasso/settings.yaml, using the default config. Error: read failed",
       ]);
     });
   });
@@ -1939,28 +2126,41 @@ hello
       assert.deepStrictEqual(getWrites(), []);
     });
 
-    it("returns true and suggests the init slash commands when nothing is set", () => {
+    it("prints the api key error and returns true when the api key is missing", () => {
       actions.resetState();
       testProcessEnv._clear();
       const getWrites = mockStdoutWrites();
       assert.strictEqual(blockOnMissingConfig(), true);
       assert.deepStrictEqual(getWrites(), [
-        `${YELLOW}Warning! You're missing required configuration options.
-- Set the \`LASSO_API_KEY\` environment variable, e.g. \`export LASSO_API_KEY=...\`
-- Set \`sdkProvider\` in your config file (\`openai-compatible\` or \`anthropic\`)
-- Set \`model\` in your config file
-
-Run /initlocal or /initglobal to generate a sample config in \`./.lasso\` or \`~/.config/lasso\` respectively.${RESET}\n`,
+        `${RED}Set the \`LASSO_API_KEY\` environment variable, e.g. \`export LASSO_API_KEY=...\`${RESET}\n`,
+        "\n",
       ]);
     });
 
-    it("only mentions the missing api key when baseURL and model are set", () => {
+    it("does not append the api key error to config error messages", () => {
+      actions.resetState();
       testProcessEnv._clear();
       const getWrites = mockStdoutWrites();
       assert.strictEqual(blockOnMissingConfig(), true);
+      assert.deepStrictEqual(getState().content.configErrorMessages, []);
       assert.deepStrictEqual(getWrites(), [
-        `${YELLOW}Warning! You're missing required configuration options.
-- Set the \`LASSO_API_KEY\` environment variable, e.g. \`export LASSO_API_KEY=...\`${RESET}\n`,
+        `${RED}Set the \`LASSO_API_KEY\` environment variable, e.g. \`export LASSO_API_KEY=...\`${RESET}\n`,
+        "\n",
+      ]);
+    });
+
+    it("prints config error messages when the api key is missing and config errors are present", () => {
+      actions.resetState();
+      testProcessEnv._clear();
+      actions.appendConfigErrorMessage("Set `model` in your config file");
+      actions.setIncludeConfigInitMessage(true);
+      const getWrites = mockStdoutWrites();
+      assert.strictEqual(blockOnMissingConfig(), true);
+      assert.deepStrictEqual(getWrites(), [
+        `${RED}Set the \`LASSO_API_KEY\` environment variable, e.g. \`export LASSO_API_KEY=...\`${RESET}\n`,
+        `${RED}- Set \`model\` in your config file${RESET}\n`,
+        `${RED}Run /initlocal or /initglobal to generate a sample config in \`./.lasso\` or \`~/.config/lasso\` respectively.${RESET}\n`,
+        "\n",
       ]);
     });
   });

@@ -5,15 +5,9 @@ import {
   getAvailableSlashCommands,
   getCustomSlashCommandsStr,
 } from "./slash-commands.ts";
-import { actions } from "./state.ts";
+import { actions, getState } from "./state.ts";
 import { fsDeps } from "./deps.ts";
-import {
-  mockStdoutWrites,
-  RED,
-  RESET,
-  setupTestContext,
-  testFs,
-} from "./test-helpers.ts";
+import { mockStdoutWrites, setupTestContext, testFs } from "./test-helpers.ts";
 
 describe("getAvailableSlashCommands", () => {
   afterEach(() => {
@@ -142,9 +136,10 @@ describe("getAvailableSlashCommands", () => {
       const result = await getAvailableSlashCommands();
 
       assert.deepStrictEqual(result, []);
-      assert.deepStrictEqual(getWrites(), [
-        `${RED}Failed to list the slash command files in /test-cwd/.lasso/commands${RESET}\n`,
-        `${RED}Failed to list the slash command files in /fake-home/.config/lasso/commands${RESET}\n`,
+      assert.deepStrictEqual(getWrites(), []);
+      assert.deepStrictEqual(getState().content.configWarningMessages, [
+        "Failed to list the slash command files in /test-cwd/.lasso/commands, ignoring. Error: permission denied",
+        "Failed to list the slash command files in /fake-home/.config/lasso/commands, ignoring. Error: permission denied",
       ]);
     });
 
@@ -162,8 +157,9 @@ describe("getAvailableSlashCommands", () => {
       const result = await getAvailableSlashCommands();
 
       assert.deepStrictEqual(result, []);
-      assert.deepStrictEqual(getWrites(), [
-        `${RED}Failed to read the slash command file at /test-cwd/.lasso/commands/bad.md${RESET}\n`,
+      assert.deepStrictEqual(getWrites(), []);
+      assert.deepStrictEqual(getState().content.configWarningMessages, [
+        "Failed to read the slash command file at /test-cwd/.lasso/commands/bad.md, ignoring. Error: read failed",
       ]);
     });
   });

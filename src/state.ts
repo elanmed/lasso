@@ -217,7 +217,7 @@ const createInitialState = (): State => ({
     loadingStateFrameDuration: defaultConfig.loadingStateFrameDuration,
     loadingStateFrames: structuredClone(defaultConfig.loadingStateFrames),
     promptPrefix: defaultConfig.promptPrefix,
-    suppressBatUnavailableWarning: defaultConfig.suppressBatUnavailableWarning,
+    suppressConfigWarnings: defaultConfig.suppressConfigWarnings,
     asciiOnly: defaultConfig.asciiOnly,
     suppressStartupDurations: defaultConfig.suppressStartupDurations,
     suppressToolEditDiffs: defaultConfig.suppressToolEditDiffs,
@@ -815,13 +815,13 @@ export const actions = {
     logStateChange("set-prompt-prefix", before, promptPrefix);
   },
 
-  setSuppressBatUnavailableWarning(suppressBatUnavailableWarning: boolean) {
-    const before = state.config.suppressBatUnavailableWarning;
-    state.config.suppressBatUnavailableWarning = suppressBatUnavailableWarning;
+  setSuppressConfigWarnings(suppressConfigWarnings: boolean) {
+    const before = state.config.suppressConfigWarnings;
+    state.config.suppressConfigWarnings = suppressConfigWarnings;
     logStateChange(
-      "set-suppress-bat-unavailable-warning",
+      "set-suppress-config-warnings",
       String(before),
-      String(suppressBatUnavailableWarning),
+      String(suppressConfigWarnings),
     );
   },
 

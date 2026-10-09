@@ -6,7 +6,7 @@ _A minimal agent harness to rein in your llm_
 
 ## Features
 
-- **Minimal**: ~6,900 lines of source code, ~15,100 lines of tests
+- **Minimal**: ~7,000 lines of source code, ~15,300 lines of tests
   - Responses are piped through `bat` to render markdown
   - Multi-line input is supported by spawning an editor of your choice
   - Messages can be queued by typing a custom delimiter (default `l---`) in the spawned editor
@@ -59,33 +59,33 @@ If `model`, `baseURL`, or `LASSO_API_KEY` are missing at startup, lasso warns an
 
 ### Config Options
 
-| Option                          | Type                                                                                 | Default                  | Description                                                                |
-| ------------------------------- | ------------------------------------------------------------------------------------ | ------------------------ | -------------------------------------------------------------------------- |
-| `model`                         | `string`                                                                             | —                        | Model name (required in the merged config)                                 |
-| `sdkProvider`                   | `"anthropic"` \| `"openai"` \| `"google"` \| `"openai-compatible"`                   | `openai-compatible`      | AI SDK provider                                                            |
-| `gateway`                       | `"opencode"`                                                                         | —                        | Used to append gateway-specific headers                                    |
-| `baseURL`                       | `string`                                                                             | `null`                   | API base URL (required for `openai-compatible`)                            |
-| `transcriptionSdkProvider`      | `"google" \| "openai"`                                                               | `google`                 | AI SDK provider for audio transcription                                    |
-| `transcriptionModel`            | `string`                                                                             | —                        | Transcription model name                                                   |
-| `transcriptionBaseURL`          | `string`                                                                             | `null`                   | API base URL for audio transcription                                       |
-| `pricingPerModel`               | `object`                                                                             | `{}`                     | Token pricing per model per million                                        |
-| `contextWindowPerModel`         | `object`                                                                             | `{}`                     | Context window size in tokens per model                                    |
-| `keymaps`                       | `object`                                                                             | see below                | Custom keybindings                                                         |
-| `customSlashCommandDirs`        | `string[]`                                                                           | `[]`                     | Additional directories for custom slash commands                           |
-| `customSkillDirs`               | `string[]`                                                                           | `[]`                     | Additional directories for skills                                          |
-| `subagentModels`                | `string[]`                                                                           | `[]`                     | Models available to subagents                                              |
-| `loadingStateFrames`            | `string[]`                                                                           | `["\|", "/", "-", "\\"]` | Custom spinner frames                                                      |
-| `loadingStateFrameDuration`     | `number`                                                                             | `80`                     | Spinner frame interval in ms                                               |
-| `promptPrefix`                  | `string`                                                                             | `"> "`                   | Prompt prefix string                                                       |
-| `suppressBatUnavailableWarning` | `boolean`                                                                            | `false`                  | Suppress the startup warning when `bat` is missing                         |
-| `suppressStartupDurations`      | `boolean`                                                                            | `false`                  | Hide durations of startup operations from the screen                       |
-| `suppressToolEditDiffs`         | `boolean`                                                                            | `false`                  | Suppress file-change diffs from tool editing files                         |
-| `asciiOnly`                     | `boolean`                                                                            | `false`                  | Replace unicode characters with ASCII equivalents                          |
-| `compactWithStructuredOutput`   | `boolean`                                                                            | `true`                   | Compact conversations with structured output when possible                 |
-| `messageQueueDelimiter`         | `string`                                                                             | `l---\\n`                | Delimiter line separating multiple messages in the editor input            |
-| `reasoning`                     | `"provider-default" \| "none" \| "minimal" \| "low" \|"medium" \| "high" \| "xhigh"` | `provider-default`       | Reasoning effort (`provider-default` uses the provider's default behavior) |
-| `mcps`                          | `object`                                                                             | `{}`                     | Named MCP servers                                                          |
-| `usageLimit`                    | `object`                                                                             | `undefined`              | Dollar limit and tracking window                                           |
+| Option                        | Type                                                                                 | Default                  | Description                                                                |
+| ----------------------------- | ------------------------------------------------------------------------------------ | ------------------------ | -------------------------------------------------------------------------- |
+| `model`                       | `string`                                                                             | —                        | Model name (required in the merged config)                                 |
+| `sdkProvider`                 | `"anthropic"` \| `"openai"` \| `"google"` \| `"openai-compatible"`                   | `openai-compatible`      | AI SDK provider                                                            |
+| `gateway`                     | `"opencode"`                                                                         | —                        | Used to append gateway-specific headers                                    |
+| `baseURL`                     | `string`                                                                             | `null`                   | API base URL (required for `openai-compatible`)                            |
+| `transcriptionSdkProvider`    | `"google" \| "openai"`                                                               | `google`                 | AI SDK provider for audio transcription                                    |
+| `transcriptionModel`          | `string`                                                                             | —                        | Transcription model name                                                   |
+| `transcriptionBaseURL`        | `string`                                                                             | `null`                   | API base URL for audio transcription                                       |
+| `pricingPerModel`             | `object`                                                                             | `{}`                     | Token pricing per model per million                                        |
+| `contextWindowPerModel`       | `object`                                                                             | `{}`                     | Context window size in tokens per model                                    |
+| `keymaps`                     | `object`                                                                             | see below                | Custom keybindings                                                         |
+| `customSlashCommandDirs`      | `string[]`                                                                           | `[]`                     | Additional directories for custom slash commands                           |
+| `customSkillDirs`             | `string[]`                                                                           | `[]`                     | Additional directories for skills                                          |
+| `subagentModels`              | `string[]`                                                                           | `[]`                     | Models available to subagents                                              |
+| `loadingStateFrames`          | `string[]`                                                                           | `["\|", "/", "-", "\\"]` | Custom spinner frames                                                      |
+| `loadingStateFrameDuration`   | `number`                                                                             | `80`                     | Spinner frame interval in ms                                               |
+| `promptPrefix`                | `string`                                                                             | `"> "`                   | Prompt prefix string                                                       |
+| `suppressConfigWarnings`      | `boolean`                                                                            | `false`                  | Suppress the config warning list shown at startup                          |
+| `suppressStartupDurations`    | `boolean`                                                                            | `false`                  | Hide durations of startup operations from the screen                       |
+| `suppressToolEditDiffs`       | `boolean`                                                                            | `false`                  | Suppress file-change diffs from tool editing files                         |
+| `asciiOnly`                   | `boolean`                                                                            | `false`                  | Replace unicode characters with ASCII equivalents                          |
+| `compactWithStructuredOutput` | `boolean`                                                                            | `true`                   | Compact conversations with structured output when possible                 |
+| `messageQueueDelimiter`       | `string`                                                                             | `l---\\n`                | Delimiter line separating multiple messages in the editor input            |
+| `reasoning`                   | `"provider-default" \| "none" \| "minimal" \| "low" \|"medium" \| "high" \| "xhigh"` | `provider-default`       | Reasoning effort (`provider-default` uses the provider's default behavior) |
+| `mcps`                        | `object`                                                                             | `{}`                     | Named MCP servers                                                          |
+| `usageLimit`                  | `object`                                                                             | `undefined`              | Dollar limit and tracking window                                           |
 
 ### Local Overwrite vs Extend
 

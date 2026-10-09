@@ -131,8 +131,7 @@ skills body`,
         loadingStateFrameDuration: defaultConfig.loadingStateFrameDuration,
         loadingStateFrames: structuredClone(defaultConfig.loadingStateFrames),
         promptPrefix: defaultConfig.promptPrefix,
-        suppressBatUnavailableWarning:
-          defaultConfig.suppressBatUnavailableWarning,
+        suppressConfigWarnings: defaultConfig.suppressConfigWarnings,
         asciiOnly: defaultConfig.asciiOnly,
         suppressStartupDurations: defaultConfig.suppressStartupDurations,
         suppressToolEditDiffs: defaultConfig.suppressToolEditDiffs,
@@ -794,13 +793,10 @@ hello`,
       assert.strictEqual(getState().config.promptPrefix, "🤖 ");
     });
 
-    it("set-suppress-bat-unavailable-warning", () => {
-      assert.strictEqual(
-        getState().config.suppressBatUnavailableWarning,
-        false,
-      );
-      actions.setSuppressBatUnavailableWarning(true);
-      assert.strictEqual(getState().config.suppressBatUnavailableWarning, true);
+    it("set-suppress-config-warnings", () => {
+      assert.strictEqual(getState().config.suppressConfigWarnings, false);
+      actions.setSuppressConfigWarnings(true);
+      assert.strictEqual(getState().config.suppressConfigWarnings, true);
     });
 
     it("set-suppress-tool-edit-diffs", () => {

@@ -1,6 +1,6 @@
 import { format } from "prettier";
 import { childProcessDeps, processDeps } from "./deps.ts";
-import { actions, getState } from "./state.ts";
+import { getState } from "./state.ts";
 import {
   getMessageFromError,
   getTempFileName,
@@ -12,7 +12,6 @@ import {
   shellQuote,
 } from "./utils.ts";
 import { print } from "./print.ts";
-import { getGlobalConfigPath, getLocalConfigPath } from "./paths.ts";
 
 export function baseBatFlags() {
   return shouldDisableColor()

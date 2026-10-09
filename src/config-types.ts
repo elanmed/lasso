@@ -82,7 +82,7 @@ const LoadingStateFramesSchema = z
     message: "loadingStateFrames must be at least length 2",
   });
 const PromptPrefixSchema = z.string();
-const SuppressBatUnavailableWarningSchema = z.boolean();
+const SuppressConfigWarningsSchema = z.boolean();
 const SuppressToolEditDiffsSchema = z.boolean();
 const AsciiOnlySchema = z.boolean();
 const SuppressStartupDurationsSchema = z.boolean();
@@ -139,7 +139,7 @@ export const ConfigSchema = z.strictObject({
   loadingStateFrameDuration: LoadingStateFrameDurationSchema.optional(),
   loadingStateFrames: LoadingStateFramesSchema.optional(),
   promptPrefix: PromptPrefixSchema.optional(),
-  suppressBatUnavailableWarning: SuppressBatUnavailableWarningSchema.optional(),
+  suppressConfigWarnings: SuppressConfigWarningsSchema.optional(),
   asciiOnly: AsciiOnlySchema.optional(),
   suppressStartupDurations: SuppressStartupDurationsSchema.optional(),
   suppressToolEditDiffs: SuppressToolEditDiffsSchema.optional(),
@@ -169,7 +169,7 @@ export const DefaultedConfigSchema = z.strictObject({
   loadingStateFrameDuration: LoadingStateFrameDurationSchema,
   loadingStateFrames: LoadingStateFramesSchema,
   promptPrefix: PromptPrefixSchema,
-  suppressBatUnavailableWarning: SuppressBatUnavailableWarningSchema,
+  suppressConfigWarnings: SuppressConfigWarningsSchema,
   asciiOnly: AsciiOnlySchema,
   suppressStartupDurations: SuppressStartupDurationsSchema,
   suppressToolEditDiffs: SuppressToolEditDiffsSchema,
@@ -214,7 +214,7 @@ export const defaultConfig: DefaultedConfig = {
   loadingStateFrameDuration: 80,
   loadingStateFrames: ["|", "/", "-", "\\"],
   promptPrefix: "> ",
-  suppressBatUnavailableWarning: false,
+  suppressConfigWarnings: false,
   asciiOnly: false,
   suppressStartupDurations: false,
   suppressToolEditDiffs: false,

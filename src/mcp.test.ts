@@ -400,7 +400,9 @@ describe("mcp", () => {
         `${BLUE}Starting first mcp server: ${RESET}`,
         `${GREEN}0.0ms${RESET}`,
         `${DOWN_1}${CR}`,
-        `${RED}Failed to import the tools the first mcp server: boom${RESET}\n`,
+      ]);
+      assert.deepStrictEqual(getState().content.configWarningMessages, [
+        "Failed to import the tools the first mcp server, ignoring. Error: boom",
       ]);
     });
   });

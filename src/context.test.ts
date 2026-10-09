@@ -18,7 +18,7 @@ import {
   getSkillJSON,
   parseFrontMatter,
 } from "./context.ts";
-import { actions } from "./state.ts";
+import { actions, getState } from "./state.ts";
 
 describe("context", () => {
   afterEach(() => {
@@ -522,8 +522,9 @@ would benefit from specialized instructions.
       const result = await getContextEntries();
 
       assert.deepStrictEqual(result, []);
-      assert.deepStrictEqual(getWrites(), [
-        `${RED}Failed to read the agent file at /test-cwd/AGENTS.md${RESET}\n`,
+      assert.deepStrictEqual(getWrites(), []);
+      assert.deepStrictEqual(getState().content.configWarningMessages, [
+        "Failed to read the agent file at /test-cwd/AGENTS.md, ignoring. Error: Permission denied ",
       ]);
     });
 
@@ -593,8 +594,9 @@ would benefit from specialized instructions.
         const result = await getSkills();
 
         assert.deepStrictEqual(result, []);
-        assert.deepStrictEqual(getWrites(), [
-          `${RED}Failed to read the agent file at /repo/src/AGENTS.md${RESET}\n`,
+        assert.deepStrictEqual(getWrites(), []);
+        assert.deepStrictEqual(getState().content.configWarningMessages, [
+          "Failed to read the agent file at /repo/src/AGENTS.md, ignoring. Error: ENOENT: /repo/src/AGENTS.md",
         ]);
       });
 
@@ -605,8 +607,9 @@ would benefit from specialized instructions.
         const result = await getSkills();
 
         assert.deepStrictEqual(result, []);
-        assert.deepStrictEqual(writes(), [
-          `${RED}Failed to list the agent files with git${RESET}\n`,
+        assert.deepStrictEqual(writes(), []);
+        assert.deepStrictEqual(getState().content.configWarningMessages, [
+          "Failed to list the agent files with git, ignoring. Error: git failed",
         ]);
       });
 
@@ -619,9 +622,10 @@ would benefit from specialized instructions.
         const result = await getSkills();
 
         assert.deepStrictEqual(result, []);
-        assert.deepStrictEqual(writes(), [
-          `${RED}Failed to list the skill files in /test-cwd/.lasso/skills${RESET}\n`,
-          `${RED}Failed to list the skill files in /fake-home/.config/lasso/skills${RESET}\n`,
+        assert.deepStrictEqual(writes(), []);
+        assert.deepStrictEqual(getState().content.configWarningMessages, [
+          "Failed to list the skill files in /test-cwd/.lasso/skills, ignoring",
+          "Failed to list the skill files in /fake-home/.config/lasso/skills, ignoring",
         ]);
       });
 

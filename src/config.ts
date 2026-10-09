@@ -78,27 +78,32 @@ export function warnOnMissingConfig() {
   const messages = getState().content.configWarningMessages;
   if (messages.length === 0) return;
   print.warning(messages.map((message) => `- ${message}`).join("\n"));
+  print.warning(
+    `Suppress these warnings via the \`suppressConfigWarnings\` config option`,
+  );
 }
 
 export function blockOnMissingConfig() {
-  const apiKey = processDeps.env.get("LASSO_API_KEY");
+  const apiKeyMissing = processDeps.env.get("LASSO_API_KEY") === undefined;
+  const messages = getState().content.configErrorMessages;
+  if (!apiKeyMissing && messages.length === 0) return false;
 
-  if (apiKey === undefined) {
-    actions.appendConfigErrorMessage(
+  if (apiKeyMissing) {
+    print.error(
       "Set the `LASSO_API_KEY` environment variable, e.g. `export LASSO_API_KEY=...`",
     );
   }
 
-  const messages = getState().content.configErrorMessages;
-  if (messages.length === 0) return false;
+  if (messages.length !== 0) {
+    print.error(messages.map((message) => `- ${message}`).join("\n"));
+  }
 
-  print.error(messages.map((message) => `- ${message}`).join("\n"));
-  printNewline();
-  if (getState().content.includeConfigInitMessage) {
+  if (getState().content.includeConfigInitMessage && messages.length !== 0) {
     print.error(
       "Run /initlocal or /initglobal to generate a sample config in `./.lasso` or `~/.config/lasso` respectively.",
     );
   }
+  printNewline();
   return true;
 }
 
@@ -221,10 +226,10 @@ export function initStateFromConfig({
       globalConfig.promptPrefix ??
       defaultConfig.promptPrefix,
   );
-  actions.setSuppressBatUnavailableWarning(
-    localConfig.suppressBatUnavailableWarning ??
-      globalConfig.suppressBatUnavailableWarning ??
-      defaultConfig.suppressBatUnavailableWarning,
+  actions.setSuppressConfigWarnings(
+    localConfig.suppressConfigWarnings ??
+      globalConfig.suppressConfigWarnings ??
+      defaultConfig.suppressConfigWarnings,
   );
   actions.setSuppressToolEditDiffs(
     localConfig.suppressToolEditDiffs ??
@@ -370,7 +375,7 @@ export async function initBatAvailable() {
   const batResult = await tryCatchAsync(childProcessDeps.exec("bat --version"));
 
   actions.setBatAvailable(batResult.ok);
-  if (getState().config.suppressBatUnavailableWarning) return;
+  if (getState().config.suppressConfigWarnings) return;
 
   if (!batResult.ok) {
     actions.appendConfigWarningMessage(

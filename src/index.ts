@@ -7,7 +7,7 @@ import {
   stopLoadingState,
 } from "./print.ts";
 import { fencePrint } from "./fence.ts";
-import { executeBat, warnOnMissingBat } from "./terminal.ts";
+import { executeBat } from "./terminal.ts";
 import {
   initState,
   blockOnMissingConfig,
