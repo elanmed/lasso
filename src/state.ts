@@ -94,6 +94,7 @@ interface UsageState {
 interface ContentState {
   configErrorMessages: string[];
   configWarningMessages: string[];
+  includeConfigInitMessage: boolean;
   contextEntries: ContextEntry[];
   contextStr: string;
   globalConfigStr: string;
@@ -174,6 +175,7 @@ const createInitialState = (): State => ({
   content: {
     configErrorMessages: [],
     configWarningMessages: [],
+    includeConfigInitMessage: false,
     contextEntries: [],
     contextStr: "",
     globalConfigStr: "",
@@ -642,6 +644,16 @@ export const actions = {
       "append-config-error-message",
       String(state.content.configErrorMessages.length - 1),
       String(state.content.configErrorMessages.length),
+    );
+  },
+
+  setIncludeConfigInitMessage(includeConfigInitMessage: boolean) {
+    const before = state.content.includeConfigInitMessage;
+    state.content.includeConfigInitMessage = includeConfigInitMessage;
+    logStateChange(
+      "set-include-config-init-message",
+      String(before),
+      String(includeConfigInitMessage),
     );
   },
 

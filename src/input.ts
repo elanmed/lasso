@@ -1378,7 +1378,15 @@ const getReloadTempFileStr = (): Record<ReloadTempFilePrefixes, string> => ({
   skills: getState().content.skillsStr,
 });
 
+function resetConfigMessages() {
+  actions.resetConfigErrorMessages();
+  actions.resetConfigWarningMessages();
+  actions.setIncludeConfigInitMessage(false);
+}
+
 async function reload() {
+  resetConfigMessages();
+
   const beforeFiles = await Promise.all(
     reloadTempFilePrefixes.map((prefix) =>
       getTempFileName({

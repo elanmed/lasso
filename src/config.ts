@@ -32,6 +32,7 @@ import { syncInitialModelUsageForLimitWindow } from "./usage.ts";
 import {
   createParallelPerformanceLogger,
   print,
+  printNewline,
   type LogIdToLabel,
   type ParallelPerformanceLogger,
 } from "./print.ts";
@@ -83,38 +84,22 @@ export function warnOnMissingConfig() {
 export function blockOnMissingConfig() {
   const apiKey = processDeps.env.get("LASSO_API_KEY");
 
-  let includeConfigCommand = false;
-
   if (apiKey === undefined) {
     actions.appendConfigErrorMessage(
       "Set the `LASSO_API_KEY` environment variable, e.g. `export LASSO_API_KEY=...`",
     );
   }
 
-  if (getState().config.sdkProvider === MISSING) {
-    includeConfigCommand = true;
-    actions.appendConfigErrorMessage(
-      "Set `sdkProvider` in your config file (`openai-compatible` or `anthropic`)",
-    );
-  }
-
-  if (getState().config.model === MISSING) {
-    includeConfigCommand = true;
-    actions.appendConfigErrorMessage("Set `model` in your config file");
-  }
-
   const messages = getState().content.configErrorMessages;
   if (messages.length === 0) return false;
 
-  let formattedMessages = messages.map((message) => `- ${message}`).join("\n");
-
-  if (includeConfigCommand) {
-    formattedMessages = formattedMessages.concat(
-      "\n\nRun /initlocal or /initglobal to generate a sample config in `./.lasso` or `~/.config/lasso` respectively.",
+  print.error(messages.map((message) => `- ${message}`).join("\n"));
+  printNewline();
+  if (getState().content.includeConfigInitMessage) {
+    print.error(
+      "Run /initlocal or /initglobal to generate a sample config in `./.lasso` or `~/.config/lasso` respectively.",
     );
   }
-
-  print.warning(formattedMessages);
   return true;
 }
 
@@ -288,6 +273,20 @@ export function initStateFromConfig({
   }
 
   actions.setUsageLimit(defaultedUsageLimit);
+
+  let includeConfigCommand = false;
+  if (getState().config.sdkProvider === MISSING) {
+    includeConfigCommand = true;
+    actions.appendConfigErrorMessage(
+      "Set `sdkProvider` in your config file (`openai-compatible` or `anthropic`)",
+    );
+  }
+
+  if (getState().config.model === MISSING) {
+    includeConfigCommand = true;
+    actions.appendConfigErrorMessage("Set `model` in your config file");
+  }
+  actions.setIncludeConfigInitMessage(includeConfigCommand);
 }
 
 export async function initStateFromFs({

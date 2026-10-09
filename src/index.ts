@@ -39,15 +39,16 @@ async function main() {
     await pollUntilNonBlockingProcessClosed();
     const userInput = await resolveUserInput({ isFirstInput });
     isFirstInput = false;
+
     if (userInput === null) continue;
+
+    const missingConfig = blockOnMissingConfig();
+    if (missingConfig) continue;
 
     if (userInput === "") {
       print.warning("Empty input");
       continue;
     }
-
-    const missingConfig = blockOnMissingConfig();
-    if (missingConfig) continue;
 
     await maybeCompact(userInput);
 
