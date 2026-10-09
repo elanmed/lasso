@@ -1,6 +1,12 @@
 import { join } from "node:path";
 import * as YAML from "yaml";
-import { getShortId, stringify, tryCatch, tryCatchAsync } from "./utils.ts";
+import {
+  getMessageFromError,
+  getShortId,
+  stringify,
+  tryCatch,
+  tryCatchAsync,
+} from "./utils.ts";
 import { getAvailableSlashCommands } from "./slash-commands.ts";
 import {
   getContextEntries,
@@ -38,7 +44,9 @@ export async function readConfigFileStr(path: string) {
 
   const readResult = await tryCatchAsync(fsDeps.readFile(path, "utf8"));
   if (!readResult.ok) {
-    print.error(`Failed to read the config file at ${path}`);
+    actions.appendConfigWarningMessage(
+      `Failed to read the config file at ${path}, using the default config. Error: ${getMessageFromError(readResult.error, { forceSingleLine: true })}`,
+    );
     return "{}";
   }
 
@@ -51,62 +59,63 @@ export function parseConfigFileStr(
 ): Partial<Config> {
   const parseResult = tryCatch((): unknown => YAML.parse(configFileStr));
   if (!parseResult.ok) {
-    throw new Error(`\`${path}\` is invalid YAML!`);
+    actions.appendConfigErrorMessage(
+      `\`${path}\` is invalid YAML. Error: ${getMessageFromError(parseResult.error, { forceSingleLine: true })}`,
+    );
+    return {};
   }
 
   const configResult = ConfigSchema.safeParse(parseResult.value);
   if (configResult.success) return configResult.data;
-  throw new Error(`Config at \`${path}\` has an invalid option!
+  actions.appendConfigErrorMessage(
+    `Config at \`${path}\` has an invalid option, using default. Error: ${getMessageFromError(configResult.error, { forceSingleLine: true })}`,
+  );
+  return {};
+}
 
-${configResult.error}
-
-Update your config and try again.
-`);
+// TODO: where to call this
+export function warnOnMissingConfig() {
+  const messages = getState().content.configWarningMessages;
+  if (messages.length === 0) return;
+  print.warning(messages.map((message) => `- ${message}`).join("\n"));
 }
 
 export function blockOnMissingConfig() {
   const apiKey = processDeps.env.get("LASSO_API_KEY");
 
-  const warningMessages: string[] = [];
   let includeConfigCommand = false;
 
   if (apiKey === undefined) {
-    warningMessages.push(
+    actions.appendConfigErrorMessage(
       "Set the `LASSO_API_KEY` environment variable, e.g. `export LASSO_API_KEY=...`",
     );
   }
 
   if (getState().config.sdkProvider === MISSING) {
     includeConfigCommand = true;
-    warningMessages.push(
+    actions.appendConfigErrorMessage(
       "Set `sdkProvider` in your config file (`openai-compatible` or `anthropic`)",
     );
   }
 
   if (getState().config.model === MISSING) {
     includeConfigCommand = true;
-    warningMessages.push("Set `model` in your config file");
+    actions.appendConfigErrorMessage("Set `model` in your config file");
   }
 
-  if (warningMessages.length > 0) {
-    let formattedMessages = warningMessages
-      .map((message) => `- ${message}`)
-      .join("\n");
+  const messages = getState().content.configErrorMessages;
+  if (messages.length === 0) return false;
 
-    if (includeConfigCommand) {
-      formattedMessages = formattedMessages.concat(
-        "\n\nRun /initlocal or /initglobal to generate a sample config in `./.lasso` or `~/.config/lasso` respectively.",
-      );
-    }
+  let formattedMessages = messages.map((message) => `- ${message}`).join("\n");
 
-    const warning = `Warning! You're missing required configuration options.
-${formattedMessages}`;
-
-    print.warning(warning);
-    return true;
+  if (includeConfigCommand) {
+    formattedMessages = formattedMessages.concat(
+      "\n\nRun /initlocal or /initglobal to generate a sample config in `./.lasso` or `~/.config/lasso` respectively.",
+    );
   }
 
-  return false;
+  print.warning(formattedMessages);
+  return true;
 }
 
 function filterNulls<T>(entries: Record<string, T | null>): Record<string, T> {
@@ -151,8 +160,8 @@ export function initStateFromConfig({
     defaultedBaseURL === undefined &&
     defaultedSdkProvider === "openai-compatible"
   ) {
-    throw new Error(
-      `A \`baseURL\` is required when \`sdkProvider=openai-compatible\` in either ${getLocalConfigPath()} or ${getGlobalConfigPath()}`,
+    actions.appendConfigErrorMessage(
+      `A \`baseURL\` is required when \`sdkProvider=openai-compatible\``,
     );
   }
 
@@ -206,7 +215,7 @@ export function initStateFromConfig({
   for (const [i, [commandA, keymapA]] of keyedCommands.entries()) {
     for (const [commandB, keymapB] of keyedCommands.slice(i + 1)) {
       if (!isSameKey(keymapA, keymapB)) continue;
-      throw new Error(
+      actions.appendConfigErrorMessage(
         `keymaps must be unique: \`${commandA}\` and \`${commandB}\` are both bound to \`${stringify(keymapA)}\``,
       );
     }
@@ -267,14 +276,14 @@ export function initStateFromConfig({
     defaultedUsageLimit !== undefined &&
     defaultedPricingPerModel[defaultedModel] === undefined
   ) {
-    print.warning(
-      `- Warning: usage limit is disabled because there is no \`pricingPerModel\` entry for the current model \`${defaultedModel}\``,
+    actions.appendConfigWarningMessage(
+      `Usage limit is disabled because there is no \`pricingPerModel\` entry for the current model \`${defaultedModel}\``,
     );
   }
 
   if (defaultedContextWindowPerModel[defaultedModel] === undefined) {
-    print.warning(
-      `- Warning: using a default context window of 128,000 tokens because there is no \`contextWindowPerModel\` entry for the current model \`${defaultedModel}\``,
+    actions.appendConfigWarningMessage(
+      `Using a default context window of 128,000 tokens because there is no \`contextWindowPerModel\` entry for the current model \`${defaultedModel}\``,
     );
   }
 

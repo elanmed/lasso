@@ -47,12 +47,22 @@ export function isReadlineClosedError(error: unknown): boolean {
   );
 }
 
-export function getMessageFromError(error: unknown) {
+function maybeForceSingleLine(str: string, forceSingleLine: boolean) {
+  if (forceSingleLine) {
+    return str.replaceAll("\n", "");
+  }
+  return str;
+}
+
+export function getMessageFromError(
+  error: unknown,
+  { forceSingleLine = true }: { forceSingleLine?: boolean } = {},
+) {
   if (error instanceof Error) {
-    return error.message;
+    return maybeForceSingleLine(error.message, forceSingleLine);
   }
   const json = JSON.stringify(error) as string | undefined;
-  return json ?? String(error);
+  return maybeForceSingleLine(json ?? String(error), forceSingleLine);
 }
 
 export function tryCatch<T>(cb: () => T): Result<T> {

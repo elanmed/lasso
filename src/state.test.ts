@@ -92,6 +92,7 @@ skills body`,
       assert.deepStrictEqual(getState().content.skills, []);
       assert.deepStrictEqual(getState().content.subagentModels, []);
       assert.deepStrictEqual(getState().content.slashCommands, []);
+      assert.deepStrictEqual(getState().content.configWarningMessages, []);
       assert.strictEqual(getState().content.batAvailable, false);
       assert.strictEqual(getState().terminal.bufferedStdoutWhileEditorOpen, "");
       assert.strictEqual(getState().terminal.editorInputValue, null);
@@ -554,6 +555,36 @@ hello`,
       assert.equal(getState().content.skillsStr, "");
       actions.setSkillsStr("- skill: desc");
       assert.equal(getState().content.skillsStr, "- skill: desc");
+    });
+  });
+
+  describe("config-warning-messages", () => {
+    it("starts empty", () => {
+      assert.deepStrictEqual(getState().content.configWarningMessages, []);
+    });
+
+    it("appends warning messages in order", () => {
+      actions.appendConfigWarningMessage("unknown key: foo");
+      actions.appendConfigWarningMessage("deprecated key: bar");
+      assert.deepStrictEqual(getState().content.configWarningMessages, [
+        "unknown key: foo",
+        "deprecated key: bar",
+      ]);
+    });
+
+    it("reset clears the warning messages", () => {
+      actions.appendConfigWarningMessage("unknown key: foo");
+      actions.resetConfigWarningMessages();
+      assert.deepStrictEqual(getState().content.configWarningMessages, []);
+    });
+
+    it("reset keeps appending working", () => {
+      actions.appendConfigWarningMessage("before reset");
+      actions.resetConfigWarningMessages();
+      actions.appendConfigWarningMessage("after reset");
+      assert.deepStrictEqual(getState().content.configWarningMessages, [
+        "after reset",
+      ]);
     });
   });
 

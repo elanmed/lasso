@@ -1,9 +1,12 @@
 import { basename, extname, join } from "node:path";
 import { fsDeps } from "./deps.ts";
-import { normalizeNewline, tryCatchAsync } from "./utils.ts";
+import {
+  getMessageFromError,
+  normalizeNewline,
+  tryCatchAsync,
+} from "./utils.ts";
 import { getGlobalSlashCommandDir, getLocalSlashCommandDir } from "./paths.ts";
-import { print } from "./print.ts";
-import { getState, type SlashCommand } from "./state.ts";
+import { actions, getState, type SlashCommand } from "./state.ts";
 
 export const builtinSlashCommands = [
   "edit",
@@ -72,7 +75,9 @@ export async function getAvailableSlashCommands() {
     const glob = join(dir, "**/*.md");
     const globResult = await tryCatchAsync(fsDeps.glob(glob));
     if (!globResult.ok) {
-      print.error(`Failed to list the slash command files in ${dir}`);
+      actions.appendConfigWarningMessage(
+        `Failed to list the slash command files in ${dir}, ignoring. Error: ${getMessageFromError(globResult.error, { forceSingleLine: true })}`,
+      );
       continue;
     }
     slashCommandFilePaths.push(...globResult.value);
@@ -81,7 +86,9 @@ export async function getAvailableSlashCommands() {
   for (const filePath of slashCommandFilePaths) {
     const readResult = await tryCatchAsync(fsDeps.readFile(filePath, "utf8"));
     if (!readResult.ok) {
-      print.error(`Failed to read the slash command file at ${filePath}`);
+      actions.appendConfigWarningMessage(
+        `Failed to read the slash command file at ${filePath}, ignoring. Error: ${getMessageFromError(readResult.error, { forceSingleLine: true })}`,
+      );
       continue;
     }
     const name = basename(filePath, extname(filePath));

@@ -2,9 +2,14 @@ import { dirname, join } from "node:path";
 import * as YAML from "yaml";
 import { z } from "zod";
 import { fsDeps, processDeps } from "./deps.ts";
-import { normalizeNewline, tryCatch, tryCatchAsync } from "./utils.ts";
+import {
+  getMessageFromError,
+  normalizeNewline,
+  tryCatch,
+  tryCatchAsync,
+} from "./utils.ts";
 import { print } from "./print.ts";
-import { getState } from "./state.ts";
+import { actions, getState } from "./state.ts";
 import {
   getGlobalContextDir,
   getGlobalSkillDir,
@@ -33,6 +38,7 @@ ${normalizeNewline(entry.content)}`,
 
 ${contextFilesList}`;
 }
+
 export async function getContextEntries() {
   const agentFileDirs: string[] = [processDeps.cwd(), getGlobalContextDir()];
 
@@ -43,7 +49,9 @@ export async function getContextEntries() {
     if (!fsDeps.existsSync(filePath)) continue;
     const readResult = await tryCatchAsync(fsDeps.readFile(filePath, "utf8"));
     if (!readResult.ok) {
-      print.error(`Failed to read the agent file at ${filePath}`);
+      actions.appendConfigWarningMessage(
+        `Failed to read the agent file at ${filePath}, ignoring. Error: ${getMessageFromError(readResult.error, { forceSingleLine: true })} `,
+      );
       continue;
     }
     entries.push({ filePath, content: readResult.value });
@@ -94,7 +102,9 @@ export async function getSkills() {
     const glob = join(skillGrandparentDir, "**/SKILL.md");
     const globResult = await tryCatchAsync(fsDeps.glob(glob));
     if (!globResult.ok) {
-      print.error(`Failed to list the skill files in ${skillGrandparentDir}`);
+      actions.appendConfigWarningMessage(
+        `Failed to list the skill files in ${skillGrandparentDir}, ignoring`,
+      );
       continue;
     }
     skillPaths.push(...globResult.value);
@@ -113,7 +123,9 @@ export async function getSkills() {
     fsDeps.gitLsFiles("**/AGENTS.md"),
   );
   if (!agentFileGlobResult.ok) {
-    print.error("Failed to list the agent files with git");
+    actions.appendConfigWarningMessage(
+      `Failed to list the agent files with git, ignoring. Error: ${getMessageFromError(agentFileGlobResult.error, { forceSingleLine: true })}`,
+    );
     return skills;
   }
 
@@ -124,7 +136,9 @@ export async function getSkills() {
       fsDeps.readFile(agentFilePath, "utf8"),
     );
     if (!readResult.ok) {
-      print.error(`Failed to read the agent file at ${agentFilePath}`);
+      actions.appendConfigWarningMessage(
+        `Failed to read the agent file at ${agentFilePath}, ignoring. Error: ${getMessageFromError(readResult.error, { forceSingleLine: true })}`,
+      );
       continue;
     }
     const dir = dirname(agentFilePath);

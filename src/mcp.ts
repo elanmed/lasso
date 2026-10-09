@@ -65,7 +65,7 @@ async function getMcpClients({
         mcpClients[name] = createMcpResult.value;
       } else {
         failureMessages.push(
-          `Failed to start the ${name} mcp server: ${getMessageFromError(createMcpResult.error)}`,
+          `Failed to start the ${name} mcp server: ${getMessageFromError(createMcpResult.error, { forceSingleLine: true })}`,
         );
       }
     }),
@@ -92,8 +92,8 @@ export async function initMcpState({
       if (toolsPromise.ok) {
         return toolsPromise.value;
       } else {
-        print.error(
-          `Failed to import the tools the ${name} mcp server: ${getMessageFromError(toolsPromise.error)}`,
+        actions.appendConfigWarningMessage(
+          `Failed to import the tools the ${name} mcp server, ignoring. Error: ${getMessageFromError(toolsPromise.error, { forceSingleLine: true })}`,
         );
         return null;
       }

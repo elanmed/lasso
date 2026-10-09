@@ -92,6 +92,8 @@ interface UsageState {
 }
 
 interface ContentState {
+  configErrorMessages: string[];
+  configWarningMessages: string[];
   contextEntries: ContextEntry[];
   contextStr: string;
   globalConfigStr: string;
@@ -170,6 +172,8 @@ const createInitialState = (): State => ({
     apiEndTime: null,
   },
   content: {
+    configErrorMessages: [],
+    configWarningMessages: [],
     contextEntries: [],
     contextStr: "",
     globalConfigStr: "",
@@ -630,6 +634,34 @@ export const actions = {
       String(before),
       String(state.content.skills.length),
     );
+  },
+
+  appendConfigErrorMessage(message: string) {
+    state.content.configErrorMessages.push(message);
+    logStateChange(
+      "append-config-error-message",
+      String(state.content.configErrorMessages.length - 1),
+      String(state.content.configErrorMessages.length),
+    );
+  },
+
+  resetConfigErrorMessages() {
+    state.content.configErrorMessages = [];
+    logStateChange("reset-config-error-messages", "", "");
+  },
+
+  appendConfigWarningMessage(message: string) {
+    state.content.configWarningMessages.push(message);
+    logStateChange(
+      "append-config-warning-message",
+      String(state.content.configWarningMessages.length - 1),
+      String(state.content.configWarningMessages.length),
+    );
+  },
+
+  resetConfigWarningMessages() {
+    state.content.configWarningMessages = [];
+    logStateChange("reset-config-warning-messages", "", "");
   },
 
   appendToolEditDiff(diff: ToolEditDiff) {
