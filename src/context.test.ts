@@ -524,7 +524,7 @@ would benefit from specialized instructions.
       assert.deepStrictEqual(result, []);
       assert.deepStrictEqual(getWrites(), []);
       assert.deepStrictEqual(getState().content.configWarningMessages, [
-        "Failed to read the agent file at /test-cwd/AGENTS.md, ignoring. Error: Permission denied ",
+        "Failed to read the agent file at `/test-cwd/AGENTS.md`, ignoring. Error: Permission denied",
       ]);
     });
 
@@ -596,7 +596,7 @@ would benefit from specialized instructions.
         assert.deepStrictEqual(result, []);
         assert.deepStrictEqual(getWrites(), []);
         assert.deepStrictEqual(getState().content.configWarningMessages, [
-          "Failed to read the agent file at /repo/src/AGENTS.md, ignoring. Error: ENOENT: /repo/src/AGENTS.md",
+          "Failed to read the agent file at `/repo/src/AGENTS.md`, ignoring. Error: ENOENT: /repo/src/AGENTS.md",
         ]);
       });
 
@@ -624,8 +624,8 @@ would benefit from specialized instructions.
         assert.deepStrictEqual(result, []);
         assert.deepStrictEqual(writes(), []);
         assert.deepStrictEqual(getState().content.configWarningMessages, [
-          "Failed to list the skill files in /test-cwd/.lasso/skills, ignoring",
-          "Failed to list the skill files in /fake-home/.config/lasso/skills, ignoring",
+          "Failed to list the skill files in `/test-cwd/.lasso/skills`, ignoring. Error: glob failed",
+          "Failed to list the skill files in `/fake-home/.config/lasso/skills`, ignoring. Error: glob failed",
         ]);
       });
 

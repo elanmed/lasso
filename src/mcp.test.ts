@@ -402,7 +402,7 @@ describe("mcp", () => {
         `${DOWN_1}${CR}`,
       ]);
       assert.deepStrictEqual(getState().content.configWarningMessages, [
-        "Failed to import the tools the first mcp server, ignoring. Error: boom",
+        "Failed to import the tools for the `first` mcp server, ignoring. Error: boom",
       ]);
     });
   });

@@ -93,7 +93,7 @@ export async function initMcpState({
         return toolsPromise.value;
       } else {
         actions.appendConfigWarningMessage(
-          `Failed to import the tools the ${name} mcp server, ignoring. Error: ${getMessageFromError(toolsPromise.error, { forceSingleLine: true })}`,
+          `Failed to import the tools for the \`${name}\` mcp server, ignoring. Error: ${getMessageFromError(toolsPromise.error, { forceSingleLine: true })}`,
         );
         return null;
       }

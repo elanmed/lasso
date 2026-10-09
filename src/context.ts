@@ -50,7 +50,7 @@ export async function getContextEntries() {
     const readResult = await tryCatchAsync(fsDeps.readFile(filePath, "utf8"));
     if (!readResult.ok) {
       actions.appendConfigWarningMessage(
-        `Failed to read the agent file at ${filePath}, ignoring. Error: ${getMessageFromError(readResult.error, { forceSingleLine: true })} `,
+        `Failed to read the agent file at \`${filePath}\`, ignoring. Error: ${getMessageFromError(readResult.error, { forceSingleLine: true })}`,
       );
       continue;
     }
@@ -103,7 +103,7 @@ export async function getSkills() {
     const globResult = await tryCatchAsync(fsDeps.glob(glob));
     if (!globResult.ok) {
       actions.appendConfigWarningMessage(
-        `Failed to list the skill files in ${skillGrandparentDir}, ignoring`,
+        `Failed to list the skill files in \`${skillGrandparentDir}\`, ignoring. Error: ${getMessageFromError(globResult.error, { forceSingleLine: true })}`,
       );
       continue;
     }
@@ -137,7 +137,7 @@ export async function getSkills() {
     );
     if (!readResult.ok) {
       actions.appendConfigWarningMessage(
-        `Failed to read the agent file at ${agentFilePath}, ignoring. Error: ${getMessageFromError(readResult.error, { forceSingleLine: true })}`,
+        `Failed to read the agent file at \`${agentFilePath}\`, ignoring. Error: ${getMessageFromError(readResult.error, { forceSingleLine: true })}`,
       );
       continue;
     }

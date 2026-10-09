@@ -46,7 +46,7 @@ export async function readConfigFileStr(path: string) {
   const readResult = await tryCatchAsync(fsDeps.readFile(path, "utf8"));
   if (!readResult.ok) {
     actions.appendConfigWarningMessage(
-      `Failed to read the config file at ${path}, using the default config. Error: ${getMessageFromError(readResult.error, { forceSingleLine: true })}`,
+      `Failed to read the config file at \`${path}\`, using the default config. Error: ${getMessageFromError(readResult.error, { forceSingleLine: true })}`,
     );
     return "{}";
   }
@@ -61,7 +61,7 @@ export function parseConfigFileStr(
   const parseResult = tryCatch((): unknown => YAML.parse(configFileStr));
   if (!parseResult.ok) {
     actions.appendConfigErrorMessage(
-      `\`${path}\` is invalid YAML. Error: ${getMessageFromError(parseResult.error, { forceSingleLine: true })}`,
+      `Invalid YAML in \`${path}\`, using the default config. Error: ${getMessageFromError(parseResult.error, { forceSingleLine: true })}`,
     );
     return {};
   }
@@ -69,7 +69,7 @@ export function parseConfigFileStr(
   const configResult = ConfigSchema.safeParse(parseResult.value);
   if (configResult.success) return configResult.data;
   actions.appendConfigErrorMessage(
-    `Config at \`${path}\` has an invalid option, using default. Error: ${getMessageFromError(configResult.error, { forceSingleLine: true })}`,
+    `Failed to validate \`${path}\`, using the default config. Error: ${getMessageFromError(configResult.error, { forceSingleLine: true })}`,
   );
   return {};
 }
@@ -141,7 +141,7 @@ export function initStateFromConfig({
     defaultedSdkProvider === "openai-compatible"
   ) {
     actions.appendConfigErrorMessage(
-      `A \`baseURL\` is required when \`sdkProvider=openai-compatible\``,
+      `A \`baseURL\` is required when \`sdkProvider\` is \`openai-compatible\``,
     );
   }
 
@@ -196,7 +196,7 @@ export function initStateFromConfig({
     for (const [commandB, keymapB] of keyedCommands.slice(i + 1)) {
       if (!isSameKey(keymapA, keymapB)) continue;
       actions.appendConfigErrorMessage(
-        `keymaps must be unique: \`${commandA}\` and \`${commandB}\` are both bound to \`${stringify(keymapA)}\``,
+        `\`keymaps\` must be unique: \`${commandA}\` and \`${commandB}\` are both bound to \`${stringify(keymapA)}\``,
       );
     }
   }
@@ -263,7 +263,7 @@ export function initStateFromConfig({
 
   if (defaultedContextWindowPerModel[defaultedModel] === undefined) {
     actions.appendConfigWarningMessage(
-      `Using a default context window of 128,000 tokens because there is no \`contextWindowPerModel\` entry for the current model \`${defaultedModel}\``,
+      `A default context window of 128,000 tokens is used because there is no \`contextWindowPerModel\` entry for the current model \`${defaultedModel}\``,
     );
   }
 
@@ -376,7 +376,7 @@ export async function initBatAvailable() {
 
   if (!batResult.ok) {
     actions.appendConfigWarningMessage(
-      `\`bat\` is not available, consider installing it to properly render markdown responses in the terminal`,
+      `\`bat\` is not available; consider installing it to properly render markdown responses`,
     );
   }
 }

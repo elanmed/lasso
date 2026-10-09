@@ -76,7 +76,7 @@ export async function getAvailableSlashCommands() {
     const globResult = await tryCatchAsync(fsDeps.glob(glob));
     if (!globResult.ok) {
       actions.appendConfigWarningMessage(
-        `Failed to list the slash command files in ${dir}, ignoring. Error: ${getMessageFromError(globResult.error, { forceSingleLine: true })}`,
+        `Failed to list the slash command files in \`${dir}\`, ignoring. Error: ${getMessageFromError(globResult.error, { forceSingleLine: true })}`,
       );
       continue;
     }
@@ -87,7 +87,7 @@ export async function getAvailableSlashCommands() {
     const readResult = await tryCatchAsync(fsDeps.readFile(filePath, "utf8"));
     if (!readResult.ok) {
       actions.appendConfigWarningMessage(
-        `Failed to read the slash command file at ${filePath}, ignoring. Error: ${getMessageFromError(readResult.error, { forceSingleLine: true })}`,
+        `Failed to read the slash command file at \`${filePath}\`, ignoring. Error: ${getMessageFromError(readResult.error, { forceSingleLine: true })}`,
       );
       continue;
     }

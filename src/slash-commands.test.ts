@@ -138,8 +138,8 @@ describe("getAvailableSlashCommands", () => {
       assert.deepStrictEqual(result, []);
       assert.deepStrictEqual(getWrites(), []);
       assert.deepStrictEqual(getState().content.configWarningMessages, [
-        "Failed to list the slash command files in /test-cwd/.lasso/commands, ignoring. Error: permission denied",
-        "Failed to list the slash command files in /fake-home/.config/lasso/commands, ignoring. Error: permission denied",
+        "Failed to list the slash command files in `/test-cwd/.lasso/commands`, ignoring. Error: permission denied",
+        "Failed to list the slash command files in `/fake-home/.config/lasso/commands`, ignoring. Error: permission denied",
       ]);
     });
 
@@ -159,7 +159,7 @@ describe("getAvailableSlashCommands", () => {
       assert.deepStrictEqual(result, []);
       assert.deepStrictEqual(getWrites(), []);
       assert.deepStrictEqual(getState().content.configWarningMessages, [
-        "Failed to read the slash command file at /test-cwd/.lasso/commands/bad.md, ignoring. Error: read failed",
+        "Failed to read the slash command file at `/test-cwd/.lasso/commands/bad.md`, ignoring. Error: read failed",
       ]);
     });
   });

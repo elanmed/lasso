@@ -579,12 +579,12 @@ describe("config", () => {
 
         await initState();
         const messages = getState().content.configErrorMessages.filter(
-          (message) => message.includes("keymaps must be unique"),
+          (message) => message.includes("`keymaps` must be unique"),
         );
         assert.strictEqual(messages.length, 1);
         assert.match(
           first(messages),
-          /keymaps must be unique: `edit` and `clear` are both bound to/,
+          /`keymaps` must be unique: `edit` and `clear` are both bound to/,
         );
       });
 
@@ -603,12 +603,12 @@ describe("config", () => {
         await initState();
         const messages = getState().content.configErrorMessages;
         const keymapMessages = messages.filter((message) =>
-          message.includes("keymaps must be unique"),
+          message.includes("`keymaps` must be unique"),
         );
         assert.strictEqual(keymapMessages.length, 1);
         assert.match(
           first(keymapMessages),
-          /keymaps must be unique: `clear` and `history` are both bound to/,
+          /`keymaps` must be unique: `clear` and `history` are both bound to/,
         );
       });
     });
@@ -891,7 +891,7 @@ describe("config", () => {
         await initState();
         const invalidOptionMessages =
           getState().content.configErrorMessages.filter((message) =>
-            message.includes("has an invalid option"),
+            message.includes("Failed to validate"),
           );
         assert.strictEqual(invalidOptionMessages.length, 1);
         assert.match(first(invalidOptionMessages), /Invalid option/);
@@ -915,7 +915,7 @@ describe("config", () => {
         await initState();
         const invalidOptionMessages =
           getState().content.configErrorMessages.filter((message) =>
-            message.includes("has an invalid option"),
+            message.includes("Failed to validate"),
           );
         assert.strictEqual(invalidOptionMessages.length, 1);
         assert.match(
@@ -942,7 +942,7 @@ describe("config", () => {
         await initState();
         const invalidOptionMessages =
           getState().content.configErrorMessages.filter((message) =>
-            message.includes("has an invalid option"),
+            message.includes("Failed to validate"),
           );
         assert.strictEqual(invalidOptionMessages.length, 1);
         assert.match(
@@ -969,7 +969,7 @@ describe("config", () => {
         await initState();
         const invalidOptionMessages =
           getState().content.configErrorMessages.filter((message) =>
-            message.includes("has an invalid option"),
+            message.includes("Failed to validate"),
           );
         assert.strictEqual(invalidOptionMessages.length, 1);
         assert.match(first(invalidOptionMessages), /Unrecognized key/);
@@ -1042,7 +1042,7 @@ describe("config", () => {
         await initState();
         const invalidOptionMessages =
           getState().content.configErrorMessages.filter((message) =>
-            message.includes("has an invalid option"),
+            message.includes("Failed to validate"),
           );
         assert.strictEqual(invalidOptionMessages.length, 1);
         assert.match(
@@ -1069,7 +1069,7 @@ describe("config", () => {
         await initState();
         const invalidOptionMessages =
           getState().content.configErrorMessages.filter((message) =>
-            message.includes("has an invalid option"),
+            message.includes("Failed to validate"),
           );
         assert.strictEqual(invalidOptionMessages.length, 1);
         assert.match(
@@ -1092,7 +1092,7 @@ describe("config", () => {
         await initState();
         const invalidOptionMessages =
           getState().content.configErrorMessages.filter((message) =>
-            message.includes("has an invalid option"),
+            message.includes("Failed to validate"),
           );
         assert.strictEqual(invalidOptionMessages.length, 1);
         assert.match(
@@ -1113,7 +1113,7 @@ describe("config", () => {
         await initState();
         const invalidOptionMessages =
           getState().content.configErrorMessages.filter((message) =>
-            message.includes("has an invalid option"),
+            message.includes("Failed to validate"),
           );
         assert.strictEqual(invalidOptionMessages.length, 1);
         assert.match(
@@ -1134,7 +1134,7 @@ describe("config", () => {
         await initState();
         const invalidOptionMessages =
           getState().content.configErrorMessages.filter((message) =>
-            message.includes("has an invalid option"),
+            message.includes("Failed to validate"),
           );
         assert.strictEqual(invalidOptionMessages.length, 1);
         assert.match(
@@ -1155,7 +1155,7 @@ describe("config", () => {
         await initState();
         const invalidOptionMessages =
           getState().content.configErrorMessages.filter((message) =>
-            message.includes("has an invalid option"),
+            message.includes("Failed to validate"),
           );
         assert.strictEqual(invalidOptionMessages.length, 1);
         assert.match(
@@ -1176,7 +1176,7 @@ describe("config", () => {
         await initState();
         const invalidOptionMessages =
           getState().content.configErrorMessages.filter((message) =>
-            message.includes("has an invalid option"),
+            message.includes("Failed to validate"),
           );
         assert.strictEqual(invalidOptionMessages.length, 1);
         assert.match(
@@ -1197,7 +1197,7 @@ describe("config", () => {
         await initState();
         const invalidOptionMessages =
           getState().content.configErrorMessages.filter((message) =>
-            message.includes("has an invalid option"),
+            message.includes("Failed to validate"),
           );
         assert.strictEqual(invalidOptionMessages.length, 1);
         assert.match(
@@ -1220,7 +1220,7 @@ describe("config", () => {
         await initState();
         const invalidOptionMessages =
           getState().content.configErrorMessages.filter((message) =>
-            message.includes("has an invalid option"),
+            message.includes("Failed to validate"),
           );
         assert.strictEqual(invalidOptionMessages.length, 1);
         assert.match(
@@ -1241,7 +1241,7 @@ describe("config", () => {
         await initState();
         const invalidOptionMessages =
           getState().content.configErrorMessages.filter((message) =>
-            message.includes("has an invalid option"),
+            message.includes("Failed to validate"),
           );
         assert.strictEqual(invalidOptionMessages.length, 1);
         assert.match(
@@ -1262,7 +1262,7 @@ describe("config", () => {
         await initState();
         const invalidOptionMessages =
           getState().content.configErrorMessages.filter((message) =>
-            message.includes("has an invalid option"),
+            message.includes("Failed to validate"),
           );
         assert.strictEqual(invalidOptionMessages.length, 1);
         assert.match(
@@ -1283,7 +1283,7 @@ describe("config", () => {
         await initState();
         const invalidOptionMessages =
           getState().content.configErrorMessages.filter((message) =>
-            message.includes("has an invalid option"),
+            message.includes("Failed to validate"),
           );
         assert.strictEqual(invalidOptionMessages.length, 1);
         assert.match(
@@ -1304,7 +1304,7 @@ describe("config", () => {
         await initState();
         const invalidOptionMessages =
           getState().content.configErrorMessages.filter((message) =>
-            message.includes("has an invalid option"),
+            message.includes("Failed to validate"),
           );
         assert.strictEqual(invalidOptionMessages.length, 1);
         assert.match(
@@ -1356,11 +1356,11 @@ describe("config", () => {
           const getWrites = mockStdoutWrites();
           await initState();
           assert.deepStrictEqual(getState().content.configWarningMessages, [
-            "Using a default context window of 128,000 tokens because there is no `contextWindowPerModel` entry for the current model `claude-sonnet-4-6`",
+            "A default context window of 128,000 tokens is used because there is no `contextWindowPerModel` entry for the current model `claude-sonnet-4-6`",
           ]);
           warnOnMissingConfig();
           assert.deepStrictEqual(getWrites(), [
-            `${YELLOW}- Using a default context window of 128,000 tokens because there is no \`contextWindowPerModel\` entry for the current model \`claude-sonnet-4-6\`${RESET}\n`,
+            `${YELLOW}- A default context window of 128,000 tokens is used because there is no \`contextWindowPerModel\` entry for the current model \`claude-sonnet-4-6\`${RESET}\n`,
             `${YELLOW}Suppress these warnings via the \`suppressConfigWarnings\` config option${RESET}\n`,
             "\n",
           ]);
@@ -1695,7 +1695,7 @@ describe("config", () => {
         assert.strictEqual(messages.length, 1);
         assert.match(
           first(messages),
-          /A `baseURL` is required when `sdkProvider=openai-compatible`/,
+          /A `baseURL` is required when `sdkProvider` is `openai-compatible`/,
         );
       });
     });
@@ -1714,7 +1714,7 @@ describe("config", () => {
       await initState();
       const invalidOptionMessages =
         getState().content.configErrorMessages.filter((message) =>
-          message.includes("has an invalid option"),
+          message.includes("Failed to validate"),
         );
       assert.strictEqual(invalidOptionMessages.length, 1);
       assert.match(
@@ -1735,7 +1735,7 @@ describe("config", () => {
       await initState();
       const invalidOptionMessages =
         getState().content.configErrorMessages.filter((message) =>
-          message.includes("has an invalid option"),
+          message.includes("Failed to validate"),
         );
       assert.strictEqual(invalidOptionMessages.length, 1);
       assert.match(
@@ -1756,7 +1756,7 @@ describe("config", () => {
       await initState();
       const invalidOptionMessages =
         getState().content.configErrorMessages.filter((message) =>
-          message.includes("has an invalid option"),
+          message.includes("Failed to validate"),
         );
       assert.strictEqual(invalidOptionMessages.length, 1);
       assert.match(
@@ -1789,12 +1789,12 @@ describe("config", () => {
 
       await initState();
       const messages = getState().content.configErrorMessages.filter(
-        (message) => message.includes("is invalid YAML"),
+        (message) => message.includes("Invalid YAML"),
       );
       assert.strictEqual(messages.length, 1);
       assert.match(
         first(messages),
-        /`\/fake-home\/.config\/lasso\/settings.yaml` is invalid YAML/,
+        /`\/fake-home\/.config\/lasso\/settings.yaml`, using the default config/,
       );
     });
 
@@ -1803,12 +1803,12 @@ describe("config", () => {
 
       await initState();
       const messages = getState().content.configErrorMessages.filter(
-        (message) => message.includes("is invalid YAML"),
+        (message) => message.includes("Invalid YAML"),
       );
       assert.strictEqual(messages.length, 1);
       assert.match(
         first(messages),
-        /`\/test-cwd\/.lasso\/settings.yaml` is invalid YAML/,
+        /`\/test-cwd\/.lasso\/settings.yaml`, using the default config/,
       );
     });
 
@@ -1824,12 +1824,12 @@ describe("config", () => {
 
         await initState();
         const messages = getState().content.configErrorMessages.filter(
-          (message) => message.includes("has an invalid option"),
+          (message) => message.includes("Failed to validate"),
         );
         assert.strictEqual(messages.length, 1);
         assert.match(
           first(messages),
-          /Config at `\/fake-home\/.config\/lasso\/settings\.yaml` has an invalid option/,
+          /Failed to validate `\/fake-home\/.config\/lasso\/settings\.yaml`/,
         );
       });
 
@@ -1844,12 +1844,12 @@ describe("config", () => {
 
         await initState();
         const messages = getState().content.configErrorMessages.filter(
-          (message) => message.includes("has an invalid option"),
+          (message) => message.includes("Failed to validate"),
         );
         assert.strictEqual(messages.length, 1);
         assert.match(
           first(messages),
-          /Config at `\/test-cwd\/.lasso\/settings\.yaml` has an invalid option/,
+          /Failed to validate `\/test-cwd\/.lasso\/settings\.yaml`/,
         );
       });
     });
@@ -2086,7 +2086,7 @@ hello
       assert.strictEqual(globalConfigStr, "{}");
       assert.deepStrictEqual(writes(), []);
       assert.deepStrictEqual(getState().content.configWarningMessages, [
-        "Failed to read the config file at /fake-home/.config/lasso/settings.yaml, using the default config. Error: read failed",
+        "Failed to read the config file at `/fake-home/.config/lasso/settings.yaml`, using the default config. Error: read failed",
       ]);
     });
   });
