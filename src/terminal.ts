@@ -12,24 +12,7 @@ import {
   shellQuote,
 } from "./utils.ts";
 import { print } from "./print.ts";
-
 import { getGlobalConfigPath, getLocalConfigPath } from "./paths.ts";
-
-export async function checkBat(): Promise<boolean> {
-  return (await tryCatchAsync(childProcessDeps.exec("bat --version"))).ok;
-}
-
-export async function warnOnMissingBat() {
-  const batAvailable = await checkBat();
-  actions.setBatAvailable(batAvailable);
-  if (getState().config.suppressBatUnavailableWarning) return;
-
-  if (!batAvailable) {
-    print.warning(
-      `\`bat\` is not available, consider installing it to properly render markdown responses in the terminal. Suppress this warning with \`suppressBatUnavailableWarning: true\` in ${getGlobalConfigPath()} or ${getLocalConfigPath()}`,
-    );
-  }
-}
 
 export function baseBatFlags() {
   return shouldDisableColor()

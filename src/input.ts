@@ -52,7 +52,7 @@ import {
   warnOnLargePromptOverhead,
 } from "./usage.ts";
 import { actions, getState } from "./state.ts";
-import { initStateRepeatable } from "./config.ts";
+import { initStateRepeatable, warnOnMissingConfig } from "./config.ts";
 import { isSameKey, type Key } from "./config-types.ts";
 import { aiDeps, childProcessDeps, fsDeps, processDeps } from "./deps.ts";
 import { getGlobalConfigPath, getLocalConfigPath } from "./paths.ts";
@@ -1468,6 +1468,7 @@ ${normalizeNewline(diffResult.value.stdout)}`,
     });
   }
   warnOnLargePromptOverhead();
+  warnOnMissingConfig();
 }
 
 const getDefaultConfig = (

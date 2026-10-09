@@ -22,7 +22,7 @@ import {
   type Config,
 } from "./config-types.ts";
 import { MISSING } from "./missing.ts";
-import { fsDeps, processDeps } from "./deps.ts";
+import { childProcessDeps, fsDeps, processDeps } from "./deps.ts";
 import {
   getDebugLogDir,
   getGlobalConfigPath,
@@ -74,7 +74,6 @@ export function parseConfigFileStr(
   return {};
 }
 
-// TODO: where to call this
 export function warnOnMissingConfig() {
   const messages = getState().content.configWarningMessages;
   if (messages.length === 0) return;
@@ -367,6 +366,19 @@ export function getStartupLogIdToLabel(): LogIdToLabel {
   ]);
 }
 
+export async function initBatAvailable() {
+  const batResult = await tryCatchAsync(childProcessDeps.exec("bat --version"));
+
+  actions.setBatAvailable(batResult.ok);
+  if (getState().config.suppressBatUnavailableWarning) return;
+
+  if (!batResult.ok) {
+    actions.appendConfigWarningMessage(
+      `\`bat\` is not available, consider installing it to properly render markdown responses in the terminal`,
+    );
+  }
+}
+
 export async function initState() {
   const { globalConfig, localConfig } = await initStateFirst();
   const debugLogPath = join(getDebugLogDir(), `debug-${getShortId()}.log`);
@@ -386,5 +398,6 @@ export async function initState() {
     initStateFromFs({ performanceLogger }),
     deleteExpiredSessionFiles(),
     initSessionFile(),
+    initBatAvailable(),
   ]);
 }

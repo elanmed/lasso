@@ -8,7 +8,11 @@ import {
 } from "./print.ts";
 import { fencePrint } from "./fence.ts";
 import { executeBat, warnOnMissingBat } from "./terminal.ts";
-import { initState, blockOnMissingConfig } from "./config.ts";
+import {
+  initState,
+  blockOnMissingConfig,
+  warnOnMissingConfig,
+} from "./config.ts";
 import {
   initReadline,
   initStdin,
@@ -22,15 +26,12 @@ import { warnOnLargePromptOverhead } from "./usage.ts";
 
 async function main() {
   actions.setIsInitializing(true);
-
   initStdin();
   initStdout();
   await initState();
   initReadline();
-
-  await warnOnMissingBat();
+  warnOnMissingConfig();
   warnOnLargePromptOverhead();
-
   actions.setIsInitializing(false);
 
   let isFirstInput = true;
