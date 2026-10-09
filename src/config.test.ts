@@ -120,6 +120,32 @@ describe("config", () => {
         assert.equal(getState().config.sdkProvider, "anthropic");
       });
 
+      it("appends the api key error to config error messages when the api key is missing", async () => {
+        testProcessEnv._clear();
+        testFs._files.set(
+          getGlobalConfigPath(),
+          JSON.stringify({
+            model: testConfig.model,
+            baseURL: testConfig.baseURL,
+            sdkProvider: "anthropic",
+          }),
+        );
+        testFs._files.set(
+          getLocalConfigPath(),
+          JSON.stringify({
+            model: testConfig.model,
+            baseURL: testConfig.baseURL,
+            sdkProvider: "anthropic",
+          }),
+        );
+
+        await initState();
+
+        assert.deepStrictEqual(getState().content.configErrorMessages, [
+          "Set the `LASSO_API_KEY` environment variable, e.g. `export LASSO_API_KEY=...`",
+        ]);
+      });
+
       it("uses minimal local config without model over the global config", async () => {
         testFs._files.set(
           getGlobalConfigPath(),
@@ -1336,6 +1362,7 @@ describe("config", () => {
           assert.deepStrictEqual(getWrites(), [
             `${YELLOW}- Using a default context window of 128,000 tokens because there is no \`contextWindowPerModel\` entry for the current model \`claude-sonnet-4-6\`${RESET}\n`,
             `${YELLOW}Suppress these warnings via the \`suppressConfigWarnings\` config option${RESET}\n`,
+            "\n",
           ]);
         });
 
@@ -2120,47 +2147,32 @@ hello
       actions.setBaseURL("https://api.anthropic.com");
     });
 
-    it("returns false when api key, baseURL, and model are set", () => {
+    it("returns false and prints nothing when there are no config error messages", () => {
       const getWrites = mockStdoutWrites();
       assert.strictEqual(blockOnMissingConfig(), false);
       assert.deepStrictEqual(getWrites(), []);
     });
 
-    it("prints the api key error and returns true when the api key is missing", () => {
-      actions.resetState();
-      testProcessEnv._clear();
+    it("prints the config error messages and returns true when there are config error messages", () => {
+      actions.appendConfigErrorMessage("Set `model` in your config file");
+      actions.appendConfigErrorMessage(
+        "Set the `LASSO_API_KEY` environment variable, e.g. `export LASSO_API_KEY=...`",
+      );
       const getWrites = mockStdoutWrites();
       assert.strictEqual(blockOnMissingConfig(), true);
       assert.deepStrictEqual(getWrites(), [
-        `${RED}Set the \`LASSO_API_KEY\` environment variable, e.g. \`export LASSO_API_KEY=...\`${RESET}\n`,
-        "\n",
+        `${RED}- Set \`model\` in your config file\n- Set the \`LASSO_API_KEY\` environment variable, e.g. \`export LASSO_API_KEY=...\`${RESET}\n`,
       ]);
     });
 
-    it("does not append the api key error to config error messages", () => {
-      actions.resetState();
-      testProcessEnv._clear();
-      const getWrites = mockStdoutWrites();
-      assert.strictEqual(blockOnMissingConfig(), true);
-      assert.deepStrictEqual(getState().content.configErrorMessages, []);
-      assert.deepStrictEqual(getWrites(), [
-        `${RED}Set the \`LASSO_API_KEY\` environment variable, e.g. \`export LASSO_API_KEY=...\`${RESET}\n`,
-        "\n",
-      ]);
-    });
-
-    it("prints config error messages when the api key is missing and config errors are present", () => {
-      actions.resetState();
-      testProcessEnv._clear();
+    it("prints the init command hint when includeConfigInitMessage is true", () => {
       actions.appendConfigErrorMessage("Set `model` in your config file");
       actions.setIncludeConfigInitMessage(true);
       const getWrites = mockStdoutWrites();
       assert.strictEqual(blockOnMissingConfig(), true);
       assert.deepStrictEqual(getWrites(), [
-        `${RED}Set the \`LASSO_API_KEY\` environment variable, e.g. \`export LASSO_API_KEY=...\`${RESET}\n`,
         `${RED}- Set \`model\` in your config file${RESET}\n`,
         `${RED}Run /initlocal or /initglobal to generate a sample config in \`./.lasso\` or \`~/.config/lasso\` respectively.${RESET}\n`,
-        "\n",
       ]);
     });
   });

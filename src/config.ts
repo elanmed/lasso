@@ -81,29 +81,20 @@ export function warnOnMissingConfig() {
   print.warning(
     `Suppress these warnings via the \`suppressConfigWarnings\` config option`,
   );
+  printNewline();
 }
 
 export function blockOnMissingConfig() {
-  const apiKeyMissing = processDeps.env.get("LASSO_API_KEY") === undefined;
   const messages = getState().content.configErrorMessages;
-  if (!apiKeyMissing && messages.length === 0) return false;
+  if (messages.length === 0) return false;
 
-  if (apiKeyMissing) {
-    print.error(
-      "Set the `LASSO_API_KEY` environment variable, e.g. `export LASSO_API_KEY=...`",
-    );
-  }
+  print.error(messages.map((message) => `- ${message}`).join("\n"));
 
-  if (messages.length !== 0) {
-    print.error(messages.map((message) => `- ${message}`).join("\n"));
-  }
-
-  if (getState().content.includeConfigInitMessage && messages.length !== 0) {
+  if (getState().content.includeConfigInitMessage) {
     print.error(
       "Run /initlocal or /initglobal to generate a sample config in `./.lasso` or `~/.config/lasso` respectively.",
     );
   }
-  printNewline();
   return true;
 }
 
@@ -291,6 +282,12 @@ export function initStateFromConfig({
     actions.appendConfigErrorMessage("Set `model` in your config file");
   }
   actions.setIncludeConfigInitMessage(includeConfigCommand);
+
+  if (processDeps.env.get("LASSO_API_KEY") === undefined) {
+    actions.appendConfigErrorMessage(
+      "Set the `LASSO_API_KEY` environment variable, e.g. `export LASSO_API_KEY=...`",
+    );
+  }
 }
 
 export async function initStateFromFs({
