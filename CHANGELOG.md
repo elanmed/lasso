@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.11.3 - 2026-10-09
+
+- Warn on all config errors and unify warning/error message wording, with a new `suppressConfigWarnings` option to suppress them
+- Shell-quote editor and pager temp-file commands, guard generated temp paths, and fall back to `vi` when `EDITOR` is whitespace-only
+- Abort an in-progress recording before starting an api stream
+- Pass the message queue delimiter through when appending editor input value
+
 ## v0.11.2 - 2026-10-07
 
 - Add a `read_image` tool for attaching image files to the conversation
