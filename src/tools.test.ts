@@ -1,6 +1,5 @@
 import { describe, it, beforeEach, afterEach, mock } from "node:test";
 import assert from "node:assert";
-import { getEventListeners } from "node:events";
 import { z } from "zod";
 import {
   bashToolInputSchema,
@@ -274,17 +273,15 @@ describe("tools", () => {
     });
     const fakeFetch = (_input: unknown, init?: { signal: AbortSignal }) => {
       onFetchCalled();
+      assert(init?.signal !== undefined);
+      const { signal } = init;
       return new Promise<Response>((_resolve, reject) => {
-        const abortError = new DOMException(
-          "This operation was aborted",
-          "AbortError",
-        );
-        if (init?.signal.aborted === true) {
-          reject(abortError);
+        if (signal.aborted) {
+          reject(signal.reason as Error);
           return;
         }
-        init?.signal.addEventListener("abort", () => {
-          reject(abortError);
+        signal.addEventListener("abort", () => {
+          reject(signal.reason as Error);
         });
       });
     };
@@ -355,25 +352,29 @@ describe("tools", () => {
     });
 
     it("returns isError when the request times out", async () => {
-      mock.timers.enable({ apis: ["setTimeout"] });
       const { fakeFetch, fetchCalledPromise } = makeHangingFetch();
       mock.method(globalThis, "fetch", fakeFetch);
 
-      const resultPromise = executeWebFetchHtmlTool({
-        href: "https://example.com/slow",
-      });
-      // await for fetch to have been called
+      const controller = new AbortController();
+      const resultPromise = executeWebFetchHtmlTool(
+        { href: "https://example.com/slow" },
+        controller.signal,
+      );
       await fetchCalledPromise;
-      mock.timers.tick(10_000);
+      controller.abort(
+        new DOMException(
+          "The operation was aborted due to timeout",
+          "TimeoutError",
+        ),
+      );
       const result = await resultPromise;
       assert.deepStrictEqual(result, {
         isError: true,
-        content: "Request to https://example.com/slow timed out after 10s",
+        content: "The operation was aborted due to timeout",
       });
-      mock.timers.reset();
     });
 
-    it("rethrows when aborted by the caller and removes the abort listener", async () => {
+    it("rethrows when aborted by the caller", async () => {
       const controller = new AbortController();
       const { fakeFetch } = makeHangingFetch();
       mock.method(globalThis, "fetch", fakeFetch);
@@ -384,7 +385,6 @@ describe("tools", () => {
       );
       controller.abort();
       await assert.rejects(resultPromise, { name: "AbortError" });
-      assert.deepStrictEqual(getEventListeners(controller.signal, "abort"), []);
     });
   });
 
@@ -460,25 +460,26 @@ describe("tools", () => {
     });
 
     it("returns isError when the request times out", async () => {
-      mock.timers.enable({ apis: ["setTimeout"] });
       const { fakeFetch, fetchCalledPromise } = makeHangingFetch();
       mock.method(globalThis, "fetch", fakeFetch);
 
-      try {
-        const resultPromise = executeWebFetchJsonTool({
-          href: "https://api.example.com/slow",
-        });
-        await fetchCalledPromise;
-        mock.timers.tick(10_000);
-        const result = await resultPromise;
-        assert.deepStrictEqual(result, {
-          isError: true,
-          content:
-            "Request to https://api.example.com/slow timed out after 10s",
-        });
-      } finally {
-        mock.timers.reset();
-      }
+      const controller = new AbortController();
+      const resultPromise = executeWebFetchJsonTool(
+        { href: "https://api.example.com/slow" },
+        controller.signal,
+      );
+      await fetchCalledPromise;
+      controller.abort(
+        new DOMException(
+          "The operation was aborted due to timeout",
+          "TimeoutError",
+        ),
+      );
+      const result = await resultPromise;
+      assert.deepStrictEqual(result, {
+        isError: true,
+        content: "The operation was aborted due to timeout",
+      });
     });
   });
 
@@ -949,51 +950,37 @@ skills body`,
       });
 
       it("returns a timeout error with subagent metadata", async () => {
-        mock.timers.enable({ apis: ["setTimeout"] });
-        let onGenerateTextCalled: () => void = () => undefined;
-        const generateTextCalledPromise = new Promise<void>((resolve) => {
-          onGenerateTextCalled = resolve;
-        });
-        mockGenerateText((options: { abortSignal?: AbortSignal }) => {
-          onGenerateTextCalled();
-          return new Promise((_resolve, reject) => {
-            options.abortSignal?.addEventListener("abort", () => {
-              reject(
-                new DOMException("This operation was aborted", "AbortError"),
-              );
-            });
-          });
+        mockGenerateText(() =>
+          Promise.reject(
+            new DOMException(
+              "The operation was aborted due to timeout",
+              "TimeoutError",
+            ),
+          ),
+        );
+
+        const result = await createSubagentTool({
+          tasks: [
+            {
+              prompt: "inspect timeout",
+              access: "read-only",
+              model: "slow-model",
+            },
+          ],
         });
 
-        try {
-          const resultPromise = createSubagentTool({
-            tasks: [
-              {
-                prompt: "inspect timeout",
-                access: "read-only",
-                model: "slow-model",
-                timeout: 1_000,
-              },
-            ],
-          });
-          await generateTextCalledPromise;
-          mock.timers.tick(1_000);
-          const result = await resultPromise;
-          assert.strictEqual(result.isError, true);
-          assert.deepStrictEqual(JSON.parse(result.content), [
-            {
-              model: "slow-model",
-              prompt: "inspect timeout",
-              isError: true,
-              content: "Subagent timed out after 1s",
-            },
-          ]);
-        } finally {
-          mock.timers.reset();
-        }
+        assert.strictEqual(result.isError, true);
+        assert.deepStrictEqual(JSON.parse(result.content), [
+          {
+            model: "slow-model",
+            prompt: "inspect timeout",
+            isError: true,
+            content: "The operation was aborted due to timeout",
+          },
+        ]);
       });
 
-      it("rethrows when aborted by the caller and removes the abort listener", async () => {
+      it("rethrows when aborted by the caller", async () => {
         const controller = new AbortController();
         let onGenerateTextCalled: () => void = () => undefined;
         const generateTextCalledPromise = new Promise<void>((resolve) => {
@@ -1001,8 +988,10 @@ skills body`,
         });
         mockGenerateText((options: { abortSignal?: AbortSignal }) => {
           onGenerateTextCalled();
+          assert(options.abortSignal !== undefined);
+          const { abortSignal } = options;
           return new Promise((_resolve, reject) => {
-            options.abortSignal?.addEventListener("abort", () => {
+            abortSignal.addEventListener("abort", () => {
               reject(
                 new DOMException("This operation was aborted", "AbortError"),
               );
@@ -1026,10 +1015,6 @@ skills body`,
         controller.abort();
 
         await assert.rejects(resultPromise, { name: "AbortError" });
-        assert.deepStrictEqual(
-          getEventListeners(controller.signal, "abort"),
-          [],
-        );
       });
     });
   });

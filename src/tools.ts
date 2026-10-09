@@ -165,67 +165,22 @@ export const webFetchToolSchema = z.object({
 });
 export type WebFetchTool = z.infer<typeof webFetchToolSchema>;
 
-const FETCH_TIMEOUT_MS = 10 * 1_000;
-const SUBAGENT_TIMEOUT_MS = 2 * 60 * 1_000;
+export const baseTimeoutSettings = {
+  totalMs: 10 * 60_000,
+  toolMs: 30_000,
+  tools: {
+    bashMs: 2 * 60_000,
+    create_subagentMs: 5 * 60_000,
+  },
+};
 
-function createTimeoutController(
-  signal: AbortSignal | undefined,
-  timeout: number,
-) {
-  const controller = new AbortController();
-
-  let timedOut = false;
-  const timeoutId = setTimeout(() => {
-    timedOut = true;
-    controller.abort();
-  }, timeout);
-
-  const onExternalAbort = () => {
-    controller.abort();
-  };
-
-  if (signal !== undefined) {
-    if (signal.aborted) {
-      controller.abort();
-    } else {
-      signal.addEventListener("abort", onExternalAbort, { once: true });
-    }
-  }
-
-  return {
-    controller,
-    isTimedOut: () => timedOut,
-    cleanup: () => {
-      clearTimeout(timeoutId);
-      signal?.removeEventListener("abort", onExternalAbort);
-    },
-  };
-}
-
-const getFetchTimeoutContent = (href: string) =>
-  `Request to ${href} timed out after ${String(FETCH_TIMEOUT_MS / 1_000)}s`;
-
-function resolveTimeoutError({
-  error,
-  content,
-  isTimedOut,
-}: {
-  error: unknown;
-  content: string;
-  isTimedOut: () => boolean;
-}): ToolResult {
-  if (isTimedOut()) {
-    return {
-      isError: true,
-      content,
-    };
-  }
-  if (isAbortError(error)) throw error;
-  return {
-    isError: true,
-    content: getMessageFromError(error),
-  };
-}
+export const subagentTimeoutSettings = {
+  totalMs: 4 * 60_000,
+  toolMs: 30_000,
+  tools: {
+    bashMs: 2 * 60_000,
+  },
+};
 
 export async function executeWebFetchHtmlTool(
   { href }: WebFetchTool,
@@ -235,32 +190,25 @@ export async function executeWebFetchHtmlTool(
   headers.append("User-Agent", userAgent);
   headers.append("Accept", "text/html");
 
-  const { controller, isTimedOut, cleanup } = createTimeoutController(
-    signal,
-    FETCH_TIMEOUT_MS,
-  );
-
   const fetchResult = await tryCatchAsync(
     fetch(href, {
       headers,
-      signal: controller.signal,
+      ...(signal === undefined ? {} : { signal }),
     }),
   );
 
   if (!fetchResult.ok) {
-    cleanup();
-    return resolveTimeoutError({
-      error: fetchResult.error,
-      content: getFetchTimeoutContent(href),
-      isTimedOut,
-    });
+    if (isAbortError(fetchResult.error)) throw fetchResult.error;
+    return {
+      content: getMessageFromError(fetchResult.error),
+      isError: true,
+    };
   }
 
   const response = fetchResult.value;
   if (!response.ok) {
-    cleanup();
     const error = `HTTP ${String(response.status)}: ${response.statusText}`;
-    print.warning(error);
+    print.doing(error);
     return {
       isError: true,
       content: error,
@@ -269,12 +217,11 @@ export async function executeWebFetchHtmlTool(
 
   const textResult = await tryCatchAsync(response.text());
   if (!textResult.ok) {
-    cleanup();
-    return resolveTimeoutError({
-      error: textResult.error,
-      content: getFetchTimeoutContent(href),
-      isTimedOut,
-    });
+    if (isAbortError(textResult.error)) throw textResult.error;
+    return {
+      content: getMessageFromError(textResult.error),
+      isError: true,
+    };
   }
   const htmlStr = textResult.value;
 
@@ -284,15 +231,13 @@ export async function executeWebFetchHtmlTool(
   const article = reader.parse();
   if (article === null) {
     const error = `Failed to parse article from ${href}`;
-    print.warning(error);
-    cleanup();
+    print.doing(error);
     return {
       isError: true,
       content: error,
     };
   }
 
-  cleanup();
   return {
     content: stringify(article),
   };
@@ -306,32 +251,25 @@ export async function executeWebFetchJsonTool(
   headers.append("User-Agent", userAgent);
   headers.append("Accept", "application/json");
 
-  const { controller, isTimedOut, cleanup } = createTimeoutController(
-    signal,
-    FETCH_TIMEOUT_MS,
-  );
-
   const fetchResult = await tryCatchAsync(
     fetch(href, {
       headers,
-      signal: controller.signal,
+      ...(signal === undefined ? {} : { signal }),
     }),
   );
 
   if (!fetchResult.ok) {
-    cleanup();
-    return resolveTimeoutError({
-      error: fetchResult.error,
-      content: getFetchTimeoutContent(href),
-      isTimedOut,
-    });
+    if (isAbortError(fetchResult.error)) throw fetchResult.error;
+    return {
+      content: getMessageFromError(fetchResult.error),
+      isError: true,
+    };
   }
 
   const response = fetchResult.value;
   if (!response.ok) {
-    cleanup();
     const error = `HTTP ${String(response.status)}: ${response.statusText}`;
-    print.warning(error);
+    print.doing(error);
     return {
       isError: true,
       content: error,
@@ -340,15 +278,12 @@ export async function executeWebFetchJsonTool(
 
   const jsonResult = await tryCatchAsync(response.json());
   if (!jsonResult.ok) {
-    cleanup();
-    return resolveTimeoutError({
-      error: jsonResult.error,
-      content: getFetchTimeoutContent(href),
-      isTimedOut,
-    });
+    if (isAbortError(jsonResult.error)) throw jsonResult.error;
+    return {
+      content: getMessageFromError(jsonResult.error),
+      isError: true,
+    };
   }
-
-  cleanup();
   const json = jsonResult.value;
   return {
     content: stringify(json),
@@ -403,10 +338,6 @@ export const createSubagentTaskSchema = z.object({
         });
       }
     }),
-  timeout: z
-    .number()
-    .optional()
-    .describe("Maximum milliseconds the subagent may run before timing out"),
 });
 export const createSubagentToolSchema = z.object({
   tasks: z
@@ -427,13 +358,6 @@ export async function createSubagentTool(
 ): Promise<ToolResult> {
   const subagentPromises = tasks.map(
     async (subagentSchema): Promise<SubagentResult> => {
-      const timeout = subagentSchema.timeout ?? SUBAGENT_TIMEOUT_MS;
-
-      const { controller, isTimedOut, cleanup } = createTimeoutController(
-        signal,
-        timeout,
-      );
-
       const model = subagentSchema.model;
 
       const systemContent = [
@@ -456,8 +380,8 @@ export async function createSubagentTool(
 
       const generateTextResult = await tryCatchAsync(
         aiDeps.generateText({
-          model: getLanguageModel(model),
           // Subagents should always use the provider's default reasoning
+          model: getLanguageModel(model),
           instructions: systemContent,
           messages: [userMessage],
           tools: {
@@ -466,7 +390,8 @@ export async function createSubagentTool(
             ...getState().mcp.tools,
           },
           stopWhen: aiDeps.isLoopFinished(),
-          abortSignal: controller.signal,
+          ...(signal === undefined ? {} : { abortSignal: signal }),
+          timeout: subagentTimeoutSettings,
           onToolExecutionStart: async ({ toolCall }) => {
             if (subagentSchema.access !== "read-write") return;
             if (toolCall.toolName !== "bash") return;
@@ -506,15 +431,13 @@ export async function createSubagentTool(
 
       if (!generateTextResult.ok) {
         await toolCallDiffer.cleanupAllTempFileBefore();
-        cleanup();
-        const timeoutResult = resolveTimeoutError({
-          error: generateTextResult.error,
-          content: `Subagent timed out after ${String(timeout / 1_000)}s`,
-          isTimedOut,
-        });
 
+        if (isAbortError(generateTextResult.error)) {
+          throw generateTextResult.error;
+        }
         return {
-          ...timeoutResult,
+          content: getMessageFromError(generateTextResult.error),
+          isError: true,
           model,
           prompt: subagentSchema.prompt,
         };
@@ -523,7 +446,6 @@ export async function createSubagentTool(
       const { usage, text } = generateTextResult.value;
       await appendModelUsage(usage, model);
       await toolCallDiffer.cleanupAllTempFileBefore();
-      cleanup();
 
       return {
         model,

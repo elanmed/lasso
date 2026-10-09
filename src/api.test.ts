@@ -79,6 +79,25 @@ describe("api", () => {
         getCapturedTool(capturedOptions, "bash");
       });
 
+      it("passes timeouts to generateText", async () => {
+        let capturedOptions: Record<string, unknown> | undefined;
+        mockGenerateText(async (options: Record<string, unknown>) => {
+          capturedOptions = options;
+          return Promise.resolve(makeGenerateTextResult());
+        });
+
+        await resolveApiCall("hello");
+
+        assert.deepStrictEqual(capturedOptions?.["timeout"], {
+          totalMs: 600_000,
+          toolMs: 30_000,
+          tools: {
+            bashMs: 120_000,
+            create_subagentMs: 300_000,
+          },
+        });
+      });
+
       it("passes the configured reasoning to generateText", async () => {
         const captured: Record<string, unknown>[] = [];
         mockGenerateText(async (options: Record<string, unknown>) => {
@@ -1245,6 +1264,14 @@ describe("api", () => {
         const getMessages = () => getCapturedMessages(capturedOpts);
         await getConversationSummary();
         assert.strictEqual(getMessages().length, 1);
+        assert.deepStrictEqual(capturedOpts?.["timeout"], {
+          totalMs: 600_000,
+          toolMs: 30_000,
+          tools: {
+            bashMs: 120_000,
+            create_subagentMs: 300_000,
+          },
+        });
         const capturedMessage = getMessages()[0];
         assert(capturedMessage !== undefined);
         assert.strictEqual(

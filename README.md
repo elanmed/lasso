@@ -550,8 +550,6 @@ vim.g.clipboard = {
 
 ## TODO (soon)
 
-- [ ] Use native ai sdk v7 timeouts
-
 ## TODO (later)
 
 - [ ] Support codemode

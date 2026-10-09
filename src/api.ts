@@ -31,6 +31,7 @@ import {
 import {
   getBaseAgentTools,
   toolPrint,
+  baseTimeoutSettings,
   bashToolInputSchema,
   webFetchToolSchema,
   loadSkillToolSchema,
@@ -82,6 +83,7 @@ export async function resolveApiCall(userInput: string) {
       tools: getBaseAgentTools(),
       stopWhen: aiDeps.isLoopFinished(),
       abortSignal: getApiStreamAbortSignal(),
+      timeout: baseTimeoutSettings,
       onToolExecutionStart: async ({ toolCall }) => {
         switch (toolCall.toolName) {
           case "bash": {
@@ -273,6 +275,7 @@ export async function getMergedSummaries() {
       messages: [{ content: compactPrompt, role: "user" }],
       stopWhen: aiDeps.isLoopFinished(),
       abortSignal: getApiStreamAbortSignal(),
+      timeout: baseTimeoutSettings,
       ...structuredOutputOpts,
     }),
   );
@@ -350,6 +353,7 @@ export async function getConversationSummary() {
       messages: [{ content: compactPrompt, role: "user" }],
       stopWhen: aiDeps.isLoopFinished(),
       abortSignal: getApiStreamAbortSignal(),
+      timeout: baseTimeoutSettings,
       ...structuredOutputOpts,
     }),
   );
