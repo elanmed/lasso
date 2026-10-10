@@ -83,4 +83,23 @@ describe("config-types", () => {
       });
     });
   });
+
+  describe("contextWindowPerModel", () => {
+    const schema = ConfigSchema.shape.contextWindowPerModel;
+
+    it("accepts a context window equal to the minimum", () => {
+      const result = schema.safeParse({ "test-model": 40_000 });
+      assert.deepStrictEqual(result.data, { "test-model": 40_000 });
+    });
+
+    it("accepts a null context window", () => {
+      const result = schema.safeParse({ "test-model": null });
+      assert.deepStrictEqual(result.data, { "test-model": null });
+    });
+
+    it("rejects a context window below the minimum", () => {
+      const result = schema.safeParse({ "test-model": 39_999 });
+      assert.strictEqual(result.success, false);
+    });
+  });
 });

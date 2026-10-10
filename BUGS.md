@@ -24,20 +24,6 @@ Overall, the codebase is in good shape, with consistent error handling and thoro
 +  return { stdout, stderr };
 ```
 
-### 5. Compaction crashes the process when the context window is under 40,000 tokens
-
-- Location: `api.ts`, `getMergedSummaries`
-- Severity: medium
-- What is wrong: `getMaxNumberSummaries` is `floor(0.25 * window / 5000)`, which is 1 for a 32k window and 0 under 20k. Once `summaries.length >= max`, the pair-search loop never runs, `summaries[-1]` is `undefined`, and `assertAtBuildtime` throws. The error is not caught in `maybeCompact`, so `main` exits.
-- How to trigger: Set `contextWindowPerModel` to 32000 and chat until the second compaction.
-- Suggested fix:
-
-```diff
--  if (summaries.length < maxNumberSummaries) {
-+  const minimumSummariesToMerge = 2;
-+  if (summaries.length < Math.max(maxNumberSummaries, minimumSummariesToMerge)) {
-```
-
 ### 6. `/resume` with no args can pick an empty session and give up
 
 - Location: `log.ts` `initSessionFile`, `input.ts` `resumeWithNoArgs`

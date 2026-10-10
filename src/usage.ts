@@ -18,15 +18,17 @@ import { fsDeps } from "./deps.ts";
 import { getUsageLogLockPath, getUsageLogPath } from "./paths.ts";
 import { print } from "./print.ts";
 import { getBaseAgentPrompt } from "./prompts.ts";
-import { MISSING } from "./missing.ts";
+import {
+  dedicatedSummaryRatio,
+  maxTokenCountPerSummary,
+  MISSING,
+} from "./missing.ts";
 
 export const compactTriggerRatio = 0.95;
-export const dedicatedSummaryRatio = 0.25;
 export const dedicatedPromptOverheadRatio =
   compactTriggerRatio - dedicatedSummaryRatio;
 
 export const defaultContextWindow = 128_000;
-const maxTokenCountPerSummary = 5_000;
 export const maxCharCountPerSummary = approxTokensToCharLen(
   maxTokenCountPerSummary,
 );

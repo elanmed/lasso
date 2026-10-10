@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { MISSING } from "./missing.ts";
+import { minContextWindow, MISSING } from "./missing.ts";
 
 const KeySchema = z.object({
   name: z.string().length(1),
@@ -58,7 +58,10 @@ const PricingPerModelSchema = z.record(
   z.string(),
   ModelPricingSchema.nullable(),
 );
-const ContextWindowPerModelSchema = z.record(z.string(), z.number().nullable());
+const ContextWindowPerModelSchema = z.record(
+  z.string(),
+  z.number().min(minContextWindow).nullable(),
+);
 const DefaultedPricingPerModelSchema = z.record(z.string(), ModelPricingSchema);
 const DefaultedContextWindowPerModelSchema = z.record(z.string(), z.number());
 const KeymapsSchema = z.record(z.string(), KeySchema);
