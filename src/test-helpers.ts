@@ -1,7 +1,7 @@
 import os from "node:os";
 import crypto from "node:crypto";
 import { mock } from "node:test";
-import assert from "node:assert";
+import assert from "node:assert/strict";
 import readline from "node:readline/promises";
 import { EventEmitter } from "node:events";
 import { type ChildProcess } from "node:child_process";

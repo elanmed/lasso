@@ -1,4 +1,4 @@
-import assert from "node:assert";
+import assert from "node:assert/strict";
 import { once } from "node:events";
 import type { ChildProcess } from "node:child_process";
 

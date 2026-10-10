@@ -1,5 +1,5 @@
 import { describe, it, beforeEach, afterEach, mock } from "node:test";
-import assert from "node:assert";
+import assert from "node:assert/strict";
 import os from "node:os";
 import { stdin } from "node:process";
 import {
