@@ -167,19 +167,6 @@ find ~/.local/state/lasso/sessions -size 0 -delete
 +  }
 ```
 
-### 12. `forceSingleLine` glues words together
-
-- Location: `utils.ts`, `maybeForceSingleLine`
-- Severity: low
-- What is wrong: Newlines are replaced with an empty string, so multi-line zod or API errors read like "...expected stringat path...".
-- How to trigger: Feed a config with two validation errors.
-- Suggested fix:
-
-```diff
--    return str.replaceAll("\n", "");
-+    return str.replaceAll("\n", " ");
-```
-
 ### 13. Startup timing display can corrupt
 
 - Location: `config.ts` `initState`, `context.ts` `getSkillJSON`, `mcp.ts` `getMcpClients`

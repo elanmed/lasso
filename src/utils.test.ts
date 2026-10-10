@@ -171,6 +171,23 @@ describe("utils", () => {
       assert.equal(getMessageFromError(undefined), "undefined");
       assert.equal(getMessageFromError(Symbol("test")), "Symbol(test)");
     });
+
+    it("joins multi-line error messages with spaces by default", () => {
+      assert.equal(
+        getMessageFromError(new Error("first line\nsecond line")),
+        "first line second line",
+      );
+    });
+
+    it("keeps newlines when forceSingleLine is false", () => {
+      assert.equal(
+        getMessageFromError(new Error("first line\nsecond line"), {
+          forceSingleLine: false,
+        }),
+        `first line
+second line`,
+      );
+    });
   });
 
   describe("isAbortError", () => {

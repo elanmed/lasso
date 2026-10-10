@@ -49,7 +49,7 @@ export function isReadlineClosedError(error: unknown): boolean {
 
 function maybeForceSingleLine(str: string, forceSingleLine: boolean) {
   if (forceSingleLine) {
-    return str.replaceAll("\n", "");
+    return str.replaceAll("\n", " ");
   }
   return str;
 }
