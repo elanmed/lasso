@@ -4654,6 +4654,39 @@ usageLimit:
       );
     });
 
+    it("prints the error and does not create the local config when it cannot be checked", async () => {
+      mock.method(fsDeps, "existsSync", (path: string) => {
+        if (path === "/test-cwd/.lasso/settings.yaml")
+          throw makeErrnoError("EACCES");
+        return false;
+      });
+      actions.resetStdout();
+      await initLocalConfig();
+      assert.deepStrictEqual(getWrites(), [
+        `${RED}Failed to check if /test-cwd/.lasso/settings.yaml exists. Error: EACCES${RESET}\n`,
+      ]);
+      assert.strictEqual(
+        testFs._files.has("/test-cwd/.lasso/settings.yaml"),
+        false,
+      );
+    });
+
+    it("prints the error and does not create the local config when its directory cannot be checked", async () => {
+      mock.method(fsDeps, "existsSync", (path: string) => {
+        if (path === "/test-cwd/.lasso") throw makeErrnoError("EACCES");
+        return false;
+      });
+      actions.resetStdout();
+      await initLocalConfig();
+      assert.deepStrictEqual(getWrites(), [
+        `${RED}Failed to check if /test-cwd/.lasso exists. Error: EACCES${RESET}\n`,
+      ]);
+      assert.strictEqual(
+        testFs._files.has("/test-cwd/.lasso/settings.yaml"),
+        false,
+      );
+    });
+
     it("warns when writing the local config fails", async () => {
       mock.method(fsDeps, "writeFile", () =>
         Promise.reject(new Error("write failed")),
@@ -4663,6 +4696,39 @@ usageLimit:
       assert.deepStrictEqual(getWrites(), [
         `${RED}Failed to write the config to /test-cwd/.lasso/settings.yaml${RESET}\n`,
       ]);
+    });
+
+    it("prints the error and does not create the global config when it cannot be checked", async () => {
+      mock.method(fsDeps, "existsSync", (path: string) => {
+        if (path === "/fake-home/.config/lasso/settings.yaml")
+          throw makeErrnoError("EACCES");
+        return false;
+      });
+      actions.resetStdout();
+      await initGlobalConfig();
+      assert.deepStrictEqual(getWrites(), [
+        `${RED}Failed to check if /fake-home/.config/lasso/settings.yaml exists. Error: EACCES${RESET}\n`,
+      ]);
+      assert.strictEqual(
+        testFs._files.has("/fake-home/.config/lasso/settings.yaml"),
+        false,
+      );
+    });
+
+    it("prints the error and does not create the global config when its directory cannot be checked", async () => {
+      mock.method(fsDeps, "existsSync", (path: string) => {
+        if (path === "/fake-home/.config/lasso") throw makeErrnoError("EACCES");
+        return false;
+      });
+      actions.resetStdout();
+      await initGlobalConfig();
+      assert.deepStrictEqual(getWrites(), [
+        `${RED}Failed to check if /fake-home/.config/lasso exists. Error: EACCES${RESET}\n`,
+      ]);
+      assert.strictEqual(
+        testFs._files.has("/fake-home/.config/lasso/settings.yaml"),
+        false,
+      );
     });
 
     it("creates the global config in ~/.config/lasso/settings.yaml", async () => {

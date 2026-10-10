@@ -608,7 +608,14 @@ interface SessionFileInfo {
 
 export async function listSessionFiles() {
   const sessionDir = getSessionDir();
-  if (!fsDeps.existsSync(sessionDir)) return [];
+  const sessionDirExistsResult = tryCatch(() => fsDeps.existsSync(sessionDir));
+  if (!sessionDirExistsResult.ok) {
+    print.error(
+      `Failed to check if ${sessionDir} exists. Error: ${getMessageFromError(sessionDirExistsResult.error)}`,
+    );
+    return [];
+  }
+  if (!sessionDirExistsResult.value) return [];
 
   const sessionFiles: SessionFileInfo[] = [];
   for (const name of await fsDeps.readdir(sessionDir)) {
@@ -1734,7 +1741,14 @@ export async function getContextEntries() {
 
   for (const agentFileDir of agentFileDirs) {
     const filePath = join(agentFileDir, "AGENTS.md");
-    if (!fsDeps.existsSync(filePath)) continue;
+    const filePathExistsResult = tryCatch(() => fsDeps.existsSync(filePath));
+    if (!filePathExistsResult.ok) {
+      print.error(
+        `Failed to check if ${filePath} exists. Error: ${getMessageFromError(filePathExistsResult.error)}`,
+      );
+      continue;
+    }
+    if (!filePathExistsResult.value) continue;
     const readResult = await tryCatchAsync(fsDeps.readFile(filePath, "utf8"));
     if (!readResult.ok) {
       actions.appendConfigWarningMessage(
@@ -1984,7 +1998,14 @@ export async function syncInitialModelUsageForLimitWindow() {
 
   const path = getUsageLogPath();
   const dir = dirname(path);
-  if (!fsDeps.existsSync(dir)) return;
+  const dirExistsResult = tryCatch(() => fsDeps.existsSync(dir));
+  if (!dirExistsResult.ok) {
+    print.error(
+      `Failed to check if ${dir} exists. Error: ${getMessageFromError(dirExistsResult.error)}`,
+    );
+    return;
+  }
+  if (!dirExistsResult.value) return;
 
   await getLockQueue(getUsageLogLockPath()).enqueue(async () => {
     const lockUtils = createLockUtils(getUsageLogLockPath());
@@ -1995,8 +2016,25 @@ export async function syncInitialModelUsageForLimitWindow() {
       );
     }
 
+    const pathExistsResult = tryCatch(() => fsDeps.existsSync(path));
+    if (!pathExistsResult.ok) {
+      print.error(
+        `Failed to check if ${path} exists. Error: ${getMessageFromError(pathExistsResult.error)}`,
+      );
+      await lockUtils.deleteLock();
+      return;
+    }
+    if (!pathExistsResult.value) {
+      await tryCatchAsync(fsDeps.writeFile(path, JSON.stringify({})));
+      await lockUtils.deleteLock();
+      return;
+    }
+
     const readResult = await tryCatchAsync(fsDeps.readFile(path, "utf8"));
     if (!readResult.ok) {
+      print.error(
+        `Failed to read the usage log at ${path}. Error: ${getMessageFromError(readResult.error)}`,
+      );
       await tryCatchAsync(fsDeps.writeFile(path, JSON.stringify({})));
       await lockUtils.deleteLock();
       return;
@@ -2006,6 +2044,9 @@ export async function syncInitialModelUsageForLimitWindow() {
       ModelUsageMapSchema.parse(JSON.parse(readResult.value)),
     );
     if (!parseResult.ok) {
+      print.error(
+        `Failed to parse the usage log at ${path}. Error: ${getMessageFromError(parseResult.error)}`,
+      );
       await tryCatchAsync(fsDeps.writeFile(path, JSON.stringify({})));
       await lockUtils.deleteLock();
       return;
@@ -2029,7 +2070,14 @@ export async function syncNewModelUsageForLimitWindow(
 
   const path = getUsageLogPath();
   const dir = dirname(path);
-  if (!fsDeps.existsSync(dir)) {
+  const dirExistsResult = tryCatch(() => fsDeps.existsSync(dir));
+  if (!dirExistsResult.ok) {
+    print.error(
+      `Failed to check if ${dir} exists. Error: ${getMessageFromError(dirExistsResult.error)}`,
+    );
+    return;
+  }
+  if (!dirExistsResult.value) {
     const mkDirResult = await tryCatchAsync(
       fsDeps.mkdir(dir, { recursive: true }),
     );
@@ -2048,13 +2096,30 @@ export async function syncNewModelUsageForLimitWindow(
       );
     }
 
-    const readResult = await tryCatchAsync(fsDeps.readFile(path, "utf8"));
-    const loggedModelUsage = (() => {
-      if (!readResult.ok) return {};
+    const loggedModelUsage = await (async () => {
+      const pathExistsResult = tryCatch(() => fsDeps.existsSync(path));
+      if (!pathExistsResult.ok) {
+        print.error(
+          `Failed to check if ${path} exists. Error: ${getMessageFromError(pathExistsResult.error)}`,
+        );
+        return {};
+      }
+      if (!pathExistsResult.value) return {};
+
+      const readResult = await tryCatchAsync(fsDeps.readFile(path, "utf8"));
+      if (!readResult.ok) {
+        print.error(
+          `Failed to read the usage log at ${path}. Error: ${getMessageFromError(readResult.error)}`,
+        );
+        return {};
+      }
       const parseResult = tryCatch(() =>
         ModelUsageMapSchema.parse(JSON.parse(readResult.value)),
       );
       if (parseResult.ok) return parseResult.value;
+      print.error(
+        `Failed to parse the usage log at ${path}. Error: ${getMessageFromError(parseResult.error)}`,
+      );
       return {};
     })();
     (loggedModelUsage[model] ??= []).push(usage);
@@ -2537,7 +2602,14 @@ export async function syncSessionFile({
 } = {}) {
   const sessionFilePath = getState().session.sessionFilePath;
   const sessionDir = getSessionDir();
-  if (!fsDeps.existsSync(sessionDir)) {
+  const sessionDirExistsResult = tryCatch(() => fsDeps.existsSync(sessionDir));
+  if (!sessionDirExistsResult.ok) {
+    print.error(
+      `Failed to check if ${sessionDir} exists. Error: ${getMessageFromError(sessionDirExistsResult.error)}`,
+    );
+    return;
+  }
+  if (!sessionDirExistsResult.value) {
     const mkdirResult = await tryCatchAsync(
       fsDeps.mkdir(sessionDir, { recursive: true }),
     );
@@ -3667,7 +3739,14 @@ export function stringifyTools() {
 }
 
 export async function readConfigFileStr(path: string) {
-  if (!fsDeps.existsSync(path)) return "{}";
+  const pathExistsResult = tryCatch(() => fsDeps.existsSync(path));
+  if (!pathExistsResult.ok) {
+    print.error(
+      `Failed to check if ${path} exists. Error: ${getMessageFromError(pathExistsResult.error)}`,
+    );
+    return "{}";
+  }
+  if (!pathExistsResult.value) return "{}";
 
   const readResult = await tryCatchAsync(fsDeps.readFile(path, "utf8"));
   if (!readResult.ok) {

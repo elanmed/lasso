@@ -10,6 +10,7 @@ import {
   assertAtBuildtime,
   isAbortError,
   isReadlineClosedError,
+  tryCatch,
   tryCatchAsync,
   getMessageFromError,
   normalizeNewline,
@@ -1473,13 +1474,27 @@ usageLimit:
 export async function initLocalConfig() {
   const path = getLocalConfigPath();
 
-  if (fsDeps.existsSync(path)) {
+  const pathExistsResult = tryCatch(() => fsDeps.existsSync(path));
+  if (!pathExistsResult.ok) {
+    print.error(
+      `Failed to check if ${path} exists. Error: ${getMessageFromError(pathExistsResult.error)}`,
+    );
+    return;
+  }
+  if (pathExistsResult.value) {
     print.warning(`The local config already exists at ${path}`);
     return;
   }
 
   const dir = dirname(path);
-  if (!fsDeps.existsSync(dir)) {
+  const dirExistsResult = tryCatch(() => fsDeps.existsSync(dir));
+  if (!dirExistsResult.ok) {
+    print.error(
+      `Failed to check if ${dir} exists. Error: ${getMessageFromError(dirExistsResult.error)}`,
+    );
+    return;
+  }
+  if (!dirExistsResult.value) {
     const mkdirResult = await tryCatchAsync(
       fsDeps.mkdir(dir, { recursive: true }),
     );
@@ -1502,13 +1517,27 @@ export async function initLocalConfig() {
 export async function initGlobalConfig() {
   const path = getGlobalConfigPath();
 
-  if (fsDeps.existsSync(path)) {
+  const pathExistsResult = tryCatch(() => fsDeps.existsSync(path));
+  if (!pathExistsResult.ok) {
+    print.error(
+      `Failed to check if ${path} exists. Error: ${getMessageFromError(pathExistsResult.error)}`,
+    );
+    return;
+  }
+  if (pathExistsResult.value) {
     print.warning(`The global config already exists at ${path}`);
     return;
   }
 
   const dir = dirname(path);
-  if (!fsDeps.existsSync(dir)) {
+  const dirExistsResult = tryCatch(() => fsDeps.existsSync(dir));
+  if (!dirExistsResult.ok) {
+    print.error(
+      `Failed to check if ${dir} exists. Error: ${getMessageFromError(dirExistsResult.error)}`,
+    );
+    return;
+  }
+  if (!dirExistsResult.value) {
     const mkdirResult = await tryCatchAsync(
       fsDeps.mkdir(dir, { recursive: true }),
     );
