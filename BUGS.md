@@ -153,21 +153,6 @@ find ~/.local/state/lasso/sessions -size 0 -delete
 +  }
 ```
 
-### 13. Startup timing display can corrupt
-
-- Location: `config.ts` `initState`, `context.ts` `getSkillJSON`, `mcp.ts` `getMcpClients`
-- Severity: low
-- What is wrong: The parallel logger moves the cursor up by a fixed row count. `getSkillJSON` calls `print.error` mid-startup, and MCP failure messages print after the MCP promises settle, which can be before the skills or commands rows finish. Either adds a row and later `end()` calls overwrite the wrong line.
-- How to trigger: Add a malformed `SKILL.md` and start with timings enabled.
-- Suggested fix: Route those messages through `actions.appendConfigWarningMessage`, for example:
-
-```diff
--    print.error(`Failed to read the skill at ${skillMdPath}`);
-+    actions.appendConfigWarningMessage(
-+      `Failed to read the skill at \`${skillMdPath}\`, ignoring.`,
-+    );
-```
-
 ## Needs verification
 
 1. Cost tracking likely uses last-step usage only. `appendModelUsage(usage)` reads `usage` from `generateText`. In recent `ai` versions this is believed to be the last step, with `totalUsage` summing all steps. In a tool loop that would undercount spend by roughly the step count. Check by logging `totalUsage` next to `usage` on a multi-tool turn.

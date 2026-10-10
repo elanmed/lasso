@@ -3,7 +3,7 @@ import { Experimental_StdioMCPTransport as StdioClientTransport } from "@ai-sdk/
 import type { MCPClient } from "@ai-sdk/mcp";
 import { actions, getState, type MCPToolSet } from "./state.ts";
 import type { Mcp } from "./config-types.ts";
-import { print, type ParallelPerformanceLogger } from "./print.ts";
+import { type ParallelPerformanceLogger } from "./print.ts";
 import { getMessageFromError, tryCatchAsync } from "./utils.ts";
 import { mcpDeps } from "./deps.ts";
 
@@ -55,7 +55,6 @@ async function getMcpClients({
   const mcpClients: Record<string, MCPClient> = {};
 
   const serverEntries = Object.entries(getState().config.mcps);
-  const failureMessages: string[] = [];
   await Promise.all(
     serverEntries.map(async ([name, config]) => {
       performanceLogger.start(name);
@@ -64,13 +63,12 @@ async function getMcpClients({
       if (createMcpResult.ok) {
         mcpClients[name] = createMcpResult.value;
       } else {
-        failureMessages.push(
-          `Failed to start the ${name} mcp server: ${getMessageFromError(createMcpResult.error, { forceSingleLine: true })}`,
+        actions.appendConfigWarningMessage(
+          `Failed to start the ${name} mcp server, ignoring. Error: ${getMessageFromError(createMcpResult.error, { forceSingleLine: true })}`,
         );
       }
     }),
   );
-  failureMessages.forEach((message) => print.error(message));
 
   return mcpClients;
 }

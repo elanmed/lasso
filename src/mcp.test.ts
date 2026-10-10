@@ -14,7 +14,6 @@ import {
   DOWN_1,
   DOWN_2,
   GREEN,
-  RED,
   RESET,
   UP_1,
   UP_2,
@@ -309,7 +308,7 @@ describe("mcp", () => {
   });
 
   describe("startup printing", () => {
-    it("prints an error when a client fails to start", async () => {
+    it("records a warning when a client fails to start", async () => {
       mockMcpClients(new Error("connection refused"));
       setMcps("first");
 
@@ -324,11 +323,13 @@ describe("mcp", () => {
         `${BLUE}Starting first mcp server: ${RESET}`,
         `${GREEN}0.0ms${RESET}`,
         `${DOWN_1}${CR}`,
-        `${RED}Failed to start the first mcp server: connection refused${RESET}\n`,
+      ]);
+      assert.deepStrictEqual(getState().content.configWarningMessages, [
+        "Failed to start the first mcp server, ignoring. Error: connection refused",
       ]);
     });
 
-    it("prints all labels upfront and failure messages after every server settles", async () => {
+    it("records a warning for every server that fails to start", async () => {
       mockMcpClients(new Error("first error"), new Error("second error"));
       setMcps("first", "second");
 
@@ -348,8 +349,10 @@ describe("mcp", () => {
         `${BLUE}Starting second mcp server: ${RESET}`,
         `${GREEN}0.0ms${RESET}`,
         `${DOWN_1}${CR}`,
-        `${RED}Failed to start the first mcp server: first error${RESET}\n`,
-        `${RED}Failed to start the second mcp server: second error${RESET}\n`,
+      ]);
+      assert.deepStrictEqual(getState().content.configWarningMessages, [
+        "Failed to start the first mcp server, ignoring. Error: first error",
+        "Failed to start the second mcp server, ignoring. Error: second error",
       ]);
     });
 

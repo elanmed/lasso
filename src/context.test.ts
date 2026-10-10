@@ -3,8 +3,6 @@ import assert from "node:assert";
 import {
   mockGitLsFilesRejection,
   mockStdoutWrites,
-  RED,
-  RESET,
   setupTestContext,
   testFs,
 } from "./test-helpers.ts";
@@ -826,8 +824,47 @@ description: A valid skill
       const result = await getSkillJSON("/some/dir/SKILL.md");
 
       assert.equal(result, null);
-      assert.deepStrictEqual(writes(), [
-        `${RED}Failed to read the skill at /some/dir/SKILL.md${RESET}\n`,
+      assert.deepStrictEqual(writes(), []);
+      assert.deepStrictEqual(getState().content.configWarningMessages, [
+        "Failed to read the skill at /some/dir/SKILL.md, ignoring. Error: ENOENT: /some/dir/SKILL.md",
+      ]);
+    });
+
+    it("warns and returns null when the front matter is not valid YAML", async () => {
+      testFs._files.set(
+        "/skill-dir/SKILL.md",
+        `---
+name: [
+---
+# Deploy`,
+      );
+      const writes = mockStdoutWrites();
+
+      const result = await getSkillJSON("/skill-dir/SKILL.md");
+
+      assert.equal(result, null);
+      assert.deepStrictEqual(writes(), []);
+      assert.deepStrictEqual(getState().content.configWarningMessages, [
+        "Malformed skill at /skill-dir/SKILL.md! A skill's front matter must contain valid YAML between `---` and `---`.",
+      ]);
+    });
+
+    it("warns and returns null when the front matter lacks a description", async () => {
+      testFs._files.set(
+        "/skill-dir/SKILL.md",
+        `---
+name: deploy
+---
+# Deploy`,
+      );
+      const writes = mockStdoutWrites();
+
+      const result = await getSkillJSON("/skill-dir/SKILL.md");
+
+      assert.equal(result, null);
+      assert.deepStrictEqual(writes(), []);
+      assert.deepStrictEqual(getState().content.configWarningMessages, [
+        "Malformed skill at /skill-dir/SKILL.md! A skill's front matter must contain a `name` and `description` field.",
       ]);
     });
 

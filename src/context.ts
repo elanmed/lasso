@@ -8,7 +8,6 @@ import {
   tryCatch,
   tryCatchAsync,
 } from "./utils.ts";
-import { print } from "./print.ts";
 import { actions, getState } from "./state.ts";
 import {
   getGlobalContextDir,
@@ -176,20 +175,22 @@ export function parseFrontMatter(content: string) {
 export async function getSkillJSON(skillMdPath: string) {
   const readResult = await tryCatchAsync(fsDeps.readFile(skillMdPath, "utf8"));
   if (!readResult.ok) {
-    print.error(`Failed to read the skill at ${skillMdPath}`);
+    actions.appendConfigWarningMessage(
+      `Failed to read the skill at ${skillMdPath}, ignoring. Error: ${getMessageFromError(readResult.error)}`,
+    );
     return null;
   }
 
   const parsed = parseFrontMatter(readResult.value);
   if (parsed === null) {
-    print.error(
+    actions.appendConfigWarningMessage(
       `Malformed skill at ${skillMdPath}! A skill's front matter must contain valid YAML between \`---\` and \`---\`.`,
     );
     return null;
   }
   const parseResult = skillMetadataSchema.safeParse(parsed.data);
   if (!parseResult.success) {
-    print.error(
+    actions.appendConfigWarningMessage(
       `Malformed skill at ${skillMdPath}! A skill's front matter must contain a \`name\` and \`description\` field.`,
     );
     return null;
