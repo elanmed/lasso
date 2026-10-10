@@ -23,6 +23,8 @@ import {
   decimalToPercent,
   shellQuote,
   isShellSafePath,
+  removeMediaReplacer,
+  getApproxTokensFromMessages,
 } from "./utils.ts";
 import {
   testFs,
@@ -770,6 +772,170 @@ second line`,
           assert.doesNotThrow(() => lockUtils.deleteLock());
         });
       });
+    });
+  });
+
+  describe("removeMediaReplacer", () => {
+    const stringifyWithoutMedia = (messages: unknown[]): unknown =>
+      JSON.parse(JSON.stringify(messages, removeMediaReplacer));
+
+    it("replaces top-level image and file parts", () => {
+      const messages = [
+        {
+          role: "user",
+          content: [
+            { type: "text", text: "look" },
+            { type: "image", image: "AAAA" },
+            { type: "file", data: "BBBB", mediaType: "application/pdf" },
+          ],
+        },
+      ];
+      assert.deepStrictEqual(stringifyWithoutMedia(messages), [
+        {
+          role: "user",
+          content: [
+            { type: "text", text: "look" },
+            "[media omitted]",
+            "[media omitted]",
+          ],
+        },
+      ]);
+    });
+
+    it("replaces deprecated image-data and file-data values", () => {
+      const messages = [
+        {
+          role: "tool",
+          content: [
+            {
+              type: "tool-result",
+              toolCallId: "call-1",
+              toolName: "read_image",
+              output: {
+                type: "content",
+                value: [
+                  { type: "image-data", data: "IMG", mediaType: "image/png" },
+                  {
+                    type: "file-data",
+                    data: "FILE",
+                    mediaType: "application/pdf",
+                  },
+                ],
+              },
+            },
+          ],
+        },
+      ];
+      assert.deepStrictEqual(stringifyWithoutMedia(messages), [
+        {
+          role: "tool",
+          content: [
+            {
+              type: "tool-result",
+              toolCallId: "call-1",
+              toolName: "read_image",
+              output: {
+                type: "content",
+                value: ["[media omitted]", "[media omitted]"],
+              },
+            },
+          ],
+        },
+      ]);
+    });
+
+    it("replaces image and file values in tool-result content output", () => {
+      const messages = [
+        {
+          role: "tool",
+          content: [
+            {
+              type: "tool-result",
+              toolCallId: "call-1",
+              toolName: "read_image",
+              output: {
+                type: "content",
+                value: [
+                  { type: "text", text: "Read image" },
+                  {
+                    type: "file",
+                    data: { type: "data", data: "BASE64" },
+                    mediaType: "image/png",
+                  },
+                ],
+              },
+            },
+          ],
+        },
+      ];
+      assert.deepStrictEqual(stringifyWithoutMedia(messages), [
+        {
+          role: "tool",
+          content: [
+            {
+              type: "tool-result",
+              toolCallId: "call-1",
+              toolName: "read_image",
+              output: {
+                type: "content",
+                value: [
+                  { type: "text", text: "Read image" },
+                  "[media omitted]",
+                ],
+              },
+            },
+          ],
+        },
+      ]);
+    });
+
+    it("leaves string content and non-content tool-result outputs unchanged", () => {
+      const messages = [
+        { role: "user", content: "hello" },
+        {
+          role: "tool",
+          content: [
+            {
+              type: "tool-result",
+              toolCallId: "call-2",
+              toolName: "bash",
+              output: { type: "text", value: "ok" },
+            },
+          ],
+        },
+      ];
+      assert.deepStrictEqual(stringifyWithoutMedia(messages), messages);
+    });
+  });
+
+  describe("getApproxTokensFromMessages", () => {
+    it("does not count base64 image data in tool results", () => {
+      const makeMessages = (data: string) => [
+        {
+          role: "tool",
+          content: [
+            {
+              type: "tool-result",
+              toolCallId: "call-1",
+              toolName: "read_image",
+              output: {
+                type: "content",
+                value: [
+                  {
+                    type: "file",
+                    data: { type: "data", data: data },
+                    mediaType: "image/png",
+                  },
+                ],
+              },
+            },
+          ],
+        },
+      ];
+      assert.strictEqual(
+        getApproxTokensFromMessages(makeMessages("A".repeat(100_000))),
+        getApproxTokensFromMessages(makeMessages("B")),
+      );
     });
   });
 

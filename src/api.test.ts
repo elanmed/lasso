@@ -1249,6 +1249,48 @@ describe("api", () => {
     };
 
     describe("summarizes the conversation", () => {
+      it("strips image data from tool results in the compact prompt", async () => {
+        actions.setConversationSummaries([]);
+        actions.setConversationMessages([
+          {
+            role: "tool",
+            content: [
+              {
+                type: "tool-result",
+                toolCallId: "call-1",
+                toolName: "read_image",
+                output: {
+                  type: "content",
+                  value: [
+                    {
+                      type: "file",
+                      data: { type: "data", data: "IMAGEBYTES" },
+                      mediaType: "image/png",
+                    },
+                  ],
+                },
+              },
+            ],
+          },
+        ]);
+        actions.setPromptTokens(85_000);
+        actions.setPromptTokensDirty(false);
+        let capturedOpts: Record<string, unknown> | undefined;
+        mock.method(aiDeps, "generateText", (opts: Record<string, unknown>) => {
+          capturedOpts = opts;
+          return Promise.resolve(
+            makeGenerateTextResult({
+              output: { compacted: "compacted summary" },
+              usage,
+            }),
+          );
+        });
+        await getConversationSummary();
+        const capturedMessage = getCapturedMessages(capturedOpts)[0];
+        assert(capturedMessage !== undefined);
+        assert.doesNotMatch(JSON.stringify(capturedMessage), /IMAGEBYTES/);
+      });
+
       it("sends the unsummarized messages as a compact prompt to the api", async () => {
         seedConversation();
         let capturedOpts: Record<string, unknown> | undefined;

@@ -9,6 +9,7 @@ import {
   safeStringify,
   strToApproxTokens,
   markdownFence,
+  removeMediaReplacer,
 } from "./utils.ts";
 import { createToolCallDiffer } from "./differ.ts";
 import { getUnicodeChar } from "./text.ts";
@@ -332,6 +333,7 @@ export async function getConversationSummary() {
         getState().conversation.messages.slice(
           getState().conversation.summaries.length,
         ),
+        removeMediaReplacer,
       ),
     ),
   });

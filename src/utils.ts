@@ -10,18 +10,24 @@ import type { Color } from "./print.ts";
 
 export type Result<T> = { ok: true; value: T } | { ok: false; error: unknown };
 
+function isMediaPart(value: unknown) {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "type" in value &&
+    (value.type === "image" ||
+      value.type === "file" ||
+      value.type === "image-data" ||
+      value.type === "file-data")
+  );
+}
+
+export function removeMediaReplacer(_key: string, value: unknown) {
+  return isMediaPart(value) ? "[media omitted]" : value;
+}
+
 export function getApproxTokensFromMessages(messages: ModelMessage[]) {
-  const textOnly = messages.map((message) => {
-    const content = message.content as string | { type: string }[];
-    if (typeof content === "string") return message;
-    return {
-      ...message,
-      content: content.filter(
-        (part) => part.type !== "image" && part.type !== "file",
-      ),
-    };
-  });
-  return strToApproxTokens(JSON.stringify(textOnly));
+  return strToApproxTokens(JSON.stringify(messages, removeMediaReplacer));
 }
 
 export function strToApproxTokens(str: string) {
