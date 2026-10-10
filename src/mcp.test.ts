@@ -1,12 +1,13 @@
 import { afterEach, beforeEach, describe, it, mock } from "node:test";
 import assert from "node:assert";
-import { actions, getState } from "./state.ts";
-import { initMcpState } from "./mcp.ts";
 import {
+  actions,
+  getState,
+  initMcpState,
   executeMcpListResourcesTool,
   executeMcpReadResourceTool,
-} from "./tools.ts";
-import { stringify } from "./utils.ts";
+  stringify,
+} from "./utils.ts";
 import {
   BLUE,
   CLEAR_LINE,

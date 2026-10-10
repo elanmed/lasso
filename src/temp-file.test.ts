@@ -1,6 +1,6 @@
 import { describe, it, beforeEach, afterEach, mock } from "node:test";
 import assert from "node:assert";
-import { getTempFileName } from "./temp-file.ts";
+import { getTempFileName } from "./utils.ts";
 import { fsDeps } from "./deps.ts";
 import {
   mockStdoutWrites,

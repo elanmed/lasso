@@ -1,7 +1,7 @@
 import { describe, it, beforeEach, afterEach, mock } from "node:test";
 import assert from "node:assert";
 import { dirname } from "node:path";
-import type { LanguageModelUsage } from "ai";
+import { type LanguageModelUsage } from "ai";
 import {
   appendModelUsage,
   filterExpiredModelUsage,
@@ -17,8 +17,12 @@ import {
   orApproxTokens,
   syncInitialModelUsageForLimitWindow,
   syncNewModelUsageForLimitWindow,
-} from "./usage.ts";
-import { actions, getState, promptDeps } from "./state.ts";
+  actions,
+  getState,
+  promptDeps,
+  getUsageLogLockPath,
+  getUsageLogPath,
+} from "./utils.ts";
 import { fsDeps } from "./deps.ts";
 import {
   makeErrnoError,
@@ -29,7 +33,6 @@ import {
   RED,
   RESET,
 } from "./test-helpers.ts";
-import { getUsageLogLockPath, getUsageLogPath } from "./paths.ts";
 
 describe("usage", () => {
   afterEach(() => {

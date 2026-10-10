@@ -1,8 +1,7 @@
 import { describe, it, beforeEach, afterEach, mock } from "node:test";
 import assert from "node:assert";
 import { childProcessDeps, fsDeps } from "./deps.ts";
-import { actions } from "./state.ts";
-import { executeBat, formatMarkdown, openWithPager } from "./terminal.ts";
+import { actions, executeBat, formatMarkdown, openWithPager } from "./utils.ts";
 import {
   batPagerCmd,
   makeInvalidString,

@@ -1,10 +1,16 @@
 import { describe, it, beforeEach, afterEach, mock } from "node:test";
 import assert from "node:assert";
-import { actions, getState, promptDeps, SessionFileSchema } from "./state.ts";
-import { getBaseAgentPrompt } from "./prompts.ts";
-import { stringify } from "./utils.ts";
-import { defaultConfig } from "./config-types.ts";
-import { MISSING } from "./missing.ts";
+import {
+  actions,
+  getState,
+  promptDeps,
+  SessionFileSchema,
+  getBaseAgentPrompt,
+  stringify,
+  defaultConfig,
+  MISSING,
+  initMcpState,
+} from "./utils.ts";
 import {
   makeFakeMcpClient,
   makeFakeRl,
@@ -12,7 +18,6 @@ import {
   setupTestContext,
   testFs,
 } from "./test-helpers.ts";
-import { initMcpState } from "./mcp.ts";
 
 const realGetSystemContent = promptDeps.getSystemContent;
 const realGetToolsContentStr = promptDeps.getToolsContentStr;

@@ -4,11 +4,11 @@ import { mock } from "node:test";
 import assert from "node:assert";
 import readline from "node:readline/promises";
 import { EventEmitter } from "node:events";
-import type { ChildProcess } from "node:child_process";
+import { type ChildProcess } from "node:child_process";
 import { stdin } from "node:process";
 import { z } from "zod";
-import type { ModelMessage, ToolSet } from "ai";
-import type { MCPClient } from "@ai-sdk/mcp";
+import { type ModelMessage, type ToolSet } from "ai";
+import { type MCPClient } from "@ai-sdk/mcp";
 import {
   aiDeps,
   childProcessDeps,
@@ -22,13 +22,16 @@ import {
   promptDeps,
   type MCPToolSet,
   type SessionFile,
-} from "./state.ts";
+  type Key,
+  type Mcp,
+  type SdkProvider,
+  getMcpLogIdToLabel,
+  createParallelPerformanceLogger,
+  baseBatFlags,
+  markdownBatFlags,
+  shellQuote,
+} from "./utils.ts";
 import { initKeypress } from "./input.ts";
-import type { Key, Mcp, SdkProvider } from "./config-types.ts";
-import { getMcpLogIdToLabel } from "./config.ts";
-import { createParallelPerformanceLogger } from "./print.ts";
-import { baseBatFlags, markdownBatFlags } from "./terminal.ts";
-import { shellQuote } from "./utils.ts";
 
 export function makeMcpTool() {
   return {

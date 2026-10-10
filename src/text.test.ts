@@ -1,8 +1,6 @@
 import { describe, it, beforeEach, afterEach, mock } from "node:test";
 import assert, { AssertionError } from "node:assert";
-
-import { truncate, getUnicodeChar } from "./text.ts";
-import { actions } from "./state.ts";
+import { truncate, getUnicodeChar, actions } from "./utils.ts";
 import { setupTestContext } from "./test-helpers.ts";
 import { processDeps } from "./deps.ts";
 

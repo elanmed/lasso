@@ -1,11 +1,11 @@
 import { describe, it, beforeEach, afterEach, mock } from "node:test";
 import assert from "node:assert";
-
 import {
   getAvailableSlashCommands,
   getCustomSlashCommandsStr,
-} from "./slash-commands.ts";
-import { actions, getState } from "./state.ts";
+  actions,
+  getState,
+} from "./utils.ts";
 import { fsDeps } from "./deps.ts";
 import { mockStdoutWrites, setupTestContext, testFs } from "./test-helpers.ts";
 

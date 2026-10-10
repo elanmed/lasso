@@ -7,16 +7,17 @@ import {
   testFs,
 } from "./test-helpers.ts";
 import { fsDeps } from "./deps.ts";
-import { getGlobalContextDir } from "./paths.ts";
 import {
+  getGlobalContextDir,
   getContextFilesStr,
   getContextEntries,
   getSkillsStr,
   getSkills,
   getSkillJSON,
   parseFrontMatter,
-} from "./context.ts";
-import { actions, getState } from "./state.ts";
+  actions,
+  getState,
+} from "./utils.ts";
 
 describe("context", () => {
   afterEach(() => {

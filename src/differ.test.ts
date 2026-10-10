@@ -1,8 +1,12 @@
 import { describe, it, beforeEach, afterEach, mock } from "node:test";
 import assert from "node:assert";
-import { createToolCallDiffer, execGitDiff } from "./differ.ts";
+import {
+  createToolCallDiffer,
+  execGitDiff,
+  actions,
+  getState,
+} from "./utils.ts";
 import { fsDeps } from "./deps.ts";
-import { actions, getState } from "./state.ts";
 import {
   BOLD,
   BOLD_RESET,

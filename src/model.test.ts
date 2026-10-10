@@ -1,11 +1,11 @@
 import { describe, it, beforeEach, afterEach, mock } from "node:test";
 import assert from "node:assert";
-import { actions } from "./state.ts";
 import {
+  actions,
   getHeaders,
   getLanguageModel,
   getTranscriptionProvider,
-} from "./model.ts";
+} from "./utils.ts";
 import { setupTestContext, testProcessEnv } from "./test-helpers.ts";
 
 describe("model", () => {

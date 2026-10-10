@@ -12,8 +12,9 @@ import {
   successWithSpacing,
   errorWithSpacing,
   bold,
-} from "./print.ts";
-import { actions, getState } from "./state.ts";
+  actions,
+  getState,
+} from "./utils.ts";
 import { processDeps } from "./deps.ts";
 import {
   BLUE,

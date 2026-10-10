@@ -1,13 +1,13 @@
 import { describe, it, beforeEach, afterEach, mock } from "node:test";
 import assert from "node:assert/strict";
-
 import {
   initSessionFile,
   deleteExpiredSessionFiles,
   syncSessionFile,
   resumeFromSessionFile,
-} from "./log.ts";
-import { actions, getState } from "./state.ts";
+  actions,
+  getState,
+} from "./utils.ts";
 import {
   mockStdoutWrites,
   RED,

@@ -11,7 +11,7 @@ import {
   getStateDir,
   getUsageLogLockPath,
   getUsageLogPath,
-} from "./paths.ts";
+} from "./utils.ts";
 import { testProcessEnv, setupTestContext } from "./test-helpers.ts";
 
 describe("paths", () => {

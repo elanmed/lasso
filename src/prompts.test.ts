@@ -5,7 +5,7 @@ import {
   getConversationSummaryPrompt,
   getMergeSummariesPrompt,
   getSubagentPrompt,
-} from "./prompts.ts";
+} from "./utils.ts";
 
 describe("prompts", () => {
   describe("system prompts", () => {

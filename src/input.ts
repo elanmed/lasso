@@ -5,9 +5,9 @@ import { stdin, stdout } from "node:process";
 import { Writable } from "node:stream";
 import { dirname, join } from "node:path";
 import os from "node:os";
-import type { AssistantContent, Tool } from "ai";
-import { assertAtBuildtime } from "./assert.ts";
+import { type AssistantContent, type Tool } from "ai";
 import {
+  assertAtBuildtime,
   isAbortError,
   isReadlineClosedError,
   tryCatchAsync,
@@ -23,10 +23,8 @@ import {
   safeStringify,
   getPrettyDate,
   sleep,
-} from "./utils.ts";
-import { getTempFileName } from "./temp-file.ts";
-import { truncate } from "./text.ts";
-import {
+  getTempFileName,
+  truncate,
   errorWithSpacing,
   print,
   printNewline,
@@ -35,43 +33,41 @@ import {
   stopLoadingState,
   successWithSpacing,
   wrapInColor,
-} from "./print.ts";
-import { fencePrint, wrapInFence } from "./fence.ts";
-import {
+  fencePrint,
+  wrapInFence,
   getPrettyContextWindowUsage,
   getPrettyMoney,
   getPrettyTokenUsage,
   getUsageMoneyForModel,
   sumUsageTokens,
-} from "./usage-format.ts";
-import {
   getApproxPromptTokens,
   getPrettyTokensByArea,
   getTokensByArea,
   isUsageLimitDisabled,
   warnOnLargePromptOverhead,
-} from "./usage.ts";
-import { actions, getState } from "./state.ts";
-import { initStateRepeatable, warnOnMissingConfig } from "./config.ts";
-import { isSameKey, type Key } from "./config-types.ts";
-import { aiDeps, childProcessDeps, fsDeps, processDeps } from "./deps.ts";
-import { getGlobalConfigPath, getLocalConfigPath } from "./paths.ts";
-import { contextFileSkillNamePrefix } from "./context.ts";
-import { execGitDiff } from "./differ.ts";
-import { formatMarkdown, openWithPager } from "./terminal.ts";
-import {
+  actions,
+  getState,
+  initStateRepeatable,
+  warnOnMissingConfig,
+  isSameKey,
+  type Key,
+  getGlobalConfigPath,
+  getLocalConfigPath,
+  contextFileSkillNamePrefix,
+  execGitDiff,
+  formatMarkdown,
+  openWithPager,
   builtinSlashCommands,
   getAvailableCommandsStr,
   getCustomSlashCommandsStr,
   type BuiltinSlashCommand,
-} from "./slash-commands.ts";
-import {
   getAppendedTranscript,
   resumeFromSessionFile,
   syncSessionFile,
-} from "./log.ts";
-import { harnessTools } from "./tools.ts";
-import { getTranscriptionProvider } from "./model.ts";
+  harnessTools,
+  getTranscriptionProvider,
+} from "./utils.ts";
+import { aiDeps, childProcessDeps, fsDeps, processDeps } from "./deps.ts";
 
 // https://stackoverflow.com/a/33500118
 export const mutedStdout = new Writable({

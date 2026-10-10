@@ -2,10 +2,19 @@ import { describe, it, beforeEach, afterEach, mock } from "node:test";
 import assert from "node:assert";
 import os from "node:os";
 import { stdin } from "node:process";
-import { actions, getState, promptDeps } from "./state.ts";
-import { print, startLoadingState } from "./print.ts";
-
-import { sleep, strToApproxTokens } from "./utils.ts";
+import {
+  actions,
+  getState,
+  promptDeps,
+  print,
+  startLoadingState,
+  sleep,
+  strToApproxTokens,
+  getGlobalConfigPath,
+  getGlobalContextDir,
+  defaultConfig,
+  type Key,
+} from "./utils.ts";
 import {
   parseInputFromEditor,
   shouldMuteStdout,
@@ -77,8 +86,6 @@ import {
   mockProcessExit,
 } from "./test-helpers.ts";
 import { aiDeps, fsDeps } from "./deps.ts";
-import { getGlobalConfigPath, getGlobalContextDir } from "./paths.ts";
-import { defaultConfig, type Key } from "./config-types.ts";
 
 function getTestRl() {
   const rl = getState().terminal.rl;

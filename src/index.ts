@@ -1,18 +1,19 @@
 import { fileURLToPath } from "node:url";
-import { getMessageFromError } from "./utils.ts";
 import {
+  getMessageFromError,
   print,
   printNewline,
   printSessionStartDate,
   stopLoadingState,
-} from "./print.ts";
-import { fencePrint } from "./fence.ts";
-import { executeBat } from "./terminal.ts";
-import {
+  fencePrint,
+  executeBat,
   initState,
   blockOnMissingConfig,
   warnOnMissingConfig,
-} from "./config.ts";
+  actions,
+  getState,
+  warnOnLargePromptOverhead,
+} from "./utils.ts";
 import {
   initReadline,
   initStdin,
@@ -20,9 +21,7 @@ import {
   pollUntilNonBlockingProcessClosed,
   resolveUserInput,
 } from "./input.ts";
-import { resolveApiCall, maybeCompact } from "./api.ts";
-import { actions, getState } from "./state.ts";
-import { warnOnLargePromptOverhead } from "./usage.ts";
+import { resolveApiCall, maybeCompact } from "./app.ts";
 
 async function main() {
   actions.setIsInitializing(true);

@@ -1,8 +1,10 @@
 import { describe, it, beforeEach, afterEach, mock } from "node:test";
 import assert from "node:assert";
 import { dirname } from "node:path";
-import { actions, getState, promptDeps } from "./state.ts";
 import {
+  actions,
+  getState,
+  promptDeps,
   initState,
   initStateFromConfig,
   initStateFirst,
@@ -10,16 +12,15 @@ import {
   blockOnMissingConfig,
   readConfigFileStr,
   warnOnMissingConfig,
-} from "./config.ts";
-import { stringifyTools } from "./tools.ts";
-import { defaultConfig, DefaultedConfigSchema } from "./config-types.ts";
-import { MISSING } from "./missing.ts";
-import {
+  stringifyTools,
+  defaultConfig,
+  DefaultedConfigSchema,
+  MISSING,
   getGlobalConfigPath,
   getLocalConfigPath,
   getGlobalContextDir,
   getUsageLogPath,
-} from "./paths.ts";
+} from "./utils.ts";
 import {
   testFs,
   testProcessEnv,

@@ -1,7 +1,6 @@
 import { describe, it, beforeEach, afterEach, mock } from "node:test";
 import assert from "node:assert";
-import { fencePrint, getPrettyApiDuration } from "./fence.ts";
-import { actions } from "./state.ts";
+import { fencePrint, getPrettyApiDuration, actions } from "./utils.ts";
 import { processDeps } from "./deps.ts";
 import {
   BOLD,

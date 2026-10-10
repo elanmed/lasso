@@ -1,7 +1,6 @@
 import { describe, it, beforeEach, afterEach, mock } from "node:test";
 import assert from "node:assert/strict";
-
-import { debugLog } from "./debug-log.ts";
+import { writeDebugLog } from "./utils.ts";
 import { setupTestContext, testFs } from "./test-helpers.ts";
 
 describe("debugLog", () => {
@@ -17,19 +16,19 @@ describe("debugLog", () => {
 
   describe("does nothing", () => {
     it("does nothing when debugLog is disabled", async () => {
-      await debugLog(false, path, "test message");
+      await writeDebugLog(false, path, "test message");
       assert.equal(testFs._files.has(path), false);
     });
 
     it("does nothing when no debug log path is set", async () => {
-      await debugLog(true, "", "test message");
+      await writeDebugLog(true, "", "test message");
       assert.equal(testFs._files.has(""), false);
     });
   });
 
   describe("creates the directory", () => {
     it("creates directory when log file does not exist", async () => {
-      await debugLog(true, path, "test message");
+      await writeDebugLog(true, path, "test message");
       assert.equal(testFs._dirs.has("/fake-home/.config/lasso"), true);
     });
 
@@ -41,7 +40,7 @@ describe("debugLog", () => {
       });
       testFs._dirs.add("/fake-home/.config/lasso");
 
-      await debugLog(true, path, "test message");
+      await writeDebugLog(true, path, "test message");
 
       assert.deepEqual(mkdirCalls, []);
       assert.equal(
@@ -53,7 +52,7 @@ describe("debugLog", () => {
 
   describe("appends messages", () => {
     it("appends content to log file with timestamp", async () => {
-      await debugLog(true, path, "test message");
+      await writeDebugLog(true, path, "test message");
       assert.equal(
         testFs._files.get(path),
         "2023-11-14T22:13:20.000Z :: test message\n",
@@ -61,8 +60,8 @@ describe("debugLog", () => {
     });
 
     it("appends multiple messages", async () => {
-      await debugLog(true, path, "message 1");
-      await debugLog(true, path, "message 2");
+      await writeDebugLog(true, path, "message 1");
+      await writeDebugLog(true, path, "message 2");
       assert.equal(
         testFs._files.get(path),
         `2023-11-14T22:13:20.000Z :: message 1

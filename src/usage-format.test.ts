@@ -1,15 +1,14 @@
 import { describe, it, beforeEach, afterEach, mock } from "node:test";
 import assert from "node:assert";
-import type { LanguageModelUsage } from "ai";
-
+import { type LanguageModelUsage } from "ai";
 import {
   getPrettyContextWindowUsage,
   getPrettyTokenUsage,
   getUsageMoneyForModel,
   sumUsageTokens,
-} from "./usage-format.ts";
-import { actions } from "./state.ts";
-import { appendModelUsage } from "./usage.ts";
+  actions,
+  appendModelUsage,
+} from "./utils.ts";
 import { setupTestContext } from "./test-helpers.ts";
 import { processDeps } from "./deps.ts";
 

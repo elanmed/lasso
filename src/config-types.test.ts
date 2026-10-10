@@ -1,11 +1,6 @@
 import { describe, it, afterEach, mock } from "node:test";
 import assert from "node:assert";
-
-import {
-  ConfigSchema,
-  DefaultedConfigSchema,
-  isSameKey,
-} from "./config-types.ts";
+import { ConfigSchema, DefaultedConfigSchema, isSameKey } from "./utils.ts";
 
 describe("config-types", () => {
   afterEach(() => {

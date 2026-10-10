@@ -14,7 +14,10 @@ import {
   harnessTools,
   stringifyTools,
   toolPrint,
-} from "./tools.ts";
+  actions,
+  getSubagentPrompt,
+  safeStringify,
+} from "./utils.ts";
 import {
   testFs,
   setupTestContext,
@@ -32,9 +35,6 @@ import {
   RESET,
 } from "./test-helpers.ts";
 import { processDeps } from "./deps.ts";
-import { actions } from "./state.ts";
-import { getSubagentPrompt } from "./prompts.ts";
-import { safeStringify } from "./utils.ts";
 
 describe("tools", () => {
   beforeEach(() => {

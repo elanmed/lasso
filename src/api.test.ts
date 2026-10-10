@@ -1,15 +1,22 @@
 import { describe, it, beforeEach, afterEach, mock } from "node:test";
 import assert from "node:assert";
-import type { ModelMessage } from "ai";
-import { safeStringify, strToApproxTokens } from "./utils.ts";
-import { actions, getState, type MCPToolSet } from "./state.ts";
+import { type ModelMessage } from "ai";
+import {
+  safeStringify,
+  strToApproxTokens,
+  actions,
+  getState,
+  type MCPToolSet,
+  harnessTools,
+  stringifyTools,
+  promptDeps,
+} from "./utils.ts";
 import {
   maybeCompact,
   getConversationSummary,
   getMergedSummaries,
   resolveApiCall,
-} from "./api.ts";
-import { harnessTools, stringifyTools } from "./tools.ts";
+} from "./app.ts";
 import {
   setupTestContext,
   testFs,
@@ -32,7 +39,6 @@ import {
   mockGenerateTextResults,
 } from "./test-helpers.ts";
 import { aiDeps } from "./deps.ts";
-import { promptDeps } from "./state.ts";
 
 describe("api", () => {
   afterEach(() => {
