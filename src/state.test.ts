@@ -907,7 +907,7 @@ hello`,
         cacheWriteTokens: 1,
         date: 1_000,
       };
-      actions.appendToModelUsageForSession(first);
+      actions.appendToModelUsageForSession(first, "gpt-4");
 
       actions.setModel("claude");
       const second = {
@@ -917,7 +917,7 @@ hello`,
         cacheWriteTokens: 0,
         date: 2_000,
       };
-      actions.appendToModelUsageForSession(second);
+      actions.appendToModelUsageForSession(second, "claude");
 
       assert.deepStrictEqual(getState().usage.modelUsageForSession, {
         "gpt-4": [first],

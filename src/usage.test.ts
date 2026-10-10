@@ -195,6 +195,71 @@ describe("usage", () => {
       );
     });
 
+    it("skips the limit window for a model argument without pricing", async () => {
+      mock.method(Date, "now", () => 1_000);
+
+      await appendModelUsage(
+        {
+          inputTokens: 30,
+          outputTokens: 15,
+          inputTokenDetails: {
+            cacheReadTokens: 3,
+            cacheWriteTokens: 1,
+          },
+        } as LanguageModelUsage,
+        "unpriced",
+      );
+
+      assert.deepStrictEqual(getState().usage.modelUsageForLimitWindow, {});
+      assert.deepStrictEqual(getState().usage.modelUsageForSession, {
+        unpriced: [
+          {
+            inputTokens: 30,
+            outputTokens: 15,
+            cacheReadTokens: 3,
+            cacheWriteTokens: 1,
+            date: 1_000,
+          },
+        ],
+      });
+    });
+
+    it("records session usage under the model argument when it differs from the configured model", async () => {
+      mock.method(Date, "now", () => 1_000);
+
+      await appendModelUsage(
+        {
+          inputTokens: 30,
+          outputTokens: 15,
+          inputTokenDetails: {
+            cacheReadTokens: 3,
+            cacheWriteTokens: 1,
+          },
+        } as LanguageModelUsage,
+        "claude",
+      );
+
+      const expectedUsage = {
+        claude: [
+          {
+            inputTokens: 30,
+            outputTokens: 15,
+            cacheReadTokens: 3,
+            cacheWriteTokens: 1,
+            date: 1_000,
+          },
+        ],
+      };
+      assert.deepStrictEqual(
+        getState().usage.modelUsageForSession,
+        expectedUsage,
+      );
+      assert.deepStrictEqual(
+        getState().usage.modelUsageForLimitWindow,
+        expectedUsage,
+      );
+    });
+
     it("defaults missing token detail values to 0", async () => {
       mock.method(Date, "now", () => 1_000);
 
@@ -825,6 +890,19 @@ describe("usage", () => {
       });
       actions.setUsageLimit({ duration: "60m", dollarAmount: 10 });
       assert.strictEqual(isUsageLimitDisabled(), false);
+    });
+
+    it("checks the model argument instead of the configured model", () => {
+      actions.setModel("gpt-4");
+      actions.setPricingPerModel({
+        claude: {
+          inputPerMillion: 1,
+          outputPerMillion: 5,
+        },
+      });
+      actions.setUsageLimit({ duration: "60m", dollarAmount: 10 });
+      assert.strictEqual(isUsageLimitDisabled("claude"), false);
+      assert.strictEqual(isUsageLimitDisabled("gpt-4"), true);
     });
   });
 

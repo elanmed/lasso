@@ -85,11 +85,11 @@ export async function appendModelUsage(
   };
 
   await syncNewModelUsageForLimitWindow(model, defaultedUsage);
-  actions.appendToModelUsageForSession(defaultedUsage);
+  actions.appendToModelUsageForSession(defaultedUsage, model);
 }
 
-export function isUsageLimitDisabled() {
-  const { usageLimit, pricingPerModel, model } = getState().config;
+export function isUsageLimitDisabled(model = getState().config.model) {
+  const { usageLimit, pricingPerModel } = getState().config;
   const pricing = pricingPerModel[model];
 
   return pricing === undefined || usageLimit === undefined;
@@ -175,7 +175,7 @@ export async function syncNewModelUsageForLimitWindow(
   model: string,
   usage: ModelUsage,
 ) {
-  if (isUsageLimitDisabled()) return;
+  if (isUsageLimitDisabled(model)) return;
 
   const expiredTime = getExpiredTime();
 

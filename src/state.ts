@@ -714,8 +714,7 @@ export const actions = {
     );
   },
 
-  appendToModelUsageForSession(usage: ModelUsage) {
-    const model = state.config.model;
+  appendToModelUsageForSession(usage: ModelUsage, model: string) {
     state.usage.modelUsageForSession[model] ??= [];
 
     const before = state.usage.modelUsageForSession[model];

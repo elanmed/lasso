@@ -47,25 +47,6 @@ Existing empty files can be removed with this command:
 find ~/.local/state/lasso/sessions -size 0 -delete
 ```
 
-### 7. Subagent usage is recorded under the wrong model
-
-- Location: `usage.ts` `appendModelUsage` and `state.ts` `appendToModelUsageForSession`
-- Severity: medium
-- What is wrong: `appendModelUsage(usage, model)` passes `model` to the limit-window log, but the session log uses `state.config.model`. Subagent tokens on another model are priced with the main model's rates in `/usage` and the fence line. `isUsageLimitDisabled()` also checks pricing for the current model, not the `model` argument.
-- How to trigger: Set `subagentModels` to a model with different pricing, run a subagent, then `/usage`.
-- Suggested fix:
-
-```diff
--  appendToModelUsageForSession(usage: ModelUsage) {
--    const model = state.config.model;
-+  appendToModelUsageForSession(usage: ModelUsage, model = state.config.model) {
-```
-
-```diff
--  actions.appendToModelUsageForSession(defaultedUsage);
-+  actions.appendToModelUsageForSession(defaultedUsage, model);
-```
-
 ## Needs verification
 
 1. Cost tracking likely uses last-step usage only. `appendModelUsage(usage)` reads `usage` from `generateText`. In recent `ai` versions this is believed to be the last step, with `totalUsage` summing all steps. In a tool loop that would undercount spend by roughly the step count. Check by logging `totalUsage` next to `usage` on a multi-tool turn.
