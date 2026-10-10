@@ -503,7 +503,7 @@ const mediaTypeByExtension: Record<string, string> = {
   ".webp": "image/webp",
 };
 
-const readImageSchema = z.object({ filePath: z.string() });
+export const readImageSchema = z.object({ filePath: z.string() });
 export type ReadImageTool = z.infer<typeof readImageSchema>;
 
 export const mcpListResourcesSchema = z.object({

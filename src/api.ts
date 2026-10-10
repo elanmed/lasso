@@ -38,6 +38,7 @@ import {
   createSubagentToolSchema,
   mcpListResourcesSchema,
   mcpReadResourceSchema,
+  readImageSchema,
 } from "./tools.ts";
 import { MISSING } from "./missing.ts";
 import type { ModelSummary } from "./state.ts";
@@ -120,6 +121,11 @@ export async function resolveApiCall(userInput: string) {
           case "load_skill": {
             const input = loadSkillToolSchema.parse(toolCall.input);
             toolPrint("load_skill", input.name);
+            break;
+          }
+          case "read_image": {
+            const input = readImageSchema.parse(toolCall.input);
+            toolPrint("read_image", input.filePath);
             break;
           }
           case "create_subagent": {
