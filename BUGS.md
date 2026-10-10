@@ -24,20 +24,6 @@ Overall, the codebase is in good shape, with consistent error handling and thoro
 +  return { stdout, stderr };
 ```
 
-### 4. `suppressConfigWarnings` does not suppress most warnings
-
-- Location: `config.ts`, `warnOnMissingConfig`
-- Severity: medium
-- What is wrong: The option is only read in `initBatAvailable`. Default context window, usage limit, skill and MCP warnings still print, and the printed hint says the option suppresses them. The existing "suppresses the warnings" test passes vacuously because its config produces no warnings.
-- How to trigger: Set `suppressConfigWarnings: true` with a model that has no `contextWindowPerModel` entry.
-- Suggested fix:
-
-```diff
- export function warnOnMissingConfig() {
-+  if (getState().config.suppressConfigWarnings) return;
-   const messages = getState().content.configWarningMessages;
-```
-
 ### 5. Compaction crashes the process when the context window is under 40,000 tokens
 
 - Location: `api.ts`, `getMergedSummaries`

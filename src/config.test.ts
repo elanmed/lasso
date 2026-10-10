@@ -25,6 +25,7 @@ import {
   testProcessEnv,
   setupTestContext,
   first,
+  mockExec,
   mockStdoutWrites,
   RED,
   RESET,
@@ -1372,7 +1373,6 @@ describe("config", () => {
             JSON.stringify({
               model: testConfig.model,
               sdkProvider: "anthropic",
-              contextWindowPerModel: { "claude-sonnet-4-6": 200_000 },
               suppressStartupDurations: true,
               suppressConfigWarnings: true,
             }),
@@ -1380,7 +1380,31 @@ describe("config", () => {
 
           const getWrites = mockStdoutWrites();
           await initState();
-          assert.deepStrictEqual(getState().content.configWarningMessages, []);
+          assert.deepStrictEqual(getState().content.configWarningMessages, [
+            "A default context window of 128,000 tokens is used because there is no `contextWindowPerModel` entry for the current model `claude-sonnet-4-6`",
+          ]);
+          warnOnMissingConfig();
+          assert.deepStrictEqual(getWrites(), []);
+        });
+
+        it("when bat is unavailable and suppressConfigWarnings is true it suppresses the warning", async () => {
+          testFs._files.set(
+            getGlobalConfigPath(),
+            JSON.stringify({
+              model: testConfig.model,
+              sdkProvider: "anthropic",
+              contextWindowPerModel: { "claude-sonnet-4-6": 200_000 },
+              suppressStartupDurations: true,
+              suppressConfigWarnings: true,
+            }),
+          );
+          mockExec({ stdout: "", error: new Error("bat: command not found") });
+
+          const getWrites = mockStdoutWrites();
+          await initState();
+          assert.deepStrictEqual(getState().content.configWarningMessages, [
+            "`bat` is not available; consider installing it to properly render markdown responses",
+          ]);
           warnOnMissingConfig();
           assert.deepStrictEqual(getWrites(), []);
         });

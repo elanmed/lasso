@@ -75,6 +75,8 @@ export function parseConfigFileStr(
 }
 
 export function warnOnMissingConfig() {
+  if (getState().config.suppressConfigWarnings) return;
+
   const messages = getState().content.configWarningMessages;
   if (messages.length === 0) return;
   print.warning(messages.map((message) => `- ${message}`).join("\n"));
@@ -370,10 +372,7 @@ export function getStartupLogIdToLabel(): LogIdToLabel {
 
 export async function initBatAvailable() {
   const batResult = await tryCatchAsync(childProcessDeps.exec("bat --version"));
-
   actions.setBatAvailable(batResult.ok);
-  if (getState().config.suppressConfigWarnings) return;
-
   if (!batResult.ok) {
     actions.appendConfigWarningMessage(
       `\`bat\` is not available; consider installing it to properly render markdown responses`,
