@@ -2815,8 +2815,48 @@ editor input
         assert.strictEqual(getState().terminal.isRecording, false);
         assert.strictEqual(
           getState().terminal.editorInputValue,
-          `\n${defaultConfig.messageQueueDelimiter}hello from the mic`,
+          "hello from the mic",
         );
+      });
+
+      it("appends transcription after the delimiter when the editor has content", async () => {
+        actions.setQuestionAbortController(null);
+        actions.setKeymaps({
+          ...defaultConfig.keymaps,
+          record: { name: "r", ctrl: true },
+        });
+        testProcessEnv._set("LASSO_TRANSCRIPTION_API_KEY", "key");
+        actions.setTranscriptionSdkProvider("openai");
+        actions.setTranscriptionModel("gpt-4o-transcribe");
+        actions.setRl(makeFakeRl({ question: () => Promise.resolve("") }));
+        actions.appendEditorInputValue("draft");
+        actions.resetStdout();
+        mockRecording();
+        mockTranscription("hello from the mic");
+        harness.emitKey({ name: "r", ctrl: true });
+        await harness.flush();
+        assert.strictEqual(
+          getState().terminal.editorInputValue,
+          `draft\n${defaultConfig.messageQueueDelimiter}hello from the mic`,
+        );
+      });
+
+      it("does not append an empty transcription to the editor", async () => {
+        actions.setQuestionAbortController(null);
+        actions.setKeymaps({
+          ...defaultConfig.keymaps,
+          record: { name: "r", ctrl: true },
+        });
+        testProcessEnv._set("LASSO_TRANSCRIPTION_API_KEY", "key");
+        actions.setTranscriptionSdkProvider("openai");
+        actions.setTranscriptionModel("gpt-4o-transcribe");
+        actions.setRl(makeFakeRl({ question: () => Promise.resolve("") }));
+        actions.resetStdout();
+        mockRecording();
+        mockTranscription("");
+        harness.emitKey({ name: "r", ctrl: true });
+        await harness.flush();
+        assert.strictEqual(getState().terminal.editorInputValue, null);
       });
 
       it("runs edit command when its keymap matches", async () => {
@@ -4332,6 +4372,21 @@ custom command content`,
       ]);
       assert.strictEqual(getState().abortControllers.recordProcess, null);
       assert.strictEqual(testFs._files.has("/tmp/lasso-test-uuid.wav"), false);
+    });
+
+    it("returns null and prints an error when the transcription is empty", async () => {
+      actions.setTranscriptionSdkProvider("openai");
+      actions.setTranscriptionModel("gpt-4o-transcribe");
+      testProcessEnv._set("LASSO_TRANSCRIPTION_API_KEY", "key");
+      mockRecording();
+      mockTranscription("");
+      actions.resetStdout();
+      const result = await recordAndTranscribeInput();
+      assert.strictEqual(result, null);
+      assert.deepStrictEqual(getWrites(), [
+        `${RED}⏺${RESET} Press enter to stop recording \n`,
+        `${RED}Empty transcription result${RESET}\n`,
+      ]);
     });
 
     it("aborts the transcription when the transcription is aborted", async () => {

@@ -232,7 +232,12 @@ export function initKeypress(rl: readline.Interface) {
             );
             actions.setIsRecording(false);
 
-            if (transcriptionInput !== null) {
+            if (transcriptionInput === null) return;
+
+            const { editorInputValue } = getState().terminal;
+            if (editorInputValue === null) {
+              actions.appendEditorInputValue(transcriptionInput);
+            } else {
               actions.appendEditorInputValue(
                 `\n${getState().config.messageQueueDelimiter}${transcriptionInput}`,
               );
@@ -1867,6 +1872,11 @@ export async function recordAndTranscribeInput({
       `Error while transcribing: ${getMessageFromError(transcribeResult.error)}`,
       { whileMuted: !isTyped },
     );
+    return null;
+  }
+
+  if (transcribeResult.value === "") {
+    print.error("Empty transcription result");
     return null;
   }
 
