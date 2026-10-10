@@ -110,29 +110,13 @@ export async function resumeFromSessionFile(sessionFilePath: string) {
   return true;
 }
 
-export async function initSessionFile() {
+export function initSessionFile() {
   const sessionDir = getSessionDir();
-  if (!fsDeps.existsSync(sessionDir)) {
-    const mkDirResult = await tryCatchAsync(
-      fsDeps.mkdir(sessionDir, { recursive: true }),
-    );
-    if (!mkDirResult.ok) {
-      print.error(`Failed to create the directory: ${sessionDir}`);
-      return;
-    }
-  }
-
   const sessionFilePath = join(
     sessionDir,
     `session-${getState().session.sessionStartDate.toString()}.json`,
   );
   actions.setSessionFilePath(sessionFilePath);
-  const writeResult = await tryCatchAsync(
-    fsDeps.writeFile(sessionFilePath, ""),
-  );
-  if (!writeResult.ok) {
-    print.error(`Failed to write the session file to ${sessionFilePath}`);
-  }
 }
 
 export async function deleteExpiredSessionFiles() {

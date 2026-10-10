@@ -32,63 +32,32 @@ describe("log", () => {
       setupTestContext({ now: 1_234_567_890_000 });
     });
 
-    it("creates directory and sets path when directory does not exist", async () => {
-      await initSessionFile();
+    it("sets the path without creating the directory or file", () => {
+      initSessionFile();
+      assert.equal(
+        getState().session.sessionFilePath,
+        "/fake-home/.local/state/lasso/sessions/session-1234567890000.json",
+      );
       assert.equal(
         testFs._dirs.has("/fake-home/.local/state/lasso/sessions"),
-        true,
+        false,
       );
       assert.equal(
-        getState().session.sessionFilePath,
-        "/fake-home/.local/state/lasso/sessions/session-1234567890000.json",
+        testFs._files.has(
+          "/fake-home/.local/state/lasso/sessions/session-1234567890000.json",
+        ),
+        false,
       );
+    });
+
+    it("creates the session file on the first sync", async () => {
+      initSessionFile();
+      await syncSessionFile({ messages: [], summaries: [], transcript: [] });
       assert.equal(
         testFs._files.get(
           "/fake-home/.local/state/lasso/sessions/session-1234567890000.json",
         ),
-        "",
-      );
-    });
-
-    it("warns and leaves the session path empty when mkdir fails", async () => {
-      mock.method(fsDeps, "existsSync", () => false);
-      mock.method(fsDeps, "mkdir", () =>
-        Promise.reject(new Error("Permission denied")),
-      );
-      const getWrites = mockStdoutWrites();
-
-      await initSessionFile();
-
-      assert.deepStrictEqual(getWrites(), [
-        `${RED}Failed to create the directory: /fake-home/.local/state/lasso/sessions${RESET}\n`,
-      ]);
-      assert.equal(getState().session.sessionFilePath, "");
-    });
-
-    it("warns when the initial write fails", async () => {
-      mock.method(fsDeps, "writeFile", () =>
-        Promise.reject(new Error("Permission denied")),
-      );
-      const getWrites = mockStdoutWrites();
-
-      await initSessionFile();
-
-      assert.deepStrictEqual(getWrites(), [
-        `${RED}Failed to write the session file to /fake-home/.local/state/lasso/sessions/session-1234567890000.json${RESET}\n`,
-      ]);
-    });
-
-    it("generates correct log path with session start date", async () => {
-      await initSessionFile();
-      assert.equal(
-        getState().session.sessionFilePath,
-        "/fake-home/.local/state/lasso/sessions/session-1234567890000.json",
-      );
-      assert.equal(
-        testFs._files.get(
-          "/fake-home/.local/state/lasso/sessions/session-1234567890000.json",
-        ),
-        "",
+        '{"messages":[],"summaries":[],"transcript":[]}',
       );
     });
   });

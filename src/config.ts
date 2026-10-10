@@ -351,6 +351,8 @@ export async function initStateRepeatable() {
   });
   performanceLogger.printAllLabels();
 
+  initSessionFile();
+
   await Promise.all([
     initMcpState({ performanceLogger }),
     initStateFromFs({ performanceLogger }),
@@ -394,11 +396,12 @@ export async function initState() {
   });
   performanceLogger.printAllLabels();
 
+  initSessionFile();
+
   await Promise.all([
     initMcpState({ performanceLogger }),
     initStateFromFs({ performanceLogger }),
     deleteExpiredSessionFiles(),
-    initSessionFile(),
     initBatAvailable(),
   ]);
 }

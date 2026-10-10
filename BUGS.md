@@ -24,29 +24,6 @@ Overall, the codebase is in good shape, with consistent error handling and thoro
 +  return { stdout, stderr };
 ```
 
-### 6. `/resume` with no args can pick an empty session and give up
-
-- Location: `log.ts` `initSessionFile`, `input.ts` `resumeWithNoArgs`
-- Severity: medium
-- What is wrong: Startup writes a zero-byte session file. Open lasso, quit without typing, and that file becomes the newest. The next `/resume` takes `sortedSessionFiles[0]`, fails to parse it, and returns null without trying older sessions.
-- How to trigger: Start lasso, press Ctrl-C twice and confirm exit, start again, run `/resume`.
-- Suggested fix: Stop creating the file until the first sync.
-
-```diff
--  const writeResult = await tryCatchAsync(
--    fsDeps.writeFile(sessionFilePath, ""),
--  );
--  if (!writeResult.ok) {
--    print.error(`Failed to write the session file to ${sessionFilePath}`);
--  }
-```
-
-Existing empty files can be removed with this command:
-
-```
-find ~/.local/state/lasso/sessions -size 0 -delete
-```
-
 ## Needs verification
 
 1. Cost tracking likely uses last-step usage only. `appendModelUsage(usage)` reads `usage` from `generateText`. In recent `ai` versions this is believed to be the last step, with `totalUsage` summing all steps. In a tool loop that would undercount spend by roughly the step count. Check by logging `totalUsage` next to `usage` on a multi-tool turn.
