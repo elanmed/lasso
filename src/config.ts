@@ -79,7 +79,10 @@ export function warnOnMissingConfig() {
 
   const messages = getState().content.configWarningMessages;
   if (messages.length === 0) return;
+
+  printNewline();
   print.warning(messages.map((message) => `- ${message}`).join("\n"));
+  printNewline();
   print.warning(
     `Suppress these warnings via the \`suppressConfigWarnings\` config option`,
   );
@@ -90,13 +93,15 @@ export function blockOnMissingConfig() {
   const messages = getState().content.configErrorMessages;
   if (messages.length === 0) return false;
 
+  printNewline();
   print.error(messages.map((message) => `- ${message}`).join("\n"));
-
   if (getState().content.includeConfigInitMessage) {
+    printNewline();
     print.error(
       "Run /initlocal or /initglobal to generate a sample config in `./.lasso` or `~/.config/lasso` respectively.",
     );
   }
+  printNewline();
   return true;
 }
 
