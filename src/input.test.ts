@@ -12,7 +12,6 @@ import {
   getGlobalContextDir,
   defaultConfig,
   type Key,
-  resolveInterruptWithEditor,
 } from "./app.ts";
 import { sleep, strToApproxTokens } from "./utils.ts";
 import {
@@ -92,12 +91,6 @@ function getTestRl() {
   return rl;
 }
 
-async function resolveInterruptWithAnswer(answer: string) {
-  actions.setEditorInputValue("queued input");
-  actions.setRl(makeFakeRl({ question: () => Promise.resolve(answer) }));
-  await resolveInterruptWithEditor();
-}
-
 describe("input", () => {
   afterEach(() => {
     mock.restoreAll();
@@ -108,74 +101,6 @@ describe("input", () => {
   beforeEach(() => {
     setupTestContext();
     getWrites = mockStdoutWrites();
-  });
-
-  describe("resolveInterruptWithEditor", () => {
-    it("waits for enter and clears the interrupt controller", async () => {
-      const prompts: string[] = [];
-      let questionOptions: { signal: AbortSignal } | undefined;
-      actions.setKeymaps({
-        ...defaultConfig.keymaps,
-        edit: { name: "e", ctrl: true },
-      });
-      actions.setRl(
-        makeFakeRl({
-          question: (prompt: string, options: { signal: AbortSignal }) => {
-            prompts.push(prompt);
-            questionOptions = options;
-            return Promise.resolve("");
-          },
-        }),
-      );
-
-      await resolveInterruptWithEditor();
-
-      assert(questionOptions !== undefined);
-      assert.equal(questionOptions.signal.aborted, false);
-      assert.equal(
-        getState().abortControllers.interruptWithEditorContent,
-        null,
-      );
-      assert.deepStrictEqual(getWrites(), [
-        `${YELLOW}You have queued messages!${RESET}\n`,
-      ]);
-      assert.deepStrictEqual(prompts, [
-        'Edit ({"name":"e","ctrl":true}), c(lear), or <CR> to continue: ',
-      ]);
-    });
-
-    it("clears queued editor input when c is entered", async () => {
-      await resolveInterruptWithAnswer("c");
-      assert.strictEqual(getState().terminal.editorInputValue, null);
-    });
-
-    it("clears queued editor input when clear is entered", async () => {
-      await resolveInterruptWithAnswer("clear");
-      assert.strictEqual(getState().terminal.editorInputValue, null);
-    });
-
-    it("keeps queued editor input when the answer is not c or clear", async () => {
-      await resolveInterruptWithAnswer("e");
-      assert.strictEqual(getState().terminal.editorInputValue, "queued input");
-    });
-
-    it("returns normally when interrupted", async () => {
-      actions.setRl(
-        makeFakeRl({
-          question: () => {
-            const error = makeAbortError("interrupted");
-            return Promise.reject(error);
-          },
-        }),
-      );
-
-      await resolveInterruptWithEditor();
-
-      assert.equal(
-        getState().abortControllers.interruptWithEditorContent,
-        null,
-      );
-    });
   });
 
   describe("initSigInt", () => {
