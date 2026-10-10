@@ -1,5 +1,23 @@
 # Changelog
 
+## v0.11.4 - 2026-10-10
+
+- Strip base64 image data from token estimates and compaction prompts
+- Print `read_image` tool calls
+- Return diff output when `git diff` exits with code 1
+- Clean up pager and diff temp files on exit or failure
+- Create the session file on first sync instead of at startup
+- Record session usage under the subagent model and check limit pricing for the recorded model
+- Enforce a 40,000 token minimum context window
+- Report `sox` spawn failures instead of transcribing empty audio
+- Route skill and MCP startup failures through config warnings
+- Add `suppressConfigWarnings` to suppress all config warnings
+- Join multi-line error messages with spaces when forced to a single line
+- Run the bash tool under `/bin/bash`
+- Add `sdkProvider` and per-model settings to the generated sample config
+- Append transcription after the delimiter only when the editor has content, and skip empty transcriptions
+- Switch to native AI SDK v7 timeouts
+
 ## v0.11.3 - 2026-10-09
 
 - Warn on all config errors and unify warning/error message wording, with a new `suppressConfigWarnings` option to suppress them
