@@ -447,6 +447,11 @@ describe("differ", () => {
         `${RED}An error occurred when getting the diff for /test/file.txt: fatal${RESET}\n`,
       ]);
       assert.deepStrictEqual(getState().conversation.toolEditDiffs, []);
+      assert.strictEqual(testFs._files.has("/tmp/lasso-test-uuid.txt"), false);
+      assert.strictEqual(
+        differ.toolCallIdToTempFileBefore.has("call-1"),
+        false,
+      );
     });
 
     it("warns when the after temp file cannot be created", async () => {

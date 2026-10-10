@@ -101,6 +101,8 @@ export function createToolCallDiffer() {
       print.error(
         `An error occurred when getting the diff for ${path}: ${getMessageFromError(diffResult.error)}`,
       );
+      await tryCatchAsync(fsDeps.unlink(tempFileAfterPath));
+      await cleanupTempFileBefore(toolCallId);
       return;
     }
 

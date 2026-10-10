@@ -87,23 +87,6 @@ find ~/.local/state/lasso/sessions -size 0 -delete
 +  await tryCatchAsync(fsDeps.unlink(tempFile));
 ```
 
-### 10. Failed diff leaks both temp files
-
-- Location: `differ.ts`, `diffAndCleanup`
-- Severity: low
-- What is wrong: When `execGitDiff` fails, the function prints and returns without unlinking the after file or the before file.
-- How to trigger: Make `git diff` exit with code 128, for example with a corrupt git install.
-- Suggested fix:
-
-```diff
-       print.error(
-         `An error occurred when getting the diff for ${path}: ${getMessageFromError(diffResult.error)}`,
-       );
-+      await tryCatchAsync(fsDeps.unlink(tempFileAfterPath));
-+      await cleanupTempFileBefore(toolCallId);
-       return;
-```
-
 ## Needs verification
 
 1. Cost tracking likely uses last-step usage only. `appendModelUsage(usage)` reads `usage` from `generateText`. In recent `ai` versions this is believed to be the last step, with `totalUsage` summing all steps. In a tool loop that would undercount spend by roughly the step count. Check by logging `totalUsage` next to `usage` on a multi-tool turn.
