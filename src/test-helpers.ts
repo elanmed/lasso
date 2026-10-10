@@ -569,7 +569,10 @@ export function mockEditorSpawn(
   return { spawned };
 }
 
-export function mockRecording({ chunk = "fake recording" } = {}) {
+export function mockRecording({
+  chunk = "fake recording",
+  spawnError,
+}: { chunk?: string; spawnError?: Error } = {}) {
   const stdout = new EventEmitter();
   const stderr = new EventEmitter();
   const killSignals: string[] = [];
@@ -597,6 +600,11 @@ export function mockRecording({ chunk = "fake recording" } = {}) {
     "spawn",
     (file: string, args: string[], options: unknown) => {
       spawnCalls.push({ file, args, options });
+      process.nextTick(() =>
+        spawnError === undefined
+          ? child.emit("spawn")
+          : child.emit("error", spawnError),
+      );
       return child;
     },
   );

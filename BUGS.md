@@ -118,28 +118,6 @@ find ~/.local/state/lasso/sessions -size 0 -delete
        return;
 ```
 
-### 11. Missing or broken `sox` goes unnoticed until transcription fails
-
-- Location: `input.ts`, `recordAndTranscribeInput`
-- Severity: low
-- What is wrong: `await recordingPromise` discards its result. If `spawn` fails, `once` rejects on the `error` event and that result is dropped. The temp wav was already created empty, so the empty file goes to the transcription API and the user gets a confusing API error.
-- How to trigger: Run `/record` with `sox` not installed.
-- Suggested fix:
-
-```diff
--  await recordingPromise;
-+  const recordingResult = await recordingPromise;
-   actions.setRecordProcessAbortController(null);
-+  if (!recordingResult.ok) {
-+    print.error(
-+      `Recording failed: ${getMessageFromError(recordingResult.error)}`,
-+      { whileMuted: !isTyped },
-+    );
-+    await cleanup();
-+    return null;
-+  }
-```
-
 ## Needs verification
 
 1. Cost tracking likely uses last-step usage only. `appendModelUsage(usage)` reads `usage` from `generateText`. In recent `ai` versions this is believed to be the last step, with `totalUsage` summing all steps. In a tool loop that would undercount spend by roughly the step count. Check by logging `totalUsage` next to `usage` on a multi-tool turn.

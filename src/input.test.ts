@@ -4264,6 +4264,59 @@ custom command content`,
       assert.strictEqual(testFs._files.has("/tmp/lasso-test-uuid.wav"), false);
     });
 
+    it("returns null and prints an error when the recording process emits an error", async () => {
+      actions.setTranscriptionSdkProvider("openai");
+      actions.setTranscriptionModel("gpt-4o-transcribe");
+      testProcessEnv._set("LASSO_TRANSCRIPTION_API_KEY", "key");
+      const { child } = mockRecording();
+      const { transcribeCalls } = mockTranscription("hello from the mic");
+      actions.setRl(
+        makeFakeRl({
+          question: () => {
+            child.emit("error", new Error("spawn sox ENOENT"));
+            return Promise.resolve("");
+          },
+        }),
+      );
+      actions.resetStdout();
+      const result = await recordAndTranscribeInput();
+      assert.strictEqual(result, null);
+      assert.deepStrictEqual(getWrites(), [
+        `${RED}⏺${RESET} Press enter to stop recording \n`,
+        `${RED}Recording failed: spawn sox ENOENT${RESET}\n`,
+      ]);
+      assert.strictEqual(transcribeCalls.length, 0);
+      assert.strictEqual(getState().abortControllers.recordProcess, null);
+      assert.strictEqual(testFs._files.has("/tmp/lasso-test-uuid.wav"), false);
+    });
+
+    it("returns null without prompting when the recording process fails to spawn", async () => {
+      actions.setTranscriptionSdkProvider("openai");
+      actions.setTranscriptionModel("gpt-4o-transcribe");
+      testProcessEnv._set("LASSO_TRANSCRIPTION_API_KEY", "key");
+      mockRecording({ spawnError: new Error("spawn sox ENOENT") });
+      const { transcribeCalls } = mockTranscription("hello from the mic");
+      let questionCalls = 0;
+      actions.setRl(
+        makeFakeRl({
+          question: () => {
+            questionCalls += 1;
+            return Promise.resolve("");
+          },
+        }),
+      );
+      actions.resetStdout();
+      const result = await recordAndTranscribeInput();
+      assert.strictEqual(result, null);
+      assert.strictEqual(questionCalls, 0);
+      assert.deepStrictEqual(getWrites(), [
+        `${RED}Recording failed: spawn sox ENOENT${RESET}\n`,
+      ]);
+      assert.strictEqual(transcribeCalls.length, 0);
+      assert.strictEqual(getState().abortControllers.recordProcess, null);
+      assert.strictEqual(testFs._files.has("/tmp/lasso-test-uuid.wav"), false);
+    });
+
     it("returns null and prints an error when the stop-recording question rejects", async () => {
       actions.setTranscriptionSdkProvider("openai");
       actions.setTranscriptionModel("gpt-4o-transcribe");
@@ -4573,25 +4626,18 @@ custom command content`,
       assert.deepStrictEqual(killSignals, ["SIGINT"]);
     });
 
-    it("resolves recordingReady when sox first writes to stderr", async () => {
+    it("resolves recordingReady when the recording process spawns", async () => {
       actions.setRecordProcessAbortController(new AbortController());
-      const { stderr } = mockRecording();
+      mockRecording();
       const { recordingReady } = recordInput("/tmp/lasso-test-uuid.wav");
-      stderr.emit("data", Buffer.from("ready"));
-      await recordingReady;
+      assert.deepStrictEqual(await recordingReady, []);
     });
 
-    it("collects stderr chunks and exposes them via getErrorOutput", async () => {
+    it("rejects recordingReady when the recording process fails to spawn", async () => {
       actions.setRecordProcessAbortController(new AbortController());
-      const { stderr } = mockRecording();
-      const { stop, getErrorOutput, recordingFinished } = recordInput(
-        "/tmp/lasso-test-uuid.wav",
-      );
-      stderr.emit("data", Buffer.from("in:"));
-      stderr.emit("data", Buffer.from(" 16kHz"));
-      stop();
-      await recordingFinished;
-      assert.strictEqual(getErrorOutput(), "in: 16kHz");
+      mockRecording({ spawnError: new Error("spawn sox ENOENT") });
+      const { recordingReady } = recordInput("/tmp/lasso-test-uuid.wav");
+      await assert.rejects(recordingReady, { message: "spawn sox ENOENT" });
     });
   });
 

@@ -1837,8 +1837,17 @@ export async function recordAndTranscribeInput({
     await tryCatchAsync(fsDeps.unlink(tempFile));
   }
 
-  const { stop, recordingFinished } = recordInput(tempFile);
+  const { stop, recordingFinished, recordingReady } = recordInput(tempFile);
   const recordingPromise = tryCatchAsync(recordingFinished);
+
+  const readyResult = await tryCatchAsync(recordingReady);
+  if (!readyResult.ok) {
+    print.error(`Recording failed: ${getMessageFromError(readyResult.error)}`, {
+      whileMuted: !isTyped,
+    });
+    await cleanup();
+    return null;
+  }
 
   const query = `${wrapInColor("⏺", "red")} Press enter to stop recording `;
   let questionPromise: Promise<string>;
@@ -1855,10 +1864,18 @@ export async function recordAndTranscribeInput({
     questionPromise = rl.question("", { signal: abortController.signal });
   }
   const finishRecordingResult = await tryCatchAsync(questionPromise);
-
   stop();
-  await recordingPromise;
+
+  const recordingResult = await recordingPromise;
   actions.setRecordProcessAbortController(null);
+  if (!recordingResult.ok) {
+    print.error(
+      `Recording failed: ${getMessageFromError(recordingResult.error)}`,
+      { whileMuted: !isTyped },
+    );
+    await cleanup();
+    return null;
+  }
 
   if (!finishRecordingResult.ok) {
     if (isAbortError(finishRecordingResult.error)) {
@@ -1935,20 +1952,10 @@ export function recordInput(tempFile: string) {
       "16", // output bit depth: 16 bits per sample
       tempFile,
     ],
-    { stdio: ["ignore", "pipe", "pipe"] },
+    { stdio: ["ignore", "pipe", "ignore"] },
   );
   recordingProcess.stdout.on("data", (chunk: Buffer) =>
     outputChunks.push(chunk),
-  );
-
-  const recordingReady = new Promise<void>((resolve) => {
-    recordingProcess.stderr.once("data", () => resolve());
-  });
-
-  const errorChunks: Buffer[] = [];
-
-  recordingProcess.stderr.on("data", (chunk: Buffer) =>
-    errorChunks.push(chunk),
   );
 
   abortController.signal.addEventListener("abort", () => {
@@ -1956,12 +1963,12 @@ export function recordInput(tempFile: string) {
   });
 
   const recordingFinished = once(recordingProcess, "close");
+  const recordingReady = once(recordingProcess, "spawn");
 
   return {
     stop: () => recordingProcess.kill("SIGINT"),
     recordingFinished,
     recordingReady,
-    getErrorOutput: () => Buffer.concat(errorChunks).toString("utf8"),
   };
 }
 
