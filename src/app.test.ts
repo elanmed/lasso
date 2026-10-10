@@ -12132,4 +12132,20 @@ describe("resolveInterruptWithEditor", () => {
 
     assert.equal(getState().abortControllers.interruptWithEditorContent, null);
   });
+
+  it("prints the error when the question fails for a reason other than abort", async () => {
+    actions.setRl(
+      makeFakeRl({
+        question: () => Promise.reject(new Error("boom")),
+      }),
+    );
+
+    await resolveInterruptWithEditor();
+
+    assert.equal(getState().abortControllers.interruptWithEditorContent, null);
+    assert.deepStrictEqual(getWrites(), [
+      `${YELLOW}You have queued messages!${RESET}\n`,
+      `${RED}boom${RESET}\n`,
+    ]);
+  });
 });
