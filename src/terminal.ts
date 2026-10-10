@@ -3,7 +3,6 @@ import { childProcessDeps, fsDeps, processDeps } from "./deps.ts";
 import { getState } from "./state.ts";
 import {
   getMessageFromError,
-  getTempFileName,
   isExisty,
   normalizeNewline,
   tryCatch,
@@ -11,6 +10,7 @@ import {
   shouldDisableColor,
   shellQuote,
 } from "./utils.ts";
+import { getTempFileName } from "./temp-file.ts";
 import { print } from "./print.ts";
 
 export function baseBatFlags() {
@@ -85,10 +85,7 @@ export async function openWithPager({
 }): Promise<void> {
   initialContentStr = normalizeNewline(initialContentStr, { count: 2 });
   const tempFile = await getTempFileName({ initialContentStr });
-  if (tempFile === null) {
-    print.error("Failed to create a temp file to open the pager");
-    return;
-  }
+  if (tempFile === null) return;
 
   const pagerCommand = (() => {
     const lassoDefaultPagerEnvValue = processDeps.env.get("LASSO_PAGER");

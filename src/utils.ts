@@ -1,9 +1,7 @@
 import { basename, extname, join } from "node:path";
-import os from "node:os";
 import crypto from "node:crypto";
 import type { AssistantContent } from "ai";
 import type { ModelMessage } from "./state.ts";
-import { assertAtRuntime } from "./assert.ts";
 import { fsDeps, processDeps } from "./deps.ts";
 import { getSessionDir } from "./paths.ts";
 import type { Color } from "./print.ts";
@@ -121,62 +119,6 @@ export function isShellSafePath(str: string) {
   // +: one or more of those
   // $: end of string
   return /^[\w./-]+$/.test(str);
-}
-
-export interface GetTempFileNameArgs {
-  pathPrefix?: string | undefined;
-  initialContentPath?: string | undefined;
-  initialContentStr?: string | undefined;
-  extension?: string;
-}
-
-export async function getTempFileName(args?: GetTempFileNameArgs) {
-  const { pathPrefix, initialContentPath, initialContentStr, extension } =
-    args ?? {};
-  assertAtRuntime(
-    initialContentPath === undefined || initialContentStr === undefined,
-  );
-
-  const tempFile = join(
-    os.tmpdir(),
-    `${pathPrefix ?? "lasso"}-${getShortId()}.${extension ?? "txt"}`,
-  );
-
-  assertAtRuntime(isShellSafePath(tempFile));
-
-  if (initialContentPath !== undefined) {
-    const existsResult = tryCatch(() => fsDeps.existsSync(initialContentPath));
-    if (!existsResult.ok) return null;
-    if (!existsResult.value) {
-      const writeResult = await tryCatchAsync(fsDeps.writeFile(tempFile, ""));
-      if (!writeResult.ok) return null;
-      return tempFile;
-    }
-
-    const readResult = await tryCatchAsync(
-      fsDeps.readFile(initialContentPath, "utf8"),
-    );
-    if (!readResult.ok) return null;
-
-    const writeResult = await tryCatchAsync(
-      fsDeps.writeFile(tempFile, readResult.value),
-    );
-    if (!writeResult.ok) return null;
-
-    return tempFile;
-  }
-
-  if (initialContentStr !== undefined) {
-    const writeResult = await tryCatchAsync(
-      fsDeps.writeFile(tempFile, initialContentStr),
-    );
-    if (!writeResult.ok) return null;
-    return tempFile;
-  }
-
-  const writeResult = await tryCatchAsync(fsDeps.writeFile(tempFile, ""));
-  if (!writeResult.ok) return null;
-  return tempFile;
 }
 
 export function stringify(val: unknown) {

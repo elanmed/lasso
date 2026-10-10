@@ -65,8 +65,8 @@ describe("differ", () => {
         await differ.diffAndCleanup("call-1", "/test/file.txt");
 
         assert.deepStrictEqual(writes(), [
-          `${RED}Failed to create the before diff temp file for /test/file.txt${RESET}\n`,
-          `${RED}Failed to create the after diff temp file for /test/file.txt${RESET}\n`,
+          `${RED}Failed to write a temp file with the content from path /test/file.txt: write failed${RESET}\n`,
+          `${RED}Failed to write a temp file with the content from path /test/file.txt: write failed${RESET}\n`,
         ]);
         assert.deepStrictEqual(getState().conversation.toolEditDiffs, []);
       });
@@ -503,7 +503,7 @@ describe("differ", () => {
       await differ.diffAndCleanup("call-1", "/test/file.txt");
 
       assert.deepStrictEqual(writes(), [
-        `${RED}Failed to create the after diff temp file for /test/file.txt${RESET}\n`,
+        `${RED}Failed to write a temp file with the content from path /test/file.txt: write failed${RESET}\n`,
       ]);
       assert.deepStrictEqual(getState().conversation.toolEditDiffs, []);
     });

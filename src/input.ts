@@ -13,7 +13,6 @@ import {
   tryCatchAsync,
   getMessageFromError,
   normalizeNewline,
-  getTempFileName,
   isExisty,
   shellQuote,
   listSessionFiles,
@@ -25,6 +24,7 @@ import {
   getPrettyDate,
   sleep,
 } from "./utils.ts";
+import { getTempFileName } from "./temp-file.ts";
 import { truncate } from "./text.ts";
 import {
   errorWithSpacing,
@@ -1084,10 +1084,7 @@ export async function spawnAndReadEditorContent(opts?: {
   });
 
   const tempFile = await getTempFileName();
-  if (tempFile === null) {
-    print.error("Failed to create a temp file");
-    return null;
-  }
+  if (tempFile === null) return null;
 
   const editCommand = getEditCommand(tempFile);
 
@@ -1418,18 +1415,12 @@ async function reload() {
 
     const beforeFile = beforeFiles[i];
     if (beforeFile === null || beforeFile === undefined) {
-      print.error(
-        `Failed to create a before temp file for the reload diff of ${prefix}`,
-      );
       continue;
     }
 
     const afterFile = afterFiles[i];
     if (afterFile === null || afterFile === undefined) {
       await tryCatchAsync(fsDeps.unlink(beforeFile));
-      print.warning(
-        `Failed to create an after temp file for the reload diff of ${prefix}`,
-      );
       continue;
     }
 
@@ -1823,11 +1814,7 @@ export async function recordAndTranscribeInput({
   actions.setRecordProcessAbortController(abortController);
 
   const tempFile = await getTempFileName({ extension: "wav" });
-
   if (tempFile === null) {
-    print.error("Error creating a time file to write the recording to", {
-      whileMuted: !isTyped,
-    });
     actions.setRecordProcessAbortController(null);
     return null;
   }

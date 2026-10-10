@@ -11,7 +11,6 @@ import {
   tryCatchAsync,
   normalizeNewline,
   getMessageFromError,
-  getTempFileName,
   createQueue,
   createLockUtils,
   listSessionFiles,
@@ -404,97 +403,6 @@ second line`,
 
     it("defaults to one newline when no options are given", () => {
       assert.equal(normalizeNewline("content\n\n\n"), "content\n");
-    });
-  });
-
-  describe("getTempFileName", () => {
-    it("returns temp file path without initial content", async () => {
-      const result = await getTempFileName();
-      assert.equal(result, "/tmp/lasso-test-uuid.txt");
-    });
-
-    it("copies initial content when initialContentPath is provided", async () => {
-      testFs._files.set("/source/file.txt", "initial content");
-      const result = await getTempFileName({
-        initialContentPath: "/source/file.txt",
-      });
-      assert.equal(result, "/tmp/lasso-test-uuid.txt");
-      assert.equal(
-        testFs._files.get("/tmp/lasso-test-uuid.txt"),
-        "initial content",
-      );
-    });
-
-    it("creates an empty temp file when the initial content path does not exist", async () => {
-      const result = await getTempFileName({
-        initialContentPath: "/missing/file.txt",
-      });
-      assert.equal(result, "/tmp/lasso-test-uuid.txt");
-      assert.equal(testFs._files.get("/tmp/lasso-test-uuid.txt"), "");
-    });
-
-    it("returns null when reading an existing path fails", async () => {
-      testFs._files.set("/source/file.txt", "initial content");
-      mock.method(fsDeps, "readFile", () => Promise.reject(new Error("EIO")));
-      const result = await getTempFileName({
-        initialContentPath: "/source/file.txt",
-      });
-      assert.equal(result, null);
-      assert.equal(testFs._files.has("/tmp/lasso-test-uuid.txt"), false);
-    });
-
-    it("returns null when write fails", async () => {
-      testFs._files.set("/source.txt", "content");
-      mock.method(fsDeps, "writeFile", () => Promise.reject(new Error("EIO")));
-      const result = await getTempFileName({
-        initialContentPath: "/source.txt",
-      });
-      assert.equal(result, null);
-
-      const strResult = await getTempFileName({ initialContentStr: "content" });
-      assert.equal(strResult, null);
-
-      const noArgsResult = await getTempFileName();
-      assert.equal(noArgsResult, null);
-    });
-
-    it("writes initialContentStr into the temp file", async () => {
-      const result = await getTempFileName({
-        initialContentStr: "string content",
-      });
-      assert.equal(result, "/tmp/lasso-test-uuid.txt");
-      assert.equal(
-        testFs._files.get("/tmp/lasso-test-uuid.txt"),
-        "string content",
-      );
-    });
-
-    it("uses the extension in the temp file path", async () => {
-      const result = await getTempFileName({ extension: "wav" });
-      assert.equal(result, "/tmp/lasso-test-uuid.wav");
-    });
-
-    it("uses the path prefix in the temp file path", async () => {
-      const result = await getTempFileName({
-        pathPrefix: "lasso-local",
-        initialContentStr: "local content",
-      });
-      assert.equal(result, "/tmp/lasso-local-test-uuid.txt");
-      assert.equal(
-        testFs._files.get("/tmp/lasso-local-test-uuid.txt"),
-        "local content",
-      );
-    });
-
-    it("throws when both initialContentPath and initialContentStr are provided", async () => {
-      await assert.rejects(
-        () =>
-          getTempFileName({
-            initialContentPath: "/source/file.txt",
-            initialContentStr: "string content",
-          }),
-        /falsy value/,
-      );
     });
   });
 

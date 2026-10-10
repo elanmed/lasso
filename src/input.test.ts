@@ -496,7 +496,7 @@ describe("input", () => {
 
         assert.strictEqual(result, null);
         assert.deepStrictEqual(getWrites(), [
-          `${RED}Failed to create a temp file${RESET}\n`,
+          `${RED}Failed to create an empty temp file. Error: write failed${RESET}\n`,
         ]);
       });
 
@@ -3777,7 +3777,7 @@ commands diff
           `${GREEN}0.0ms${RESET}`,
           `${BLUE}Reading slash commands: ${RESET}`,
           `${GREEN}0.0ms${RESET}`,
-          `${RED}Failed to create a before temp file for the reload diff of global${RESET}\n`,
+          `${RED}Failed to write to a temp file. Error: write failed${RESET}\n`,
         ]);
       });
 
@@ -3840,7 +3840,7 @@ commands diff
           `${GREEN}0.0ms${RESET}`,
           `${BLUE}Reading slash commands: ${RESET}`,
           `${GREEN}0.0ms${RESET}`,
-          `${YELLOW}Failed to create an after temp file for the reload diff of global${RESET}\n`,
+          `${RED}Failed to write to a temp file. Error: write failed${RESET}\n`,
         ]);
       });
 

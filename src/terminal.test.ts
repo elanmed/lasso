@@ -157,7 +157,7 @@ describe("terminal", () => {
 
         assert.deepStrictEqual(spawned, []);
         assert.deepStrictEqual(writes(), [
-          `${RED}Failed to create a temp file to open the pager${RESET}\n`,
+          `${RED}Failed to write to a temp file. Error: write failed${RESET}\n`,
         ]);
       });
     });
