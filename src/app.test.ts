@@ -3771,6 +3771,27 @@ Global content
       );
     });
 
+    it("prints the error and skips files whose existence cannot be checked", async () => {
+      testFs._dirs.add(getGlobalContextDir());
+      testFs._files.set(
+        "/fake-home/.config/lasso/context/AGENTS.md",
+        "Global content",
+      );
+      const realExistsSync = fsDeps.existsSync;
+      mock.method(fsDeps, "existsSync", (path: string) => {
+        if (path === "/fake-home/.config/lasso/context/AGENTS.md") {
+          throw makeErrnoError("EACCES");
+        }
+        return realExistsSync(path);
+      });
+      const writes = mockStdoutWrites();
+
+      assert.deepStrictEqual(await getContextEntries(), []);
+      assert.deepStrictEqual(writes(), [
+        `${RED}Failed to check if /fake-home/.config/lasso/context/AGENTS.md exists. Error: EACCES${RESET}\n`,
+      ]);
+    });
+
     it("includes global agents dir files", async () => {
       testFs._dirs.add(getGlobalContextDir());
       testFs._globResults.set("/fake-home/.config/lasso/context/**/AGENTS.md", [
@@ -5137,8 +5158,9 @@ describe("usage", () => {
         );
       });
 
-      it("overwrites a malformed usage log with the new entry", async () => {
+      it("prints the error and overwrites a malformed usage log with the new entry", async () => {
         testFs._files.set(getUsageLogPath(), "not-json");
+        const getWrites = mockStdoutWrites();
         const usage = {
           inputTokens: 10,
           outputTokens: 5,
@@ -5149,6 +5171,9 @@ describe("usage", () => {
 
         await syncNewModelUsageForLimitWindow("gpt-4", usage);
 
+        assert.deepStrictEqual(getWrites(), [
+          `${RED}Failed to parse the usage log at /fake-home/.local/share/lasso/usage.json. Error: Unexpected token 'o', "not-json" is not valid JSON${RESET}\n`,
+        ]);
         assert.deepStrictEqual(getState().usage.modelUsageForLimitWindow, {
           "gpt-4": [usage],
         });
@@ -5156,6 +5181,81 @@ describe("usage", () => {
           testFs._files.get(getUsageLogPath()),
           JSON.stringify({ "gpt-4": [usage] }),
         );
+      });
+
+      it("prints the error and appends the new entry when the usage log cannot be read", async () => {
+        testFs._files.set("/fake-home/.local/share/lasso/usage.json", "{}");
+        mock.method(fsDeps, "readFile", () =>
+          Promise.reject(makeErrnoError("EIO")),
+        );
+        const getWrites = mockStdoutWrites();
+        const usage = {
+          inputTokens: 10,
+          outputTokens: 5,
+          cacheReadTokens: 1,
+          cacheWriteTokens: 0,
+          date: 500_000,
+        };
+
+        await syncNewModelUsageForLimitWindow("gpt-4", usage);
+
+        assert.deepStrictEqual(getWrites(), [
+          `${RED}Failed to read the usage log at /fake-home/.local/share/lasso/usage.json. Error: EIO${RESET}\n`,
+        ]);
+        assert.deepStrictEqual(getState().usage.modelUsageForLimitWindow, {
+          "gpt-4": [usage],
+        });
+      });
+
+      it("prints the error and does nothing when the usage log directory cannot be checked", async () => {
+        mock.method(fsDeps, "existsSync", () => {
+          throw makeErrnoError("EACCES");
+        });
+        const getWrites = mockStdoutWrites();
+        const usage = {
+          inputTokens: 10,
+          outputTokens: 5,
+          cacheReadTokens: 1,
+          cacheWriteTokens: 0,
+          date: 500_000,
+        };
+
+        await syncNewModelUsageForLimitWindow("gpt-4", usage);
+
+        assert.deepStrictEqual(getWrites(), [
+          `${RED}Failed to check if /fake-home/.local/share/lasso exists. Error: EACCES${RESET}\n`,
+        ]);
+        assert.deepStrictEqual(getState().usage.modelUsageForLimitWindow, {});
+        assert.strictEqual(
+          testFs._files.has("/fake-home/.local/share/lasso/usage.json"),
+          false,
+        );
+      });
+
+      it("prints the error and appends the new entry when the usage log existence cannot be checked", async () => {
+        const realExistsSync = fsDeps.existsSync;
+        mock.method(fsDeps, "existsSync", (path: string) => {
+          if (path === "/fake-home/.local/share/lasso/usage.json")
+            throw makeErrnoError("EACCES");
+          return realExistsSync(path);
+        });
+        const getWrites = mockStdoutWrites();
+        const usage = {
+          inputTokens: 10,
+          outputTokens: 5,
+          cacheReadTokens: 1,
+          cacheWriteTokens: 0,
+          date: 500_000,
+        };
+
+        await syncNewModelUsageForLimitWindow("gpt-4", usage);
+
+        assert.deepStrictEqual(getWrites(), [
+          `${RED}Failed to check if /fake-home/.local/share/lasso/usage.json exists. Error: EACCES${RESET}\n`,
+        ]);
+        assert.deepStrictEqual(getState().usage.modelUsageForLimitWindow, {
+          "gpt-4": [usage],
+        });
       });
 
       it("appends to state even when the write fails", async () => {
@@ -5503,25 +5603,84 @@ describe("usage", () => {
       );
     });
 
-    it("overwrites a malformed usage log with an empty object", async () => {
-      testFs._dirs.add(dirname(getUsageLogPath()));
-      testFs._files.set(getUsageLogPath(), "not-json");
+    it("prints the error and does nothing when the usage log directory cannot be checked", async () => {
+      mock.method(fsDeps, "existsSync", () => {
+        throw makeErrnoError("EACCES");
+      });
+      const getWrites = mockStdoutWrites();
 
       await syncInitialModelUsageForLimitWindow();
 
+      assert.deepStrictEqual(getWrites(), [
+        `${RED}Failed to check if /fake-home/.local/share/lasso exists. Error: EACCES${RESET}\n`,
+      ]);
+      assert.deepStrictEqual(getState().usage.modelUsageForLimitWindow, {});
+      assert.strictEqual(
+        testFs._files.has("/fake-home/.local/share/lasso/usage.json"),
+        false,
+      );
+    });
+
+    it("prints the error and releases the lock when the usage log existence cannot be checked", async () => {
+      testFs._dirs.add("/fake-home/.local/share/lasso");
+      const realExistsSync = fsDeps.existsSync;
+      mock.method(fsDeps, "existsSync", (path: string) => {
+        if (path === "/fake-home/.local/share/lasso/usage.json")
+          throw makeErrnoError("EACCES");
+        return realExistsSync(path);
+      });
+      const getWrites = mockStdoutWrites();
+
+      await syncInitialModelUsageForLimitWindow();
+
+      assert.deepStrictEqual(getWrites(), [
+        `${RED}Failed to check if /fake-home/.local/share/lasso/usage.json exists. Error: EACCES${RESET}\n`,
+      ]);
+      assert.deepStrictEqual(getState().usage.modelUsageForLimitWindow, {});
+      assert.strictEqual(testFs._files.has(getUsageLogLockPath()), false);
+    });
+
+    it("does not print an error when the usage log does not exist", async () => {
+      testFs._dirs.add("/fake-home/.local/share/lasso");
+      const getWrites = mockStdoutWrites();
+
+      await syncInitialModelUsageForLimitWindow();
+
+      assert.deepStrictEqual(getWrites(), []);
+      assert.strictEqual(
+        testFs._files.get("/fake-home/.local/share/lasso/usage.json"),
+        `{}`,
+      );
+    });
+
+    it("prints the error and overwrites a malformed usage log with an empty object", async () => {
+      testFs._dirs.add(dirname(getUsageLogPath()));
+      testFs._files.set(getUsageLogPath(), "not-json");
+      const getWrites = mockStdoutWrites();
+
+      await syncInitialModelUsageForLimitWindow();
+
+      assert.deepStrictEqual(getWrites(), [
+        `${RED}Failed to parse the usage log at /fake-home/.local/share/lasso/usage.json. Error: Unexpected token 'o', "not-json" is not valid JSON${RESET}\n`,
+      ]);
       assert.deepStrictEqual(getState().usage.modelUsageForLimitWindow, {});
       assert.strictEqual(testFs._files.get(getUsageLogPath()), `{}`);
       assert.strictEqual(testFs._files.has(getUsageLogLockPath()), false);
     });
 
-    it("overwrites an unreadable usage log with an empty object and releases the lock", async () => {
+    it("prints the error and overwrites an unreadable usage log with an empty object and releases the lock", async () => {
       testFs._dirs.add(dirname(getUsageLogPath()));
+      testFs._files.set("/fake-home/.local/share/lasso/usage.json", "{}");
       mock.method(fsDeps, "readFile", () =>
         Promise.reject(makeErrnoError("EIO")),
       );
+      const getWrites = mockStdoutWrites();
 
       await syncInitialModelUsageForLimitWindow();
 
+      assert.deepStrictEqual(getWrites(), [
+        `${RED}Failed to read the usage log at /fake-home/.local/share/lasso/usage.json. Error: EIO${RESET}\n`,
+      ]);
       assert.deepStrictEqual(getState().usage.modelUsageForLimitWindow, {});
       assert.strictEqual(testFs._files.get(getUsageLogPath()), `{}`);
       assert.strictEqual(testFs._files.has(getUsageLogLockPath()), false);
@@ -5866,6 +6025,18 @@ describe("listSessionFiles", () => {
 
   it("returns an empty array when the directory does not exist", async () => {
     assert.deepStrictEqual(await listSessionFiles(), []);
+  });
+
+  it("prints the error and returns an empty array when the directory cannot be checked", async () => {
+    mock.method(fsDeps, "existsSync", () => {
+      throw makeErrnoError("EACCES");
+    });
+    const writes = mockStdoutWrites();
+
+    assert.deepStrictEqual(await listSessionFiles(), []);
+    assert.deepStrictEqual(writes(), [
+      `${RED}Failed to check if /fake-home/.local/state/lasso/sessions exists. Error: EACCES${RESET}\n`,
+    ]);
   });
 
   it("returns an empty array when the directory has no files", async () => {
@@ -7707,6 +7878,25 @@ describe("log", () => {
       assert.deepStrictEqual(getState().conversation.messages, [
         { role: "assistant", content: "reply" },
       ]);
+    });
+
+    it("prints the error and does not write when the session directory cannot be checked", async () => {
+      mock.method(fsDeps, "existsSync", () => {
+        throw makeErrnoError("EACCES");
+      });
+      const writes = mockStdoutWrites();
+
+      await syncSessionFile();
+
+      assert.deepStrictEqual(writes(), [
+        `${RED}Failed to check if /fake-home/.local/state/lasso/sessions exists. Error: EACCES${RESET}\n`,
+      ]);
+      assert.strictEqual(
+        testFs._files.has(
+          "/fake-home/.local/state/lasso/sessions/session-1234567890000.json",
+        ),
+        false,
+      );
     });
 
     it("creates the directory when it does not exist", async () => {
@@ -11768,6 +11958,22 @@ hello
       assert.strictEqual(getState().content.localConfigStr, localConfigStr);
       assert.strictEqual(globalConfig.model, testConfig.model);
       assert.strictEqual(localConfig.promptPrefix, ">>> ");
+    });
+
+    it("prints the error and returns the default config when the config file cannot be checked", async () => {
+      testFs._files.set(getGlobalConfigPath(), "model: gpt-4");
+      mock.method(fsDeps, "existsSync", () => {
+        throw makeErrnoError("EACCES");
+      });
+      const writes = mockStdoutWrites();
+
+      const globalConfigStr = await readConfigFileStr(getGlobalConfigPath());
+
+      assert.strictEqual(globalConfigStr, "{}");
+      assert.deepStrictEqual(writes(), [
+        `${RED}Failed to check if ${getGlobalConfigPath()} exists. Error: EACCES${RESET}\n`,
+      ]);
+      assert.deepStrictEqual(getState().content.configWarningMessages, []);
     });
 
     it("warns when reading an existing config file fails", async () => {
