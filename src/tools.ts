@@ -135,10 +135,10 @@ export async function executeBashTool(
   { command: bashCommand }: BashToolInput,
   signal?: AbortSignal,
 ): Promise<ToolResult> {
-  const bashPromise = childProcessDeps.exec(
-    bashCommand,
-    signal === undefined ? undefined : { signal },
-  );
+  const bashPromise = childProcessDeps.exec(bashCommand, {
+    shell: "/bin/bash",
+    ...(signal === undefined ? undefined : { signal }),
+  });
   bashPromise.child.stdin?.end();
   const bashResult = await tryCatchAsync(bashPromise);
   if (!bashResult.ok) {

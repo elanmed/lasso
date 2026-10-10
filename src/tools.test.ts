@@ -18,6 +18,7 @@ import {
   testFs,
   setupTestContext,
   mockExec,
+  mockExecRecordingOptions,
   mockGenerateText,
   mockStdoutWrites,
   makeGenerateTextResult,
@@ -263,6 +264,27 @@ describe("tools", () => {
       );
       assert.strictEqual(result.isError, true);
       assert.match(result.content, /Command failed: exit 1/);
+    });
+
+    it("runs the command with /bin/bash as the shell", async () => {
+      const optionsCalls = mockExecRecordingOptions();
+      await executeBashTool(
+        { fileSystemAccessType: "read", command: "echo hi" },
+        undefined,
+      );
+      assert.deepStrictEqual(optionsCalls, [{ shell: "/bin/bash" }]);
+    });
+
+    it("passes the abort signal alongside the bash shell", async () => {
+      const optionsCalls = mockExecRecordingOptions();
+      const controller = new AbortController();
+      await executeBashTool(
+        { fileSystemAccessType: "read", command: "echo hi" },
+        controller.signal,
+      );
+      assert.deepStrictEqual(optionsCalls, [
+        { shell: "/bin/bash", signal: controller.signal },
+      ]);
     });
   });
 

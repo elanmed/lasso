@@ -6,25 +6,6 @@ Overall, the codebase is in good shape, with consistent error handling and thoro
 
 ## Confirmed bugs
 
-### 2. `bash` tool runs under `/bin/sh`, not bash
-
-- Location: `tools.ts`, `executeBashTool`
-- Severity: medium
-- What is wrong: `child_process.exec` uses `/bin/sh`, which is dash on Debian and Ubuntu. The tool and prompts say "bash", so `[[ ]]`, `set -o pipefail`, `<(...)` and `source` fail.
-- How to trigger: Have the model run `set -o pipefail; echo hi` on Ubuntu.
-- Suggested fix:
-
-```diff
--  const bashPromise = childProcessDeps.exec(
--    bashCommand,
--    signal === undefined ? undefined : { signal },
--  );
-+  const bashPromise = childProcessDeps.exec(bashCommand, {
-+    shell: "/bin/bash",
-+    ...(signal === undefined ? {} : { signal }),
-+  });
-```
-
 ### 3. Diff output is discarded when `git diff` exits 1
 
 - Location: `differ.ts`, end of `execGitDiff`

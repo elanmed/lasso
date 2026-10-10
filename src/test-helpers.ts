@@ -473,6 +473,17 @@ export function mockExecCalls(
   });
 }
 
+export function mockExecRecordingOptions() {
+  const optionsCalls: unknown[] = [];
+  mock.method(childProcessDeps, "exec", (_cmd: string, options: unknown) => {
+    optionsCalls.push(options);
+    return Object.assign(Promise.resolve({ stdout: "", stderr: "" }), {
+      child: { stdin: undefined },
+    });
+  });
+  return optionsCalls;
+}
+
 export function mockGenerateText(implementation: unknown) {
   mock.method(aiDeps, "generateText", implementation as never);
 }
