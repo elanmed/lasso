@@ -105,7 +105,7 @@ I checked the import list of every module by hand:
 3. **Exports and mocks in tests.** Tests that `mock.method` on an exported function from a module that moves will need updated import paths. Check every `*.test.ts` that imports a moved module.
 4. **Diff size and history.** This is a large diff that moves a lot of code. `git log --follow` will not track most of it. Do it as a separate commit series, one batch at a time, so each commit still passes `./agent-pnpm-run.sh ci`.
 5. **File size.** `utils.ts` will be about 4,600 lines, and `input.ts` stays about 1,990. Editing a 4,600-line file with `sed`-based edits works, but review and search are harder than with the current split.
-6. **Test files.** `src/*.test.ts` has 22 files. Decided: keep test files separate for now. Their imports are repointed to the merged modules, and the test files keep their current names. Consolidating tests would make `input.test.ts` (4,821 lines) even larger. It also conflicts with the `AGENTS.md` rule that tests move with their functions, so that rule is deferred until test consolidation is decided.
+6. **Test files.** Superseded. Test files were later moved to match the new modules. See "Test file consolidation" below.
 7. **Build and tooling.** `scripts/compile.sh` builds from `src/index.ts`, so bundling should not change. Check it after the move.
 8. **Docs.** After the move, update the README line counts (`./agent-pnpm-run.sh cloc`). Check whether any docs mention specific file names.
 9. **`import/order` lint.** Re-run lint after each batch. The order rule may flag imports that move within a merged file.
@@ -117,11 +117,30 @@ I checked the import list of every module by hand:
 3. Move the six-module cycle (`state`, `print`, `context`, `usage`, `debug-log`, `utils`) and `text` into `utils.ts`, then run `ci`.
 4. Move `fence`, `usage-format`, `differ`, `model`, `log`, `mcp`, `terminal`, `slash-commands`, `tools`, and `config` into `utils.ts`, running `ci` after each group.
 5. Rename `api.ts` to `app.ts`, and repoint `index.ts` and `input.ts` to the new files. Check that `test-helpers.ts` still compiles and that the bundle still builds.
-6. Repoint test imports to the merged modules. Do not move test files. Run `ci` to confirm the tests still pass.
+6. Repoint test imports to the merged modules, then move the tests into files named after the new modules (see "Test file consolidation"). Run `ci` to confirm the tests still pass.
 7. Run `./agent-pnpm-run.sh cloc` and update the README counts if needed.
+
+## Test file consolidation
+
+Test files now follow the new source layout. Each test file is named after the module that contains the code it tests, so there is one test file per source module that has tests.
+
+| Test file       | Tests for  | Previously in                                                                                                                                                                                                                  |
+| --------------- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `app.test.ts`   | `app.ts`   | `api.test.ts` (renamed)                                                                                                                                                                                                        |
+| `input.test.ts` | `input.ts` | unchanged                                                                                                                                                                                                                      |
+| `utils.test.ts` | `utils.ts` | `utils`, `config`, `config-types`, `context`, `debug-log`, `differ`, `fence`, `log`, `mcp`, `model`, `paths`, `print`, `prompts`, `slash-commands`, `state`, `temp-file`, `terminal`, `text`, `tools`, `usage`, `usage-format` |
+
+Notes on the move:
+
+- The 20 test files other than `api.test.ts` and `input.test.ts` were merged into `utils.test.ts`. Their `describe` blocks keep their original order and content. Imports are merged into one block per module.
+- `assert` in `utils.test.ts` is imported from `node:assert/strict`. `debug-log.test.ts` and `log.test.ts` already used strict mode. All tests pass under it.
+- One test moved. `falls back to 80 columns when stdout columns are undefined` was nested under `truncate`, whose `beforeEach` mocks `processDeps.stdout.getColumns`. Stacking a second mock on the same method left a width of 100 behind after `mock.restoreAll()`, and that leaked into the fence tests. The test now sits at the `text` level. Its assertion is unchanged.
+- Verification: 924 tests before and after, with the same test names. `lint`, `types`, and `prettier-check` pass. README test line count updated from ~16,000 to ~15,800.
+- Size: `utils.test.ts` is about 11,000 lines, and `input.test.ts` stays about 4,800. Search and review are harder in the large file. Splitting it again would mean another layout decision.
+- Tests now share a process, so state can leak between sections that used to be isolated. Run the full suite after each merge.
 
 ## Out of scope
 
 - Changing behavior or public APIs.
-- Consolidating or moving test files (see risk 6).
+- Changing test coverage. Tests are moved, not rewritten.
 - Changing `deps.ts` or the test mocking model.
