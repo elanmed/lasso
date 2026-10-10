@@ -182,6 +182,16 @@ export const subagentTimeoutSettings = {
   },
 };
 
+async function parseArticle(htmlStr: string) {
+  const window = new Window();
+  try {
+    const doc = new window.DOMParser().parseFromString(htmlStr, "text/html");
+    return new Readability(doc).parse();
+  } finally {
+    await window.happyDOM.close();
+  }
+}
+
 export async function executeWebFetchHtmlTool(
   { href }: WebFetchTool,
   signal?: AbortSignal,
@@ -225,10 +235,7 @@ export async function executeWebFetchHtmlTool(
   }
   const htmlStr = textResult.value;
 
-  const window = new Window();
-  const doc = new window.DOMParser().parseFromString(htmlStr, "text/html");
-  const reader = new Readability(doc);
-  const article = reader.parse();
+  const article = await parseArticle(htmlStr);
   if (article === null) {
     const error = `Failed to parse article from ${href}`;
     print.doing(error);

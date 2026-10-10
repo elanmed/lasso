@@ -1,6 +1,7 @@
 import { describe, it, beforeEach, afterEach, mock } from "node:test";
 import assert from "node:assert";
 import { z } from "zod";
+import { DetachedWindowAPI } from "happy-dom";
 import {
   bashToolInputSchema,
   executeBashTool,
@@ -17,6 +18,7 @@ import {
 import {
   testFs,
   setupTestContext,
+  makeFakeFetch,
   mockExec,
   mockExecRecordingOptions,
   mockGenerateText,
@@ -318,13 +320,7 @@ describe("tools", () => {
           <body><p>This is the main content of the article that should be extracted.</p></body>
         </html>
       `;
-      const fakeFetch = () => {
-        return Promise.resolve({
-          ok: true,
-          text: () => Promise.resolve(html),
-        } as Response);
-      };
-      mock.method(globalThis, "fetch", fakeFetch);
+      mock.method(globalThis, "fetch", makeFakeFetch({ text: html }));
 
       const result = await executeWebFetchHtmlTool({
         href: "https://example.com/article",
@@ -338,11 +334,35 @@ describe("tools", () => {
       );
     });
 
+    it("closes the happy-dom window after parsing", async () => {
+      const html = `<html><head><title>Test Page</title></head><body><p>Content</p></body></html>`;
+      mock.method(globalThis, "fetch", makeFakeFetch({ text: html }));
+      const closeSpy = mock.method(DetachedWindowAPI.prototype, "close");
+
+      await executeWebFetchHtmlTool({ href: "https://example.com/article" });
+      assert.strictEqual(closeSpy.mock.callCount(), 1);
+    });
+
+    it("closes the happy-dom window when no article is found", async () => {
+      mock.method(globalThis, "fetch", makeFakeFetch());
+      const closeSpy = mock.method(DetachedWindowAPI.prototype, "close");
+
+      const result = await executeWebFetchHtmlTool({
+        href: "https://example.com/empty",
+      });
+      assert.deepStrictEqual(result, {
+        isError: true,
+        content: "Failed to parse article from https://example.com/empty",
+      });
+      assert.strictEqual(closeSpy.mock.callCount(), 1);
+    });
+
     it("returns isError when fetch throws", async () => {
-      const fakeFetch = () => {
-        return Promise.reject(new Error("network error"));
-      };
-      mock.method(globalThis, "fetch", fakeFetch);
+      mock.method(
+        globalThis,
+        "fetch",
+        makeFakeFetch({ error: new Error("network error") }),
+      );
 
       const result = await executeWebFetchHtmlTool({
         href: "https://example.com/fail",
@@ -354,15 +374,16 @@ describe("tools", () => {
     });
 
     it("returns isError when response is not ok", async () => {
-      const fakeFetch = () => {
-        return Promise.resolve({
+      mock.method(
+        globalThis,
+        "fetch",
+        makeFakeFetch({
           ok: false,
           status: 500,
           statusText: "Internal Server Error",
-          text: () => Promise.resolve("server error"),
-        } as Response);
-      };
-      mock.method(globalThis, "fetch", fakeFetch);
+          text: "server error",
+        }),
+      );
 
       const result = await executeWebFetchHtmlTool({
         href: "https://example.com/broken",
@@ -413,13 +434,7 @@ describe("tools", () => {
   describe("executeWebFetchJsonTool", () => {
     it("returns parsed JSON content on success", async () => {
       const jsonData = { name: "test", value: 42 };
-      const fakeFetch = () => {
-        return Promise.resolve({
-          ok: true,
-          json: () => Promise.resolve(jsonData),
-        } as Response);
-      };
-      mock.method(globalThis, "fetch", fakeFetch);
+      mock.method(globalThis, "fetch", makeFakeFetch({ json: jsonData }));
 
       const result = await executeWebFetchJsonTool({
         href: "https://api.example.com/data",
@@ -430,10 +445,11 @@ describe("tools", () => {
     });
 
     it("returns isError when fetch throws", async () => {
-      const fakeFetch = () => {
-        return Promise.reject(new Error("network error"));
-      };
-      mock.method(globalThis, "fetch", fakeFetch);
+      mock.method(
+        globalThis,
+        "fetch",
+        makeFakeFetch({ error: new Error("network error") }),
+      );
 
       const result = await executeWebFetchJsonTool({
         href: "https://api.example.com/fail",
@@ -445,14 +461,11 @@ describe("tools", () => {
     });
 
     it("returns isError when response is not ok", async () => {
-      const fakeFetch = () => {
-        return Promise.resolve({
-          ok: false,
-          status: 404,
-          statusText: "Not Found",
-        } as Response);
-      };
-      mock.method(globalThis, "fetch", fakeFetch);
+      mock.method(
+        globalThis,
+        "fetch",
+        makeFakeFetch({ ok: false, status: 404, statusText: "Not Found" }),
+      );
 
       const result = await executeWebFetchJsonTool({
         href: "https://api.example.com/missing",

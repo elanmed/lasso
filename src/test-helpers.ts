@@ -414,6 +414,29 @@ export function makeAbortError(message = "aborted") {
   return err;
 }
 
+export function makeFakeFetch(
+  opts: {
+    ok?: boolean;
+    status?: number;
+    statusText?: string;
+    text?: string;
+    json?: unknown;
+    error?: Error;
+  } = {},
+) {
+  return () => {
+    if (opts.error !== undefined) return Promise.reject(opts.error);
+    const response = {
+      ok: opts.ok ?? true,
+      status: opts.status,
+      statusText: opts.statusText,
+      text: () => Promise.resolve(opts.text ?? ""),
+      json: () => Promise.resolve(opts.json),
+    };
+    return Promise.resolve(response as Response);
+  };
+}
+
 export function mockGenerateTextResults(results: unknown[]) {
   let callCount = 0;
   const m = mock.method(aiDeps, "generateText", () => {
