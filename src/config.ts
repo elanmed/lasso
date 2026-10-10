@@ -81,6 +81,7 @@ export function warnOnMissingConfig() {
   if (messages.length === 0) return;
 
   printNewline();
+  print.warning("Warnings:");
   print.warning(messages.map((message) => `- ${message}`).join("\n"));
   printNewline();
   print.warning(
@@ -94,6 +95,7 @@ export function blockOnMissingConfig() {
   if (messages.length === 0) return false;
 
   printNewline();
+  print.error("Errors:");
   print.error(messages.map((message) => `- ${message}`).join("\n"));
   if (getState().content.includeConfigInitMessage) {
     printNewline();

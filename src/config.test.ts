@@ -1362,6 +1362,7 @@ describe("config", () => {
           warnOnMissingConfig();
           assert.deepStrictEqual(getWrites(), [
             "\n",
+            `${YELLOW}Warnings:${RESET}\n`,
             `${YELLOW}- A default context window of 128,000 tokens is used because there is no \`contextWindowPerModel\` entry for the current model \`claude-sonnet-4-6\`${RESET}\n`,
             "\n",
             `${YELLOW}Suppress these warnings via the \`suppressConfigWarnings\` config option${RESET}\n`,
@@ -2188,6 +2189,7 @@ hello
       assert.strictEqual(blockOnMissingConfig(), true);
       assert.deepStrictEqual(getWrites(), [
         "\n",
+        `${RED}Errors:${RESET}\n`,
         `${RED}- Set \`model\` in your config file\n- Set the \`LASSO_API_KEY\` environment variable, e.g. \`export LASSO_API_KEY=...\`${RESET}\n`,
         "\n",
       ]);
@@ -2200,6 +2202,7 @@ hello
       assert.strictEqual(blockOnMissingConfig(), true);
       assert.deepStrictEqual(getWrites(), [
         "\n",
+        `${RED}Errors:${RESET}\n`,
         `${RED}- Set \`model\` in your config file${RESET}\n`,
         "\n",
         `${RED}Run /initlocal or /initglobal to generate a sample config in \`./.lasso\` or \`~/.config/lasso\` respectively.${RESET}\n`,
