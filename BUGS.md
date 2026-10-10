@@ -101,19 +101,6 @@ find ~/.local/state/lasso/sessions -size 0 -delete
 +  await tryCatchAsync(fsDeps.unlink(tempFile));
 ```
 
-### 9. An empty or comment-only settings file is a fatal config error
-
-- Location: `config.ts`, `parseConfigFileStr`
-- Severity: low
-- What is wrong: `YAML.parse("")` returns `null`, which `z.strictObject` rejects, and the resulting error blocks all input.
-- How to trigger: `touch .lasso/settings.yaml`, start lasso, send a message.
-- Suggested fix:
-
-```diff
--  const configResult = ConfigSchema.safeParse(parseResult.value);
-+  const configResult = ConfigSchema.safeParse(parseResult.value ?? {});
-```
-
 ### 10. Failed diff leaks both temp files
 
 - Location: `differ.ts`, `diffAndCleanup`
