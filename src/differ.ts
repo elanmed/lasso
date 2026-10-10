@@ -31,6 +31,8 @@ export async function execGitDiff(opts: {
   const result = await tryCatchAsync(
     childProcessDeps.exec(command, { cwd: os.tmpdir() }),
   );
+  // exit code 1 for files that differ
+  // exec treats exit code 1 as an error
 
   if (!result.ok) {
     const code = (result.error as { code?: number }).code;
@@ -45,7 +47,27 @@ export async function execGitDiff(opts: {
     }
   }
 
-  return result.ok ? result.value : { stdout: "", stderr: "" };
+  if (result.ok) return result.value;
+
+  const obj: { stdout: string; stderr: string } = { stderr: "", stdout: "" };
+  if (
+    typeof result.error === "object" &&
+    result.error !== null &&
+    "stdout" in result.error &&
+    typeof result.error.stdout === "string"
+  ) {
+    obj.stdout = result.error.stdout;
+  }
+
+  if (
+    typeof result.error === "object" &&
+    result.error !== null &&
+    "stderr" in result.error &&
+    typeof result.error.stderr === "string"
+  ) {
+    obj.stderr = result.error.stderr;
+  }
+  return obj;
 }
 
 export function isToolCallDiffIgnoredPath(path: string) {

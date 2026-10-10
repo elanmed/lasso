@@ -326,6 +326,23 @@ describe("differ", () => {
         });
         assert.deepStrictEqual(result, { stdout: "", stderr: "" });
       });
+
+      it("returns the diff from the error output when delta exits with code 1", async () => {
+        const err = Object.assign(new Error("diff failed"), {
+          code: 1,
+          stdout: "delta diff output",
+          stderr: "delta warning",
+        });
+        mockExecCalls([{ stdout: "delta 0.18.2" }, { stdout: "", error: err }]);
+        const result = await execGitDiff({
+          tempFileBeforePath: "a",
+          tempFileAfterPath: "b",
+        });
+        assert.deepStrictEqual(result, {
+          stdout: "delta diff output",
+          stderr: "delta warning",
+        });
+      });
     });
 
     describe("plain git diff", () => {
@@ -353,6 +370,26 @@ describe("differ", () => {
           tempFileAfterPath: "b",
         });
         assert.deepStrictEqual(result, { stdout: "", stderr: "" });
+      });
+
+      it("returns the diff from the error output when plain git diff exits with code 1", async () => {
+        const err = Object.assign(new Error("diff failed"), {
+          code: 1,
+          stdout: "plain diff output",
+          stderr: "",
+        });
+        mockExecCalls([
+          { stdout: "", error: new Error("not found") },
+          { stdout: "", error: err },
+        ]);
+        const result = await execGitDiff({
+          tempFileBeforePath: "a",
+          tempFileAfterPath: "b",
+        });
+        assert.deepStrictEqual(result, {
+          stdout: "plain diff output",
+          stderr: "",
+        });
       });
 
       it("resolves on plain git diff error with an unexpected low exit code", async () => {
