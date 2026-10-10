@@ -15,14 +15,18 @@ import {
   normalizeNewline,
   isExisty,
   shellQuote,
-  listSessionFiles,
   stringify,
   getStrFromAssistantContent,
   markdownFence,
   isNullish,
-  safeStringify,
   getPrettyDate,
   sleep,
+  wrapInColor,
+  getPrettyMoney,
+  execGitDiff,
+} from "./utils.ts";
+import {
+  listSessionFiles,
   getTempFileName,
   truncate,
   errorWithSpacing,
@@ -32,11 +36,9 @@ import {
   startLoadingState,
   stopLoadingState,
   successWithSpacing,
-  wrapInColor,
   fencePrint,
   wrapInFence,
   getPrettyContextWindowUsage,
-  getPrettyMoney,
   getPrettyTokenUsage,
   getUsageMoneyForModel,
   sumUsageTokens,
@@ -54,7 +56,6 @@ import {
   getGlobalConfigPath,
   getLocalConfigPath,
   contextFileSkillNamePrefix,
-  execGitDiff,
   formatMarkdown,
   openWithPager,
   builtinSlashCommands,
@@ -66,7 +67,7 @@ import {
   syncSessionFile,
   harnessTools,
   getTranscriptionProvider,
-} from "./utils.ts";
+} from "./app.ts";
 import { aiDeps, childProcessDeps, fsDeps, processDeps } from "./deps.ts";
 
 // https://stackoverflow.com/a/33500118
@@ -678,36 +679,6 @@ async function resolveExitConfirmation() {
   }
 
   return;
-}
-
-export async function resolveInterruptWithEditor() {
-  const rl = getState().terminal.rl;
-  assertAtBuildtime(rl !== null);
-
-  actions.setInterruptWithEditorAbortController(new AbortController());
-  const abortController =
-    getState().abortControllers.interruptWithEditorContent;
-  assertAtBuildtime(abortController !== null);
-  print.warning("You have queued messages!");
-  const continueResult = await tryCatchAsync(
-    rl.question(
-      `Edit (${safeStringify(getState().config.keymaps.edit)}), c(lear), or <CR> to continue: `,
-      {
-        signal: abortController.signal,
-      },
-    ),
-  );
-  actions.setInterruptWithEditorAbortController(null);
-
-  if (!continueResult.ok) {
-    if (isAbortError(continueResult.error)) return;
-    print.error(getMessageFromError(continueResult.error));
-    return;
-  }
-
-  if (/^c(lear)?$/i.exec(continueResult.value) !== null) {
-    actions.setEditorInputValue(null);
-  }
 }
 
 type ParameterizedBuiltinSlashCommand = "resume" | "model";

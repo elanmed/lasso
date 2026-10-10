@@ -8,13 +8,13 @@ import {
   promptDeps,
   print,
   startLoadingState,
-  sleep,
-  strToApproxTokens,
   getGlobalConfigPath,
   getGlobalContextDir,
   defaultConfig,
   type Key,
-} from "./utils.ts";
+  resolveInterruptWithEditor,
+} from "./app.ts";
+import { sleep, strToApproxTokens } from "./utils.ts";
 import {
   parseInputFromEditor,
   shouldMuteStdout,
@@ -45,7 +45,6 @@ import {
   pageHistory,
   pageLastMessage,
   pageLastResponse,
-  resolveInterruptWithEditor,
   pageLastDiff,
   printKeymaps,
 } from "./input.ts";

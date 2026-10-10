@@ -1,6 +1,6 @@
 import { fileURLToPath } from "node:url";
+import { getMessageFromError } from "./utils.ts";
 import {
-  getMessageFromError,
   print,
   printNewline,
   printSessionStartDate,
@@ -13,7 +13,9 @@ import {
   actions,
   getState,
   warnOnLargePromptOverhead,
-} from "./utils.ts";
+  resolveApiCall,
+  maybeCompact,
+} from "./app.ts";
 import {
   initReadline,
   initStdin,
@@ -21,7 +23,6 @@ import {
   pollUntilNonBlockingProcessClosed,
   resolveUserInput,
 } from "./input.ts";
-import { resolveApiCall, maybeCompact } from "./app.ts";
 
 async function main() {
   actions.setIsInitializing(true);
