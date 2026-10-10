@@ -2384,6 +2384,7 @@ editor input
     });
 
     it("filters out context file skills", async () => {
+      mockPagerSpawn();
       actions.setSkills([
         {
           name: "__lasso-context-for-/ctx",
@@ -2539,6 +2540,7 @@ editor input
     });
 
     it("includes context file skills", async () => {
+      mockPagerSpawn();
       actions.setContextEntries([
         { filePath: "/project/AGENTS.md", content: "context" },
       ]);
@@ -2621,6 +2623,7 @@ editor input
     });
 
     it("writes builtin and custom commands into the temp file", async () => {
+      mockPagerSpawn();
       actions.setSlashCommands([
         {
           name: "custom.md",

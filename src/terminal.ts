@@ -1,5 +1,5 @@
 import { format } from "prettier";
-import { childProcessDeps, processDeps } from "./deps.ts";
+import { childProcessDeps, fsDeps, processDeps } from "./deps.ts";
 import { getState } from "./state.ts";
 import {
   getMessageFromError,
@@ -117,4 +117,5 @@ export async function openWithPager({
     shell: true,
     stdio: "inherit",
   });
+  await tryCatchAsync(fsDeps.unlink(tempFile));
 }

@@ -66,27 +66,6 @@ find ~/.local/state/lasso/sessions -size 0 -delete
 +  actions.appendToModelUsageForSession(defaultedUsage, model);
 ```
 
-### 8. Pager temp files are never deleted
-
-- Location: `terminal.ts`, `openWithPager`
-- Severity: low
-- What is wrong: Every `/history`, `/lastresponse` and `/config` leaves a file in the temp dir containing conversation text, readable with default umask. The pager tests currently read the file after the call and will need updating.
-- How to trigger: Run `/history` and list `/tmp/lasso-*`.
-- Suggested fix:
-
-```diff
--import { childProcessDeps, processDeps } from "./deps.ts";
-+import { childProcessDeps, fsDeps, processDeps } from "./deps.ts";
-```
-
-```diff
-   childProcessDeps.spawnSync(pagerCommand, {
-     shell: true,
-     stdio: "inherit",
-   });
-+  await tryCatchAsync(fsDeps.unlink(tempFile));
-```
-
 ## Needs verification
 
 1. Cost tracking likely uses last-step usage only. `appendModelUsage(usage)` reads `usage` from `generateText`. In recent `ai` versions this is believed to be the last step, with `totalUsage` summing all steps. In a tool loop that would undercount spend by roughly the step count. Check by logging `totalUsage` next to `usage` on a multi-tool turn.

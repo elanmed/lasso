@@ -547,10 +547,15 @@ export function mockSpawnSync(
 
 export function mockPagerSpawn() {
   const spawned: string[] = [];
+  const unlinked: string[] = [];
   mock.method(childProcessDeps, "spawnSync", (cmd: string) => {
     spawned.push(cmd);
   });
-  return { spawned };
+  mock.method(fsDeps, "unlink", (path: string) => {
+    unlinked.push(path);
+    return Promise.resolve();
+  });
+  return { spawned, unlinked };
 }
 
 export function mockEditorSpawn(

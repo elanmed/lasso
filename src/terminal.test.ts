@@ -31,9 +31,12 @@ describe("terminal", () => {
     });
 
     let spawned: string[];
+    let unlinked: string[];
 
     beforeEach(() => {
-      spawned = mockPagerSpawn().spawned;
+      const pager = mockPagerSpawn();
+      spawned = pager.spawned;
+      unlinked = pager.unlinked;
       actions.setBatAvailable(true);
     });
 
@@ -131,6 +134,14 @@ describe("terminal", () => {
           testFs._files.get("/tmp/lasso-test-uuid.txt"),
           "content\n\n",
         );
+      });
+
+      it("deletes the temp file after the pager exits", async () => {
+        await openWithPager({
+          initialContentStr: "content",
+          contentType: "markdown",
+        });
+        assert.deepStrictEqual(unlinked, ["/tmp/lasso-test-uuid.txt"]);
       });
 
       it("does not spawn a pager when the temp file cannot be created", async () => {
