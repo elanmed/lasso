@@ -10,15 +10,15 @@ _A minimal agent harness to rein in your llm_
   - Responses are piped through `bat` to render markdown
   - Multi-line input is supported by spawning an editor of your choice
   - Messages can be queued by typing a custom delimiter (default `l---`) in the spawned editor
-- **Tools**: 5 tools to execute bash, fetch from the web, and launch subagents
+- **Tools**: 8 built-in tools, plus tools exposed by configured MCP servers
   - The agent is given instructions on how to perform crud operations via the bash tool
-  - A `git diff` with `delta` is output whenever the bash tool changes a file
+  - File edits made through the bash tool are shown as diffs, rendered with `delta` when available
 - **Multiple providers**: Anthropic, OpenAI, Google, or OpenAI-compatible APIs
 - **MCP support**: Connect HTTP, SSE, and stdio servers
 - **AGENTS.md support**: The root file is included in context, nested files are internally represented as skills
 - **Slash commands**: Change agent settings or execute reusable prompts
 - **Token usage tracking**: Track spending per model within a configurable time window
-- **Context compaction**: Conversations are automatically compacted near 95% context usage
+- **Context compaction**: Conversations are compacted near 95% of the context window
 - **Session history**: Transcripts are persisted per session and past sessions can be resumed with `/resume`
 - **Keymaps**: Customizable shortcuts for executing built-in slash commands
 
@@ -42,7 +42,7 @@ export LASSO_API_KEY=your-api-key && ~/.local/bin/lasso
 
 ### Manual installation
 
-> Note that manual installation requires Node.js 24 and pnpm 11.1.0:
+> Note that manual installation requires Node.js 22 or later and pnpm 11.1.0:
 
 ```sh
 git clone https://github.com/elanmed/lasso.git
@@ -69,7 +69,7 @@ If `model`, `baseURL`, or `LASSO_API_KEY` are missing at startup, lasso warns an
 | `transcriptionModel`          | `string`                                                                             | —                        | Transcription model name                                                   |
 | `transcriptionBaseURL`        | `string`                                                                             | `null`                   | API base URL for audio transcription                                       |
 | `pricingPerModel`             | `object`                                                                             | `{}`                     | Token pricing per model per million                                        |
-| `contextWindowPerModel`       | `object`                                                                             | `{}`                     | Context window size in tokens per model                                    |
+| `contextWindowPerModel`       | `object`                                                                             | `{}`                     | Context window per model (default: 128,000 tokens)                         |
 | `keymaps`                     | `object`                                                                             | see below                | Custom keybindings                                                         |
 | `customSlashCommandDirs`      | `string[]`                                                                           | `[]`                     | Additional directories for custom slash commands                           |
 | `customSkillDirs`             | `string[]`                                                                           | `[]`                     | Additional directories for skills                                          |
@@ -91,7 +91,7 @@ If `model`, `baseURL`, or `LASSO_API_KEY` are missing at startup, lasso warns an
 
 The local config either overwrites or extends the global config per option:
 
-- **Overwrite**: scalar options (`model`, `sdkProvider`, `gateway`, `baseURL`, `transcriptionSdkProvider`, `transcriptionModel`, `transcriptionBaseURL`, `loadingStateFrameDuration`, `promptPrefix`, `suppressBatUnavailableWarning`, `asciiOnly`, `suppressStartupDurations`, `suppressToolEditDiffs`, `messageQueueDelimiter`, `reasoning`, `usageLimit`, `compactWithStructuredOutput`) and arrays (`customSlashCommandDirs`, `customSkillDirs`, `subagentModels`, `loadingStateFrames`) replace the global value wholesale — arrays are not merged.
+- **Overwrite**: scalar options (`model`, `sdkProvider`, `gateway`, `baseURL`, `transcriptionSdkProvider`, `transcriptionModel`, `transcriptionBaseURL`, `loadingStateFrameDuration`, `promptPrefix`, `suppressConfigWarnings`, `asciiOnly`, `suppressStartupDurations`, `suppressToolEditDiffs`, `messageQueueDelimiter`, `reasoning`, `usageLimit`, `compactWithStructuredOutput`) and arrays (`customSlashCommandDirs`, `customSkillDirs`, `subagentModels`, `loadingStateFrames`) replace the global value wholesale — arrays are not merged.
 - **Extend**: `keymaps`, `mcps`, `pricingPerModel`, and `contextWindowPerModel` merge entry-by-entry with the default and global entries, the local entry winning on conflicts. `pricingPerModel` and `contextWindowPerModel` entries set to `null` cancel the global or default entry (see the relevant sections below).
 
 ### MCP Servers
@@ -295,14 +295,14 @@ usageLimit:
 
 ## Environment Variables
 
-| Variable                | Description                                                                                                            |
-| ----------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| `LASSO_API_KEY`         | API key for the configured provider (required)                                                                         |
-| `LASSO_EDIT`            | Editor command with `__FILE__` placeholder for multi-line input (fallback: `$EDITOR __FILE__`)                         |
-| `LASSO_PAGER`           | Pager command for all pager views with a `__FILE__` placeholder (fallback: `$PAGER`, then `bat`, then `less`)          |
-| `LASSO_CLIPBOARD_PASTE` | Command used by `/paste` to read the clipboard (default: `pbpaste` on macOS, `xclip -selection clipboard -o` on Linux) |
-| `NO_COLOR`              | Disables all ansi color output (color is also disabled automatically when stdout is not a tty)                         |
-| `DEBUG`                 | Set to `1` to enable debug logging                                                                                     |
+| Variable                | Description                                                                                                   |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------- |
+| `LASSO_API_KEY`         | API key for the configured provider (required)                                                                |
+| `LASSO_EDIT`            | Editor command with `__FILE__` placeholder for multi-line input (fallback: `$EDITOR __FILE__`)                |
+| `LASSO_PAGER`           | Pager command for all pager views with a `__FILE__` placeholder (fallback: `$PAGER`, then `bat`, then `less`) |
+| `LASSO_CLIPBOARD_PASTE` | Paste command (macOS: `pbpaste`; Linux: `xclip -selection clipboard -o`)                                      |
+| `NO_COLOR`              | Disables all ansi color output (color is also disabled automatically when stdout is not a tty)                |
+| `DEBUG`                 | Set to `1` to enable debug logging                                                                            |
 
 ## Builtin Slash Commands
 
@@ -331,6 +331,8 @@ Slash commands are triggered with `/command` at the prompt.
 | `/initlocal`    | Create `./.lasso/settings.yaml` if it doesn't exist                           |
 | `/initglobal`   | Create `~/.config/lasso/settings.yaml` if it doesn't exist                    |
 | `/resume`       | Resume the latest session or select one by start date (`/resume <timestamp>`) |
+| `/summaries`    | View conversation summaries in a pager                                        |
+| `/mcps`         | List configured MCP servers in a pager                                        |
 
 ### Custom Slash Commands
 
@@ -440,14 +442,16 @@ Available skills are listed in the system prompt, the LLM can use the `load_skil
 
 - `bash` — run bash commands. All CRUD operations are performed via this tool
 - `read_image` — read an image file from disk so the model can look at it
-- `web_fetch_html` — fetch a URL and return extracted article content
+- `web_fetch_html` — convert a fetched webpage to Markdown, saving large pages to a local file
 - `web_fetch_json` — fetch a JSON API endpoint and return parsed data
 - `load_skill` — load a skill to get specialized instructions
 - `create_subagent` — launch parallel subagents for independent investigation or implementation
+- `mcp_list_resources` — list resources exposed by an MCP server
+- `mcp_read_resource` — read an MCP resource
 
 ## Conversation compaction
 
-Before each API call, lasso estimates the next prompt size from the conversation so far, the new user input, and prompt overhead such as context and tools. Compaction runs when this estimate exceeds 95% of the active model's context window. Compaction is skipped unless that model has a context window configured:
+Before each API call, lasso estimates the next prompt size from the conversation so far, the new user input, and prompt overhead such as context and tools. Compaction runs when this estimate exceeds 95% of the active model's context window. If no per-model context window is configured, lasso assumes 128,000 tokens:
 
 ```yaml
 contextWindowPerModel:
@@ -460,20 +464,20 @@ By default, lasso uses structured output to enforce the summary's maximum length
 
 ## Dependencies
 
-Minimal runtime dependencies (10 total):
+Runtime dependencies (10 total):
 
-| Package                     | Purpose                                 |
-| --------------------------- | --------------------------------------- |
-| `ai`                        | AI SDK core                             |
-| `@ai-sdk/anthropic`         | Anthropic provider                      |
-| `@ai-sdk/openai`            | OpenAI provider                         |
-| `@ai-sdk/google`            | Google provider                         |
-| `@ai-sdk/openai-compatible` | OpenAI-compatible provider              |
-| `zod`                       | Schema validation                       |
-| `happy-dom`                 | DOM parsing for `web_fetch_html`        |
-| `@mozilla/readability`      | Content extraction for `web_fetch_html` |
-| `prettier`                  | Markdown formatting                     |
-| `yaml`                      | Parsing Skill metadata                  |
+| Package                     | Purpose                           |
+| --------------------------- | --------------------------------- |
+| `ai`                        | AI SDK core                       |
+| `@ai-sdk/anthropic`         | Anthropic provider                |
+| `@ai-sdk/openai`            | OpenAI provider                   |
+| `@ai-sdk/google`            | Google provider                   |
+| `@ai-sdk/openai-compatible` | OpenAI-compatible provider        |
+| `@ai-sdk/mcp`               | MCP client and stdio transport    |
+| `zod`                       | Schema validation                 |
+| `turndown`                  | Convert fetched HTML to Markdown  |
+| `prettier`                  | Format Markdown output            |
+| `yaml`                      | Parse settings and skill metadata |
 
 - This project uses **pnpm v11** for package management, which helps [mitigate the risk of supply chain attacks](https://pnpm.io/supply-chain-security)
 - All tests are written with the Node.js native test runner and mocks i.e. no Jest
