@@ -5,8 +5,7 @@ import { once } from "node:events";
 import { emitKeypressEvents } from "node:readline";
 import { stdin, stdout } from "node:process";
 import { Writable } from "node:stream";
-import { Window } from "happy-dom";
-import { Readability } from "@mozilla/readability";
+import TurndownService from "turndown";
 import {
   type AssistantContent,
   type Tool,
@@ -578,6 +577,10 @@ export function getGlobalSlashCommandDir() {
 
 export function getSessionDir() {
   return join(getStateDir(), "sessions");
+}
+
+export function getWebpagesDir() {
+  return join(getStateDir(), "webpages");
 }
 
 export function getDebugLogDir() {
@@ -2726,6 +2729,55 @@ export async function deleteExpiredSessionFiles() {
   }
 }
 
+export async function deleteExpiredWebpageFiles() {
+  const webpagesDir = getWebpagesDir();
+  const webpagesDirExistsResult = tryCatch(() =>
+    fsDeps.existsSync(webpagesDir),
+  );
+  if (!webpagesDirExistsResult.ok) {
+    print.error(
+      `Failed to check if ${webpagesDir} exists. Error: ${getMessageFromError(webpagesDirExistsResult.error)}`,
+    );
+    return;
+  }
+  if (!webpagesDirExistsResult.value) return;
+
+  interface WebpageFileInfo {
+    absolutePath: string;
+    timestampMs: number;
+  }
+
+  const webpageFiles: WebpageFileInfo[] = [];
+  for (const name of await fsDeps.readdir(webpagesDir)) {
+    const fullPath = join(webpagesDir, name);
+    const statResult = await tryCatchAsync(fsDeps.stat(fullPath));
+    if (!statResult.ok) continue;
+    if (!statResult.value.isFile()) continue;
+
+    const fileName = basename(name, extname(name));
+    const parts = fileName.split("-");
+    const lastPart = parts.at(-1);
+    if (lastPart === undefined) continue;
+
+    const timestampMs = Number(lastPart);
+    if (Number.isNaN(timestampMs)) continue;
+
+    if (extname(name) !== ".md") continue;
+
+    webpageFiles.push({
+      absolutePath: fullPath,
+      timestampMs,
+    });
+  }
+
+  for (const { absolutePath, timestampMs } of webpageFiles) {
+    const oneDay = 1_000 * 60 * 60 * 24;
+    if (timestampMs + oneDay < getState().session.sessionStartDate) {
+      await tryCatchAsync(fsDeps.unlink(absolutePath));
+    }
+  }
+}
+
 async function createMcpClient(config: Mcp) {
   switch (config.type) {
     case "http":
@@ -3160,7 +3212,7 @@ export type ToolPrint = typeof toolPrint;
 
 export interface ToolResult {
   content: string;
-  isError?: boolean;
+  isError: boolean;
 }
 
 export type BashToolInput =
@@ -3232,6 +3284,7 @@ export async function executeBashTool(
       stdout: bashResult.value.stdout,
       stderr: bashResult.value.stderr,
     }),
+    isError: false,
   };
 }
 
@@ -3258,10 +3311,22 @@ export const subagentTimeoutSettings = {
   },
 };
 
+type WebFetchHtmlResult = ToolResult & {
+  filePath?: string;
+  type?: "inline-markdown" | "file-path";
+};
+
 export async function executeWebFetchHtmlTool(
   { href }: WebFetchTool,
   signal?: AbortSignal,
-): Promise<ToolResult> {
+): Promise<WebFetchHtmlResult> {
+  if (!URL.canParse(href)) {
+    return {
+      isError: true,
+      content: `Cannot parse href ${href} as a URL`,
+    };
+  }
+
   const headers = new Headers();
   headers.append("User-Agent", userAgent);
   headers.append("Accept", "text/html");
@@ -3283,7 +3348,8 @@ export async function executeWebFetchHtmlTool(
 
   const response = fetchResult.value;
   if (!response.ok) {
-    const error = `HTTP ${String(response.status)}: ${response.statusText}`;
+    const error = `HTTP ${String(response.status)}: ${response.statusText} when fetching ${href}`;
+    toolPrint("web_fetch_html", error);
     print.doing(error);
     return {
       isError: true,
@@ -3301,18 +3367,63 @@ export async function executeWebFetchHtmlTool(
   }
   const htmlStr = textResult.value;
 
-  const article = await parseArticle(htmlStr);
-  if (article === null) {
-    const error = `Failed to parse article from ${href}`;
-    print.doing(error);
+  const turndownService = new TurndownService();
+  turndownService.remove([
+    "script",
+    "style",
+    "nav",
+    "footer",
+    "svg",
+    "iframe",
+    "noscript",
+    "template",
+    "canvas",
+    "video",
+    "audio",
+    "object",
+    "embed",
+    "dialog",
+    "form",
+    "button",
+    "input",
+    "select",
+    "textarea",
+    "aside",
+    "img",
+    "picture",
+  ]);
+  const markdown = turndownService.turndown(htmlStr);
+
+  const maxTokensForInlineFetch = 10_000;
+  if (strToApproxTokens(markdown) <= maxTokensForInlineFetch) {
     return {
-      isError: true,
-      content: error,
+      isError: false,
+      content: markdown,
+      type: "inline-markdown",
     };
   }
 
+  const url = new URL(href);
+  const slug = `${url.host}${url.pathname}`.replace(/[^a-zA-Z0-9]/g, "-");
+  const fileName = `${slug}-${String(Date.now())}.md`;
+  const filePath = join(getWebpagesDir(), fileName);
+  const writeResult = await tryCatchAsync(fsDeps.writeFile(filePath, markdown));
+  if (!writeResult.ok) {
+    return {
+      isError: true,
+      content: `Error while writing the markdown to a local file. Error: ${getMessageFromError(writeResult.error)}`,
+    };
+  }
+
+  toolPrint(
+    "web_fetch_html",
+    `Webpage markdown written to ${filePath} because it exceeded ${maxTokensForInlineFetch.toLocaleString()} tokens`,
+  );
   return {
-    content: stringify(article),
+    content: `Markdown was written to \`filePath\` because it exceeded ${maxTokensForInlineFetch.toLocaleString()} tokens. Consider reading the file in slices or searching for patterns via the \`bash\` tool.`,
+    filePath,
+    isError: false,
+    type: "file-path",
   };
 }
 
@@ -3341,8 +3452,8 @@ export async function executeWebFetchJsonTool(
 
   const response = fetchResult.value;
   if (!response.ok) {
-    const error = `HTTP ${String(response.status)}: ${response.statusText}`;
-    print.doing(error);
+    const error = `HTTP ${String(response.status)}: ${response.statusText} when fetching ${href}`;
+    toolPrint("web_fetch_json", error);
     return {
       isError: true,
       content: error,
@@ -3360,6 +3471,7 @@ export async function executeWebFetchJsonTool(
   const json = jsonResult.value;
   return {
     content: stringify(json),
+    isError: false,
   };
 }
 
@@ -3382,6 +3494,7 @@ export function loadSkillTool({ name }: LoadSkillTool): ToolResult {
 
   return {
     content: stringify(foundSkill),
+    isError: false,
   };
 }
 
@@ -3525,6 +3638,7 @@ export async function createSubagentTool(
         model,
         prompt: subagentSchema.prompt,
         content: text,
+        isError: false,
       };
     },
   );
@@ -4148,6 +4262,7 @@ export async function initState() {
     initMcpState({ performanceLogger }),
     initStateFromFs({ performanceLogger }),
     deleteExpiredSessionFiles(),
+    deleteExpiredWebpageFiles(),
     initBatAvailable(),
   ]);
 }
@@ -6604,14 +6719,4 @@ export function baseBatFlags() {
   return shouldDisableColor()
     ? ["--style=plain", "--color=never"]
     : ["--style=plain", "--color=always"];
-}
-
-export async function parseArticle(htmlStr: string) {
-  const window = new Window();
-  try {
-    const doc = new window.DOMParser().parseFromString(htmlStr, "text/html");
-    return new Readability(doc).parse();
-  } finally {
-    await window.happyDOM.close();
-  }
 }
