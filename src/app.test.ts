@@ -133,7 +133,7 @@ import {
   clearCommand,
   printTokens,
   pageSkills,
-  pageAvailableContextFiles,
+  pageContext,
   pageCommands,
   pageEditStr,
   spawnAndReadEditorContent,
@@ -147,6 +147,7 @@ import {
   initGlobalConfig,
   pageSummaries,
   pageTools,
+  pageMcps,
   pageHistory,
   pageLastMessage,
   pageLastResponse,
@@ -12197,7 +12198,7 @@ hello
         `${RED}Errors:${RESET}\n`,
         `${RED}- Set \`model\` in your config file${RESET}\n`,
         "\n",
-        `${RED}Run /initlocal or /initglobal to generate a sample config in \`./.lasso\` or \`~/.config/lasso\` respectively.${RESET}\n`,
+        `${RED}Run /initlocal or /initglobal to generate a sample config in \`./.lasso\` or \`~/.config/lasso\` respectively, then /reload to apply it to the current session.${RESET}\n`,
         "\n",
       ]);
     });
@@ -14753,6 +14754,64 @@ editor input
     });
   });
 
+  describe("pageMcps", () => {
+    beforeEach(() => {
+      actions.resetState();
+      actions.resetStdout();
+    });
+
+    it("opens available MCP servers in a pager", async () => {
+      const { spawned } = mockPagerSpawn();
+      testProcessEnv._set("LASSO_PAGER", "nano __FILE__");
+      setMcpClients({
+        clients: {
+          first: makeFakeMcpClient(),
+          second: makeFakeMcpClient(),
+        },
+      });
+
+      await pageMcps();
+
+      assert.strictEqual(spawned[0], "nano /tmp/lasso-test-uuid.txt");
+      assert.strictEqual(
+        testFs._files.get("/tmp/lasso-test-uuid.txt"),
+        `# Available MCP servers:
+
+- first
+- second
+
+`,
+      );
+      assert.deepStrictEqual(getWrites(), []);
+    });
+
+    it("prints that there are no available MCP servers when clients map is empty", () => {
+      pageMcps({ isTyped: true });
+      assert.deepStrictEqual(getWrites(), [
+        `${YELLOW}No available MCP servers${RESET}\n`,
+        "\n",
+      ]);
+      assert.strictEqual(testFs._files.has("/tmp/lasso-test-uuid.txt"), false);
+    });
+
+    it("surrounds the message with blank lines when isTyped is false", async () => {
+      await pageMcps();
+      assert.deepStrictEqual(getWrites(), [
+        "\n",
+        `${YELLOW}No available MCP servers${RESET}\n`,
+        "\n",
+      ]);
+    });
+
+    it("does not add spacing when streaming", async () => {
+      actions.setApiStreamAbortController(new AbortController());
+      await pageMcps();
+      assert.deepStrictEqual(getWrites(), [
+        `${YELLOW}No available MCP servers${RESET}\n`,
+      ]);
+    });
+  });
+
   describe("pageTools", () => {
     beforeEach(() => {
       actions.resetState();
@@ -14825,7 +14884,7 @@ editor input
     });
   });
 
-  describe("pageAvailableContextFiles", () => {
+  describe("pageContext", () => {
     beforeEach(() => {
       actions.resetState();
       actions.resetStdout();
@@ -14838,7 +14897,7 @@ editor input
         { filePath: "/project/AGENTS.md", content: "context" },
       ]);
 
-      await pageAvailableContextFiles();
+      await pageContext();
 
       assert.strictEqual(spawned[0], "nano /tmp/lasso-test-uuid.txt");
       assert.strictEqual(
@@ -14872,7 +14931,7 @@ editor input
         },
       ]);
 
-      await pageAvailableContextFiles();
+      await pageContext();
 
       assert.strictEqual(
         testFs._files.get("/tmp/lasso-test-uuid.txt"),
@@ -14886,7 +14945,7 @@ editor input
     });
 
     it("prints that there are no available context files when entries list is empty", () => {
-      pageAvailableContextFiles({ isTyped: true });
+      pageContext({ isTyped: true });
       assert.deepStrictEqual(getWrites(), [
         `${YELLOW}No available context files${RESET}\n`,
         "\n",
@@ -14895,7 +14954,7 @@ editor input
     });
 
     it("surrounds the message with blank lines when isTyped is false", async () => {
-      await pageAvailableContextFiles();
+      await pageContext();
       assert.deepStrictEqual(getWrites(), [
         "\n",
         `${YELLOW}No available context files${RESET}\n`,
@@ -14905,7 +14964,7 @@ editor input
 
     it("does not add spacing when streaming", async () => {
       actions.setApiStreamAbortController(new AbortController());
-      await pageAvailableContextFiles();
+      await pageContext();
       assert.deepStrictEqual(getWrites(), [
         `${YELLOW}No available context files${RESET}\n`,
       ]);
@@ -14967,6 +15026,7 @@ editor input
 - /summaries
 - /tools
 - /record
+- /mcps
 - /test/.lasso/commands/custom.md`,
       );
     });
@@ -15004,6 +15064,7 @@ editor input
 - /summaries
 - /tools
 - /record
+- /mcps
 - /test/.lasso/commands/custom.md _(2 tokens)_`,
       );
     });
@@ -15052,6 +15113,7 @@ editor input
 - /summaries
 - /tools
 - /record
+- /mcps
 - /test/.lasso/commands/custom.md _(2 tokens)_
 
 `,
@@ -15106,8 +15168,6 @@ editor input
       for (const [command, keyName] of [
         ["clear", "k"],
         ["model", "m"],
-        ["skills", "l"],
-        ["context", "n"],
         ["keymaps", "p"],
         ["usage", "u"],
         ["tokens", "t"],
@@ -15122,6 +15182,37 @@ editor input
           assert.deepStrictEqual(harness.writes, [
             { chunk: `/${command}\n`, key: undefined },
           ]);
+        });
+      }
+      for (const [command, keyName] of [
+        ["skills", "l"],
+        ["context", "n"],
+        ["mcps", "o"],
+      ] as const) {
+        it(`opens the /${command} pager when its keymap matches`, async () => {
+          const { spawned } = mockPagerSpawn();
+          testProcessEnv._set("LASSO_PAGER", "nano __FILE__");
+          actions.setQuestionAbortController(null);
+          actions.setContextEntries([
+            { filePath: "/project/AGENTS.md", content: "context" },
+          ]);
+          actions.setSkills([
+            {
+              name: "test-skill",
+              description: "A test skill",
+              dir: "/skills/test-skill",
+              content: "skill content",
+            },
+          ]);
+          setMcpClients({ clients: { first: makeFakeMcpClient() } });
+          actions.setKeymaps({
+            ...defaultConfig.keymaps,
+            [command]: { name: keyName, ctrl: true },
+          });
+          harness.emitKey({ name: keyName, ctrl: true });
+          await harness.flush();
+          assert.deepStrictEqual(harness.writes, []);
+          assert.strictEqual(spawned[0], "nano /tmp/lasso-test-uuid.txt");
         });
       }
 
@@ -15604,6 +15695,7 @@ editor input
 - /summaries
 - /tools
 - /record
+- /mcps
 - /test/.lasso/commands/custom.md _(2 tokens)_
 
 `,
@@ -15785,6 +15877,16 @@ editor input
           "\n",
         ]);
       });
+      it("handles /mcps command", async () => {
+        actions.resetStdout();
+        const result = await resolveSlashCommand("/mcps");
+        assert.strictEqual(result, null);
+        assert.deepStrictEqual(getWrites(), [
+          "\n",
+          `${YELLOW}No available MCP servers${RESET}\n`,
+          "\n",
+        ]);
+      });
     });
 
     describe("record commands", () => {
@@ -15942,6 +16044,7 @@ log content
 - /summaries
 - /tools
 - /record
+- /mcps
 
 `,
         );
@@ -16577,7 +16680,7 @@ custom command content`,
         assert.deepStrictEqual(getWrites(), [
           "\n",
           `${RED}Invalid command: /unknown, valid commands:${RESET}\n`,
-          "- /edit\n- /editpage\n- /history\n- /clear\n- /paste\n- /model\n- /skills\n- /context\n- /commands\n- /keymaps\n- /usage\n- /tokens\n- /resume\n- /config\n- /reload\n- /initlocal\n- /initglobal\n- /lastresponse\n- /lastmessage\n- /lastdiff\n- /summaries\n- /tools\n- /record\n- /test-cwd/.lasso/commands/known.md\n",
+          "- /edit\n- /editpage\n- /history\n- /clear\n- /paste\n- /model\n- /skills\n- /context\n- /commands\n- /keymaps\n- /usage\n- /tokens\n- /resume\n- /config\n- /reload\n- /initlocal\n- /initglobal\n- /lastresponse\n- /lastmessage\n- /lastdiff\n- /summaries\n- /tools\n- /record\n- /mcps\n- /test-cwd/.lasso/commands/known.md\n",
         ]);
       });
     });

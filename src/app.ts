@@ -3008,6 +3008,7 @@ export const builtinSlashCommands = [
   "summaries",
   "tools",
   "record",
+  "mcps",
 ] as const;
 
 export type BuiltinSlashCommand = (typeof builtinSlashCommands)[number];
@@ -3833,7 +3834,7 @@ export function printMissingConfigErrors() {
   if (getState().content.includeConfigInitMessage) {
     printNewline();
     print.error(
-      "Run /initlocal or /initglobal to generate a sample config in `./.lasso` or `~/.config/lasso` respectively.",
+      "Run /initlocal or /initglobal to generate a sample config in `./.lasso` or `~/.config/lasso` respectively, then /reload to apply it to the current session.",
     );
   }
   printNewline();
@@ -4807,11 +4808,24 @@ export function initKeypress(rl: readline.Interface) {
             redrawPendingQuestion();
             return;
           }
+          case "skills": {
+            await pageSkills();
+            redrawPendingQuestion();
+            return;
+          }
+          case "context": {
+            await pageContext();
+            redrawPendingQuestion();
+            return;
+          }
+          case "mcps": {
+            await pageMcps();
+            redrawPendingQuestion();
+            return;
+          }
           case "initlocal":
           case "initglobal":
           case "model":
-          case "skills": // TODO: move
-          case "context": // TODO: move
           case "keymaps":
           case "usage":
           case "tokens":
@@ -5244,7 +5258,7 @@ async function resolveBuiltinSlashCommand(
       return { handled: true, inputFromCommand: null };
     }
     case "context": {
-      await pageAvailableContextFiles();
+      await pageContext();
       return { handled: true, inputFromCommand: null };
     }
     case "commands": {
@@ -5316,6 +5330,10 @@ async function resolveBuiltinSlashCommand(
     }
     case "tools": {
       await pageTools();
+      return { handled: true, inputFromCommand: null };
+    }
+    case "mcps": {
+      await pageMcps({ isTyped: true });
       return { handled: true, inputFromCommand: null };
     }
     case "record": {
@@ -5613,6 +5631,7 @@ export function getModel() {
   return;
 }
 
+// TODO: remove since we have /reload
 export function setModelCommand(rawInput: string) {
   const parts = rawInput.split(/\s+/);
 
@@ -5709,9 +5728,7 @@ ${skillsList}`;
   await openWithPager({ contentType: "markdown", initialContentStr });
 }
 
-export async function pageAvailableContextFiles({
-  isTyped = false,
-}: SpacingOpts = {}) {
+export async function pageContext({ isTyped = false }: SpacingOpts = {}) {
   if (getState().content.contextEntries.length === 0) {
     streamingSupportedWithSpacing(isTyped, () =>
       print.warning("No available context files"),
@@ -5817,6 +5834,8 @@ ${markdownFence("yaml", getState().content.localConfigStr)}
 ${markdownFence("json", stringify(getState().config))}`;
 }
 
+// TODO: mcp clients?
+// TODO: tools?
 const reloadTempFilePrefixes = [
   "global",
   "local",
@@ -6249,6 +6268,28 @@ export async function pageTools() {
   const initialContentStr = `# Available tools:
 
 ${formattedHarnessTools.concat(formattedMCPTools).join("\n")}`;
+
+  await openWithPager({
+    initialContentStr,
+    contentType: "markdown",
+  });
+}
+
+export async function pageMcps({ isTyped = false }: SpacingOpts = {}) {
+  if (Object.keys(getState().mcp.clients).length === 0) {
+    streamingSupportedWithSpacing(isTyped, () =>
+      print.warning("No available MCP servers"),
+    );
+    return;
+  }
+
+  const formatted = Object.keys(getState().mcp.clients)
+    .map((clientName) => `- ${clientName}`)
+    .join("\n");
+
+  const initialContentStr = `# Available MCP servers:
+
+${formatted}`;
 
   await openWithPager({
     initialContentStr,
