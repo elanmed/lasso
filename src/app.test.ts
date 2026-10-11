@@ -16282,6 +16282,25 @@ log content
         );
       });
 
+      it("pages oversized markdown without writing it to the webpages directory", async () => {
+        testProcessEnv._set("LASSO_PAGER", "nano __FILE__");
+        const html = "<p>" + "x".repeat(30_004) + "</p>";
+        mock.method(globalThis, "fetch", makeFakeFetch({ text: html }));
+        const { spawned } = mockPagerSpawn();
+
+        const result = await resolveSlashCommand(
+          '/fetch "https://example.com/large"',
+        );
+        const pagedContent = testFs._files.get("/tmp/lasso-test-uuid.txt");
+        assert.strictEqual(result, null);
+        assert.deepStrictEqual(spawned, ["nano /tmp/lasso-test-uuid.txt"]);
+        assert.strictEqual(testFs._dirs.has(getWebpagesDir()), false);
+        assert(pagedContent !== undefined);
+        assert.strictEqual(pagedContent.length, 30_006);
+        assert.strictEqual(pagedContent.startsWith("xxxx"), true);
+        assert.strictEqual(pagedContent.endsWith("xxxx\n\n"), true);
+      });
+
       it("rejects an unquoted URL passed to /fetch without making a request", async () => {
         const fetchMock = mock.method(globalThis, "fetch", makeFakeFetch());
 

@@ -3348,6 +3348,7 @@ interface FetchHtmlSuccess {
 async function fetchHtml(
   { href }: WebFetchTool,
   signal?: AbortSignal,
+  { forceNoFile = false }: { forceNoFile?: boolean } = {},
 ): Promise<Option<FetchHtmlSuccess>> {
   if (!URL.canParse(href)) {
     return {
@@ -3425,7 +3426,7 @@ async function fetchHtml(
 
   const maxTokensForInlineFetch = 10_000;
   const markdownTokensApprox = strToApproxTokens(markdown);
-  if (markdownTokensApprox <= maxTokensForInlineFetch) {
+  if (markdownTokensApprox <= maxTokensForInlineFetch || forceNoFile) {
     return {
       ok: true,
       value: {
@@ -6571,7 +6572,7 @@ export async function fetchCommand(commandWithArgs: string) {
   actions.setFetchCommandAbortController(abortController);
   try {
     const fetchResult = await tryCatchAsync(
-      fetchHtml({ href }, abortController.signal),
+      fetchHtml({ href }, abortController.signal, { forceNoFile: true }),
     );
     if (!fetchResult.ok) {
       if (isAbortError(fetchResult.error)) return null;
