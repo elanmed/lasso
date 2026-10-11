@@ -2,7 +2,7 @@
 
 ## Prerequisite
 
-Run this only after completing `plans/split-app.md`. This is a separate follow-up: the source-module extraction must be stable before relocating tests.
+Run this only after completing `plans/01-split-app.md`. This is a separate follow-up: the source-module extraction must be stable before relocating tests.
 
 ## Goal and constraints
 
