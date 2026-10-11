@@ -16,7 +16,7 @@
     "cloc-source": "node scripts/cloc.ts source",
     "cloc-tests": "node scripts/cloc.ts tests",
     "cloc": "pnpm run cloc-source && pnpm run cloc-tests",
-    "ci": "CI=true pnpm run test && pnpm run lint && pnpm run types && pnpm run prettier-format && pnpm run cloc",
+    "ci": "CI=true pnpm run test && pnpm run lint && pnpm run types && pnpm run prettier-format",
     "pre-push": "pnpm run test && pnpm run lint && pnpm run types && pnpm run prettier-check",
     "compile": "./scripts/compile.sh"
   },
