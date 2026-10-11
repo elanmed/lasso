@@ -2073,11 +2073,6 @@ describe("prompts", () => {
       'sed -n "${START},${END}p" target.txt',
       "```",
       "",
-      "### Read an image as base64",
-      "```bash",
-      "base64 < target.png",
-      "```",
-      "",
       "### Get total line count",
       "```bash",
       "wc -l < target.txt",
@@ -2149,11 +2144,6 @@ describe("prompts", () => {
       'sed -n "${START},${END}p" target.txt',
       "```",
       "",
-      "### Read an image as base64",
-      "```bash",
-      "base64 < target.png",
-      "```",
-      "",
       "### Get total line count",
       "```bash",
       "wc -l < target.txt",
@@ -2186,11 +2176,6 @@ describe("prompts", () => {
       "### Read a range of lines",
       "```bash",
       'sed -n "${START},${END}p" target.txt',
-      "```",
-      "",
-      "### Read an image as base64",
-      "```bash",
-      "base64 < target.png",
       "```",
       "",
       "### Get total line count",
@@ -6022,7 +6007,7 @@ describe("getTokensByArea", () => {
       messages: 11,
       context: 3,
       tools: 4,
-      basePrompt: 801,
+      basePrompt: 781,
       skills: 1,
     });
   });
@@ -6033,7 +6018,7 @@ describe("getTokensByArea", () => {
       messages: 11,
       context: 3,
       tools: 4,
-      basePrompt: 801,
+      basePrompt: 781,
       skills: 1,
     });
   });
@@ -6045,7 +6030,7 @@ describe("getTokensByArea", () => {
       messages: 1100,
       context: 300,
       tools: 400,
-      basePrompt: 80100,
+      basePrompt: 78100,
       skills: 100,
     });
   });
@@ -6068,7 +6053,7 @@ describe("getPrettyTokensByArea", () => {
       `- Chat messages: 11
 - Context files: 3
 - Harness and MCP tools: 4
-- Base system prompt: 801
+- Base system prompt: 781
 - Skill descriptions: 1`,
     );
   });
@@ -6081,7 +6066,7 @@ describe("getPrettyTokensByArea", () => {
       `- Chat messages: 1,100
 - Context files: 300
 - Harness and MCP tools: 400
-- Base system prompt: 80,100
+- Base system prompt: 78,100
 - Skill descriptions: 100`,
     );
   });
@@ -13705,11 +13690,11 @@ l---
       printTokens();
       assert.deepStrictEqual(getWrites(), [
         "\n",
-        `${BLUE}Token count: 820 (0.012% of context window)${RESET}\n`,
+        `${BLUE}Token count: 800 (0.012% of context window)${RESET}\n`,
         `- Chat messages: 11
 - Context files: 3
 - Harness and MCP tools: 4
-- Base system prompt: 801
+- Base system prompt: 781
 - Skill descriptions: 1
 `,
         "\n",
@@ -13722,11 +13707,11 @@ l---
       printTokens();
       assert.deepStrictEqual(getWrites(), [
         "\n",
-        `${BLUE}Token count: 82,000 (1.172% of context window)${RESET}\n`,
+        `${BLUE}Token count: 80,000 (1.172% of context window)${RESET}\n`,
         `- Chat messages: 1,100
 - Context files: 300
 - Harness and MCP tools: 400
-- Base system prompt: 80,100
+- Base system prompt: 78,100
 - Skill descriptions: 100
 `,
         "\n",
@@ -13739,11 +13724,11 @@ l---
       printTokens();
       assert.deepStrictEqual(getWrites(), [
         "\n",
-        `${BLUE}Token count: 820 (0.15% of context window)${RESET}\n`,
+        `${BLUE}Token count: 800 (0.15% of context window)${RESET}\n`,
         `- Chat messages: 11
 - Context files: 3
 - Harness and MCP tools: 4
-- Base system prompt: 801
+- Base system prompt: 781
 - Skill descriptions: 1
 `,
         "\n",
@@ -16252,11 +16237,11 @@ log content
         assert.strictEqual(result, null);
         assert.deepStrictEqual(getWrites(), [
           "\n",
-          `${BLUE}Token count: 801 (0% of context window)${RESET}\n`,
+          `${BLUE}Token count: 781 (0% of context window)${RESET}\n`,
           `- Chat messages: 0
 - Context files: 0
 - Harness and MCP tools: 0
-- Base system prompt: 801
+- Base system prompt: 781
 - Skill descriptions: 0
 `,
           "\n",
