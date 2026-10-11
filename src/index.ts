@@ -8,11 +8,11 @@ import {
   fencePrint,
   executeBat,
   initState,
-  blockOnMissingConfig,
-  warnOnMissingConfig,
+  printMissingConfigErrors,
+  printMissingConfigWarnings,
   actions,
   getState,
-  warnOnLargePromptOverhead,
+  printLargeContextOverheadWarning,
   resolveApiCall,
   maybeCompact,
   initReadline,
@@ -28,8 +28,9 @@ async function main() {
   initStdout();
   await initState();
   initReadline();
-  warnOnMissingConfig();
-  warnOnLargePromptOverhead();
+  printMissingConfigErrors();
+  printMissingConfigWarnings();
+  printLargeContextOverheadWarning();
   actions.setIsInitializing(false);
 
   let isFirstInput = true;
@@ -41,7 +42,7 @@ async function main() {
 
     if (userInput === null) continue;
 
-    const missingConfig = blockOnMissingConfig();
+    const missingConfig = printMissingConfigErrors();
     if (missingConfig) continue;
 
     if (userInput === "") {

@@ -2160,7 +2160,7 @@ export function getPromptOverheadTokensApprox() {
   return systemContentTokensApprox + toolsTokensApprox;
 }
 
-export function warnOnLargePromptOverhead() {
+export function printLargeContextOverheadWarning() {
   const { model } = getState().config;
   const contextWindow =
     getState().config.contextWindowPerModel[model] ?? defaultContextWindow;
@@ -3807,7 +3807,7 @@ export function parseConfigFileStr(
   return {};
 }
 
-export function warnOnMissingConfig() {
+export function printMissingConfigWarnings() {
   if (getState().config.suppressConfigWarnings) return;
 
   const messages = getState().content.configWarningMessages;
@@ -3823,7 +3823,7 @@ export function warnOnMissingConfig() {
   printNewline();
 }
 
-export function blockOnMissingConfig() {
+export function printMissingConfigErrors() {
   const messages = getState().content.configErrorMessages;
   if (messages.length === 0) return false;
 
@@ -4810,8 +4810,8 @@ export function initKeypress(rl: readline.Interface) {
           case "initlocal":
           case "initglobal":
           case "model":
-          case "skills":
-          case "context":
+          case "skills": // TODO: move
+          case "context": // TODO: move
           case "keymaps":
           case "usage":
           case "tokens":
@@ -5628,7 +5628,7 @@ export function setModelCommand(rawInput: string) {
   print.doing(`Model updated from \`${prevModel}\` to \`${model}\``);
   actions.setPromptTokensDirty(true);
 
-  warnOnLargePromptOverhead();
+  printLargeContextOverheadWarning();
 }
 
 export interface SpacingOpts {
@@ -5931,8 +5931,8 @@ ${normalizeNewline(diffResult.value.stdout)}`,
       contentType: "diff",
     });
   }
-  warnOnLargePromptOverhead();
-  warnOnMissingConfig();
+  printLargeContextOverheadWarning();
+  printMissingConfigWarnings();
 }
 
 const getDefaultConfig = (

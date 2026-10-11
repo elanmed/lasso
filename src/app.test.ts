@@ -70,7 +70,7 @@ import {
   getPrettyTokensByArea,
   getPromptOverheadTokensApprox,
   getTokensByArea,
-  warnOnLargePromptOverhead,
+  printLargeContextOverheadWarning,
   isUsageLimitDisabled,
   syncInitialModelUsageForLimitWindow,
   syncNewModelUsageForLimitWindow,
@@ -112,9 +112,9 @@ import {
   initStateFromConfig,
   initStateFirst,
   initStateRepeatable,
-  blockOnMissingConfig,
+  printMissingConfigErrors,
   readConfigFileStr,
-  warnOnMissingConfig,
+  printMissingConfigWarnings,
   getLocalConfigPath,
   getTempFileName,
   resolveInterruptWithEditor,
@@ -6036,7 +6036,7 @@ describe("getPrettyTokensByArea", () => {
   });
 });
 
-describe("warnOnLargePromptOverhead", () => {
+describe("printLargeContextOverheadWarning", () => {
   beforeEach(() => {
     setupTestContext({ model: "gpt-4" });
     actions.setContextWindowPerModel({ "gpt-4": 100_000 });
@@ -6045,21 +6045,21 @@ describe("warnOnLargePromptOverhead", () => {
   it("returns early without a warning when the model has no context window", () => {
     actions.setContextWindowPerModel({});
     const getWrites = mockStdoutWrites();
-    warnOnLargePromptOverhead();
+    printLargeContextOverheadWarning();
     assert.deepStrictEqual(getWrites(), []);
   });
 
   it("does not warn when prompt overhead is below the dedicated share", () => {
     mock.method(promptDeps, "getSystemContent", () => "s".repeat(30_000));
     const getWrites = mockStdoutWrites();
-    warnOnLargePromptOverhead();
+    printLargeContextOverheadWarning();
     assert.deepStrictEqual(getWrites(), []);
   });
 
   it("warns when prompt overhead reaches the dedicated share", () => {
     mock.method(promptDeps, "getSystemContent", () => "s".repeat(210_000));
     const getWrites = mockStdoutWrites();
-    warnOnLargePromptOverhead();
+    printLargeContextOverheadWarning();
     assert.deepStrictEqual(getWrites(), [
       `${YELLOW}The current set of context, skills, and tools is 70% of the 100,000 token context window!\n\nLasso reserves 25% of the context window for compacted summaries with the assumption that at most 70% of the context window will be used for prompt overhead. As is, the prompt overhead is large enough to break this assumption and, along with any user messages, may breach the llm's context window and cause API calls to be rejected. Consider converting some of your context to skills and minimizing MCP servers.${RESET}\n`,
     ]);
@@ -11335,7 +11335,7 @@ describe("config", () => {
           assert.deepStrictEqual(getState().content.configWarningMessages, [
             "A default context window of 128,000 tokens is used because there is no `contextWindowPerModel` entry for the current model `claude-sonnet-4-6`",
           ]);
-          warnOnMissingConfig();
+          printMissingConfigWarnings();
           assert.deepStrictEqual(getWrites(), [
             "\n",
             `${YELLOW}Warnings:${RESET}\n`,
@@ -11362,7 +11362,7 @@ describe("config", () => {
           assert.deepStrictEqual(getState().content.configWarningMessages, [
             "A default context window of 128,000 tokens is used because there is no `contextWindowPerModel` entry for the current model `claude-sonnet-4-6`",
           ]);
-          warnOnMissingConfig();
+          printMissingConfigWarnings();
           assert.deepStrictEqual(getWrites(), []);
         });
 
@@ -11384,7 +11384,7 @@ describe("config", () => {
           assert.deepStrictEqual(getState().content.configWarningMessages, [
             "`bat` is not available; consider installing it to properly render markdown responses",
           ]);
-          warnOnMissingConfig();
+          printMissingConfigWarnings();
           assert.deepStrictEqual(getWrites(), []);
         });
 
@@ -12160,7 +12160,7 @@ hello
     });
   });
 
-  describe("blockOnMissingConfig", () => {
+  describe("printMissingConfigErrors", () => {
     beforeEach(() => {
       setupTestContext({ model: "claude-sonnet-4-20250514" });
       actions.setBaseURL("https://api.anthropic.com");
@@ -12168,7 +12168,7 @@ hello
 
     it("returns false and prints nothing when there are no config error messages", () => {
       const getWrites = mockStdoutWrites();
-      assert.strictEqual(blockOnMissingConfig(), false);
+      assert.strictEqual(printMissingConfigErrors(), false);
       assert.deepStrictEqual(getWrites(), []);
     });
 
@@ -12178,7 +12178,7 @@ hello
         "Set the `LASSO_API_KEY` environment variable, e.g. `export LASSO_API_KEY=...`",
       );
       const getWrites = mockStdoutWrites();
-      assert.strictEqual(blockOnMissingConfig(), true);
+      assert.strictEqual(printMissingConfigErrors(), true);
       assert.deepStrictEqual(getWrites(), [
         "\n",
         `${RED}Errors:${RESET}\n`,
@@ -12191,7 +12191,7 @@ hello
       actions.appendConfigErrorMessage("Set `model` in your config file");
       actions.setIncludeConfigInitMessage(true);
       const getWrites = mockStdoutWrites();
-      assert.strictEqual(blockOnMissingConfig(), true);
+      assert.strictEqual(printMissingConfigErrors(), true);
       assert.deepStrictEqual(getWrites(), [
         "\n",
         `${RED}Errors:${RESET}\n`,
