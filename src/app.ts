@@ -3431,6 +3431,13 @@ export async function executeWebFetchJsonTool(
   { href }: WebFetchTool,
   signal?: AbortSignal,
 ): Promise<ToolResult> {
+  if (!URL.canParse(href)) {
+    return {
+      isError: true,
+      content: `Cannot parse href ${href} as a URL`,
+    };
+  }
+
   const headers = new Headers();
   headers.append("User-Agent", userAgent);
   headers.append("Accept", "application/json");
