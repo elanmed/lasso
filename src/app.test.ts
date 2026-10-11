@@ -9291,6 +9291,7 @@ describe("tools", () => {
       );
       assert.deepStrictEqual(result, {
         content: JSON.stringify({ stdout: "hello\n", stderr: "" }),
+        isError: false,
       });
     });
 
@@ -9304,6 +9305,7 @@ describe("tools", () => {
       );
       assert.deepStrictEqual(result, {
         content: JSON.stringify({ stdout: "", stderr: "error\n" }),
+        isError: false,
       });
     });
 
@@ -9740,6 +9742,7 @@ describe("tools", () => {
           null,
           2,
         ),
+        isError: false,
       });
     });
 
@@ -9875,11 +9878,13 @@ describe("tools", () => {
             model: "model-one",
             prompt: "inspect one",
             content: "result-1",
+            isError: false,
           },
           {
             model: "model-two",
             prompt: "inspect two",
             content: "result-2",
+            isError: false,
           },
         ]);
         const firstCall = calls[0];
@@ -9965,7 +9970,12 @@ describe("tools", () => {
         });
 
         assert.deepStrictEqual(JSON.parse(result.content), [
-          { model: "main-model", prompt: "edit", content: "done" },
+          {
+            model: "main-model",
+            prompt: "edit",
+            content: "done",
+            isError: false,
+          },
         ]);
         assert.deepStrictEqual(getWrites(), [
           "\n",
@@ -10016,7 +10026,12 @@ skills body`,
         });
 
         assert.deepStrictEqual(JSON.parse(result.content), [
-          { model: "main-model", prompt: "inspect", content: "ok" },
+          {
+            model: "main-model",
+            prompt: "inspect",
+            content: "ok",
+            isError: false,
+          },
         ]);
       });
 
@@ -10033,7 +10048,12 @@ skills body`,
         });
 
         assert.deepStrictEqual(JSON.parse(result.content), [
-          { model: "main-model", prompt: "inspect", content: "ok" },
+          {
+            model: "main-model",
+            prompt: "inspect",
+            content: "ok",
+            isError: false,
+          },
         ]);
       });
     });
@@ -10062,7 +10082,12 @@ skills body`,
             isError: true,
             content: "subagent failed",
           },
-          { model: "good-model", prompt: "good", content: "ok" },
+          {
+            model: "good-model",
+            prompt: "good",
+            content: "ok",
+            isError: false,
+          },
         ]);
       });
 
