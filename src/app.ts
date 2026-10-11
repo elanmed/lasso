@@ -3012,9 +3012,18 @@ export const builtinSlashCommands = [
 
 export type BuiltinSlashCommand = (typeof builtinSlashCommands)[number];
 
-export function getAvailableCommandsStr() {
+export function getAvailableCommandsStr({
+  includeTokenCount = false,
+}: { includeTokenCount?: boolean } = {}) {
   const customCommandsFormatted = getState().content.slashCommands.map(
-    (command) => `- ${command.filePath}`,
+    (command) => {
+      const suffix = (() => {
+        if (!includeTokenCount) return "";
+        return ` _(${strToApproxTokens(command.content).toLocaleString()} tokens)_`;
+      })();
+
+      return `- ${command.filePath}${suffix}`;
+    },
   );
   const builtinCommandsFormatted = builtinSlashCommands.map(
     (command) => `- /${command}`,
@@ -5652,7 +5661,7 @@ export async function pageEditStr({ isTyped = false }: SpacingOpts = {}) {
     return;
   }
 
-  const initialContentStr = `# [lasso] Editor content
+  const initialContentStr = `# [lasso] Editor content _(${strToApproxTokens(editorInputValue).toLocaleString()} tokens)_
 
 ${editorInputValue}`;
 
@@ -5665,7 +5674,7 @@ ${editorInputValue}`;
 export async function pageCommands() {
   const initialContentStr = `# Available commands:
 
-${getAvailableCommandsStr()}`;
+${getAvailableCommandsStr({ includeTokenCount: true })}`;
 
   await openWithPager({
     initialContentStr,
@@ -5686,7 +5695,9 @@ export async function pageSkills({ isTyped = false }: SpacingOpts = {}) {
       (skill) => !skill.name.startsWith(contextFileSkillNamePrefix),
     )
     .map(
-      (skill) => `- **${skill.name}**: ${skill.description}
+      (
+        skill,
+      ) => `- **${skill.name}** _(${strToApproxTokens(skill.description).toLocaleString()}-${strToApproxTokens(skill.content).toLocaleString()} tokens)_: ${skill.description}
   ${skill.dir}`,
     )
     .join("\n");
@@ -5709,7 +5720,8 @@ export async function pageAvailableContextFiles({
   }
 
   const contextFiles = getState().content.contextEntries.map(
-    (context) => `- ${context.filePath}`,
+    (context) =>
+      `- ${context.filePath} _(${strToApproxTokens(context.content).toLocaleString()} tokens)_`,
   );
 
   const contextSkillFiles = getState()
@@ -6211,7 +6223,7 @@ export async function pageTools() {
 
     const prefix = context.type === "harness" ? "lasso" : `${context.name} mcp`;
 
-    return `- **[${prefix}] ${name}**: ${description}`;
+    return `- **[${prefix}] ${name}** _(${strToApproxTokens(safeStringify(tool)).toLocaleString()} tokens)_: ${description}`;
   }
 
   const formattedHarnessTools = Object.entries(harnessTools).map((entry) =>

@@ -548,6 +548,8 @@ vim.g.clipboard = {
 
 ## TODO (now)
 
+- [ ] /mcp
+
 ## TODO (soon)
 
 ## TODO (later)
