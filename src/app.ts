@@ -3067,8 +3067,6 @@ export async function openWithPager({
   await tryCatchAsync(fsDeps.unlink(tempFile));
 }
 
-export type ParameterizedSlashCommand = "fetch" | "resume";
-
 export const builtinSlashCommands = [
   "edit",
   "editpage",
@@ -5392,12 +5390,36 @@ interface SlashCommandOutcome {
   inputFromCommand: string | null;
 }
 
-// TODO: validate no args passed
+function splitArgs(input: string) {
+  return input.split(/\s+/);
+}
+
+function hasArgs(input: string) {
+  return splitArgs(input).length > 1;
+}
+
+function printUsageIfArgs(commandWithArgs: string) {
+  if (!hasArgs(commandWithArgs)) return false;
+  const [commandStr] = splitArgs(commandWithArgs);
+  assertAtBuildtime(commandStr !== undefined);
+
+  print.error(`Usage: /${commandStr}`);
+  return true;
+}
+
 async function resolveBuiltinSlashCommand(
-  command: BuiltinSlashCommand,
+  commandWithArgs: string,
 ): Promise<SlashCommandOutcome> {
+  const [commandStr] = splitArgs(commandWithArgs);
+  assertAtBuildtime(commandStr !== undefined);
+
+  const command = commandStr as BuiltinSlashCommand;
   switch (command) {
     case "edit": {
+      if (printUsageIfArgs(commandWithArgs)) {
+        return { handled: true, inputFromCommand: null };
+      }
+
       actions.setIsNonBlockingProcessOngoing(true);
       const content = await spawnAndReadEditorContent();
       actions.setIsNonBlockingProcessOngoing(false);
@@ -5414,10 +5436,18 @@ async function resolveBuiltinSlashCommand(
       return { handled: true, inputFromCommand: content };
     }
     case "editpage": {
+      if (printUsageIfArgs(commandWithArgs)) {
+        return { handled: true, inputFromCommand: null };
+      }
+
       await pageEditStr({ isTyped: true });
       return { handled: true, inputFromCommand: null };
     }
     case "paste": {
+      if (printUsageIfArgs(commandWithArgs)) {
+        return { handled: true, inputFromCommand: null };
+      }
+
       actions.setIsNonBlockingProcessOngoing(true);
       const content = await spawnAndReadEditorContent({
         includeClipboardSuffix: true,
@@ -5435,40 +5465,75 @@ async function resolveBuiltinSlashCommand(
       return { handled: true, inputFromCommand: content };
     }
     case "clear": {
+      if (printUsageIfArgs(commandWithArgs)) {
+        return { handled: true, inputFromCommand: null };
+      }
+
       await clearCommand();
       return { handled: true, inputFromCommand: null };
     }
     case "history": {
+      if (printUsageIfArgs(commandWithArgs)) {
+        return { handled: true, inputFromCommand: null };
+      }
+
       await pageHistory({ isTyped: true });
       return { handled: true, inputFromCommand: null };
     }
     case "skills": {
+      if (printUsageIfArgs(commandWithArgs)) {
+        return { handled: true, inputFromCommand: null };
+      }
+
       await pageSkills();
       return { handled: true, inputFromCommand: null };
     }
     case "context": {
+      if (printUsageIfArgs(commandWithArgs)) {
+        return { handled: true, inputFromCommand: null };
+      }
+
       await pageContext();
       return { handled: true, inputFromCommand: null };
     }
     case "commands": {
+      if (printUsageIfArgs(commandWithArgs)) {
+        return { handled: true, inputFromCommand: null };
+      }
+
       await pageCommands();
       return { handled: true, inputFromCommand: null };
     }
     case "keymaps": {
+      if (printUsageIfArgs(commandWithArgs)) {
+        return { handled: true, inputFromCommand: null };
+      }
+
       printKeymaps();
       return { handled: true, inputFromCommand: null };
     }
     case "usage": {
+      if (printUsageIfArgs(commandWithArgs)) {
+        return { handled: true, inputFromCommand: null };
+      }
+
       printUsage();
       return { handled: true, inputFromCommand: null };
     }
     case "tokens": {
+      if (printUsageIfArgs(commandWithArgs)) {
+        return { handled: true, inputFromCommand: null };
+      }
+
       printTokens();
       return { handled: true, inputFromCommand: null };
     }
     case "config": {
-      const initialContentStr = getAllPrettyConfig();
+      if (printUsageIfArgs(commandWithArgs)) {
+        return { handled: true, inputFromCommand: null };
+      }
 
+      const initialContentStr = getAllPrettyConfig();
       await openWithPager({
         initialContentStr,
         contentType: "markdown",
@@ -5477,7 +5542,10 @@ async function resolveBuiltinSlashCommand(
       return { handled: true, inputFromCommand: null };
     }
     case "resume": {
-      const inputFromCommand = await resumeWithNoArgs();
+      const inputFromCommand = hasArgs(commandWithArgs)
+        ? await resume(commandWithArgs)
+        : await resumeWithNoArgs();
+
       if (inputFromCommand !== null) {
         await syncSessionFile({
           transcript: getAppendedTranscript({
@@ -5490,46 +5558,91 @@ async function resolveBuiltinSlashCommand(
       return { handled: true, inputFromCommand };
     }
     case "reload": {
+      if (printUsageIfArgs(commandWithArgs)) {
+        return { handled: true, inputFromCommand: null };
+      }
+
       await reload();
       return { handled: true, inputFromCommand: null };
     }
     case "initlocal": {
+      if (printUsageIfArgs(commandWithArgs)) {
+        return { handled: true, inputFromCommand: null };
+      }
+
       await initLocalConfig();
       return { handled: true, inputFromCommand: null };
     }
     case "initglobal": {
+      if (printUsageIfArgs(commandWithArgs)) {
+        return { handled: true, inputFromCommand: null };
+      }
+
       await initGlobalConfig();
       return { handled: true, inputFromCommand: null };
     }
     case "lastresponse": {
+      if (printUsageIfArgs(commandWithArgs)) {
+        return { handled: true, inputFromCommand: null };
+      }
+
       await pageLastResponse({ isTyped: true });
       return { handled: true, inputFromCommand: null };
     }
     case "lastmessage": {
+      if (printUsageIfArgs(commandWithArgs)) {
+        return { handled: true, inputFromCommand: null };
+      }
+
       await pageLastMessage({ isTyped: true });
       return { handled: true, inputFromCommand: null };
     }
     case "lastdiff": {
+      if (printUsageIfArgs(commandWithArgs)) {
+        return { handled: true, inputFromCommand: null };
+      }
+
       await pageLastDiff({ isTyped: true });
       return { handled: true, inputFromCommand: null };
     }
     case "summaries": {
+      if (printUsageIfArgs(commandWithArgs)) {
+        return { handled: true, inputFromCommand: null };
+      }
+
       await pageSummaries({ isTyped: true });
       return { handled: true, inputFromCommand: null };
     }
     case "tools": {
+      if (printUsageIfArgs(commandWithArgs)) {
+        return { handled: true, inputFromCommand: null };
+      }
+
       await pageTools();
       return { handled: true, inputFromCommand: null };
     }
     case "mcps": {
+      if (printUsageIfArgs(commandWithArgs)) {
+        return { handled: true, inputFromCommand: null };
+      }
+
       await pageMcps({ isTyped: true });
       return { handled: true, inputFromCommand: null };
     }
     case "fetch": {
+      if (hasArgs(commandWithArgs)) {
+        const inputFromCommand = await fetchCommand(commandWithArgs);
+        return { handled: true, inputFromCommand };
+      }
+
       print.error(`usage: /fetch "[href]"`);
       return { handled: true, inputFromCommand: null };
     }
     case "record": {
+      if (printUsageIfArgs(commandWithArgs)) {
+        return { handled: true, inputFromCommand: null };
+      }
+
       actions.setIsRecording(true);
       const inputFromCommand = await recordAndTranscribeInput({
         isTyped: true,
@@ -5546,38 +5659,6 @@ async function resolveBuiltinSlashCommand(
         });
       }
       return { handled: true, inputFromCommand };
-    }
-    default: {
-      command satisfies never;
-      return { handled: false, inputFromCommand: null };
-    }
-  }
-}
-
-async function resolveParameterizedBuiltinSlashCommand(
-  commandWithArgs: string,
-): Promise<SlashCommandOutcome> {
-  const parts = commandWithArgs.split(/\s+/);
-  const command = parts[0] as ParameterizedSlashCommand | undefined;
-  assertAtBuildtime(command !== undefined);
-
-  switch (command) {
-    case "fetch": {
-      const inputFromCommand = await fetchCommand(commandWithArgs);
-      return { handled: true, inputFromCommand };
-    }
-    case "resume": {
-      const inputFromCommand = await resume(commandWithArgs);
-      if (inputFromCommand !== null) {
-        await syncSessionFile({
-          transcript: getAppendedTranscript({
-            message: inputFromCommand,
-            role: "user",
-            timestamp: Date.now(),
-          }),
-        });
-      }
-      return { handled: true, inputFromCommand: inputFromCommand };
     }
     default: {
       command satisfies never;
@@ -5634,18 +5715,10 @@ ${normalizeNewline(matchedCommand.content, { count: 0 })}`;
 
 export async function resolveSlashCommand(rawInput: string) {
   const commandWithoutSlash = rawInput.trim().slice(1);
-
-  const builtinSlashCommandOutcome = await resolveBuiltinSlashCommand(
-    commandWithoutSlash as BuiltinSlashCommand,
-  );
+  const builtinSlashCommandOutcome =
+    await resolveBuiltinSlashCommand(commandWithoutSlash);
   if (builtinSlashCommandOutcome.handled) {
     return builtinSlashCommandOutcome.inputFromCommand;
-  }
-
-  const parameterizedBuiltinSlashCommandOutcome =
-    await resolveParameterizedBuiltinSlashCommand(commandWithoutSlash);
-  if (parameterizedBuiltinSlashCommandOutcome.handled) {
-    return parameterizedBuiltinSlashCommandOutcome.inputFromCommand;
   }
 
   const customSlashCommandOutcome =
@@ -5945,7 +6018,7 @@ export async function resumeWithNoArgs() {
 }
 
 export async function resume(rawInput: string) {
-  const parts = rawInput.split(/\s+/);
+  const parts = splitArgs(rawInput);
 
   if (parts.length !== 2) {
     print.error("Usage: /resume [session start date]");
@@ -6470,7 +6543,7 @@ ${formatted}`;
 }
 
 export async function fetchCommand(commandWithArgs: string) {
-  const [, hrefWithQuotes] = commandWithArgs.split(/\s+/);
+  const [, hrefWithQuotes] = splitArgs(commandWithArgs);
   if (hrefWithQuotes === undefined) {
     print.error('Usage: /fetch "[href]"');
     return null;

@@ -16244,6 +16244,15 @@ log content
           "\n",
         ]);
       });
+
+      it("prints usage when /keymaps receives arguments", async () => {
+        actions.resetStdout();
+        const result = await resolveSlashCommand("/keymaps unexpected");
+        assert.strictEqual(result, null);
+        assert.deepStrictEqual(getWrites(), [
+          `${RED}Usage: /keymaps${RESET}\n`,
+        ]);
+      });
     });
 
     describe("usage and resume commands", () => {
