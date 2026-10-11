@@ -59,6 +59,7 @@ import {
   isNullish,
   getPrettyDate,
   sleep,
+  type Option,
 } from "./utils.ts";
 import {
   aiDeps,
@@ -3054,6 +3055,10 @@ export async function openWithPager({
   await tryCatchAsync(fsDeps.unlink(tempFile));
 }
 
+const parameterizedSlashCommands = ["fetch", "resume"] as const;
+export type ParameterizedSlashCommand =
+  (typeof parameterizedSlashCommands)[number];
+
 export const builtinSlashCommands = [
   "edit",
   "editpage",
@@ -3078,6 +3083,7 @@ export const builtinSlashCommands = [
   "tools",
   "record",
   "mcps",
+  "fetch",
 ] as const;
 
 export type BuiltinSlashCommand = (typeof builtinSlashCommands)[number];
@@ -3324,6 +3330,131 @@ type WebFetchHtmlResult = ToolResult & {
   filePath?: string;
   type?: "inline-markdown" | "file-path";
 };
+
+async function fetchHtml(
+  { href }: WebFetchTool,
+  signal?: AbortSignal,
+): Promise<Option<unknown>> {
+  if (!URL.canParse(href)) {
+    return {
+      ok: false,
+      error: `Cannot parse href ${href} as a URL`,
+    };
+  }
+
+  const headers = new Headers();
+  headers.append("User-Agent", userAgent);
+  headers.append("Accept", "text/html");
+
+  const fetchResult = await tryCatchAsync(
+    fetch(href, {
+      headers,
+      ...(signal === undefined ? {} : { signal }),
+    }),
+  );
+
+  if (!fetchResult.ok) {
+    if (isAbortError(fetchResult.error)) throw fetchResult.error;
+    return {
+      ok: false,
+      error: fetchResult.error,
+    };
+  }
+
+  const response = fetchResult.value;
+  if (!response.ok) {
+    const error = `HTTP ${String(response.status)}: ${response.statusText} when fetching ${href}`;
+    toolPrint("web_fetch_html", error);
+    print.doing(error);
+    return {
+      ok: false,
+      error,
+    };
+  }
+
+  const textResult = await tryCatchAsync(response.text());
+  if (!textResult.ok) {
+    if (isAbortError(textResult.error)) throw textResult.error;
+    return {
+      error: textResult.error,
+      ok: false,
+    };
+  }
+  const htmlStr = textResult.value;
+
+  const turndownService = new TurndownService();
+  turndownService.remove([
+    "script",
+    "style",
+    "nav",
+    "footer",
+    "svg",
+    "iframe",
+    "noscript",
+    "template",
+    "canvas",
+    "video",
+    "audio",
+    "object",
+    "embed",
+    "dialog",
+    "form",
+    "button",
+    "input",
+    "select",
+    "textarea",
+    "aside",
+    "img",
+    "picture",
+  ]);
+  const markdown = turndownService.turndown(htmlStr);
+
+  const maxTokensForInlineFetch = 10_000;
+  const markdownTokensApprox = strToApproxTokens(markdown);
+  if (markdownTokensApprox <= maxTokensForInlineFetch) {
+    return {
+      ok: true,
+      value: {
+        content: markdown,
+        type: "inline-markdown",
+      },
+    };
+  }
+
+  const url = new URL(href);
+  const slug = `${url.host}${url.pathname}`.replace(/[^a-zA-Z0-9]/g, "-");
+  const fileName = `${slug}-${String(Date.now())}.md`;
+  const filePath = join(getWebpagesDir(), fileName);
+  const mkdirResult = await tryCatchAsync(
+    fsDeps.mkdir(getWebpagesDir(), { recursive: true }),
+  );
+  if (!mkdirResult.ok) {
+    return {
+      ok: false,
+      error: `Error while creating the local webpages directory. Error: ${getMessageFromError(mkdirResult.error)}`,
+    };
+  }
+  const writeResult = await tryCatchAsync(fsDeps.writeFile(filePath, markdown));
+  if (!writeResult.ok) {
+    return {
+      ok: false,
+      error: `Error while writing the markdown to a local file. Error: ${getMessageFromError(writeResult.error)}`,
+    };
+  }
+
+  toolPrint(
+    "web_fetch_html",
+    `Webpage markdown written to ${filePath} because it exceeded ${maxTokensForInlineFetch.toLocaleString()} tokens`,
+  );
+  return {
+    ok: true,
+    value: {
+      content: `The page contains approximately ${markdownTokensApprox.toLocaleString()} tokens. Its Markdown has been saved to \`${filePath}\` rather than included in this response. Use the \`bash\` tool to search the file or read selected lines.`,
+      filePath,
+      type: "file-path",
+    },
+  };
+}
 
 export async function executeWebFetchHtmlTool(
   { href }: WebFetchTool,
@@ -4969,6 +5100,7 @@ export function initKeypress(rl: readline.Interface) {
             redrawPendingQuestion();
             return;
           }
+          case "fetch":
           case "initlocal":
           case "initglobal":
           case "keymaps":
@@ -5343,6 +5475,7 @@ interface SlashCommandOutcome {
   inputFromCommand: string | null;
 }
 
+// TODO: validate no args passed
 async function resolveBuiltinSlashCommand(
   command: BuiltinSlashCommand,
 ): Promise<SlashCommandOutcome> {
@@ -5475,6 +5608,10 @@ async function resolveBuiltinSlashCommand(
       await pageMcps({ isTyped: true });
       return { handled: true, inputFromCommand: null };
     }
+    case "fetch": {
+      print.error(`usage: /fetch "[href]"`);
+      return { handled: true, inputFromCommand: null };
+    }
     case "record": {
       actions.setIsRecording(true);
       const inputFromCommand = await recordAndTranscribeInput({
@@ -5504,20 +5641,32 @@ async function resolveParameterizedBuiltinSlashCommand(
   commandWithArgs: string,
 ): Promise<SlashCommandOutcome> {
   const parts = commandWithArgs.split(/\s+/);
-  const command = parts[0];
-  if (command !== "resume") return { handled: false, inputFromCommand: null };
+  const command = parts[0] as ParameterizedSlashCommand | undefined;
+  assertAtBuildtime(command !== undefined);
 
-  const inputFromCommand = await resume(commandWithArgs);
-  if (inputFromCommand !== null) {
-    await syncSessionFile({
-      transcript: getAppendedTranscript({
-        message: inputFromCommand,
-        role: "user",
-        timestamp: Date.now(),
-      }),
-    });
+  switch (command) {
+    case "fetch": {
+      await fetchCommand();
+      return { handled: true, inputFromCommand: null };
+    }
+    case "resume": {
+      const inputFromCommand = await resume(commandWithArgs);
+      if (inputFromCommand !== null) {
+        await syncSessionFile({
+          transcript: getAppendedTranscript({
+            message: inputFromCommand,
+            role: "user",
+            timestamp: Date.now(),
+          }),
+        });
+      }
+      return { handled: true, inputFromCommand: inputFromCommand };
+    }
+    default: {
+      command satisfies never;
+      return { handled: false, inputFromCommand: null };
+    }
   }
-  return { handled: true, inputFromCommand: inputFromCommand };
 }
 
 function resolveCustomSlashCommand(commandStr: string): SlashCommandOutcome {
@@ -6402,6 +6551,8 @@ ${formatted}`;
     contentType: "markdown",
   });
 }
+
+export function fetchCommand() {}
 
 export function warnOnMissingTranscribeConfig() {
   const rl = getState().terminal.rl;

@@ -11,7 +11,15 @@ export function assertAtRuntime(value: boolean): asserts value {
   assert(value);
 }
 
-type Result<T> = { ok: true; value: T } | { ok: false; error: unknown };
+interface OptionSuccess<T> {
+  ok: true;
+  value: T;
+}
+interface OptionError {
+  ok: false;
+  error: unknown;
+}
+export type Option<T> = OptionSuccess<T> | OptionError;
 
 function isMediaPart(value: unknown) {
   return (
@@ -70,7 +78,7 @@ export function getMessageFromError(
   return maybeForceSingleLine(json ?? String(error), forceSingleLine);
 }
 
-export function tryCatch<T>(cb: () => T): Result<T> {
+export function tryCatch<T>(cb: () => T): Option<T> {
   try {
     const result = cb();
     return { ok: true, value: result };
@@ -81,7 +89,7 @@ export function tryCatch<T>(cb: () => T): Result<T> {
 
 export async function tryCatchAsync<T>(
   promise: Promise<T>,
-): Promise<Result<T>> {
+): Promise<Option<T>> {
   try {
     const result = await promise;
     return { ok: true, value: result };
