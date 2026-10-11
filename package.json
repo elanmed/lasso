@@ -1,7 +1,7 @@
 {
   "name": "lasso",
   "packageManager": "pnpm@11.1.0",
-  "version": "0.11.5",
+  "version": "0.12.0",
   "description": "",
   "module": "src/index.ts",
   "type": "module",

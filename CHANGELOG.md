@@ -1,5 +1,18 @@
 # Changelog
 
+## v0.12.0 - 2026-10-11
+
+- Improve web fetching with URL validation, more reliable retrieval and cleanup
+- Add `/fetch` command
+- Consolidate slash command argument validation
+- Report directory read errors
+- Add `/mcps` to list servers with their names, versions, and instructions
+- Include MCP instructions in the base prompt
+- Show token counts in miscellaneous commands
+- Remove `/model` and its arguments
+- Reorder `/config` to show applied values first.
+- Print missing-config errors at startup.
+
 ## v0.11.5 - 2026-10-11
 
 - Polish config warning and error spacing
