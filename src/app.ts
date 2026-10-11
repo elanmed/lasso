@@ -403,6 +403,15 @@ const getMcpLis = (mcpClientNames: string[]) => {
   return mcpClientNames.map((name) => `- ${name}`).join("\n");
 };
 
+const webSearchHeadingTwo = `## [lasso] Web search`;
+
+const webSearchLis = `
+- When using the \`web_fetch_html\` or \`web_fetch_json\` tools for web search, note that Google, Bing, and most other search engines block automated requests.
+- Instead, use the following agent-friendly search engines via constructed urls:
+  - \`https://html.duckduckgo.com/html/?q=<url-encoded query>\` (use with \`web_fetch_html\`)
+  - \`https://search.marginalia.nu/search?query=<url-encoded query>\` (use with \`web_fetch_html\`)
+  - \`https://en.wikipedia.org/w/index.php?search=<url-encoded query>\` (use with \`web_fetch_html\`)`;
+
 export const getBaseAgentPrompt = (mcpClientNames: string[]) => `${headingOne}
 
 ${corePrinciplesHeading}
@@ -412,6 +421,10 @@ ${corePrinciplesHeading}
 - For debugging: give 1 command at a time, never multiple
 - All responses are piped through bat as markdown — always emit valid markdown
 ${toolDiffLi}
+
+${webSearchHeadingTwo}
+
+${webSearchLis}
 
 ${mcpHeadingTwo}
 
@@ -433,7 +446,7 @@ export const getSubagentPrompt = (
 ${corePrinciplesHeading}
 - You are a read-only subagent. Although you have access to a bash tool, you must NOT use it to perform any modifications to the file system.
 
-${mcpHeadingTwo}
+${webSearchHeadingTwo}\n\n${webSearchLis}\n\n${mcpHeadingTwo}
 
 ${getMcpLis(mcpClientNames)}
 
@@ -447,7 +460,7 @@ ${readInstructions}`;
 ${corePrinciplesHeading}
 - You are a subagent with read-write access.
 
-${mcpHeadingTwo}
+${webSearchHeadingTwo}\n\n${webSearchLis}\n\n${mcpHeadingTwo}
 
 ${getMcpLis(mcpClientNames)}
 

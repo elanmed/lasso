@@ -11,7 +11,7 @@ export function assertAtRuntime(value: boolean): asserts value {
   assert(value);
 }
 
-export type Result<T> = { ok: true; value: T } | { ok: false; error: unknown };
+type Result<T> = { ok: true; value: T } | { ok: false; error: unknown };
 
 function isMediaPart(value: unknown) {
   return (
@@ -247,7 +247,7 @@ export function decimalToPercent(
   return `${String(Number((decimal * 100).toFixed(precision)))}%`;
 }
 
-export function nonNegativeDiff<T extends number | bigint>(
+function nonNegativeDiff<T extends number | bigint>(
   startTime: T,
   endTime: T,
 ): T {
@@ -303,7 +303,7 @@ export function getPrettyDate(timestamp: number) {
   });
 }
 
-export const COLORS = {
+const COLORS = {
   red: "\x1b[31m",
   green: "\x1b[32m",
   yellow: "\x1b[33m",

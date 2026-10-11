@@ -40,7 +40,7 @@ export function makeMcpTool() {
   };
 }
 
-export interface FakeFsDeps {
+interface FakeFsDeps {
   _files: Map<string, string>;
   _dirs: Set<string>;
   _globResults: Map<string, string[]>;
@@ -80,9 +80,7 @@ const EXCLUDED_KEYS = [
   "_restore",
 ];
 
-export function makeFakeFsDeps(
-  overrides: Partial<FakeFsDeps> = {},
-): FakeFsDeps {
+function makeFakeFsDeps(overrides: Partial<FakeFsDeps> = {}): FakeFsDeps {
   const _files = new Map<string, string>();
   const _dirs = new Set<string>();
   const _globResults = new Map<string, string[]>();
@@ -170,16 +168,6 @@ export function makeFakeFsDeps(
   };
 }
 
-export function mockStdout(opts: { includeSpinnerFrames?: boolean } = {}) {
-  const { includeSpinnerFrames = false } = opts;
-  let captured = "";
-  mock.method(processDeps.stdout, "write", (out: string) => {
-    if (!includeSpinnerFrames && out.includes("\r")) return;
-    captured += out;
-  });
-  return () => captured;
-}
-
 export function mockStdoutWrites(
   opts: { includeSpinnerFrames?: boolean } = {},
 ) {
@@ -192,15 +180,7 @@ export function mockStdoutWrites(
   return () => writes;
 }
 
-export function mockStderr() {
-  let captured = "";
-  mock.method(processDeps.stderr, "write", (out: string) => {
-    captured += out;
-  });
-  return () => captured;
-}
-
-export function makeFakeProcessEnv() {
+function makeFakeProcessEnv() {
   const map = new Map<string, string>();
 
   return {
@@ -216,7 +196,7 @@ export function makeFakeProcessEnv() {
   };
 }
 
-export function makeFakeCwd() {
+function makeFakeCwd() {
   let cwd = "/test-cwd";
   return {
     _cwd: cwd,
@@ -231,7 +211,7 @@ export function makeFakeCwd() {
 
 export const testFs = makeFakeFsDeps();
 export const testProcessEnv = makeFakeProcessEnv();
-export const testCwd = makeFakeCwd();
+const testCwd = makeFakeCwd();
 
 export function addSessionFile(timestampMs: number, session: SessionFile) {
   testFs._dirs.add("/fake-home/.local/state/lasso/sessions");
@@ -544,7 +524,7 @@ export function mockClipboardPasteFailure(error: Error) {
   mock.method(os, "platform", () => "linux");
   mockExec({ stdout: "", error });
 }
-export interface SpawnSyncResult {
+interface SpawnSyncResult {
   status: number | null;
   stdout?: string;
   stderr?: string;

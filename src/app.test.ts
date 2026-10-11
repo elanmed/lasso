@@ -2053,6 +2053,15 @@ describe("prompts", () => {
           "- All responses are piped through bat as markdown — always emit valid markdown",
           "- After a successful file-modifying tool (bash with fileSystemAccessType create-update-delete): the CLI auto-outputs a diff. Do NOT repeat the code, file contents, or a diff of the change in your response — summarize in prose only. Verification via a targeted read (e.g. sed -n) is fine, but don't re-echo what the diff already showed",
           "",
+          "## [lasso] Web search",
+          "",
+          "",
+          "- When using the `web_fetch_html` or `web_fetch_json` tools for web search, note that Google, Bing, and most other search engines block automated requests.",
+          "- Instead, use the following agent-friendly search engines via constructed urls:",
+          "  - `https://html.duckduckgo.com/html/?q=<url-encoded query>` (use with `web_fetch_html`)",
+          "  - `https://search.marginalia.nu/search?query=<url-encoded query>` (use with `web_fetch_html`)",
+          "  - `https://en.wikipedia.org/w/index.php?search=<url-encoded query>` (use with `web_fetch_html`)",
+          "",
           "## [lasso] MCP Servers",
           "",
           "No available MCP servers",
@@ -2153,6 +2162,15 @@ describe("prompts", () => {
           "## [lasso] Core principles",
           "- You are a read-only subagent. Although you have access to a bash tool, you must NOT use it to perform any modifications to the file system.",
           "",
+          "## [lasso] Web search",
+          "",
+          "",
+          "- When using the `web_fetch_html` or `web_fetch_json` tools for web search, note that Google, Bing, and most other search engines block automated requests.",
+          "- Instead, use the following agent-friendly search engines via constructed urls:",
+          "  - `https://html.duckduckgo.com/html/?q=<url-encoded query>` (use with `web_fetch_html`)",
+          "  - `https://search.marginalia.nu/search?query=<url-encoded query>` (use with `web_fetch_html`)",
+          "  - `https://en.wikipedia.org/w/index.php?search=<url-encoded query>` (use with `web_fetch_html`)",
+          "",
           "## [lasso] MCP Servers",
           "",
           "No available MCP servers",
@@ -2187,6 +2205,15 @@ describe("prompts", () => {
           "",
           "## [lasso] Core principles",
           "- You are a subagent with read-write access.",
+          "",
+          "## [lasso] Web search",
+          "",
+          "",
+          "- When using the `web_fetch_html` or `web_fetch_json` tools for web search, note that Google, Bing, and most other search engines block automated requests.",
+          "- Instead, use the following agent-friendly search engines via constructed urls:",
+          "  - `https://html.duckduckgo.com/html/?q=<url-encoded query>` (use with `web_fetch_html`)",
+          "  - `https://search.marginalia.nu/search?query=<url-encoded query>` (use with `web_fetch_html`)",
+          "  - `https://en.wikipedia.org/w/index.php?search=<url-encoded query>` (use with `web_fetch_html`)",
           "",
           "## [lasso] MCP Servers",
           "",
@@ -5943,7 +5970,7 @@ describe("getTokensByArea", () => {
       messages: 11,
       context: 3,
       tools: 4,
-      basePrompt: 619,
+      basePrompt: 801,
       skills: 1,
     });
   });
@@ -5954,7 +5981,7 @@ describe("getTokensByArea", () => {
       messages: 11,
       context: 3,
       tools: 4,
-      basePrompt: 619,
+      basePrompt: 801,
       skills: 1,
     });
   });
@@ -5966,7 +5993,7 @@ describe("getTokensByArea", () => {
       messages: 1100,
       context: 300,
       tools: 400,
-      basePrompt: 61900,
+      basePrompt: 80100,
       skills: 100,
     });
   });
@@ -5989,7 +6016,7 @@ describe("getPrettyTokensByArea", () => {
       `- Chat messages: 11
 - Context files: 3
 - Harness and MCP tools: 4
-- Base system prompt: 619
+- Base system prompt: 801
 - Skill descriptions: 1`,
     );
   });
@@ -6002,7 +6029,7 @@ describe("getPrettyTokensByArea", () => {
       `- Chat messages: 1,100
 - Context files: 300
 - Harness and MCP tools: 400
-- Base system prompt: 61,900
+- Base system prompt: 80,100
 - Skill descriptions: 100`,
     );
   });
@@ -13628,11 +13655,11 @@ l---
       printTokens();
       assert.deepStrictEqual(getWrites(), [
         "\n",
-        `${BLUE}Token count: 638 (0.012% of context window)${RESET}\n`,
+        `${BLUE}Token count: 820 (0.012% of context window)${RESET}\n`,
         `- Chat messages: 11
 - Context files: 3
 - Harness and MCP tools: 4
-- Base system prompt: 619
+- Base system prompt: 801
 - Skill descriptions: 1
 `,
         "\n",
@@ -13645,11 +13672,11 @@ l---
       printTokens();
       assert.deepStrictEqual(getWrites(), [
         "\n",
-        `${BLUE}Token count: 63,800 (1.172% of context window)${RESET}\n`,
+        `${BLUE}Token count: 82,000 (1.172% of context window)${RESET}\n`,
         `- Chat messages: 1,100
 - Context files: 300
 - Harness and MCP tools: 400
-- Base system prompt: 61,900
+- Base system prompt: 80,100
 - Skill descriptions: 100
 `,
         "\n",
@@ -13662,11 +13689,11 @@ l---
       printTokens();
       assert.deepStrictEqual(getWrites(), [
         "\n",
-        `${BLUE}Token count: 638 (0.15% of context window)${RESET}\n`,
+        `${BLUE}Token count: 820 (0.15% of context window)${RESET}\n`,
         `- Chat messages: 11
 - Context files: 3
 - Harness and MCP tools: 4
-- Base system prompt: 619
+- Base system prompt: 801
 - Skill descriptions: 1
 `,
         "\n",
@@ -15955,11 +15982,11 @@ log content
         assert.strictEqual(result, null);
         assert.deepStrictEqual(getWrites(), [
           "\n",
-          `${BLUE}Token count: 619 (0% of context window)${RESET}\n`,
+          `${BLUE}Token count: 801 (0% of context window)${RESET}\n`,
           `- Chat messages: 0
 - Context files: 0
 - Harness and MCP tools: 0
-- Base system prompt: 619
+- Base system prompt: 801
 - Skill descriptions: 0
 `,
           "\n",

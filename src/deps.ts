@@ -46,8 +46,6 @@ export const childProcessDeps = {
   spawnSync: childProcess.spawnSync,
 };
 
-export type ChildProcessDeps = typeof childProcessDeps;
-
 export const fsDeps = {
   readFile,
   writeFile,
