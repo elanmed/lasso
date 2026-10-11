@@ -9370,7 +9370,7 @@ describe("tools", () => {
         globalThis,
         "fetch",
         makeFakeFetch({
-          text: "<p>Article content</p><script>ignored()</script>",
+          text: "<p>Article content</p><hr><script>ignored()</script>",
         }),
       );
 
@@ -9379,7 +9379,7 @@ describe("tools", () => {
       });
       assert.deepStrictEqual(result, {
         isError: false,
-        content: "Article content",
+        content: "Article content\n\n---",
         type: "inline-markdown",
       });
     });
@@ -16271,6 +16271,16 @@ log content
           testFs._files.get("/tmp/lasso-test-uuid.txt"),
           "Article content\n\n",
         );
+      });
+
+      it("rejects an unquoted URL passed to /fetch without making a request", async () => {
+        const fetchMock = mock.method(globalThis, "fetch", makeFakeFetch());
+
+        const result = await resolveSlashCommand(
+          "/fetch https://example.com/article",
+        );
+        assert.strictEqual(result, null);
+        assert.strictEqual(fetchMock.mock.callCount(), 0);
       });
 
       it("rejects an invalid URL passed to /fetch without making a request", async () => {

@@ -3398,7 +3398,7 @@ async function fetchHtml(
   }
   const htmlStr = textResult.value;
 
-  const turndownService = new TurndownService();
+  const turndownService = new TurndownService({ hr: "---" });
   turndownService.remove([
     "script",
     "style",
@@ -6472,6 +6472,23 @@ ${formatted}`;
 export async function fetchCommand(commandWithArgs: string) {
   const [, hrefWithQuotes] = commandWithArgs.split(/\s+/);
   if (hrefWithQuotes === undefined) {
+    print.error('Usage: /fetch "[href]"');
+    return null;
+  }
+
+  const firstChar = hrefWithQuotes[0];
+  assertAtBuildtime(firstChar !== undefined);
+
+  const lastChar = hrefWithQuotes.at(-1);
+  assertAtBuildtime(lastChar !== undefined);
+
+  const quotes = [`"`, `'`];
+
+  if (
+    !quotes.includes(firstChar) ||
+    !quotes.includes(lastChar) ||
+    firstChar !== lastChar
+  ) {
     print.error('Usage: /fetch "[href]"');
     return null;
   }
