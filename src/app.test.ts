@@ -152,6 +152,7 @@ import {
   pageLastResponse,
   pageLastDiff,
   printKeymaps,
+  getAvailableCommandsStr,
 } from "./app.ts";
 import {
   setupTestContext,
@@ -14653,7 +14654,7 @@ older summary
       assert.strictEqual(spawned[0], "nano /tmp/lasso-test-uuid.txt");
       assert.strictEqual(
         testFs._files.get("/tmp/lasso-test-uuid.txt"),
-        `# [lasso] Editor content
+        `# [lasso] Editor content _(4 tokens)_
 
 editor input
 
@@ -14687,7 +14688,7 @@ editor input
         testFs._files.get("/tmp/lasso-test-uuid.txt"),
         `# Available skills:
 
-- **test-skill**: A test skill
+- **test-skill** _(4-4 tokens)_: A test skill
   /skills/test-skill
 
 `,
@@ -14718,7 +14719,7 @@ editor input
         testFs._files.get("/tmp/lasso-test-uuid.txt"),
         `# Available skills:
 
-- **real-skill**: A real skill
+- **real-skill** _(4-4 tokens)_: A real skill
   /skills/real
 
 `,
@@ -14769,14 +14770,14 @@ editor input
         testFs._files.get("/tmp/lasso-test-uuid.txt"),
         `# Available tools:
 
-- **[lasso] web_fetch_html**: Fetch a web page by URL and return its readable content, parsed to extract the main article.
-- **[lasso] web_fetch_json**: Fetch a JSON API endpoint by URL and return the parsed JSON response.
-- **[lasso] load_skill**: Load a skill to get specialized instructions
-- **[lasso] bash**: Execute a bash command and return its output.
-- **[lasso] read_image**: Read an image file from disk so you can look at it
-- **[lasso] mcp_list_resources**: List the resources of an mcp server
-- **[lasso] mcp_read_resource**: Read a resource from an mcp server
-- **[lasso] create_subagent**: Launch parallel subagents for independent investigation or implementation. Prefer read-only subagents for parallel work to avoid conflicts. Read-only subagents can fetch web content, inspect files, and load skills; read-write subagents can modify files or execute commands.
+- **[lasso] web_fetch_html** _(75 tokens)_: Fetch a web page by URL and return its readable content, parsed to extract the main article.
+- **[lasso] web_fetch_json** _(67 tokens)_: Fetch a JSON API endpoint by URL and return the parsed JSON response.
+- **[lasso] load_skill** _(59 tokens)_: Load a skill to get specialized instructions
+- **[lasso] bash** _(202 tokens)_: Execute a bash command and return its output.
+- **[lasso] read_image** _(62 tokens)_: Read an image file from disk so you can look at it
+- **[lasso] mcp_list_resources** _(93 tokens)_: List the resources of an mcp server
+- **[lasso] mcp_read_resource** _(72 tokens)_: Read a resource from an mcp server
+- **[lasso] create_subagent** _(391 tokens)_: Launch parallel subagents for independent investigation or implementation. Prefer read-only subagents for parallel work to avoid conflicts. Read-only subagents can fetch web content, inspect files, and load skills; read-write subagents can modify files or execute commands.
 
 `,
       );
@@ -14808,16 +14809,16 @@ editor input
         testFs._files.get("/tmp/lasso-test-uuid.txt"),
         `# Available tools:
 
-- **[lasso] web_fetch_html**: Fetch a web page by URL and return its readable content, parsed to extract the main article.
-- **[lasso] web_fetch_json**: Fetch a JSON API endpoint by URL and return the parsed JSON response.
-- **[lasso] load_skill**: Load a skill to get specialized instructions
-- **[lasso] bash**: Execute a bash command and return its output.
-- **[lasso] read_image**: Read an image file from disk so you can look at it
-- **[lasso] mcp_list_resources**: List the resources of an mcp server
-- **[lasso] mcp_read_resource**: Read a resource from an mcp server
-- **[lasso] create_subagent**: Launch parallel subagents for independent investigation or implementation. Prefer read-only subagents for parallel work to avoid conflicts. Read-only subagents can fetch web content, inspect files, and load skills; read-write subagents can modify files or execute commands.
-- **[first mcp] mcp_tool**: [no description available]
-- **[first mcp] described_tool**: A described MCP tool
+- **[lasso] web_fetch_html** _(75 tokens)_: Fetch a web page by URL and return its readable content, parsed to extract the main article.
+- **[lasso] web_fetch_json** _(67 tokens)_: Fetch a JSON API endpoint by URL and return the parsed JSON response.
+- **[lasso] load_skill** _(59 tokens)_: Load a skill to get specialized instructions
+- **[lasso] bash** _(202 tokens)_: Execute a bash command and return its output.
+- **[lasso] read_image** _(62 tokens)_: Read an image file from disk so you can look at it
+- **[lasso] mcp_list_resources** _(93 tokens)_: List the resources of an mcp server
+- **[lasso] mcp_read_resource** _(72 tokens)_: Read a resource from an mcp server
+- **[lasso] create_subagent** _(391 tokens)_: Launch parallel subagents for independent investigation or implementation. Prefer read-only subagents for parallel work to avoid conflicts. Read-only subagents can fetch web content, inspect files, and load skills; read-write subagents can modify files or execute commands.
+- **[first mcp] mcp_tool** _(22 tokens)_: [no description available]
+- **[first mcp] described_tool** _(35 tokens)_: A described MCP tool
 
 `,
       );
@@ -14844,7 +14845,7 @@ editor input
         testFs._files.get("/tmp/lasso-test-uuid.txt"),
         `# Available context files:
 
-- /project/AGENTS.md
+- /project/AGENTS.md _(2 tokens)_
 
 `,
       );
@@ -14877,7 +14878,7 @@ editor input
         testFs._files.get("/tmp/lasso-test-uuid.txt"),
         `# Available context files:
 
-- /project/AGENTS.md
+- /project/AGENTS.md _(2 tokens)_
 - /other/AGENTS.md (as a skill)
 
 `,
@@ -14928,6 +14929,86 @@ editor input
     });
   });
 
+  describe("getAvailableCommandsStr", () => {
+    beforeEach(() => {
+      actions.resetState();
+    });
+
+    it("formats builtin and custom commands without token counts by default", () => {
+      actions.setSlashCommands([
+        {
+          name: "custom.md",
+          filePath: "/test/.lasso/commands/custom.md",
+          content: "custom",
+        },
+      ]);
+      assert.strictEqual(
+        getAvailableCommandsStr(),
+        `- /edit
+- /editpage
+- /history
+- /clear
+- /paste
+- /model
+- /skills
+- /context
+- /commands
+- /keymaps
+- /usage
+- /tokens
+- /resume
+- /config
+- /reload
+- /initlocal
+- /initglobal
+- /lastresponse
+- /lastmessage
+- /lastdiff
+- /summaries
+- /tools
+- /record
+- /test/.lasso/commands/custom.md`,
+      );
+    });
+
+    it("includes token counts when includeTokenCount is true", () => {
+      actions.setSlashCommands([
+        {
+          name: "custom.md",
+          filePath: "/test/.lasso/commands/custom.md",
+          content: "custom",
+        },
+      ]);
+      assert.strictEqual(
+        getAvailableCommandsStr({ includeTokenCount: true }),
+        `- /edit
+- /editpage
+- /history
+- /clear
+- /paste
+- /model
+- /skills
+- /context
+- /commands
+- /keymaps
+- /usage
+- /tokens
+- /resume
+- /config
+- /reload
+- /initlocal
+- /initglobal
+- /lastresponse
+- /lastmessage
+- /lastdiff
+- /summaries
+- /tools
+- /record
+- /test/.lasso/commands/custom.md _(2 tokens)_`,
+      );
+    });
+  });
+
   describe("pageCommands", () => {
     beforeEach(() => {
       actions.resetState();
@@ -14971,7 +15052,7 @@ editor input
 - /summaries
 - /tools
 - /record
-- /test/.lasso/commands/custom.md
+- /test/.lasso/commands/custom.md _(2 tokens)_
 
 `,
       );
@@ -15450,7 +15531,7 @@ log content
         await harness.flush();
         assert.strictEqual(
           testFs._files.get("/tmp/lasso-test-uuid.txt"),
-          `# [lasso] Editor content
+          `# [lasso] Editor content _(4 tokens)_
 
 editor input
 
@@ -15523,7 +15604,7 @@ editor input
 - /summaries
 - /tools
 - /record
-- /test/.lasso/commands/custom.md
+- /test/.lasso/commands/custom.md _(2 tokens)_
 
 `,
         );
@@ -15549,14 +15630,14 @@ editor input
           testFs._files.get("/tmp/lasso-test-uuid.txt"),
           `# Available tools:
 
-- **[lasso] web_fetch_html**: Fetch a web page by URL and return its readable content, parsed to extract the main article.
-- **[lasso] web_fetch_json**: Fetch a JSON API endpoint by URL and return the parsed JSON response.
-- **[lasso] load_skill**: Load a skill to get specialized instructions
-- **[lasso] bash**: Execute a bash command and return its output.
-- **[lasso] read_image**: Read an image file from disk so you can look at it
-- **[lasso] mcp_list_resources**: List the resources of an mcp server
-- **[lasso] mcp_read_resource**: Read a resource from an mcp server
-- **[lasso] create_subagent**: Launch parallel subagents for independent investigation or implementation. Prefer read-only subagents for parallel work to avoid conflicts. Read-only subagents can fetch web content, inspect files, and load skills; read-write subagents can modify files or execute commands.
+- **[lasso] web_fetch_html** _(75 tokens)_: Fetch a web page by URL and return its readable content, parsed to extract the main article.
+- **[lasso] web_fetch_json** _(67 tokens)_: Fetch a JSON API endpoint by URL and return the parsed JSON response.
+- **[lasso] load_skill** _(59 tokens)_: Load a skill to get specialized instructions
+- **[lasso] bash** _(202 tokens)_: Execute a bash command and return its output.
+- **[lasso] read_image** _(62 tokens)_: Read an image file from disk so you can look at it
+- **[lasso] mcp_list_resources** _(93 tokens)_: List the resources of an mcp server
+- **[lasso] mcp_read_resource** _(72 tokens)_: Read a resource from an mcp server
+- **[lasso] create_subagent** _(391 tokens)_: Launch parallel subagents for independent investigation or implementation. Prefer read-only subagents for parallel work to avoid conflicts. Read-only subagents can fetch web content, inspect files, and load skills; read-write subagents can modify files or execute commands.
 
 `,
         );
@@ -15626,7 +15707,7 @@ editor input
         assert.strictEqual(result, null);
         assert.strictEqual(
           testFs._files.get("/tmp/lasso-test-uuid.txt"),
-          `# [lasso] Editor content
+          `# [lasso] Editor content _(4 tokens)_
 
 editor input
 
