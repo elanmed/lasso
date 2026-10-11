@@ -5,7 +5,6 @@ import os from "node:os";
 import { stdin } from "node:process";
 import { type ModelMessage, type LanguageModelUsage } from "ai";
 import { z } from "zod";
-import { DetachedWindowAPI } from "happy-dom";
 import {
   safeStringify,
   strToApproxTokens,
@@ -35,6 +34,7 @@ import {
   getMergeSummariesPrompt,
   getSubagentPrompt,
   getSessionDir,
+  getWebpagesDir,
   getDataDir,
   getGlobalConfigDir,
   getGlobalContextDir,
@@ -90,6 +90,7 @@ import {
   getTranscriptionProvider,
   initSessionFile,
   deleteExpiredSessionFiles,
+  deleteExpiredWebpageFiles,
   syncSessionFile,
   resumeFromSessionFile,
   executeMcpListResourcesTool,
@@ -7904,6 +7905,51 @@ describe("log", () => {
     });
   });
 
+  describe("deleteExpiredWebpageFiles", () => {
+    beforeEach(() => {
+      mock.restoreAll();
+      setupTestContext({ now: 1_000_000_000_000 });
+    });
+
+    it("returns early when the webpages directory does not exist", async () => {
+      await deleteExpiredWebpageFiles();
+      assert.strictEqual(testFs._dirs.has(getWebpagesDir()), false);
+    });
+
+    it("logs and returns when reading the webpages directory fails", async () => {
+      const webpagesDir = getWebpagesDir();
+      testFs._dirs.add(webpagesDir);
+      mock.method(fsDeps, "readdir", () => Promise.reject(new Error("EACCES")));
+      const writes = mockStdoutWrites();
+
+      await deleteExpiredWebpageFiles();
+
+      assert.deepStrictEqual(writes(), [
+        `${RED}Failed to read ${webpagesDir}. Error: EACCES${RESET}\n`,
+      ]);
+    });
+
+    it("deletes expired markdown and keeps recent or non-markdown files", async () => {
+      const webpagesDir = getWebpagesDir();
+      testFs._dirs.add(webpagesDir);
+      const expiredPath = join(webpagesDir, "article-999900000000.md");
+      const recentPath = join(webpagesDir, "article-999990000000.md");
+      const otherExtensionPath = join(webpagesDir, "article-999900000000.html");
+      const invalidTimestampPath = join(webpagesDir, "article-not-a-time.md");
+      testFs._files.set(expiredPath, "expired");
+      testFs._files.set(recentPath, "recent");
+      testFs._files.set(otherExtensionPath, "html");
+      testFs._files.set(invalidTimestampPath, "invalid");
+
+      await deleteExpiredWebpageFiles();
+
+      assert.deepStrictEqual(
+        [...testFs._files.keys()],
+        [recentPath, otherExtensionPath, invalidTimestampPath],
+      );
+    });
+  });
+
   describe("deleteExpiredSessionFiles", () => {
     beforeEach(() => {
       mock.restoreAll();
@@ -9317,48 +9363,70 @@ describe("tools", () => {
   }
 
   describe("executeWebFetchHtmlTool", () => {
-    it("returns parsed article content on success", async () => {
-      const html = `
-        <html>
-          <head><title>Test Page</title></head>
-          <body><p>This is the main content of the article that should be extracted.</p></body>
-        </html>
-      `;
-      mock.method(globalThis, "fetch", makeFakeFetch({ text: html }));
+    it("returns sanitized markdown on success", async () => {
+      mock.method(
+        globalThis,
+        "fetch",
+        makeFakeFetch({
+          text: "<p>Article content</p><script>ignored()</script>",
+        }),
+      );
 
       const result = await executeWebFetchHtmlTool({
         href: "https://example.com/article",
       });
-      assert.strictEqual(result.isError, undefined);
-      const parsed = JSON.parse(result.content) as Record<string, unknown>;
-      assert.equal(parsed["title"], "Test Page");
-      assert.equal(
-        parsed["textContent"],
-        `This is the main content of the article that should be extracted.\n        \n      `,
-      );
+      assert.deepStrictEqual(result, {
+        isError: false,
+        content: "Article content",
+        type: "inline-markdown",
+      });
     });
 
-    it("closes the happy-dom window after parsing", async () => {
-      const html = `<html><head><title>Test Page</title></head><body><p>Content</p></body></html>`;
+    it("rejects invalid URLs without making a request", async () => {
+      const fetchMock = mock.method(globalThis, "fetch", makeFakeFetch());
+      const result = await executeWebFetchHtmlTool({ href: "not a URL" });
+      assert.deepStrictEqual(result, {
+        isError: true,
+        content: "Cannot parse href not a URL as a URL",
+      });
+      assert.strictEqual(fetchMock.mock.callCount(), 0);
+    });
+
+    it("writes oversized markdown after creating the webpages directory", async () => {
+      const html = `<p>${"x".repeat(30_004)}</p>`;
       mock.method(globalThis, "fetch", makeFakeFetch({ text: html }));
-      const closeSpy = mock.method(DetachedWindowAPI.prototype, "close");
-
-      await executeWebFetchHtmlTool({ href: "https://example.com/article" });
-      assert.strictEqual(closeSpy.mock.callCount(), 1);
-    });
-
-    it("closes the happy-dom window when no article is found", async () => {
-      mock.method(globalThis, "fetch", makeFakeFetch());
-      const closeSpy = mock.method(DetachedWindowAPI.prototype, "close");
 
       const result = await executeWebFetchHtmlTool({
-        href: "https://example.com/empty",
+        href: "https://example.com/large",
+      });
+      const filePath =
+        "/fake-home/.local/state/lasso/webpages/example-com-large-0.md";
+      assert.deepStrictEqual(result, {
+        isError: false,
+        content:
+          "The page contains approximately 10,001 tokens. Its Markdown has been saved to `/fake-home/.local/state/lasso/webpages/example-com-large-0.md` rather than included in this response. Use the `bash` tool to search the file or read selected lines.",
+        filePath,
+        type: "file-path",
+      });
+      assert.strictEqual(testFs._dirs.has(getWebpagesDir()), true);
+      assert.strictEqual(testFs._files.get(filePath)?.length, 30_004);
+    });
+
+    it("returns an error when creating the webpages directory fails", async () => {
+      const html = `<p>${"x".repeat(30_004)}</p>`;
+      mock.method(globalThis, "fetch", makeFakeFetch({ text: html }));
+      mock.method(fsDeps, "mkdir", () =>
+        Promise.reject(new Error("mkdir failed")),
+      );
+
+      const result = await executeWebFetchHtmlTool({
+        href: "https://example.com/large",
       });
       assert.deepStrictEqual(result, {
         isError: true,
-        content: "Failed to parse article from https://example.com/empty",
+        content:
+          "Error while creating the local webpages directory. Error: mkdir failed",
       });
-      assert.strictEqual(closeSpy.mock.callCount(), 1);
     });
 
     it("returns isError when fetch throws", async () => {
@@ -9377,7 +9445,7 @@ describe("tools", () => {
       });
     });
 
-    it("returns isError when response is not ok", async () => {
+    it("returns isError when response is not ok and includes the URL", async () => {
       mock.method(
         globalThis,
         "fetch",
@@ -9394,7 +9462,8 @@ describe("tools", () => {
       });
       assert.deepStrictEqual(result, {
         isError: true,
-        content: "HTTP 500: Internal Server Error",
+        content:
+          "HTTP 500: Internal Server Error when fetching https://example.com/broken",
       });
     });
 
@@ -9445,7 +9514,18 @@ describe("tools", () => {
       });
       assert.deepStrictEqual(result, {
         content: JSON.stringify(jsonData, null, 2),
+        isError: false,
       });
+    });
+
+    it("rejects invalid URLs without making a request", async () => {
+      const fetchMock = mock.method(globalThis, "fetch", makeFakeFetch());
+      const result = await executeWebFetchJsonTool({ href: "not a URL" });
+      assert.deepStrictEqual(result, {
+        isError: true,
+        content: "Cannot parse href not a URL as a URL",
+      });
+      assert.strictEqual(fetchMock.mock.callCount(), 0);
     });
 
     it("returns isError when fetch throws", async () => {
@@ -9464,7 +9544,7 @@ describe("tools", () => {
       });
     });
 
-    it("returns isError when response is not ok", async () => {
+    it("returns isError when response is not ok and includes the URL", async () => {
       mock.method(
         globalThis,
         "fetch",
@@ -9476,17 +9556,17 @@ describe("tools", () => {
       });
       assert.deepStrictEqual(result, {
         isError: true,
-        content: "HTTP 404: Not Found",
+        content:
+          "HTTP 404: Not Found when fetching https://api.example.com/missing",
       });
     });
 
     it("returns isError when JSON parsing fails", async () => {
-      const fakeFetch = () => {
-        return Promise.resolve({
+      const fakeFetch = () =>
+        Promise.resolve({
           ok: true,
           json: () => Promise.reject(new Error("Invalid JSON")),
         } as Response);
-      };
       mock.method(globalThis, "fetch", fakeFetch);
 
       const result = await executeWebFetchJsonTool({

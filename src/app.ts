@@ -2748,7 +2748,14 @@ export async function deleteExpiredWebpageFiles() {
   }
 
   const webpageFiles: WebpageFileInfo[] = [];
-  for (const name of await fsDeps.readdir(webpagesDir)) {
+  const readdirResult = await tryCatchAsync(fsDeps.readdir(webpagesDir));
+  if (!readdirResult.ok) {
+    print.error(
+      `Failed to read ${webpagesDir}. Error: ${getMessageFromError(readdirResult.error)}`,
+    );
+    return;
+  }
+  for (const name of readdirResult.value) {
     const fullPath = join(webpagesDir, name);
     const statResult = await tryCatchAsync(fsDeps.stat(fullPath));
     if (!statResult.ok) continue;
@@ -3395,7 +3402,8 @@ export async function executeWebFetchHtmlTool(
   const markdown = turndownService.turndown(htmlStr);
 
   const maxTokensForInlineFetch = 10_000;
-  if (strToApproxTokens(markdown) <= maxTokensForInlineFetch) {
+  const markdownTokensApprox = strToApproxTokens(markdown);
+  if (markdownTokensApprox <= maxTokensForInlineFetch) {
     return {
       isError: false,
       content: markdown,
@@ -3407,6 +3415,15 @@ export async function executeWebFetchHtmlTool(
   const slug = `${url.host}${url.pathname}`.replace(/[^a-zA-Z0-9]/g, "-");
   const fileName = `${slug}-${String(Date.now())}.md`;
   const filePath = join(getWebpagesDir(), fileName);
+  const mkdirResult = await tryCatchAsync(
+    fsDeps.mkdir(getWebpagesDir(), { recursive: true }),
+  );
+  if (!mkdirResult.ok) {
+    return {
+      isError: true,
+      content: `Error while creating the local webpages directory. Error: ${getMessageFromError(mkdirResult.error)}`,
+    };
+  }
   const writeResult = await tryCatchAsync(fsDeps.writeFile(filePath, markdown));
   if (!writeResult.ok) {
     return {
@@ -3420,7 +3437,7 @@ export async function executeWebFetchHtmlTool(
     `Webpage markdown written to ${filePath} because it exceeded ${maxTokensForInlineFetch.toLocaleString()} tokens`,
   );
   return {
-    content: `Markdown was written to \`filePath\` because it exceeded ${maxTokensForInlineFetch.toLocaleString()} tokens. Consider reading the file in slices or searching for patterns via the \`bash\` tool.`,
+    content: `The page contains approximately ${markdownTokensApprox.toLocaleString()} tokens. Its Markdown has been saved to \`${filePath}\` rather than included in this response. Use the \`bash\` tool to search the file or read selected lines.`,
     filePath,
     isError: false,
     type: "file-path",
