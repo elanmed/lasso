@@ -171,7 +171,11 @@ export function createLockUtils(lockPath: string) {
     );
   }
 
-  async function overwriteLockFile() {
+  async function overwriteLockFile(expectedContent: string | null) {
+    const readResult = await tryCatchAsync(fsDeps.readFile(lockPath, "utf8"));
+    const currentContent = readResult.ok ? readResult.value : null;
+    if (currentContent !== expectedContent) return false;
+
     const unlinkResult = await tryCatchAsync(fsDeps.unlink(lockPath));
     if (!unlinkResult.ok) return false;
     return (await writeLockFile()).ok;
@@ -185,12 +189,12 @@ export function createLockUtils(lockPath: string) {
       fsDeps.readFile(lockPath, "utf8"),
     );
     if (!readLockResult.ok) {
-      return overwriteLockFile();
+      return overwriteLockFile(null);
     }
 
     const lockContentPid = Number(readLockResult.value);
     if (Number.isNaN(lockContentPid)) {
-      return overwriteLockFile();
+      return overwriteLockFile(readLockResult.value);
     }
 
     const killResult = tryCatch(() => processDeps.kill(lockContentPid, 0));
@@ -199,7 +203,7 @@ export function createLockUtils(lockPath: string) {
       return false;
     }
 
-    return await overwriteLockFile();
+    return await overwriteLockFile(readLockResult.value);
   }
 
   return {

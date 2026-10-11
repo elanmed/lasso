@@ -728,6 +728,14 @@ export function makeErrnoError(
   return err;
 }
 
+export function mockKillWithDeadPid(deadPid: number) {
+  mock.method(processDeps, "kill", (pid: number) => {
+    if (pid === deadPid) {
+      throw makeErrnoError("ESRCH", "No such process");
+    }
+  });
+}
+
 export async function drainTimerCallbacks(
   callbacks: (() => void)[],
   { keep = 0 }: { keep?: number } = {},

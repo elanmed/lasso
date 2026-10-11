@@ -190,6 +190,7 @@ import {
   mockClearInterval,
   mockGitLsFilesRejection,
   makeErrnoError,
+  mockKillWithDeadPid,
   mockSetTimeout,
   drainTimerCallbacks,
   mockExecCalls,
@@ -6271,6 +6272,47 @@ describe("listSessionFiles", () => {
         const lockUtils = createLockUtils("/lock");
         assert.equal(await lockUtils.createLock(), true);
         assert.equal(testFs._files.get("/lock"), String(process.pid));
+      });
+
+      it("does not steal the lock when the content changes after the staleness check", async () => {
+        testFs._files.set("/lock", "42");
+        mockKillWithDeadPid(42);
+        let readCount = 0;
+        mock.method(fsDeps, "readFile", () => {
+          readCount += 1;
+          return Promise.resolve(readCount === 1 ? "42" : "99");
+        });
+        const timerCallbacks = mockSetTimeout();
+
+        const lockUtils = createLockUtils("/lock");
+        const promise = lockUtils.createLock();
+        await drainTimerCallbacks(timerCallbacks);
+
+        assert.equal(await promise, false);
+        assert.equal(testFs._files.get("/lock"), "42");
+        mock.restoreAll();
+      });
+
+      it("does not steal the lock when an unreadable lock becomes readable", async () => {
+        testFs._files.set("/lock", "42");
+        mockKillWithDeadPid(42);
+        let readCount = 0;
+        mock.method(fsDeps, "readFile", () => {
+          readCount += 1;
+          if (readCount === 1) {
+            return Promise.reject(makeErrnoError("EIO", "I/O error"));
+          }
+          return Promise.resolve("99");
+        });
+        const timerCallbacks = mockSetTimeout();
+
+        const lockUtils = createLockUtils("/lock");
+        const promise = lockUtils.createLock();
+        await drainTimerCallbacks(timerCallbacks);
+
+        assert.equal(await promise, false);
+        assert.equal(testFs._files.get("/lock"), "42");
+        mock.restoreAll();
       });
     });
 
