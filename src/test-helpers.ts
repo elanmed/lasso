@@ -286,6 +286,12 @@ export function makeFakeRlWithWrites(overrides: object = {}) {
   return { rl, writes };
 }
 
+export function getTestRl() {
+  const rl = getState().terminal.rl;
+  assert(rl !== null);
+  return rl;
+}
+
 export function setupTestContext({
   now = 0,
   apiKey = "api-key",

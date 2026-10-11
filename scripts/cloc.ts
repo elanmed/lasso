@@ -16,7 +16,7 @@ const filter = (() => {
 
 const output = execFileSync(
   join(process.cwd(), "node_modules/.bin/cloc"),
-  ["src", "--json", "--quiet", filter],
+  ["src", "--json", "--quiet", "--timeout=0", filter],
   { encoding: "utf8" },
 );
 const result = JSON.parse(output) as { SUM: { code: number } };
