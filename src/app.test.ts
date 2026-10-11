@@ -9395,6 +9395,8 @@ describe("tools", () => {
     });
 
     it("writes oversized markdown after creating the webpages directory", async () => {
+      const getWrites = mockStdoutWrites();
+      mock.method(processDeps.stdout, "getColumns", () => 180);
       const html = `<p>${"x".repeat(30_004)}</p>`;
       mock.method(globalThis, "fetch", makeFakeFetch({ text: html }));
 
@@ -9412,6 +9414,9 @@ describe("tools", () => {
       });
       assert.strictEqual(testFs._dirs.has(getWebpagesDir()), true);
       assert.strictEqual(testFs._files.get(filePath)?.length, 30_004);
+      assert.deepStrictEqual(getWrites(), [
+        `${BLUE}${BOLD}web_fetch_html${BOLD_RESET}: Webpage markdown written to ${filePath} because it exceeded 10,000 tokens${RESET}\n`,
+      ]);
     });
 
     it("returns an error when creating the webpages directory fails", async () => {
@@ -9448,6 +9453,8 @@ describe("tools", () => {
     });
 
     it("returns isError when response is not ok and includes the URL", async () => {
+      const getWrites = mockStdoutWrites();
+      mock.method(processDeps.stdout, "getColumns", () => 180);
       mock.method(
         globalThis,
         "fetch",
@@ -9467,6 +9474,10 @@ describe("tools", () => {
         content:
           "HTTP 500: Internal Server Error when fetching https://example.com/broken",
       });
+      assert.deepStrictEqual(getWrites(), [
+        `${BLUE}${BOLD}web_fetch_html${BOLD_RESET}: HTTP 500: Internal Server Error when fetching https://example.com/broken${RESET}\n`,
+        `${BLUE}HTTP 500: Internal Server Error when fetching https://example.com/broken${RESET}\n`,
+      ]);
     });
 
     it("returns isError when the request times out", async () => {

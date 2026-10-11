@@ -3348,7 +3348,10 @@ interface FetchHtmlSuccess {
 async function fetchHtml(
   { href }: WebFetchTool,
   signal?: AbortSignal,
-  { forceNoFile = false }: { forceNoFile?: boolean } = {},
+  {
+    forceNoFile = false,
+    shouldToolPrint = false,
+  }: { forceNoFile?: boolean; shouldToolPrint?: boolean } = {},
 ): Promise<Option<FetchHtmlSuccess>> {
   if (!URL.canParse(href)) {
     return {
@@ -3379,7 +3382,9 @@ async function fetchHtml(
   const response = fetchResult.value;
   if (!response.ok) {
     const error = `HTTP ${String(response.status)}: ${response.statusText} when fetching ${href}`;
-    toolPrint("web_fetch_html", error);
+    if (shouldToolPrint) {
+      toolPrint("web_fetch_html", error);
+    }
     print.doing(error);
     return {
       ok: false,
@@ -3457,10 +3462,12 @@ async function fetchHtml(
     };
   }
 
-  toolPrint(
-    "web_fetch_html",
-    `Webpage markdown written to ${filePath} because it exceeded ${maxTokensForInlineFetch.toLocaleString()} tokens`,
-  );
+  if (shouldToolPrint) {
+    toolPrint(
+      "web_fetch_html",
+      `Webpage markdown written to ${filePath} because it exceeded ${maxTokensForInlineFetch.toLocaleString()} tokens`,
+    );
+  }
   return {
     ok: true,
     value: {
@@ -3475,7 +3482,7 @@ export async function executeWebFetchHtmlTool(
   { href }: WebFetchTool,
   signal?: AbortSignal,
 ): Promise<WebFetchHtmlResult> {
-  const result = await fetchHtml({ href }, signal);
+  const result = await fetchHtml({ href }, signal, { shouldToolPrint: true });
   if (!result.ok) {
     return {
       isError: true,
