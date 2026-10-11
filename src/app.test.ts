@@ -14777,8 +14777,40 @@ editor input
         testFs._files.get("/tmp/lasso-test-uuid.txt"),
         `# Available MCP servers:
 
-- first
-- second
+- first _(fake-server v0.0.0)_
+- second _(fake-server v0.0.0)_
+
+`,
+      );
+      assert.deepStrictEqual(getWrites(), []);
+    });
+
+    it("lists server name, version, and instructions when available", async () => {
+      const { spawned } = mockPagerSpawn();
+      testProcessEnv._set("LASSO_PAGER", "nano __FILE__");
+      setMcpClients({
+        clients: {
+          first: makeFakeMcpClient({
+            serverInfo: { name: "my-server", version: "1.2.3" },
+          }),
+          second: makeFakeMcpClient({
+            serverInfo: { name: "other-server", version: "0.1.0" },
+            instructions: "Instructions line 1.\nInstructions line 2.",
+          }),
+        },
+      });
+
+      await pageMcps();
+
+      assert.strictEqual(spawned[0], "nano /tmp/lasso-test-uuid.txt");
+      assert.strictEqual(
+        testFs._files.get("/tmp/lasso-test-uuid.txt"),
+        `# Available MCP servers:
+
+- first _(my-server v1.2.3)_
+- second _(other-server v0.1.0)_
+  Instructions line 1.
+  Instructions line 2.
 
 `,
       );

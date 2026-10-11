@@ -6283,8 +6283,20 @@ export async function pageMcps({ isTyped = false }: SpacingOpts = {}) {
     return;
   }
 
-  const formatted = Object.keys(getState().mcp.clients)
-    .map((clientName) => `- ${clientName}`)
+  const formatted = Object.entries(getState().mcp.clients)
+    .map(([clientName, client]) => {
+      const { serverInfo } = client;
+      const line = `- ${clientName} _(${serverInfo.name} v${serverInfo.version})_`;
+      const lines = [line];
+      if (client.instructions !== undefined) {
+        lines.push(
+          ...client.instructions
+            .split("\n")
+            .map((instruction) => `  ${instruction}`),
+        );
+      }
+      return lines.join("\n");
+    })
     .join("\n");
 
   const initialContentStr = `# Available MCP servers:
