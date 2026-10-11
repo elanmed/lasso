@@ -2,7 +2,6 @@ import { describe, it, afterEach, mock, beforeEach } from "node:test";
 import assert from "node:assert/strict";
 import {
   orApproxTokens,
-  writeDebugLog,
   isAbortError,
   isNullish,
   isReadlineClosedError,
@@ -14,7 +13,6 @@ import {
   normalizeNewline,
   getMessageFromError,
   createQueue,
-  getStrFromAssistantContent,
   getPrettyDuration,
   getPrettyDate,
   getDurationColor,
@@ -24,6 +22,7 @@ import {
   isShellSafePath,
   removeMediaReplacer,
 } from "./utils.ts";
+import { writeDebugLog, getStrFromAssistantContent } from "./app.ts";
 import {
   testProcessEnv,
   setupTestContext,

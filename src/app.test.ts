@@ -12,7 +12,6 @@ import {
   bold,
   parseFrontMatter,
   createLockUtils,
-  execGitDiff,
 } from "./utils.ts";
 import {
   actions,
@@ -116,6 +115,7 @@ import {
   getLocalConfigPath,
   getTempFileName,
   resolveInterruptWithEditor,
+  execGitDiff,
 } from "./app.ts";
 import {
   setupTestContext,

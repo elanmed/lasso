@@ -15,14 +15,12 @@ import {
   warnOnLargePromptOverhead,
   resolveApiCall,
   maybeCompact,
-} from "./app.ts";
-import {
   initReadline,
   initStdin,
   initStdout,
   pollUntilNonBlockingProcessClosed,
   resolveUserInput,
-} from "./input.ts";
+} from "./app.ts";
 
 async function main() {
   actions.setIsInitializing(true);

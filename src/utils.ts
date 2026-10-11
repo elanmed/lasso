@@ -1,12 +1,7 @@
 import assert from "node:assert";
-import os from "node:os";
-import { dirname } from "node:path";
 import crypto from "node:crypto";
-import { type AssistantContent } from "ai";
 import * as YAML from "yaml";
-import { Window } from "happy-dom";
-import { Readability } from "@mozilla/readability";
-import { processDeps, fsDeps, childProcessDeps } from "./deps.ts";
+import { processDeps, fsDeps } from "./deps.ts";
 
 export function assertAtBuildtime(value: boolean): asserts value {
   assert(value);
@@ -14,28 +9,6 @@ export function assertAtBuildtime(value: boolean): asserts value {
 
 export function assertAtRuntime(value: boolean): asserts value {
   assert(value);
-}
-
-export async function writeDebugLog(
-  enabled: boolean,
-  path: string,
-  content: string,
-) {
-  if (!enabled) return;
-  if (path.length === 0) return;
-  if (!fsDeps.existsSync(dirname(path))) {
-    const mkdirResult = await tryCatchAsync(
-      fsDeps.mkdir(dirname(path), { recursive: true }),
-    );
-    if (!mkdirResult.ok) return;
-  }
-
-  await tryCatchAsync(
-    fsDeps.appendFile(
-      path,
-      `${new Date(Date.now()).toISOString()} :: ${content}\n`,
-    ),
-  );
 }
 
 export type Result<T> = { ok: true; value: T } | { ok: false; error: unknown };
@@ -257,33 +230,6 @@ export function sleep(ms: number) {
   });
 }
 
-export function getStrFromAssistantContent(content: AssistantContent) {
-  if (typeof content === "string") return content;
-  return content
-    .map((c) => {
-      const { type: ctype } = c;
-      switch (ctype) {
-        case "text": {
-          return c.text;
-        }
-        case "file":
-        case "custom":
-        case "reasoning":
-        case "reasoning-file":
-        case "tool-call":
-        case "tool-result":
-        case "tool-approval-request": {
-          return "";
-        }
-        default: {
-          ctype satisfies never;
-          return "";
-        }
-      }
-    })
-    .join("\n");
-}
-
 export function shouldDisableColor() {
   return (
     processDeps.env.get("NO_COLOR") !== undefined || !processDeps.stdout.isTTY()
@@ -414,93 +360,4 @@ export function getPrettyMoney(money: number) {
     minimumFractionDigits: 3,
     maximumFractionDigits: 3,
   });
-}
-
-export async function execGitDiff(opts: {
-  tempFileBeforePath: string;
-  tempFileAfterPath: string;
-  includeFilename?: boolean;
-}): Promise<{ stdout: string; stderr: string }> {
-  const deltaResult = await tryCatchAsync(
-    childProcessDeps.exec("delta --version"),
-  );
-  const isDeltaAvailable = deltaResult.ok;
-
-  const colorFlag = shouldDisableColor() ? "--color=never" : "--color=always";
-  const base = `git diff --no-index ${colorFlag} -U3 ${opts.tempFileBeforePath} ${opts.tempFileAfterPath}`;
-  const fileStyle = opts.includeFilename === true ? "normal" : "omit";
-  const command = isDeltaAvailable
-    ? `${base} | delta --paging=never --line-numbers --hunk-header-style=omit --file-style=${fileStyle}`
-    : base;
-  const result = await tryCatchAsync(
-    childProcessDeps.exec(command, { cwd: os.tmpdir() }),
-  );
-  // exit code 1 for files that differ
-  // exec treats exit code 1 as an error
-
-  if (!result.ok) {
-    const code = (result.error as { code?: number }).code;
-    const isError = (() => {
-      if (code === undefined) return true;
-      if (isDeltaAvailable) return code > 1;
-      return [2, 127, 128].includes(code) || code > 128;
-    })();
-
-    if (isError) {
-      throw result.error;
-    }
-  }
-
-  if (result.ok) return result.value;
-
-  const obj: { stdout: string; stderr: string } = { stderr: "", stdout: "" };
-  if (
-    typeof result.error === "object" &&
-    result.error !== null &&
-    "stdout" in result.error &&
-    typeof result.error.stdout === "string"
-  ) {
-    obj.stdout = result.error.stdout;
-  }
-
-  if (
-    typeof result.error === "object" &&
-    result.error !== null &&
-    "stderr" in result.error &&
-    typeof result.error.stderr === "string"
-  ) {
-    obj.stderr = result.error.stderr;
-  }
-  return obj;
-}
-
-export function baseBatFlags() {
-  return shouldDisableColor()
-    ? ["--style=plain", "--color=never"]
-    : ["--style=plain", "--color=always"];
-}
-
-export const markdownBatFlags = ["--language", "md", "--italic-text=always"];
-
-export function spawnBat(input: string) {
-  return tryCatch(() =>
-    childProcessDeps.spawnSync(
-      "bat",
-      [...baseBatFlags(), ...markdownBatFlags, "--paging=never", "-"],
-      {
-        input,
-        encoding: "utf8",
-      },
-    ),
-  );
-}
-
-export async function parseArticle(htmlStr: string) {
-  const window = new Window();
-  try {
-    const doc = new window.DOMParser().parseFromString(htmlStr, "text/html");
-    return new Readability(doc).parse();
-  } finally {
-    await window.happyDOM.close();
-  }
 }

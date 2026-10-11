@@ -46,7 +46,7 @@ import {
   pageLastResponse,
   pageLastDiff,
   printKeymaps,
-} from "./input.ts";
+} from "./app.ts";
 import {
   addSessionFile,
   testFs,

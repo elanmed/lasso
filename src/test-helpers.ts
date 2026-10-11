@@ -27,9 +27,11 @@ import {
   type SdkProvider,
   getMcpLogIdToLabel,
   createParallelPerformanceLogger,
+  baseBatFlags,
+  markdownBatFlags,
 } from "./app.ts";
-import { baseBatFlags, markdownBatFlags, shellQuote } from "./utils.ts";
-import { initKeypress } from "./input.ts";
+import { shellQuote } from "./utils.ts";
+import { initKeypress } from "./app.ts";
 
 export function makeMcpTool() {
   return {
