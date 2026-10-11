@@ -318,7 +318,6 @@ Slash commands are triggered with `/command` at the prompt.
 | `/lastmessage`  | View the last user message in a pager                                         |
 | `/lastdiff`     | View the last turn's tool edit diffs in a pager                               |
 | `/paste`        | Call the `paste` keymap                                                       |
-| `/model`        | Show the configured model                                                     |
 | `/record`       | Record audio and transcribe it into the prompt                                |
 | `/skills`       | List available skills                                                         |
 | `/tools`        | List available harness and MCP tools in a pager                               |

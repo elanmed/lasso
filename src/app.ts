@@ -2999,7 +2999,6 @@ export const builtinSlashCommands = [
   "history",
   "clear",
   "paste",
-  "model",
   "skills",
   "context",
   "commands",
@@ -4831,7 +4830,6 @@ export function initKeypress(rl: readline.Interface) {
           }
           case "initlocal":
           case "initglobal":
-          case "model":
           case "keymaps":
           case "usage":
           case "tokens":
@@ -5253,10 +5251,6 @@ async function resolveBuiltinSlashCommand(
       await pageHistory({ isTyped: true });
       return { handled: true, inputFromCommand: null };
     }
-    case "model": {
-      getModel();
-      return { handled: true, inputFromCommand: null };
-    }
     case "skills": {
       await pageSkills();
       return { handled: true, inputFromCommand: null };
@@ -5618,11 +5612,6 @@ export async function spawnAndReadEditorContent(opts?: {
   return normalizeNewline(readResult.value);
 }
 
-export function getModel() {
-  print.doing(getState().config.model);
-  return;
-}
-
 export interface SpacingOpts {
   isTyped?: boolean;
 }
@@ -5794,17 +5783,17 @@ function getAllPrettyConfig() {
   const globalConfigTitle = `Global config from path: ${getGlobalConfigPath()}`;
   const localConfigTitle = `Local config from path: ${getLocalConfigPath()}`;
 
-  return `# ${globalConfigTitle}
+  return `# Applied config
+
+${markdownFence("json", stringify(getState().config))}
+
+# ${globalConfigTitle}
 
 ${markdownFence("yaml", getState().content.globalConfigStr)}
 
 # ${localConfigTitle}
 
-${markdownFence("yaml", getState().content.localConfigStr)}
-
-# Applied config
-
-${markdownFence("json", stringify(getState().config))}`;
+${markdownFence("yaml", getState().content.localConfigStr)}`;
 }
 
 // TODO: mcp clients?

@@ -128,7 +128,6 @@ import {
   resolveSlashCommand,
   resolveUserInput,
   shouldResolveSlashCommand,
-  getModel,
   clearCommand,
   printTokens,
   pageSkills,
@@ -13045,19 +13044,6 @@ describe("input", () => {
         ]);
       });
 
-      it("resolves /model from editor input", async () => {
-        actions.setModel("old");
-        actions.setEditorInputValue("/model");
-        const result = await resolveUserInput({ isFirstInput: false });
-        assert.strictEqual(result, null);
-        assert.strictEqual(getState().config.model, "old");
-        assert.strictEqual(getState().terminal.editorInputValue, null);
-        assert.deepStrictEqual(getState().conversation.transcript, [
-          { timestamp: 0, role: "user", message: "/model" },
-        ]);
-        assert.deepStrictEqual(getWrites(), [BLUE + "old" + RESET + "\n"]);
-      });
-
       it("returns the first queued editor message and keeps the rest for the next iteration", async () => {
         actions.setEditorInputValue("first\nl---\nsecond\n");
         const result = await resolveUserInput({ isFirstInput: false });
@@ -13098,18 +13084,6 @@ second
         ]);
         assert.deepStrictEqual(getState().conversation.transcript, [
           { timestamp: 0, role: "user", message: "  hello  " },
-        ]);
-      });
-
-      it("resolves /model when input starts with /", async () => {
-        actions.setModel("old");
-        actions.resetStdout();
-        mock.method(getTestRl(), "question", () => Promise.resolve("/model"));
-        const result = await resolveUserInput({ isFirstInput: false });
-        assert.strictEqual(result, null);
-        assert.strictEqual(getState().config.model, "old");
-        assert.deepStrictEqual(getState().conversation.transcript, [
-          { timestamp: 0, role: "user", message: "/model" },
         ]);
       });
     });
@@ -13383,13 +13357,20 @@ line three
       });
 
       it("keeps arguments on the slash command line intact", async () => {
+        actions.setSlashCommands([
+          {
+            name: "cwd",
+            filePath: "/test/.lasso/commands/cwd.md",
+            content: "cwd",
+          },
+        ]);
         actions.setEditorInputValue(`context
-/model new-model
+/cwd /some/path
 `);
         assert.strictEqual(await parseInputFromEditor(), "context\n");
         assert.strictEqual(
           getState().terminal.editorInputValue,
-          "/model new-model\n",
+          "/cwd /some/path\n",
         );
       });
 
@@ -13507,7 +13488,7 @@ l---
 
       it("returns true for a slash command with args", () => {
         assert.strictEqual(
-          shouldResolveSlashCommand("/model new-model", {
+          shouldResolveSlashCommand("/cwd /some/path", {
             forceKnownCommand: false,
           }),
           true,
@@ -13523,16 +13504,23 @@ l---
     });
 
     describe("forceKnownCommand", () => {
-      it("returns true for a builtin slash command when forceKnownCommand is set", () => {
+      it("returns false for /model because it is not a builtin slash command", () => {
         assert.strictEqual(
           shouldResolveSlashCommand("/model", { forceKnownCommand: true }),
+          false,
+        );
+      });
+
+      it("returns true for a builtin slash command when forceKnownCommand is set", () => {
+        assert.strictEqual(
+          shouldResolveSlashCommand("/clear", { forceKnownCommand: true }),
           true,
         );
       });
 
       it("returns true for a builtin slash command with args when forceKnownCommand is set", () => {
         assert.strictEqual(
-          shouldResolveSlashCommand("/model new-model", {
+          shouldResolveSlashCommand("/clear arg", {
             forceKnownCommand: true,
           }),
           true,
@@ -13582,18 +13570,6 @@ l---
           false,
         );
       });
-    });
-  });
-
-  describe("getModel", () => {
-    beforeEach(() => {
-      actions.resetStdout();
-    });
-
-    it("prints current model", () => {
-      actions.setModel("gpt-4");
-      getModel();
-      assert.deepStrictEqual(getWrites(), [`${BLUE}gpt-4${RESET}\n`]);
     });
   });
 
@@ -15017,7 +14993,6 @@ editor input
 - /history
 - /clear
 - /paste
-- /model
 - /skills
 - /context
 - /commands
@@ -15055,7 +15030,6 @@ editor input
 - /history
 - /clear
 - /paste
-- /model
 - /skills
 - /context
 - /commands
@@ -15104,7 +15078,6 @@ editor input
 - /history
 - /clear
 - /paste
-- /model
 - /skills
 - /context
 - /commands
@@ -15176,7 +15149,6 @@ editor input
 
       for (const [command, keyName] of [
         ["clear", "k"],
-        ["model", "m"],
         ["keymaps", "p"],
         ["usage", "u"],
         ["tokens", "t"],
@@ -15686,7 +15658,6 @@ editor input
 - /history
 - /clear
 - /paste
-- /model
 - /skills
 - /context
 - /commands
@@ -15840,7 +15811,7 @@ editor input
       });
     });
 
-    describe("model and state commands", () => {
+    describe("state commands", () => {
       it("handles /clear command", async () => {
         const result = await resolveSlashCommand("/clear");
         assert.strictEqual(result, null);
@@ -15862,16 +15833,21 @@ editor input
         assert.deepStrictEqual(getWrites(), [
           "\n",
           `${RED}Invalid command: /model new-model, valid commands:${RESET}\n`,
-          "- /edit\n- /editpage\n- /history\n- /clear\n- /paste\n- /model\n- /skills\n- /context\n- /commands\n- /keymaps\n- /usage\n- /tokens\n- /resume\n- /config\n- /reload\n- /initlocal\n- /initglobal\n- /lastresponse\n- /lastmessage\n- /lastdiff\n- /summaries\n- /tools\n- /record\n- /mcps\n- /test-cwd/.lasso/commands/known.md\n",
+          "- /edit\n- /editpage\n- /history\n- /clear\n- /paste\n- /skills\n- /context\n- /commands\n- /keymaps\n- /usage\n- /tokens\n- /resume\n- /config\n- /reload\n- /initlocal\n- /initglobal\n- /lastresponse\n- /lastmessage\n- /lastdiff\n- /summaries\n- /tools\n- /record\n- /mcps\n- /test-cwd/.lasso/commands/known.md\n",
         ]);
       });
 
-      it("handles /model without args", async () => {
+      it("rejects /model without args", async () => {
         actions.setModel("gpt-4");
         actions.resetStdout();
         const result = await resolveSlashCommand("/model");
         assert.strictEqual(result, null);
-        assert.deepStrictEqual(getWrites(), [`${BLUE}gpt-4${RESET}\n`]);
+        assert.strictEqual(getState().config.model, "gpt-4");
+        assert.deepStrictEqual(getWrites(), [
+          "\n",
+          `${RED}Invalid command: /model, valid commands:${RESET}\n`,
+          "- /edit\n- /editpage\n- /history\n- /clear\n- /paste\n- /skills\n- /context\n- /commands\n- /keymaps\n- /usage\n- /tokens\n- /resume\n- /config\n- /reload\n- /initlocal\n- /initglobal\n- /lastresponse\n- /lastmessage\n- /lastdiff\n- /summaries\n- /tools\n- /record\n- /mcps\n",
+        ]);
       });
 
       it("handles /skills command", async () => {
@@ -16044,7 +16020,6 @@ log content
 - /history
 - /clear
 - /paste
-- /model
 - /skills
 - /context
 - /commands
@@ -16076,9 +16051,9 @@ log content
         assert.deepStrictEqual(getWrites(), []);
         const tempContent = testFs._files.get("/tmp/lasso-test-uuid.txt");
         assert.ok(tempContent !== undefined);
-        assert.match(tempContent, /^# Global config from path: /);
+        assert.match(tempContent, /^# Applied config\n/);
+        assert.match(tempContent, /\n# Global config from path: /);
         assert.match(tempContent, /\n# Local config from path: /);
-        assert.match(tempContent, /# Applied config\n/);
       });
 
       it("handles /keymaps command", async () => {
@@ -16430,14 +16405,14 @@ commands diff
         assert.strictEqual(result, null);
         assert.strictEqual(
           testFs._files.get("/tmp/lasso-test-uuid.txt"),
-          `Global config from path: /fake-home/.config/lasso/settings.yaml
+          `Applied config:
+applied diff
+
+Global config from path: /fake-home/.config/lasso/settings.yaml
 global diff
 
 Local config from path: /test-cwd/.lasso/settings.yaml
 local diff
-
-Applied config:
-applied diff
 
 Agent context:
 context diff
@@ -16698,7 +16673,7 @@ custom command content`,
         assert.deepStrictEqual(getWrites(), [
           "\n",
           `${RED}Invalid command: /unknown, valid commands:${RESET}\n`,
-          "- /edit\n- /editpage\n- /history\n- /clear\n- /paste\n- /model\n- /skills\n- /context\n- /commands\n- /keymaps\n- /usage\n- /tokens\n- /resume\n- /config\n- /reload\n- /initlocal\n- /initglobal\n- /lastresponse\n- /lastmessage\n- /lastdiff\n- /summaries\n- /tools\n- /record\n- /mcps\n- /test-cwd/.lasso/commands/known.md\n",
+          "- /edit\n- /editpage\n- /history\n- /clear\n- /paste\n- /skills\n- /context\n- /commands\n- /keymaps\n- /usage\n- /tokens\n- /resume\n- /config\n- /reload\n- /initlocal\n- /initglobal\n- /lastresponse\n- /lastmessage\n- /lastdiff\n- /summaries\n- /tools\n- /record\n- /mcps\n- /test-cwd/.lasso/commands/known.md\n",
         ]);
       });
     });
