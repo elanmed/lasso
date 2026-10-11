@@ -411,9 +411,11 @@ export function makeFakeFetch(
     text?: string;
     json?: unknown;
     error?: Error;
+    onRequest?: (init: RequestInit | undefined) => void;
   } = {},
 ) {
-  return () => {
+  return (...args: Parameters<typeof fetch>) => {
+    opts.onRequest?.(args[1]);
     if (opts.error !== undefined) return Promise.reject(opts.error);
     const response = {
       ok: opts.ok ?? true,

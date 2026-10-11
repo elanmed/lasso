@@ -2570,6 +2570,7 @@ skills body`,
         interruptWithEditorContent: null,
         recordProcess: null,
         transcription: null,
+        fetchCommand: null,
       });
     };
 
@@ -2633,6 +2634,7 @@ skills body`,
       actions.setInterruptWithEditorAbortController(new AbortController());
       actions.setRecordProcessAbortController(new AbortController());
       actions.setTranscriptionAbortController(new AbortController());
+      actions.setFetchCommandAbortController(new AbortController());
       actions.resetState();
       clearTimeout(timeout);
 
@@ -12657,6 +12659,24 @@ describe("input", () => {
       assert.equal(controller.signal.aborted, true);
     });
 
+    it("aborts a slash command fetch", () => {
+      let sigint: (() => void) | undefined;
+      const rl = makeFakeRl({
+        on: (_event: string, listener: () => void) => {
+          sigint = listener;
+        },
+      });
+      actions.setRl(rl);
+      const controller = new AbortController();
+      actions.setFetchCommandAbortController(controller);
+
+      initSigInt(rl);
+      assert(sigint !== undefined);
+      sigint();
+
+      assert.equal(controller.signal.aborted, true);
+    });
+
     it("aborts the transcription", () => {
       let sigint: (() => void) | undefined;
       const rl = makeFakeRl({
@@ -15114,6 +15134,7 @@ editor input
 - /tools
 - /record
 - /mcps
+- /fetch
 - /test/.lasso/commands/custom.md`,
       );
     });
@@ -15151,6 +15172,7 @@ editor input
 - /tools
 - /record
 - /mcps
+- /fetch
 - /test/.lasso/commands/custom.md _(2 tokens)_`,
       );
     });
@@ -15199,6 +15221,7 @@ editor input
 - /tools
 - /record
 - /mcps
+- /fetch
 - /test/.lasso/commands/custom.md _(2 tokens)_
 
 `,
@@ -15779,6 +15802,7 @@ editor input
 - /tools
 - /record
 - /mcps
+- /fetch
 - /test/.lasso/commands/custom.md _(2 tokens)_
 
 `,
@@ -15936,7 +15960,32 @@ editor input
         assert.deepStrictEqual(getWrites(), [
           "\n",
           `${RED}Invalid command: /model new-model, valid commands:${RESET}\n`,
-          "- /edit\n- /editpage\n- /history\n- /clear\n- /paste\n- /skills\n- /context\n- /commands\n- /keymaps\n- /usage\n- /tokens\n- /resume\n- /config\n- /reload\n- /initlocal\n- /initglobal\n- /lastresponse\n- /lastmessage\n- /lastdiff\n- /summaries\n- /tools\n- /record\n- /mcps\n- /test-cwd/.lasso/commands/known.md\n",
+          `- /edit
+- /editpage
+- /history
+- /clear
+- /paste
+- /skills
+- /context
+- /commands
+- /keymaps
+- /usage
+- /tokens
+- /resume
+- /config
+- /reload
+- /initlocal
+- /initglobal
+- /lastresponse
+- /lastmessage
+- /lastdiff
+- /summaries
+- /tools
+- /record
+- /mcps
+- /fetch
+- /test-cwd/.lasso/commands/known.md
+          `,
         ]);
       });
 
@@ -15949,7 +15998,31 @@ editor input
         assert.deepStrictEqual(getWrites(), [
           "\n",
           `${RED}Invalid command: /model, valid commands:${RESET}\n`,
-          "- /edit\n- /editpage\n- /history\n- /clear\n- /paste\n- /skills\n- /context\n- /commands\n- /keymaps\n- /usage\n- /tokens\n- /resume\n- /config\n- /reload\n- /initlocal\n- /initglobal\n- /lastresponse\n- /lastmessage\n- /lastdiff\n- /summaries\n- /tools\n- /record\n- /mcps\n",
+          `- /edit
+- /editpage
+- /history
+- /clear
+- /paste
+- /skills
+- /context
+- /commands
+- /keymaps
+- /usage
+- /tokens
+- /resume
+- /config
+- /reload
+- /initlocal
+- /initglobal
+- /lastresponse
+- /lastmessage
+- /lastdiff
+- /summaries
+- /tools
+- /record
+- /mcps
+- /fetch
+          `,
         ]);
       });
 
@@ -16141,6 +16214,7 @@ log content
 - /tools
 - /record
 - /mcps
+- /fetch
 
 `,
         );
@@ -16173,6 +16247,40 @@ log content
     });
 
     describe("usage and resume commands", () => {
+      it("fetches a quoted URL with an abort signal and opens its markdown in a pager", async () => {
+        testProcessEnv._set("LASSO_PAGER", "nano __FILE__");
+        mock.method(
+          globalThis,
+          "fetch",
+          makeFakeFetch({
+            text: "<p>Article content</p><script>ignored()</script>",
+            onRequest: (init) => {
+              const controller = getState().abortControllers.fetchCommand;
+              assert(controller !== null);
+              assert.strictEqual(init?.signal, controller.signal);
+            },
+          }),
+        );
+
+        const result = await resolveSlashCommand(
+          '/fetch "https://example.com/article"',
+        );
+        assert.strictEqual(result, null);
+        assert.strictEqual(getState().abortControllers.fetchCommand, null);
+        assert.strictEqual(
+          testFs._files.get("/tmp/lasso-test-uuid.txt"),
+          "Article content\n\n",
+        );
+      });
+
+      it("rejects an invalid URL passed to /fetch without making a request", async () => {
+        const fetchMock = mock.method(globalThis, "fetch", makeFakeFetch());
+
+        const result = await resolveSlashCommand('/fetch "not a URL"');
+        assert.strictEqual(result, null);
+        assert.strictEqual(fetchMock.mock.callCount(), 0);
+      });
+
       it("handles /usage command", async () => {
         actions.resetStdout();
         actions.setModel("unknown-model");
@@ -16776,7 +16884,32 @@ custom command content`,
         assert.deepStrictEqual(getWrites(), [
           "\n",
           `${RED}Invalid command: /unknown, valid commands:${RESET}\n`,
-          "- /edit\n- /editpage\n- /history\n- /clear\n- /paste\n- /skills\n- /context\n- /commands\n- /keymaps\n- /usage\n- /tokens\n- /resume\n- /config\n- /reload\n- /initlocal\n- /initglobal\n- /lastresponse\n- /lastmessage\n- /lastdiff\n- /summaries\n- /tools\n- /record\n- /mcps\n- /test-cwd/.lasso/commands/known.md\n",
+          `- /edit
+- /editpage
+- /history
+- /clear
+- /paste
+- /skills
+- /context
+- /commands
+- /keymaps
+- /usage
+- /tokens
+- /resume
+- /config
+- /reload
+- /initlocal
+- /initglobal
+- /lastresponse
+- /lastmessage
+- /lastdiff
+- /summaries
+- /tools
+- /record
+- /mcps
+- /fetch
+- /test-cwd/.lasso/commands/known.md
+          `,
         ]);
       });
     });

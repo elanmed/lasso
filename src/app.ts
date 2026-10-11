@@ -975,6 +975,7 @@ interface AbortControllersState {
   interruptWithEditorContent: AbortController | null;
   recordProcess: AbortController | null;
   transcription: AbortController | null;
+  fetchCommand: AbortController | null;
 }
 
 interface State {
@@ -1081,6 +1082,7 @@ const createInitialState = (): State => ({
     interruptWithEditorContent: null,
     recordProcess: null,
     transcription: null,
+    fetchCommand: null,
   },
 });
 
@@ -1283,6 +1285,16 @@ export const actions = {
     state.abortControllers.recordProcess = controller;
     logStateChange(
       "set-record-process-abort-controller",
+      String(before),
+      String(controller),
+    );
+  },
+
+  setFetchCommandAbortController(controller: AbortController | null) {
+    const before = state.abortControllers.fetchCommand;
+    state.abortControllers.fetchCommand = controller;
+    logStateChange(
+      "set-fetch-command-abort-controller",
       String(before),
       String(controller),
     );
@@ -3055,9 +3067,7 @@ export async function openWithPager({
   await tryCatchAsync(fsDeps.unlink(tempFile));
 }
 
-const parameterizedSlashCommands = ["fetch", "resume"] as const;
-export type ParameterizedSlashCommand =
-  (typeof parameterizedSlashCommands)[number];
+export type ParameterizedSlashCommand = "fetch" | "resume";
 
 export const builtinSlashCommands = [
   "edit",
@@ -3331,10 +3341,16 @@ type WebFetchHtmlResult = ToolResult & {
   type?: "inline-markdown" | "file-path";
 };
 
+interface FetchHtmlSuccess {
+  content: string;
+  filePath?: string;
+  type?: "inline-markdown" | "file-path";
+}
+
 async function fetchHtml(
   { href }: WebFetchTool,
   signal?: AbortSignal,
-): Promise<Option<unknown>> {
+): Promise<Option<FetchHtmlSuccess>> {
   if (!URL.canParse(href)) {
     return {
       ok: false,
@@ -3460,121 +3476,15 @@ export async function executeWebFetchHtmlTool(
   { href }: WebFetchTool,
   signal?: AbortSignal,
 ): Promise<WebFetchHtmlResult> {
-  if (!URL.canParse(href)) {
+  const result = await fetchHtml({ href }, signal);
+  if (!result.ok) {
     return {
       isError: true,
-      content: `Cannot parse href ${href} as a URL`,
+      content: getMessageFromError(result.error),
     };
   }
 
-  const headers = new Headers();
-  headers.append("User-Agent", userAgent);
-  headers.append("Accept", "text/html");
-
-  const fetchResult = await tryCatchAsync(
-    fetch(href, {
-      headers,
-      ...(signal === undefined ? {} : { signal }),
-    }),
-  );
-
-  if (!fetchResult.ok) {
-    if (isAbortError(fetchResult.error)) throw fetchResult.error;
-    return {
-      content: getMessageFromError(fetchResult.error),
-      isError: true,
-    };
-  }
-
-  const response = fetchResult.value;
-  if (!response.ok) {
-    const error = `HTTP ${String(response.status)}: ${response.statusText} when fetching ${href}`;
-    toolPrint("web_fetch_html", error);
-    print.doing(error);
-    return {
-      isError: true,
-      content: error,
-    };
-  }
-
-  const textResult = await tryCatchAsync(response.text());
-  if (!textResult.ok) {
-    if (isAbortError(textResult.error)) throw textResult.error;
-    return {
-      content: getMessageFromError(textResult.error),
-      isError: true,
-    };
-  }
-  const htmlStr = textResult.value;
-
-  const turndownService = new TurndownService();
-  turndownService.remove([
-    "script",
-    "style",
-    "nav",
-    "footer",
-    "svg",
-    "iframe",
-    "noscript",
-    "template",
-    "canvas",
-    "video",
-    "audio",
-    "object",
-    "embed",
-    "dialog",
-    "form",
-    "button",
-    "input",
-    "select",
-    "textarea",
-    "aside",
-    "img",
-    "picture",
-  ]);
-  const markdown = turndownService.turndown(htmlStr);
-
-  const maxTokensForInlineFetch = 10_000;
-  const markdownTokensApprox = strToApproxTokens(markdown);
-  if (markdownTokensApprox <= maxTokensForInlineFetch) {
-    return {
-      isError: false,
-      content: markdown,
-      type: "inline-markdown",
-    };
-  }
-
-  const url = new URL(href);
-  const slug = `${url.host}${url.pathname}`.replace(/[^a-zA-Z0-9]/g, "-");
-  const fileName = `${slug}-${String(Date.now())}.md`;
-  const filePath = join(getWebpagesDir(), fileName);
-  const mkdirResult = await tryCatchAsync(
-    fsDeps.mkdir(getWebpagesDir(), { recursive: true }),
-  );
-  if (!mkdirResult.ok) {
-    return {
-      isError: true,
-      content: `Error while creating the local webpages directory. Error: ${getMessageFromError(mkdirResult.error)}`,
-    };
-  }
-  const writeResult = await tryCatchAsync(fsDeps.writeFile(filePath, markdown));
-  if (!writeResult.ok) {
-    return {
-      isError: true,
-      content: `Error while writing the markdown to a local file. Error: ${getMessageFromError(writeResult.error)}`,
-    };
-  }
-
-  toolPrint(
-    "web_fetch_html",
-    `Webpage markdown written to ${filePath} because it exceeded ${maxTokensForInlineFetch.toLocaleString()} tokens`,
-  );
-  return {
-    content: `The page contains approximately ${markdownTokensApprox.toLocaleString()} tokens. Its Markdown has been saved to \`${filePath}\` rather than included in this response. Use the \`bash\` tool to search the file or read selected lines.`,
-    filePath,
-    isError: false,
-    type: "file-path",
-  };
+  return { ...result.value, isError: false };
 }
 
 export async function executeWebFetchJsonTool(
@@ -5208,8 +5118,10 @@ export function initSigInt(rl: readline.Interface) {
     const question = getState().abortControllers.question;
     const recordProcess = getState().abortControllers.recordProcess;
     const transcription = getState().abortControllers.transcription;
+    const fetchCommand = getState().abortControllers.fetchCommand;
     const controllers = [
       apiStream,
+      fetchCommand,
       interruptWithEditorContent,
       question,
       transcription,
@@ -5228,6 +5140,11 @@ export function initSigInt(rl: readline.Interface) {
 
     if (transcription !== null) {
       transcription.abort();
+      return;
+    }
+
+    if (fetchCommand !== null) {
+      fetchCommand.abort();
       return;
     }
 
@@ -5646,8 +5563,8 @@ async function resolveParameterizedBuiltinSlashCommand(
 
   switch (command) {
     case "fetch": {
-      await fetchCommand();
-      return { handled: true, inputFromCommand: null };
+      const inputFromCommand = await fetchCommand(commandWithArgs);
+      return { handled: true, inputFromCommand };
     }
     case "resume": {
       const inputFromCommand = await resume(commandWithArgs);
@@ -6552,7 +6469,41 @@ ${formatted}`;
   });
 }
 
-export function fetchCommand() {}
+export async function fetchCommand(commandWithArgs: string) {
+  const [, hrefWithQuotes] = commandWithArgs.split(/\s+/);
+  if (hrefWithQuotes === undefined) {
+    print.error('Usage: /fetch "[href]"');
+    return null;
+  }
+
+  const href = hrefWithQuotes.slice(1, -1);
+  const abortController = new AbortController();
+  actions.setFetchCommandAbortController(abortController);
+  try {
+    const fetchResult = await tryCatchAsync(
+      fetchHtml({ href }, abortController.signal),
+    );
+    if (!fetchResult.ok) {
+      if (isAbortError(fetchResult.error)) return null;
+      print.error(getMessageFromError(fetchResult.error));
+      return null;
+    }
+
+    const result = fetchResult.value;
+    if (!result.ok) {
+      print.error(getMessageFromError(result.error));
+      return null;
+    }
+
+    await openWithPager({
+      initialContentStr: result.value.content,
+      contentType: "markdown",
+    });
+    return null;
+  } finally {
+    actions.setFetchCommandAbortController(null);
+  }
+}
 
 export function warnOnMissingTranscribeConfig() {
   const rl = getState().terminal.rl;

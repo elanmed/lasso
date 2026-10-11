@@ -237,8 +237,8 @@ describe("utils", () => {
       );
     });
 
-    it("returns JSON string for non-Error values", () => {
-      assert.equal(getMessageFromError("string error"), '"string error"');
+    it("returns strings directly and JSON stringifies other non-Error values", () => {
+      assert.equal(getMessageFromError("string error"), "string error");
       assert.equal(getMessageFromError(42), "42");
       assert.equal(getMessageFromError(null), "null");
     });

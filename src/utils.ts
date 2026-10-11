@@ -71,6 +71,9 @@ export function getMessageFromError(
   error: unknown,
   { forceSingleLine = true }: { forceSingleLine?: boolean } = {},
 ) {
+  if (typeof error === "string") {
+    return maybeForceSingleLine(error, forceSingleLine);
+  }
   if (error instanceof Error) {
     return maybeForceSingleLine(error.message, forceSingleLine);
   }
