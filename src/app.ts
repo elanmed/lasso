@@ -649,7 +649,14 @@ export async function listSessionFiles() {
   if (!sessionDirExistsResult.value) return [];
 
   const sessionFiles: SessionFileInfo[] = [];
-  for (const name of await fsDeps.readdir(sessionDir)) {
+  const readdirResult = await tryCatchAsync(fsDeps.readdir(sessionDir));
+  if (!readdirResult.ok) {
+    print.error(
+      `Failed to read ${sessionDir}. Error: ${getMessageFromError(readdirResult.error)}`,
+    );
+    return [];
+  }
+  for (const name of readdirResult.value) {
     const fullPath = join(sessionDir, name);
     const statResult = await tryCatchAsync(fsDeps.stat(fullPath));
     if (!statResult.ok) continue;

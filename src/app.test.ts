@@ -6166,6 +6166,19 @@ describe("listSessionFiles", () => {
     ]);
   });
 
+  it("prints the error and returns an empty array when reading the directory fails", async () => {
+    testFs._dirs.add("/fake-home/.local/state/lasso/sessions");
+    mock.method(fsDeps, "readdir", () =>
+      Promise.reject(makeErrnoError("EACCES")),
+    );
+    const writes = mockStdoutWrites();
+
+    assert.deepStrictEqual(await listSessionFiles(), []);
+    assert.deepStrictEqual(writes(), [
+      `${RED}Failed to read /fake-home/.local/state/lasso/sessions. Error: EACCES${RESET}\n`,
+    ]);
+  });
+
   it("returns an empty array when the directory has no files", async () => {
     testFs._dirs.add("/fake-home/.local/state/lasso/sessions");
     assert.deepStrictEqual(await listSessionFiles(), []);
