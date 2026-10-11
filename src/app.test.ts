@@ -2040,244 +2040,295 @@ describe("config-types", () => {
 });
 
 describe("prompts", () => {
+  const baseAgentPromptExpectation = (mcpServersLis: string) =>
+    [
+      "# [lasso] Base system prompt",
+      "",
+      "## [lasso] Core principles",
+      "",
+      "- You are an AI agent being called from a minimal terminal cli called lasso.",
+      "- Be concise: 1 sentence when possible, under 25 words unless detail is required. Questions get answers, no padding.",
+      "- For debugging: give 1 command at a time, never multiple",
+      "- All responses are piped through bat as markdown — always emit valid markdown",
+      "- After a successful file-modifying tool (bash with fileSystemAccessType create-update-delete): the CLI auto-outputs a diff. Do NOT repeat the code, file contents, or a diff of the change in your response — summarize in prose only. Verification via a targeted read (e.g. sed -n) is fine, but don't re-echo what the diff already showed",
+      "",
+      "## [lasso] Web search",
+      "",
+      "",
+      "- When using the `web_fetch_html` or `web_fetch_json` tools for web search, note that Google, Bing, and most other search engines block automated requests.",
+      "- Instead, use the following agent-friendly search engines via constructed urls:",
+      "  - `https://html.duckduckgo.com/html/?q=<url-encoded query>` (use with `web_fetch_html`)",
+      "  - `https://search.marginalia.nu/search?query=<url-encoded query>` (use with `web_fetch_html`)",
+      "  - `https://en.wikipedia.org/w/index.php?search=<url-encoded query>` (use with `web_fetch_html`)",
+      "",
+      "## [lasso] MCP Servers",
+      "",
+      mcpServersLis,
+      "",
+      "## Filesystem actions (via bash)",
+      "",
+      "Note: ${START}, ${END}, ${LINE} are placeholders. Replace with actual line numbers.",
+      "",
+      "### Read a range of lines",
+      "```bash",
+      'sed -n "${START},${END}p" target.txt',
+      "```",
+      "",
+      "### Read an image as base64",
+      "```bash",
+      "base64 < target.png",
+      "```",
+      "",
+      "### Get total line count",
+      "```bash",
+      "wc -l < target.txt",
+      "```",
+      "",
+      "### Write content to an empty file",
+      "```bash",
+      "cat > target.txt << 'EOF'",
+      "Your content here",
+      'with "quotes" and $variables left literal',
+      "EOF",
+      "```",
+      "",
+      "### Insert content starting after a line",
+      "```bash",
+      "INSERTFILE=$(mktemp)",
+      "cat > \"$INSERTFILE\" << 'EOF'",
+      "Content to insert",
+      "EOF",
+      "TMPFILE=$(mktemp)",
+      'sed -e "${LINE}r $INSERTFILE" target.txt > "$TMPFILE" && mv "$TMPFILE" target.txt',
+      'rm "$INSERTFILE"',
+      "```",
+      "",
+      "### Replace a range of lines",
+      "```bash",
+      "INSERTFILE=$(mktemp)",
+      "cat > \"$INSERTFILE\" << 'EOF'",
+      "Replacement content",
+      "EOF",
+      "TMPFILE=$(mktemp)",
+      'sed -e "${END}r $INSERTFILE" -e "${START},${END}d" target.txt > "$TMPFILE" && mv "$TMPFILE" target.txt',
+      'rm "$INSERTFILE"',
+      "```",
+      "",
+      "### Delete a range of lines",
+      "```bash",
+      "TMPFILE=$(mktemp)",
+      'sed -e "${START},${END}d" target.txt > "$TMPFILE" && mv "$TMPFILE" target.txt',
+      "```",
+    ].join("\n");
+
+  const readOnlySubagentPromptExpectation = (mcpServersLis: string) =>
+    [
+      "# [lasso] Base system prompt",
+      "",
+      "## [lasso] Core principles",
+      "- You are a read-only subagent. Although you have access to a bash tool, you must NOT use it to perform any modifications to the file system.",
+      "",
+      "## [lasso] Web search",
+      "",
+      "",
+      "- When using the `web_fetch_html` or `web_fetch_json` tools for web search, note that Google, Bing, and most other search engines block automated requests.",
+      "- Instead, use the following agent-friendly search engines via constructed urls:",
+      "  - `https://html.duckduckgo.com/html/?q=<url-encoded query>` (use with `web_fetch_html`)",
+      "  - `https://search.marginalia.nu/search?query=<url-encoded query>` (use with `web_fetch_html`)",
+      "  - `https://en.wikipedia.org/w/index.php?search=<url-encoded query>` (use with `web_fetch_html`)",
+      "",
+      "## [lasso] MCP Servers",
+      "",
+      mcpServersLis,
+      "",
+      "## Filesystem actions (via bash)",
+      "",
+      "Note: ${START}, ${END}, ${LINE} are placeholders. Replace with actual line numbers.",
+      "",
+      "### Read a range of lines",
+      "```bash",
+      'sed -n "${START},${END}p" target.txt',
+      "```",
+      "",
+      "### Read an image as base64",
+      "```bash",
+      "base64 < target.png",
+      "```",
+      "",
+      "### Get total line count",
+      "```bash",
+      "wc -l < target.txt",
+      "```",
+    ].join("\n");
+  const readWriteSubagentPromptExpectation = (mcpServersLis: string) =>
+    [
+      "# [lasso] Base system prompt",
+      "",
+      "## [lasso] Core principles",
+      "- You are a subagent with read-write access.",
+      "",
+      "## [lasso] Web search",
+      "",
+      "",
+      "- When using the `web_fetch_html` or `web_fetch_json` tools for web search, note that Google, Bing, and most other search engines block automated requests.",
+      "- Instead, use the following agent-friendly search engines via constructed urls:",
+      "  - `https://html.duckduckgo.com/html/?q=<url-encoded query>` (use with `web_fetch_html`)",
+      "  - `https://search.marginalia.nu/search?query=<url-encoded query>` (use with `web_fetch_html`)",
+      "  - `https://en.wikipedia.org/w/index.php?search=<url-encoded query>` (use with `web_fetch_html`)",
+      "",
+      "## [lasso] MCP Servers",
+      "",
+      mcpServersLis,
+      "",
+      "## Filesystem actions (via bash)",
+      "",
+      "Note: ${START}, ${END}, ${LINE} are placeholders. Replace with actual line numbers.",
+      "",
+      "### Read a range of lines",
+      "```bash",
+      'sed -n "${START},${END}p" target.txt',
+      "```",
+      "",
+      "### Read an image as base64",
+      "```bash",
+      "base64 < target.png",
+      "```",
+      "",
+      "### Get total line count",
+      "```bash",
+      "wc -l < target.txt",
+      "```",
+      "",
+      "### Write content to an empty file",
+      "```bash",
+      "cat > target.txt << 'EOF'",
+      "Your content here",
+      'with "quotes" and $variables left literal',
+      "EOF",
+      "```",
+      "",
+      "### Insert content starting after a line",
+      "```bash",
+      "INSERTFILE=$(mktemp)",
+      "cat > \"$INSERTFILE\" << 'EOF'",
+      "Content to insert",
+      "EOF",
+      "TMPFILE=$(mktemp)",
+      'sed -e "${LINE}r $INSERTFILE" target.txt > "$TMPFILE" && mv "$TMPFILE" target.txt',
+      'rm "$INSERTFILE"',
+      "```",
+      "",
+      "### Replace a range of lines",
+      "```bash",
+      "INSERTFILE=$(mktemp)",
+      "cat > \"$INSERTFILE\" << 'EOF'",
+      "Replacement content",
+      "EOF",
+      "TMPFILE=$(mktemp)",
+      'sed -e "${END}r $INSERTFILE" -e "${START},${END}d" target.txt > "$TMPFILE" && mv "$TMPFILE" target.txt',
+      'rm "$INSERTFILE"',
+      "```",
+      "",
+      "### Delete a range of lines",
+      "```bash",
+      "TMPFILE=$(mktemp)",
+      'sed -e "${START},${END}d" target.txt > "$TMPFILE" && mv "$TMPFILE" target.txt',
+      "```",
+    ].join("\n");
+
   describe("system prompts", () => {
     it("formats the base agent prompt exactly", () => {
       assert.strictEqual(
-        getBaseAgentPrompt([]),
-        [
-          "# [lasso] Base system prompt",
-          "",
-          "## [lasso] Core principles",
-          "",
-          "- You are an AI agent being called from a minimal terminal cli called lasso.",
-          "- Be concise: 1 sentence when possible, under 25 words unless detail is required. Questions get answers, no padding.",
-          "- For debugging: give 1 command at a time, never multiple",
-          "- All responses are piped through bat as markdown — always emit valid markdown",
-          "- After a successful file-modifying tool (bash with fileSystemAccessType create-update-delete): the CLI auto-outputs a diff. Do NOT repeat the code, file contents, or a diff of the change in your response — summarize in prose only. Verification via a targeted read (e.g. sed -n) is fine, but don't re-echo what the diff already showed",
-          "",
-          "## [lasso] Web search",
-          "",
-          "",
-          "- When using the `web_fetch_html` or `web_fetch_json` tools for web search, note that Google, Bing, and most other search engines block automated requests.",
-          "- Instead, use the following agent-friendly search engines via constructed urls:",
-          "  - `https://html.duckduckgo.com/html/?q=<url-encoded query>` (use with `web_fetch_html`)",
-          "  - `https://search.marginalia.nu/search?query=<url-encoded query>` (use with `web_fetch_html`)",
-          "  - `https://en.wikipedia.org/w/index.php?search=<url-encoded query>` (use with `web_fetch_html`)",
-          "",
-          "## [lasso] MCP Servers",
-          "",
-          "No available MCP servers",
-          "",
-          "## Filesystem actions (via bash)",
-          "",
-          "Note: ${START}, ${END}, ${LINE} are placeholders. Replace with actual line numbers.",
-          "",
-          "### Read a range of lines",
-          "```bash",
-          'sed -n "${START},${END}p" target.txt',
-          "```",
-          "",
-          "### Read an image as base64",
-          "```bash",
-          "base64 < target.png",
-          "```",
-          "",
-          "### Get total line count",
-          "```bash",
-          "wc -l < target.txt",
-          "```",
-          "",
-          "### Write content to an empty file",
-          "```bash",
-          "cat > target.txt << 'EOF'",
-          "Your content here",
-          'with "quotes" and $variables left literal',
-          "EOF",
-          "```",
-          "",
-          "### Insert content starting after a line",
-          "```bash",
-          "INSERTFILE=$(mktemp)",
-          "cat > \"$INSERTFILE\" << 'EOF'",
-          "Content to insert",
-          "EOF",
-          "TMPFILE=$(mktemp)",
-          'sed -e "${LINE}r $INSERTFILE" target.txt > "$TMPFILE" && mv "$TMPFILE" target.txt',
-          'rm "$INSERTFILE"',
-          "```",
-          "",
-          "### Replace a range of lines",
-          "```bash",
-          "INSERTFILE=$(mktemp)",
-          "cat > \"$INSERTFILE\" << 'EOF'",
-          "Replacement content",
-          "EOF",
-          "TMPFILE=$(mktemp)",
-          'sed -e "${END}r $INSERTFILE" -e "${START},${END}d" target.txt > "$TMPFILE" && mv "$TMPFILE" target.txt',
-          'rm "$INSERTFILE"',
-          "```",
-          "",
-          "### Delete a range of lines",
-          "```bash",
-          "TMPFILE=$(mktemp)",
-          'sed -e "${START},${END}d" target.txt > "$TMPFILE" && mv "$TMPFILE" target.txt',
-          "```",
-        ].join("\n"),
+        getBaseAgentPrompt({}),
+        baseAgentPromptExpectation("No available MCP servers"),
       );
     });
 
     describe("mcp servers", () => {
       it("formats the base agent prompt with mcp server bullets", () => {
-        const prompt = getBaseAgentPrompt(["alpha", "beta"]);
-        assert(
-          prompt.includes("## [lasso] MCP Servers\n\n- alpha\n- beta\n\n"),
+        assert.strictEqual(
+          getBaseAgentPrompt({
+            alpha: makeFakeMcpClient(),
+            beta: makeFakeMcpClient(),
+          }),
+          baseAgentPromptExpectation("- alpha\n- beta"),
+        );
+      });
+
+      it("lists server instructions in the base agent prompt", () => {
+        assert.strictEqual(
+          getBaseAgentPrompt({
+            alpha: makeFakeMcpClient({
+              instructions: "Call the alpha tool for edits.",
+            }),
+          }),
+          baseAgentPromptExpectation(
+            "- alpha\n  Instructions: Call the alpha tool for edits.",
+          ),
         );
       });
 
       it("formats the read-only subagent prompt with mcp server bullets", () => {
-        const prompt = getSubagentPrompt("read-only", ["alpha"]);
-        assert(prompt.includes("## [lasso] MCP Servers\n\n- alpha\n\n"));
+        assert.strictEqual(
+          getSubagentPrompt("read-only", { alpha: makeFakeMcpClient() }),
+          readOnlySubagentPromptExpectation("- alpha"),
+        );
       });
 
-      it("formats the read-write subagent prompt with mcp server bullets", () => {
-        const prompt = getSubagentPrompt("read-write", ["alpha"]);
-        assert(prompt.includes("## [lasso] MCP Servers\n\n- alpha\n\n"));
-      });
-
-      it("uses No available MCP servers as the list when there are none", () => {
-        const prompt = getBaseAgentPrompt([]);
-
-        assert(
-          prompt.includes(
-            "## [lasso] MCP Servers\n\nNo available MCP servers\n\n",
+      it("lists server instructions in the read-only subagent prompt", () => {
+        assert.strictEqual(
+          getSubagentPrompt("read-only", {
+            alpha: makeFakeMcpClient({
+              instructions: "Call the alpha tool for edits.",
+            }),
+          }),
+          readOnlySubagentPromptExpectation(
+            "- alpha\n  Instructions: Call the alpha tool for edits.",
           ),
         );
       });
-    });
 
-    it("formats a read-only subagent prompt exactly", () => {
-      assert.strictEqual(
-        getSubagentPrompt("read-only", []),
-        [
-          "# [lasso] Base system prompt",
-          "",
-          "## [lasso] Core principles",
-          "- You are a read-only subagent. Although you have access to a bash tool, you must NOT use it to perform any modifications to the file system.",
-          "",
-          "## [lasso] Web search",
-          "",
-          "",
-          "- When using the `web_fetch_html` or `web_fetch_json` tools for web search, note that Google, Bing, and most other search engines block automated requests.",
-          "- Instead, use the following agent-friendly search engines via constructed urls:",
-          "  - `https://html.duckduckgo.com/html/?q=<url-encoded query>` (use with `web_fetch_html`)",
-          "  - `https://search.marginalia.nu/search?query=<url-encoded query>` (use with `web_fetch_html`)",
-          "  - `https://en.wikipedia.org/w/index.php?search=<url-encoded query>` (use with `web_fetch_html`)",
-          "",
-          "## [lasso] MCP Servers",
-          "",
-          "No available MCP servers",
-          "",
-          "## Filesystem actions (via bash)",
-          "",
-          "Note: ${START}, ${END}, ${LINE} are placeholders. Replace with actual line numbers.",
-          "",
-          "### Read a range of lines",
-          "```bash",
-          'sed -n "${START},${END}p" target.txt',
-          "```",
-          "",
-          "### Read an image as base64",
-          "```bash",
-          "base64 < target.png",
-          "```",
-          "",
-          "### Get total line count",
-          "```bash",
-          "wc -l < target.txt",
-          "```",
-        ].join("\n"),
-      );
-    });
+      it("formats the read-write subagent prompt with mcp server bullets", () => {
+        assert.strictEqual(
+          getSubagentPrompt("read-write", { alpha: makeFakeMcpClient() }),
+          readWriteSubagentPromptExpectation("- alpha"),
+        );
+      });
 
-    it("formats a read-write subagent prompt exactly", () => {
-      assert.strictEqual(
-        getSubagentPrompt("read-write", []),
-        [
-          "# [lasso] Base system prompt",
-          "",
-          "## [lasso] Core principles",
-          "- You are a subagent with read-write access.",
-          "",
-          "## [lasso] Web search",
-          "",
-          "",
-          "- When using the `web_fetch_html` or `web_fetch_json` tools for web search, note that Google, Bing, and most other search engines block automated requests.",
-          "- Instead, use the following agent-friendly search engines via constructed urls:",
-          "  - `https://html.duckduckgo.com/html/?q=<url-encoded query>` (use with `web_fetch_html`)",
-          "  - `https://search.marginalia.nu/search?query=<url-encoded query>` (use with `web_fetch_html`)",
-          "  - `https://en.wikipedia.org/w/index.php?search=<url-encoded query>` (use with `web_fetch_html`)",
-          "",
-          "## [lasso] MCP Servers",
-          "",
-          "No available MCP servers",
-          "",
-          "## Filesystem actions (via bash)",
-          "",
-          "Note: ${START}, ${END}, ${LINE} are placeholders. Replace with actual line numbers.",
-          "",
-          "### Read a range of lines",
-          "```bash",
-          'sed -n "${START},${END}p" target.txt',
-          "```",
-          "",
-          "### Read an image as base64",
-          "```bash",
-          "base64 < target.png",
-          "```",
-          "",
-          "### Get total line count",
-          "```bash",
-          "wc -l < target.txt",
-          "```",
-          "",
-          "### Write content to an empty file",
-          "```bash",
-          "cat > target.txt << 'EOF'",
-          "Your content here",
-          'with "quotes" and $variables left literal',
-          "EOF",
-          "```",
-          "",
-          "### Insert content starting after a line",
-          "```bash",
-          "INSERTFILE=$(mktemp)",
-          "cat > \"$INSERTFILE\" << 'EOF'",
-          "Content to insert",
-          "EOF",
-          "TMPFILE=$(mktemp)",
-          'sed -e "${LINE}r $INSERTFILE" target.txt > "$TMPFILE" && mv "$TMPFILE" target.txt',
-          'rm "$INSERTFILE"',
-          "```",
-          "",
-          "### Replace a range of lines",
-          "```bash",
-          "INSERTFILE=$(mktemp)",
-          "cat > \"$INSERTFILE\" << 'EOF'",
-          "Replacement content",
-          "EOF",
-          "TMPFILE=$(mktemp)",
-          'sed -e "${END}r $INSERTFILE" -e "${START},${END}d" target.txt > "$TMPFILE" && mv "$TMPFILE" target.txt',
-          'rm "$INSERTFILE"',
-          "```",
-          "",
-          "### Delete a range of lines",
-          "```bash",
-          "TMPFILE=$(mktemp)",
-          'sed -e "${START},${END}d" target.txt > "$TMPFILE" && mv "$TMPFILE" target.txt',
-          "```",
-        ].join("\n"),
-      );
+      it("lists server instructions in the read-write subagent prompt", () => {
+        assert.strictEqual(
+          getSubagentPrompt("read-write", {
+            alpha: makeFakeMcpClient({
+              instructions: "Call the alpha tool for edits.",
+            }),
+          }),
+          readWriteSubagentPromptExpectation(
+            "- alpha\n  Instructions: Call the alpha tool for edits.",
+          ),
+        );
+      });
+
+      it("uses No available MCP servers as the list when there are none", () => {
+        assert.strictEqual(
+          getBaseAgentPrompt({}),
+          baseAgentPromptExpectation("No available MCP servers"),
+        );
+      });
     });
+  });
+
+  it("formats a read-only subagent prompt exactly", () => {
+    assert.strictEqual(
+      getSubagentPrompt("read-only", {}),
+      readOnlySubagentPromptExpectation("No available MCP servers"),
+    );
+  });
+
+  it("formats a read-write subagent prompt exactly", () => {
+    assert.strictEqual(
+      getSubagentPrompt("read-write", {}),
+      readWriteSubagentPromptExpectation("No available MCP servers"),
+    );
   });
 
   describe("compaction prompts", () => {
@@ -2419,7 +2470,7 @@ describe("state", () => {
       actions.setSkillsStr("skills body");
       assert.strictEqual(
         promptDeps.getSystemContent(),
-        `${getBaseAgentPrompt([])}
+        `${getBaseAgentPrompt({})}
 
 ctx body
 
@@ -9866,7 +9917,7 @@ describe("tools", () => {
         assert(firstCall !== undefined);
         assert.strictEqual(
           firstCall["instructions"],
-          `${getSubagentPrompt("read-only", [])}
+          `${getSubagentPrompt("read-only", {})}
 
 ctx body
 
@@ -14785,7 +14836,7 @@ editor input
       assert.deepStrictEqual(getWrites(), []);
     });
 
-    it("lists server name, version, and instructions when available", async () => {
+    it("lists server name and version when available", async () => {
       const { spawned } = mockPagerSpawn();
       testProcessEnv._set("LASSO_PAGER", "nano __FILE__");
       setMcpClients({
@@ -14809,8 +14860,6 @@ editor input
 
 - first _(my-server v1.2.3)_
 - second _(other-server v0.1.0)_
-  Instructions line 1.
-  Instructions line 2.
 
 `,
       );

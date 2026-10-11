@@ -395,12 +395,21 @@ const corePrinciplesHeading = `## [lasso] Core principles`;
 
 const mcpHeadingTwo = `## [lasso] MCP Servers`;
 
-const getMcpLis = (mcpClientNames: string[]) => {
-  if (mcpClientNames.length === 0) {
+const getMcpLis = (mcpClients: MCPClients) => {
+  if (Object.keys(mcpClients).length === 0) {
     return `No available MCP servers`;
   }
 
-  return mcpClientNames.map((name) => `- ${name}`).join("\n");
+  return Object.entries(mcpClients)
+    .map(([name, client]) => {
+      const line = `- ${name}`;
+      const lines = [line];
+      if (client.instructions !== undefined) {
+        lines.push(`  Instructions: ${client.instructions}`);
+      }
+      return lines.join("\n");
+    })
+    .join("\n");
 };
 
 const webSearchHeadingTwo = `## [lasso] Web search`;
@@ -412,7 +421,7 @@ const webSearchLis = `
   - \`https://search.marginalia.nu/search?query=<url-encoded query>\` (use with \`web_fetch_html\`)
   - \`https://en.wikipedia.org/w/index.php?search=<url-encoded query>\` (use with \`web_fetch_html\`)`;
 
-export const getBaseAgentPrompt = (mcpClientNames: string[]) => `${headingOne}
+export const getBaseAgentPrompt = (mcpClients: MCPClients) => `${headingOne}
 
 ${corePrinciplesHeading}
 
@@ -428,7 +437,7 @@ ${webSearchLis}
 
 ${mcpHeadingTwo}
 
-${getMcpLis(mcpClientNames)}
+${getMcpLis(mcpClients)}
 
 ${bashIntroHeadingTwo}
 
@@ -438,7 +447,7 @@ ${writeInstructions}`;
 
 export const getSubagentPrompt = (
   access: "read-only" | "read-write",
-  mcpClientNames: string[],
+  mcpClients: MCPClients,
 ) => {
   if (access === "read-only") {
     return `${headingOne}
@@ -448,7 +457,7 @@ ${corePrinciplesHeading}
 
 ${webSearchHeadingTwo}\n\n${webSearchLis}\n\n${mcpHeadingTwo}
 
-${getMcpLis(mcpClientNames)}
+${getMcpLis(mcpClients)}
 
 ${bashIntroHeadingTwo}
 
@@ -462,7 +471,7 @@ ${corePrinciplesHeading}
 
 ${webSearchHeadingTwo}\n\n${webSearchLis}\n\n${mcpHeadingTwo}
 
-${getMcpLis(mcpClientNames)}
+${getMcpLis(mcpClients)}
 
 ${bashIntroHeadingTwo}
 
@@ -889,8 +898,10 @@ export type SessionFile = z.infer<typeof SessionFileSchema>;
 
 export type MCPToolSet = Awaited<ReturnType<MCPClient["tools"]>>;
 
+type MCPClients = Record<string, MCPClient>;
+
 export interface McpState {
-  clients: Record<string, MCPClient>;
+  clients: MCPClients;
   tools: MCPToolSet;
   close: () => Promise<void>;
 }
@@ -1074,7 +1085,7 @@ export const getState = () => state;
 export const promptDeps = {
   getSystemContent: () =>
     [
-      getBaseAgentPrompt(Object.keys(state.mcp.clients)),
+      getBaseAgentPrompt(state.mcp.clients),
       getState().content.contextStr,
       getState().content.skillsStr,
     ].join("\n\n"),
@@ -1709,7 +1720,7 @@ export const actions = {
     logStateChange("set-mcps", stringify(before), stringify(mcps));
   },
 
-  setMcp(clients: Record<string, MCPClient>, tools: MCPToolSet) {
+  setMcp(clients: MCPClients, tools: MCPToolSet) {
     const before = state.mcp;
     state.mcp.clients = clients;
     state.mcp.tools = tools;
@@ -2223,9 +2234,7 @@ export function getTokensByArea(): TokensByArea {
     messages: getApproxTokensFromMessages(getState().conversation.messages),
     context: strToApproxTokens(getState().content.contextStr),
     tools: strToApproxTokens(promptDeps.getToolsContentStr()),
-    basePrompt: strToApproxTokens(
-      getBaseAgentPrompt(Object.keys(getState().mcp.clients)),
-    ),
+    basePrompt: strToApproxTokens(getBaseAgentPrompt(getState().mcp.clients)),
     skills: strToApproxTokens(getState().content.skillsStr),
   };
 
@@ -2762,7 +2771,7 @@ async function getMcpClients({
 }: {
   performanceLogger: ParallelPerformanceLogger;
 }) {
-  const mcpClients: Record<string, MCPClient> = {};
+  const mcpClients: MCPClients = {};
 
   const serverEntries = Object.entries(getState().config.mcps);
   await Promise.all(
@@ -3430,10 +3439,7 @@ export async function createSubagentTool(
       const model = subagentSchema.model;
 
       const systemContent = [
-        getSubagentPrompt(
-          subagentSchema.access,
-          Object.keys(getState().mcp.clients),
-        ),
+        getSubagentPrompt(subagentSchema.access, getState().mcp.clients),
         getState().content.contextStr,
         getState().content.skillsStr,
       ]
@@ -6286,16 +6292,7 @@ export async function pageMcps({ isTyped = false }: SpacingOpts = {}) {
   const formatted = Object.entries(getState().mcp.clients)
     .map(([clientName, client]) => {
       const { serverInfo } = client;
-      const line = `- ${clientName} _(${serverInfo.name} v${serverInfo.version})_`;
-      const lines = [line];
-      if (client.instructions !== undefined) {
-        lines.push(
-          ...client.instructions
-            .split("\n")
-            .map((instruction) => `  ${instruction}`),
-        );
-      }
-      return lines.join("\n");
+      return `- ${clientName} _(${serverInfo.name} v${serverInfo.version})_`;
     })
     .join("\n");
 
