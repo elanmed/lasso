@@ -5199,8 +5199,6 @@ async function resolveExitConfirmation() {
   return;
 }
 
-type ParameterizedBuiltinSlashCommand = "resume" | "model";
-
 interface SlashCommandOutcome {
   handled: boolean;
   inputFromCommand: string | null;
@@ -5371,32 +5369,20 @@ async function resolveParameterizedBuiltinSlashCommand(
   commandWithArgs: string,
 ): Promise<SlashCommandOutcome> {
   const parts = commandWithArgs.split(/\s+/);
-  const command = parts[0] as ParameterizedBuiltinSlashCommand | undefined;
-  if (command === undefined) return { handled: false, inputFromCommand: null };
+  const command = parts[0];
+  if (command !== "resume") return { handled: false, inputFromCommand: null };
 
-  switch (command) {
-    case "model": {
-      setModelCommand(commandWithArgs);
-      return { handled: true, inputFromCommand: null };
-    }
-    case "resume": {
-      const inputFromCommand = await resume(commandWithArgs);
-      if (inputFromCommand !== null) {
-        await syncSessionFile({
-          transcript: getAppendedTranscript({
-            message: inputFromCommand,
-            role: "user",
-            timestamp: Date.now(),
-          }),
-        });
-      }
-      return { handled: true, inputFromCommand: inputFromCommand };
-    }
-    default: {
-      command satisfies never;
-      return { handled: false, inputFromCommand: null };
-    }
+  const inputFromCommand = await resume(commandWithArgs);
+  if (inputFromCommand !== null) {
+    await syncSessionFile({
+      transcript: getAppendedTranscript({
+        message: inputFromCommand,
+        role: "user",
+        timestamp: Date.now(),
+      }),
+    });
   }
+  return { handled: true, inputFromCommand: inputFromCommand };
 }
 
 function resolveCustomSlashCommand(commandStr: string): SlashCommandOutcome {
@@ -5635,25 +5621,6 @@ export async function spawnAndReadEditorContent(opts?: {
 export function getModel() {
   print.doing(getState().config.model);
   return;
-}
-
-// TODO: remove since we have /reload
-export function setModelCommand(rawInput: string) {
-  const parts = rawInput.split(/\s+/);
-
-  if (parts.length !== 2) {
-    print.error("Usage: /model [model]?");
-    return;
-  }
-  const model = parts[1];
-  assertAtBuildtime(model !== undefined);
-
-  const prevModel = getState().config.model;
-  actions.setModel(model);
-  print.doing(`Model updated from \`${prevModel}\` to \`${model}\``);
-  actions.setPromptTokensDirty(true);
-
-  printLargeContextOverheadWarning();
 }
 
 export interface SpacingOpts {

@@ -129,7 +129,6 @@ import {
   resolveUserInput,
   shouldResolveSlashCommand,
   getModel,
-  setModelCommand,
   clearCommand,
   printTokens,
   pageSkills,
@@ -13046,16 +13045,17 @@ describe("input", () => {
         ]);
       });
 
-      it("resolves slash commands from editor input", async () => {
+      it("resolves /model from editor input", async () => {
         actions.setModel("old");
-        actions.setEditorInputValue("/model new-model");
+        actions.setEditorInputValue("/model");
         const result = await resolveUserInput({ isFirstInput: false });
         assert.strictEqual(result, null);
-        assert.strictEqual(getState().config.model, "new-model");
+        assert.strictEqual(getState().config.model, "old");
         assert.strictEqual(getState().terminal.editorInputValue, null);
         assert.deepStrictEqual(getState().conversation.transcript, [
-          { timestamp: 0, role: "user", message: "/model new-model" },
+          { timestamp: 0, role: "user", message: "/model" },
         ]);
+        assert.deepStrictEqual(getWrites(), [BLUE + "old" + RESET + "\n"]);
       });
 
       it("returns the first queued editor message and keeps the rest for the next iteration", async () => {
@@ -13101,17 +13101,15 @@ second
         ]);
       });
 
-      it("resolves slash commands when input starts with /", async () => {
+      it("resolves /model when input starts with /", async () => {
         actions.setModel("old");
         actions.resetStdout();
-        mock.method(getTestRl(), "question", () =>
-          Promise.resolve("/model new-model"),
-        );
+        mock.method(getTestRl(), "question", () => Promise.resolve("/model"));
         const result = await resolveUserInput({ isFirstInput: false });
         assert.strictEqual(result, null);
-        assert.strictEqual(getState().config.model, "new-model");
+        assert.strictEqual(getState().config.model, "old");
         assert.deepStrictEqual(getState().conversation.transcript, [
-          { timestamp: 0, role: "user", message: "/model new-model" },
+          { timestamp: 0, role: "user", message: "/model" },
         ]);
       });
     });
@@ -13584,76 +13582,6 @@ l---
           false,
         );
       });
-    });
-  });
-
-  describe("setModelCommand", () => {
-    beforeEach(() => {
-      actions.resetStdout();
-    });
-
-    it("sets model and prints blue confirmation when input is valid", () => {
-      actions.setModel("old-model");
-      setModelCommand("/model new-model");
-      assert.strictEqual(getState().config.model, "new-model");
-      assert.strictEqual(getState().usage.promptTokens.dirty, true);
-      assert.deepStrictEqual(getWrites(), [
-        `${BLUE}Model updated from \`old-model\` to \`new-model\`${RESET}\n`,
-      ]);
-    });
-
-    it("prints red error when input has too many parts", () => {
-      actions.setModel("old-model");
-      setModelCommand("/model new-model extra");
-      assert.strictEqual(getState().config.model, "old-model");
-      assert.deepStrictEqual(getWrites(), [
-        `${RED}Usage: /model [model]?${RESET}\n`,
-      ]);
-    });
-
-    it("prints red error when input has only the command", () => {
-      actions.setModel("old-model");
-      setModelCommand("/model");
-      assert.strictEqual(getState().config.model, "old-model");
-      assert.deepStrictEqual(getWrites(), [
-        `${RED}Usage: /model [model]?${RESET}\n`,
-      ]);
-    });
-
-    it("handles model name with slashes", () => {
-      actions.setModel("old");
-      setModelCommand("/model provider/new-model");
-      assert.strictEqual(getState().config.model, "provider/new-model");
-      assert.deepStrictEqual(getWrites(), [
-        `${BLUE}Model updated from \`old\` to \`provider/new-model\`${RESET}\n`,
-      ]);
-    });
-
-    it("handles input with multiple spaces", () => {
-      actions.setModel("old");
-      setModelCommand("/model   new-model");
-      assert.strictEqual(getState().config.model, "new-model");
-    });
-
-    it("handles input with tabs", () => {
-      actions.setModel("old");
-      setModelCommand("/model\tnew-model");
-      assert.strictEqual(getState().config.model, "new-model");
-    });
-
-    it("warns when the new model has large prompt overhead", () => {
-      actions.setContextWindowPerModel({ "new-model": 100_000 });
-      mock.method(promptDeps, "getSystemContent", () => "s".repeat(210_000));
-
-      setModelCommand("/model new-model");
-
-      assert.ok(
-        getWrites().some((w) =>
-          w.includes(
-            "The current set of context, skills, and tools is 70% of the 100,000 token context window!",
-          ),
-        ),
-      );
     });
   });
 
@@ -15918,14 +15846,23 @@ editor input
         assert.strictEqual(result, null);
       });
 
-      it("handles /model command", async () => {
+      it("rejects /model with args", async () => {
         actions.setModel("old");
+        actions.setSlashCommands([
+          {
+            name: "known",
+            filePath: "/test-cwd/.lasso/commands/known.md",
+            content: "known content",
+          },
+        ]);
         actions.resetStdout();
         const result = await resolveSlashCommand("/model new-model");
         assert.strictEqual(result, null);
-        assert.strictEqual(getState().config.model, "new-model");
+        assert.strictEqual(getState().config.model, "old");
         assert.deepStrictEqual(getWrites(), [
-          `${BLUE}Model updated from \`old\` to \`new-model\`${RESET}\n`,
+          "\n",
+          `${RED}Invalid command: /model new-model, valid commands:${RESET}\n`,
+          "- /edit\n- /editpage\n- /history\n- /clear\n- /paste\n- /model\n- /skills\n- /context\n- /commands\n- /keymaps\n- /usage\n- /tokens\n- /resume\n- /config\n- /reload\n- /initlocal\n- /initglobal\n- /lastresponse\n- /lastmessage\n- /lastdiff\n- /summaries\n- /tools\n- /record\n- /mcps\n- /test-cwd/.lasso/commands/known.md\n",
         ]);
       });
 
