@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.11.5 - 2026-10-11
+
+- Polish config warning and error spacing
+- Print errors at the source with access to the error instead of at the consumer with a generic message
+- Catch `existsSync` failures and report them via `print.error` instead of crashing
+- Refactor to fewer files
+
 ## v0.11.4 - 2026-10-10
 
 - Strip base64 image data from token estimates and compaction prompts
