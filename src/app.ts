@@ -884,10 +884,6 @@ export function getSystemContent() {
   ].join("\n\n");
 }
 
-export function getToolsContentStr() {
-  return stringifyTools();
-}
-
 const logStateChange = (actionType: string, before: string, after: string) => {
   void writeDebugLog(
     state.debug.debugLog,
@@ -1971,7 +1967,7 @@ export async function syncNewModelUsageForLimitWindow(
 
 export function getPromptOverheadTokensApprox() {
   const systemContentTokensApprox = strToApproxTokens(getSystemContent());
-  const toolsTokensApprox = strToApproxTokens(getToolsContentStr());
+  const toolsTokensApprox = strToApproxTokens(stringifyTools());
   return systemContentTokensApprox + toolsTokensApprox;
 }
 
@@ -2037,7 +2033,7 @@ export function getTokensByArea(): TokensByArea {
   const tokensByAreaApprox: TokensByArea = {
     messages: getApproxTokensFromMessages(getState().conversation.messages),
     context: strToApproxTokens(getState().content.contextStr),
-    tools: strToApproxTokens(getToolsContentStr()),
+    tools: strToApproxTokens(stringifyTools()),
     basePrompt: strToApproxTokens(getBaseAgentPrompt(getState().mcp.clients)),
     skills: strToApproxTokens(getState().content.skillsStr),
   };
