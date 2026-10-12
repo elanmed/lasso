@@ -1,4 +1,5 @@
 import { fileURLToPath } from "node:url";
+import { actions, getState } from "./state.ts";
 import { getMessageFromError } from "./utils.ts";
 import {
   print,
@@ -10,8 +11,6 @@ import {
   initState,
   printMissingConfigErrors,
   printMissingConfigWarnings,
-  actions,
-  getState,
   printLargeContextOverheadWarning,
   resolveApiCall,
   maybeCompact,

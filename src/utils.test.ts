@@ -21,8 +21,9 @@ import {
   shellQuote,
   isShellSafePath,
   removeMediaReplacer,
+  writeDebugLog,
 } from "./utils.ts";
-import { writeDebugLog, getStrFromAssistantContent } from "./app.ts";
+import { getStrFromAssistantContent } from "./app.ts";
 import {
   testProcessEnv,
   setupTestContext,

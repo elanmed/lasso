@@ -1,5 +1,6 @@
 import assert from "node:assert";
 import crypto from "node:crypto";
+import { dirname } from "node:path";
 import * as YAML from "yaml";
 import { processDeps, fsDeps } from "./deps.ts";
 
@@ -79,6 +80,28 @@ export function getMessageFromError(
   }
   const json = JSON.stringify(error) as string | undefined;
   return maybeForceSingleLine(json ?? String(error), forceSingleLine);
+}
+
+export async function writeDebugLog(
+  enabled: boolean,
+  path: string,
+  content: string,
+) {
+  if (!enabled) return;
+  if (path.length === 0) return;
+  if (!fsDeps.existsSync(dirname(path))) {
+    const mkdirResult = await tryCatchAsync(
+      fsDeps.mkdir(dirname(path), { recursive: true }),
+    );
+    if (!mkdirResult.ok) return;
+  }
+
+  await tryCatchAsync(
+    fsDeps.appendFile(
+      path,
+      `${new Date(Date.now()).toISOString()} :: ${content}\n`,
+    ),
+  );
 }
 
 export function tryCatch<T>(cb: () => T): Option<T> {

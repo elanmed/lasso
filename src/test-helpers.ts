@@ -17,14 +17,13 @@ import {
   processDeps,
 } from "./deps.ts";
 import {
-  actions,
-  getState,
-  type MCPToolSet,
   getMcpLogIdToLabel,
   createParallelPerformanceLogger,
   baseBatFlags,
   markdownBatFlags,
+  initKeypress,
 } from "./app.ts";
+import { actions, getState, type MCPToolSet } from "./state.ts";
 import {
   type Key,
   type Mcp,
@@ -32,7 +31,6 @@ import {
   type SessionFile,
 } from "./schemas.ts";
 import { shellQuote } from "./utils.ts";
-import { initKeypress } from "./app.ts";
 
 export function makeMcpTool() {
   return {
