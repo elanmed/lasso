@@ -113,7 +113,6 @@ interface AbortControllersState {
   interruptWithEditorContent: AbortController | null;
   recordProcess: AbortController | null;
   transcription: AbortController | null;
-  fetchCommand: AbortController | null;
 }
 
 interface State {
@@ -220,7 +219,6 @@ const createInitialState = (): State => ({
     interruptWithEditorContent: null,
     recordProcess: null,
     transcription: null,
-    fetchCommand: null,
   },
 });
 
@@ -413,16 +411,6 @@ export const actions = {
     state.abortControllers.recordProcess = controller;
     logStateChange(
       "set-record-process-abort-controller",
-      String(before),
-      String(controller),
-    );
-  },
-
-  setFetchCommandAbortController(controller: AbortController | null) {
-    const before = state.abortControllers.fetchCommand;
-    state.abortControllers.fetchCommand = controller;
-    logStateChange(
-      "set-fetch-command-abort-controller",
       String(before),
       String(controller),
     );

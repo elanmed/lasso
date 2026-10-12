@@ -6,7 +6,7 @@ _A minimal agent harness to rein in your llm_
 
 ## Features
 
-- **Minimal**: ~7,300 lines of source code, ~16,500 lines of tests
+- **Minimal**: ~7,200 lines of source code, ~16,500 lines of tests
   - Responses are piped through `bat` to render markdown
   - Multi-line input is supported by spawning an editor of your choice
   - Messages can be queued by typing a custom delimiter (default `l---`) in the spawned editor
@@ -442,7 +442,7 @@ Available skills are listed in the system prompt, the LLM can use the `load_skil
 
 - `bash` — run bash commands. All CRUD operations are performed via this tool
 - `read_image` — read an image file from disk so the model can look at it
-- `web_fetch_html` — convert a fetched webpage to Markdown, saving large pages to a local file
+- `web_fetch_html` — fetch a webpage and convert it to Markdown, saving large pages to a local file
 - `web_fetch_json` — fetch a JSON API endpoint and return parsed data
 - `load_skill` — load a skill to get specialized instructions
 - `create_subagent` — launch parallel subagents for independent investigation or implementation

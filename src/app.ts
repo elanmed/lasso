@@ -99,7 +99,6 @@ import {
   bashToolInputSchema,
   baseTimeoutSettings,
   createSubagentSafeTools,
-  fetchHtml,
   loadSkillToolSchema,
   mcpListResourcesSchema,
   mcpReadResourceSchema,
@@ -1652,7 +1651,6 @@ export const builtinSlashCommands = [
   "tools",
   "record",
   "mcps",
-  "fetch",
 ] as const;
 
 export type BuiltinSlashCommand = (typeof builtinSlashCommands)[number];
@@ -3052,7 +3050,6 @@ export function initKeypress(rl: readline.Interface) {
             redrawPendingQuestion();
             return;
           }
-          case "fetch":
           case "initlocal":
           case "initglobal":
           case "keymaps":
@@ -3160,10 +3157,8 @@ export function initSigInt(rl: readline.Interface) {
     const question = getState().abortControllers.question;
     const recordProcess = getState().abortControllers.recordProcess;
     const transcription = getState().abortControllers.transcription;
-    const fetchCommand = getState().abortControllers.fetchCommand;
     const controllers = [
       apiStream,
-      fetchCommand,
       interruptWithEditorContent,
       question,
       transcription,
@@ -3182,11 +3177,6 @@ export function initSigInt(rl: readline.Interface) {
 
     if (transcription !== null) {
       transcription.abort();
-      return;
-    }
-
-    if (fetchCommand !== null) {
-      fetchCommand.abort();
       return;
     }
 
@@ -3671,15 +3661,6 @@ async function resolveBuiltinSlashCommand(
       }
 
       await pageMcps({ isTyped: true });
-      return { handled: true, inputFromCommand: null };
-    }
-    case "fetch": {
-      if (hasArgs(commandWithArgs)) {
-        const inputFromCommand = await fetchCommand(commandWithArgs);
-        return { handled: true, inputFromCommand };
-      }
-
-      print.error(`usage: /fetch "[href]"`);
       return { handled: true, inputFromCommand: null };
     }
     case "record": {
@@ -4585,64 +4566,6 @@ ${formatted}`;
     initialContentStr,
     contentType: "markdown",
   });
-}
-
-export async function fetchCommand(commandWithArgs: string) {
-  const [, hrefWithQuotes] = splitArgs(commandWithArgs);
-  if (hrefWithQuotes === undefined) {
-    print.error('Usage: /fetch "[href]"');
-    return null;
-  }
-
-  const firstChar = hrefWithQuotes[0];
-  assertAtBuildtime(firstChar !== undefined);
-
-  const lastChar = hrefWithQuotes.at(-1);
-  assertAtBuildtime(lastChar !== undefined);
-
-  const quotes = [`"`, `'`];
-
-  if (
-    !quotes.includes(firstChar) ||
-    !quotes.includes(lastChar) ||
-    firstChar !== lastChar
-  ) {
-    print.error('Usage: /fetch "[href]"');
-    return null;
-  }
-
-  const href = hrefWithQuotes.slice(1, -1);
-  const abortController = new AbortController();
-  actions.setFetchCommandAbortController(abortController);
-  try {
-    const fetchResult = await tryCatchAsync(
-      fetchHtml(
-        { href },
-        abortController.signal,
-        { forceNoFile: true },
-        { toolPrint, printDoing: (text) => print.doing(text) },
-      ),
-    );
-    if (!fetchResult.ok) {
-      if (isAbortError(fetchResult.error)) return null;
-      print.error(getMessageFromError(fetchResult.error));
-      return null;
-    }
-
-    const result = fetchResult.value;
-    if (!result.ok) {
-      print.error(getMessageFromError(result.error));
-      return null;
-    }
-
-    await openWithPager({
-      initialContentStr: result.value.content,
-      contentType: "markdown",
-    });
-    return null;
-  } finally {
-    actions.setFetchCommandAbortController(null);
-  }
 }
 
 export function warnOnMissingTranscribeConfig() {

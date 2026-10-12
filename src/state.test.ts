@@ -123,7 +123,6 @@ describe("state", () => {
         interruptWithEditorContent: null,
         recordProcess: null,
         transcription: null,
-        fetchCommand: null,
       });
     };
 
@@ -187,7 +186,6 @@ describe("state", () => {
       actions.setInterruptWithEditorAbortController(new AbortController());
       actions.setRecordProcessAbortController(new AbortController());
       actions.setTranscriptionAbortController(new AbortController());
-      actions.setFetchCommandAbortController(new AbortController());
       actions.resetState();
       clearTimeout(timeout);
 

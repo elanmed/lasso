@@ -11,7 +11,6 @@ import {
   tryCatchAsync,
   strToApproxTokens,
   stringify,
-  type Option,
 } from "./utils.ts";
 
 export interface ToolOutput {
@@ -128,25 +127,15 @@ type WebFetchHtmlResult = ToolResult & {
   type?: "inline-markdown" | "file-path";
 };
 
-interface FetchHtmlSuccess {
-  content: string;
-  filePath?: string;
-  type?: "inline-markdown" | "file-path";
-}
-
-export async function fetchHtml(
+export async function executeWebFetchHtmlTool(
   { href }: WebFetchTool,
   signal: AbortSignal | undefined,
-  {
-    forceNoFile = false,
-    shouldToolPrint = false,
-  }: { forceNoFile?: boolean; shouldToolPrint?: boolean } = {},
   output: ToolOutput,
-): Promise<Option<FetchHtmlSuccess>> {
+): Promise<WebFetchHtmlResult> {
   if (!URL.canParse(href)) {
     return {
-      ok: false,
-      error: `Cannot parse href ${href} as a URL`,
+      isError: true,
+      content: `Cannot parse href ${href} as a URL`,
     };
   }
 
@@ -164,21 +153,19 @@ export async function fetchHtml(
   if (!fetchResult.ok) {
     if (isAbortError(fetchResult.error)) throw fetchResult.error;
     return {
-      ok: false,
-      error: fetchResult.error,
+      isError: true,
+      content: getMessageFromError(fetchResult.error),
     };
   }
 
   const response = fetchResult.value;
   if (!response.ok) {
     const error = `HTTP ${String(response.status)}: ${response.statusText} when fetching ${href}`;
-    if (shouldToolPrint) {
-      output.toolPrint("web_fetch_html", error);
-    }
+    output.toolPrint("web_fetch_html", error);
     output.printDoing(error);
     return {
-      ok: false,
-      error,
+      isError: true,
+      content: error,
     };
   }
 
@@ -186,8 +173,8 @@ export async function fetchHtml(
   if (!textResult.ok) {
     if (isAbortError(textResult.error)) throw textResult.error;
     return {
-      error: textResult.error,
-      ok: false,
+      isError: true,
+      content: getMessageFromError(textResult.error),
     };
   }
   const htmlStr = textResult.value;
@@ -221,13 +208,11 @@ export async function fetchHtml(
 
   const maxTokensForInlineFetch = 10_000;
   const markdownTokensApprox = strToApproxTokens(markdown);
-  if (markdownTokensApprox <= maxTokensForInlineFetch || forceNoFile) {
+  if (markdownTokensApprox <= maxTokensForInlineFetch) {
     return {
-      ok: true,
-      value: {
-        content: markdown,
-        type: "inline-markdown",
-      },
+      content: markdown,
+      isError: false,
+      type: "inline-markdown",
     };
   }
 
@@ -240,53 +225,28 @@ export async function fetchHtml(
   );
   if (!mkdirResult.ok) {
     return {
-      ok: false,
-      error: `Error while creating the local webpages directory. Error: ${getMessageFromError(mkdirResult.error)}`,
+      isError: true,
+      content: `Error while creating the local webpages directory. Error: ${getMessageFromError(mkdirResult.error)}`,
     };
   }
   const writeResult = await tryCatchAsync(fsDeps.writeFile(filePath, markdown));
   if (!writeResult.ok) {
     return {
-      ok: false,
-      error: `Error while writing the markdown to a local file. Error: ${getMessageFromError(writeResult.error)}`,
-    };
-  }
-
-  if (shouldToolPrint) {
-    output.toolPrint(
-      "web_fetch_html",
-      `Webpage markdown written to ${filePath} because it exceeded ${maxTokensForInlineFetch.toLocaleString()} tokens`,
-    );
-  }
-  return {
-    ok: true,
-    value: {
-      content: `The page contains approximately ${markdownTokensApprox.toLocaleString()} tokens. Its Markdown has been saved to \`${filePath}\` rather than included in this response. Use the \`bash\` tool to search the file or read selected lines.`,
-      filePath,
-      type: "file-path",
-    },
-  };
-}
-
-export async function executeWebFetchHtmlTool(
-  { href }: WebFetchTool,
-  signal: AbortSignal | undefined,
-  output: ToolOutput,
-): Promise<WebFetchHtmlResult> {
-  const result = await fetchHtml(
-    { href },
-    signal,
-    { shouldToolPrint: true },
-    output,
-  );
-  if (!result.ok) {
-    return {
       isError: true,
-      content: getMessageFromError(result.error),
+      content: `Error while writing the markdown to a local file. Error: ${getMessageFromError(writeResult.error)}`,
     };
   }
 
-  return { ...result.value, isError: false };
+  output.toolPrint(
+    "web_fetch_html",
+    `Webpage markdown written to ${filePath} because it exceeded ${maxTokensForInlineFetch.toLocaleString()} tokens`,
+  );
+  return {
+    content: `The page contains approximately ${markdownTokensApprox.toLocaleString()} tokens. Its Markdown has been saved to \`${filePath}\` rather than included in this response. Use the \`bash\` tool to search the file or read selected lines.`,
+    filePath,
+    isError: false,
+    type: "file-path",
+  };
 }
 
 export async function executeWebFetchJsonTool(

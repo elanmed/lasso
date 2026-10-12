@@ -179,7 +179,6 @@ import {
   makeInvalidString,
   mockSpawnSync,
   mockPagerSpawn,
-  makeFakeFetch,
   first,
   addSessionFile,
   setupKeypressTests,
@@ -9697,24 +9696,6 @@ describe("input", () => {
       assert.equal(controller.signal.aborted, true);
     });
 
-    it("aborts a slash command fetch", () => {
-      let sigint: (() => void) | undefined;
-      const rl = makeFakeRl({
-        on: (_event: string, listener: () => void) => {
-          sigint = listener;
-        },
-      });
-      actions.setRl(rl);
-      const controller = new AbortController();
-      actions.setFetchCommandAbortController(controller);
-
-      initSigInt(rl);
-      assert(sigint !== undefined);
-      sigint();
-
-      assert.equal(controller.signal.aborted, true);
-    });
-
     it("aborts the transcription", () => {
       let sigint: (() => void) | undefined;
       const rl = makeFakeRl({
@@ -12174,7 +12155,6 @@ editor input
 - /tools
 - /record
 - /mcps
-- /fetch
 - /test/.lasso/commands/custom.md`,
       );
     });
@@ -12212,7 +12192,6 @@ editor input
 - /tools
 - /record
 - /mcps
-- /fetch
 - /test/.lasso/commands/custom.md _(2 tokens)_`,
       );
     });
@@ -12261,7 +12240,6 @@ editor input
 - /tools
 - /record
 - /mcps
-- /fetch
 - /test/.lasso/commands/custom.md _(2 tokens)_
 
 `,
@@ -12842,7 +12820,6 @@ editor input
 - /tools
 - /record
 - /mcps
-- /fetch
 - /test/.lasso/commands/custom.md _(2 tokens)_
 
 `,
@@ -13023,7 +13000,6 @@ editor input
 - /tools
 - /record
 - /mcps
-- /fetch
 - /test-cwd/.lasso/commands/known.md
           `,
         ]);
@@ -13061,7 +13037,6 @@ editor input
 - /tools
 - /record
 - /mcps
-- /fetch
           `,
         ]);
       });
@@ -13254,7 +13229,6 @@ log content
 - /tools
 - /record
 - /mcps
-- /fetch
 
 `,
         );
@@ -13296,69 +13270,6 @@ log content
     });
 
     describe("usage and resume commands", () => {
-      it("fetches a quoted URL with an abort signal and opens its markdown in a pager", async () => {
-        testProcessEnv._set("LASSO_PAGER", "nano __FILE__");
-        mock.method(
-          globalThis,
-          "fetch",
-          makeFakeFetch({
-            text: "<p>Article content</p><script>ignored()</script>",
-            onRequest: (init) => {
-              const controller = getState().abortControllers.fetchCommand;
-              assert(controller !== null);
-              assert.strictEqual(init?.signal, controller.signal);
-            },
-          }),
-        );
-
-        const result = await resolveSlashCommand(
-          '/fetch "https://example.com/article"',
-        );
-        assert.strictEqual(result, null);
-        assert.strictEqual(getState().abortControllers.fetchCommand, null);
-        assert.strictEqual(
-          testFs._files.get("/tmp/lasso-test-uuid.txt"),
-          "Article content\n\n",
-        );
-      });
-
-      it("pages oversized markdown without writing it to the webpages directory", async () => {
-        testProcessEnv._set("LASSO_PAGER", "nano __FILE__");
-        const html = "<p>" + "x".repeat(30_004) + "</p>";
-        mock.method(globalThis, "fetch", makeFakeFetch({ text: html }));
-        const { spawned } = mockPagerSpawn();
-
-        const result = await resolveSlashCommand(
-          '/fetch "https://example.com/large"',
-        );
-        const pagedContent = testFs._files.get("/tmp/lasso-test-uuid.txt");
-        assert.strictEqual(result, null);
-        assert.deepStrictEqual(spawned, ["nano /tmp/lasso-test-uuid.txt"]);
-        assert.strictEqual(testFs._dirs.has(getWebpagesDir()), false);
-        assert(pagedContent !== undefined);
-        assert.strictEqual(pagedContent.length, 30_006);
-        assert.strictEqual(pagedContent.startsWith("xxxx"), true);
-        assert.strictEqual(pagedContent.endsWith("xxxx\n\n"), true);
-      });
-
-      it("rejects an unquoted URL passed to /fetch without making a request", async () => {
-        const fetchMock = mock.method(globalThis, "fetch", makeFakeFetch());
-
-        const result = await resolveSlashCommand(
-          "/fetch https://example.com/article",
-        );
-        assert.strictEqual(result, null);
-        assert.strictEqual(fetchMock.mock.callCount(), 0);
-      });
-
-      it("rejects an invalid URL passed to /fetch without making a request", async () => {
-        const fetchMock = mock.method(globalThis, "fetch", makeFakeFetch());
-
-        const result = await resolveSlashCommand('/fetch "not a URL"');
-        assert.strictEqual(result, null);
-        assert.strictEqual(fetchMock.mock.callCount(), 0);
-      });
-
       it("handles /usage command", async () => {
         actions.resetStdout();
         actions.setModel("unknown-model");
@@ -13985,7 +13896,6 @@ custom command content`,
 - /tools
 - /record
 - /mcps
-- /fetch
 - /test-cwd/.lasso/commands/known.md
           `,
         ]);
