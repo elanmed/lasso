@@ -20,15 +20,17 @@ import {
   actions,
   getState,
   type MCPToolSet,
-  type SessionFile,
-  type Key,
-  type Mcp,
-  type SdkProvider,
   getMcpLogIdToLabel,
   createParallelPerformanceLogger,
   baseBatFlags,
   markdownBatFlags,
 } from "./app.ts";
+import {
+  type Key,
+  type Mcp,
+  type SdkProvider,
+  type SessionFile,
+} from "./schemas.ts";
 import { shellQuote } from "./utils.ts";
 import { initKeypress } from "./app.ts";
 

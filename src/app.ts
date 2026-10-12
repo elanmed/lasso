@@ -14,8 +14,8 @@ import {
   type LanguageModelUsage,
   tool,
 } from "ai";
-import { z } from "zod";
 import { type MCPClient } from "@ai-sdk/mcp";
+import { z } from "zod";
 import * as YAML from "yaml";
 import { createAnthropic } from "@ai-sdk/anthropic";
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
@@ -88,294 +88,28 @@ import {
   getMergeSummariesPrompt,
   getSubagentPrompt,
 } from "./prompts.ts";
-
-export {
-  getDataDir,
-  getDebugLogDir,
-  getGlobalConfigDir,
-  getGlobalConfigPath,
-  getGlobalContextDir,
-  getGlobalSkillDir,
-  getGlobalSlashCommandDir,
-  getLocalConfigDir,
-  getLocalConfigPath,
-  getLocalSkillDir,
-  getLocalSlashCommandDir,
-  getSessionDir,
-  getStateDir,
-  getUsageLogLockPath,
-  getUsageLogPath,
-  getWebpagesDir,
-} from "./paths.ts";
-export {
-  getBaseAgentPrompt,
-  getConversationSummaryPrompt,
-  getMergeSummariesPrompt,
-  getSubagentPrompt,
-} from "./prompts.ts";
-
-export const MISSING = "__MISSING__";
-
-export const dedicatedSummaryRatio = 0.25;
-
-export const maxTokenCountPerSummary = 5_000;
-
-export const minContextWindow =
-  (maxTokenCountPerSummary / dedicatedSummaryRatio) * 2;
-
-const KeySchema = z.object({
-  name: z.string().length(1),
-  ctrl: z.boolean().optional(),
-  meta: z.boolean().optional(),
-  shift: z.boolean().optional(),
-});
-
-const ModelPricingSchema = z.object({
-  inputPerMillion: z.number(),
-  outputPerMillion: z.number(),
-  cacheReadPerMillion: z.number().optional(),
-  cacheWritePerMillion: z.number().optional(),
-});
-
-export type ModelPricing = z.infer<typeof ModelPricingSchema>;
-
-export const UsageLimitSchema = z.strictObject({
-  duration: z.string().refine(
-    (duration) => {
-      if (duration.length < 2) return false;
-      const suffix = duration.slice(-1);
-      if (!["s", "m", "h", "d"].includes(suffix)) return false;
-      const prefix = duration.slice(0, -1);
-      if (Number.isNaN(Number(prefix))) return false;
-      if (Number(prefix) < 0) return false;
-      return true;
-    },
-    {
-      message: "usageLimit.duration must be of the format '[>= 0][s,m,h,d]'",
-    },
-  ),
-  dollarAmount: z.number(),
-});
-
-export type UsageLimit = z.infer<typeof UsageLimitSchema>;
-
-const SdkProviderSchema = z.enum([
-  "anthropic",
-  "openai-compatible",
-  "openai",
-  "google",
+import {
   MISSING,
-]);
-
-export type SdkProvider = z.infer<typeof SdkProviderSchema>;
-
-const TranscriptionSdkProviderSchema = z.enum(["google", "openai"]);
-
-export type TranscriptionSdkProvider = z.infer<
-  typeof TranscriptionSdkProviderSchema
->;
-
-const ModelSchema = z.string();
-
-const BaseURLSchema = z.string();
-
-const GatewaySchema = z.enum(["opencode"]);
-
-const PricingPerModelSchema = z.record(
-  z.string(),
-  ModelPricingSchema.nullable(),
-);
-
-const ContextWindowPerModelSchema = z.record(
-  z.string(),
-  z.number().min(minContextWindow).nullable(),
-);
-
-const DefaultedPricingPerModelSchema = z.record(z.string(), ModelPricingSchema);
-
-const DefaultedContextWindowPerModelSchema = z.record(z.string(), z.number());
-
-const KeymapsSchema = z.record(z.string(), KeySchema);
-
-const DefaultedKeymapsSchema = z
-  .object({ edit: KeySchema })
-  .catchall(KeySchema);
-
-const CustomSlashCommandDirsSchema = z.array(z.string());
-
-const CustomSkillDirsSchema = z.array(z.string());
-
-const SubagentModelsSchema = z.array(z.string());
-
-const LoadingStateFrameDurationSchema = z.number();
-
-const LoadingStateFramesSchema = z
-  .array(z.string())
-  .refine(
-    (frames) => {
-      if (frames.length === 0) return true;
-      return new Set(frames.map((f) => f.length)).size === 1;
-    },
-    { message: "All loadingStateFrames strings must be the same length" },
-  )
-  .refine((frames) => frames.length >= 2, {
-    message: "loadingStateFrames must be at least length 2",
-  });
-
-const PromptPrefixSchema = z.string();
-
-const SuppressConfigWarningsSchema = z.boolean();
-
-const SuppressToolEditDiffsSchema = z.boolean();
-
-const AsciiOnlySchema = z.boolean();
-
-const SuppressStartupDurationsSchema = z.boolean();
-
-const CompactWithStructuredOutputSchema = z.boolean();
-
-const MessageQueueDelimiterSchema = z.string().endsWith("\n");
-
-const ReasoningSchema = z.enum([
-  "provider-default",
-  "none",
-  "minimal",
-  "low",
-  "medium",
-  "high",
-  "xhigh",
-]);
-
-export type Reasoning = z.infer<typeof ReasoningSchema>;
-
-const McpHeadersSchema = z.record(z.string(), z.string());
-
-const McpSchema = z.discriminatedUnion("type", [
-  z.strictObject({
-    type: z.literal("http"),
-    url: z.string(),
-    protocolVersion: z.string().optional(),
-    headers: McpHeadersSchema.optional(),
-  }),
-  z.strictObject({
-    type: z.literal("sse"),
-    url: z.string(),
-    protocolVersion: z.string().optional(),
-    headers: McpHeadersSchema.optional(),
-  }),
-  z.strictObject({
-    type: z.literal("stdio"),
-    command: z.string(),
-    args: z.array(z.string()).optional(),
-  }),
-]);
-
-const McpsSchema = z.record(z.string(), McpSchema);
-
-export type Mcp = z.infer<typeof McpSchema>;
-
-export const ConfigSchema = z.strictObject({
-  model: ModelSchema.optional(),
-  baseURL: BaseURLSchema.optional(),
-  sdkProvider: SdkProviderSchema.optional(),
-  transcriptionSdkProvider: TranscriptionSdkProviderSchema.optional(),
-  transcriptionModel: ModelSchema.optional(),
-  transcriptionBaseURL: BaseURLSchema.optional(),
-  gateway: GatewaySchema.optional(),
-  pricingPerModel: PricingPerModelSchema.optional(),
-  contextWindowPerModel: ContextWindowPerModelSchema.optional(),
-  keymaps: KeymapsSchema.optional(),
-  customSlashCommandDirs: CustomSlashCommandDirsSchema.optional(),
-  customSkillDirs: CustomSkillDirsSchema.optional(),
-  subagentModels: SubagentModelsSchema.optional(),
-  loadingStateFrameDuration: LoadingStateFrameDurationSchema.optional(),
-  loadingStateFrames: LoadingStateFramesSchema.optional(),
-  promptPrefix: PromptPrefixSchema.optional(),
-  suppressConfigWarnings: SuppressConfigWarningsSchema.optional(),
-  asciiOnly: AsciiOnlySchema.optional(),
-  suppressStartupDurations: SuppressStartupDurationsSchema.optional(),
-  suppressToolEditDiffs: SuppressToolEditDiffsSchema.optional(),
-  compactWithStructuredOutput: CompactWithStructuredOutputSchema.optional(),
-  messageQueueDelimiter: MessageQueueDelimiterSchema.optional(),
-  reasoning: ReasoningSchema.optional(),
-  mcps: McpsSchema.optional(),
-  usageLimit: UsageLimitSchema.optional(),
-});
-
-export type Config = z.infer<typeof ConfigSchema>;
-
-export const DefaultedConfigSchema = z.strictObject({
-  model: ModelSchema,
-  baseURL: BaseURLSchema.optional(),
-  sdkProvider: SdkProviderSchema,
-  transcriptionSdkProvider: TranscriptionSdkProviderSchema.optional(),
-  transcriptionModel: ModelSchema.optional(),
-  transcriptionBaseURL: BaseURLSchema.optional(),
-  gateway: GatewaySchema.optional(),
-  pricingPerModel: DefaultedPricingPerModelSchema,
-  contextWindowPerModel: DefaultedContextWindowPerModelSchema,
-  keymaps: DefaultedKeymapsSchema,
-  customSlashCommandDirs: CustomSlashCommandDirsSchema,
-  customSkillDirs: CustomSkillDirsSchema,
-  subagentModels: SubagentModelsSchema,
-  loadingStateFrameDuration: LoadingStateFrameDurationSchema,
-  loadingStateFrames: LoadingStateFramesSchema,
-  promptPrefix: PromptPrefixSchema,
-  suppressConfigWarnings: SuppressConfigWarningsSchema,
-  asciiOnly: AsciiOnlySchema,
-  suppressStartupDurations: SuppressStartupDurationsSchema,
-  suppressToolEditDiffs: SuppressToolEditDiffsSchema,
-  compactWithStructuredOutput: CompactWithStructuredOutputSchema,
-  messageQueueDelimiter: MessageQueueDelimiterSchema,
-  reasoning: ReasoningSchema,
-  mcps: McpsSchema,
-  usageLimit: UsageLimitSchema.optional(),
-});
-
-export type DefaultedConfig = z.infer<typeof DefaultedConfigSchema>;
-
-export type Key = z.infer<typeof KeySchema>;
-
-export function isSameKey(a: Key, b: Key) {
-  return (
-    a.name === b.name &&
-    (a.ctrl ?? false) === (b.ctrl ?? false) &&
-    (a.meta ?? false) === (b.meta ?? false) &&
-    (a.shift ?? false) === (b.shift ?? false)
-  );
-}
-
-export const defaultConfig: DefaultedConfig = {
-  model: MISSING,
-  sdkProvider: MISSING,
-  transcriptionSdkProvider: undefined,
-  transcriptionModel: undefined,
-  transcriptionBaseURL: undefined,
-  gateway: undefined,
-  pricingPerModel: {},
-  contextWindowPerModel: {},
-  keymaps: {
-    edit: {
-      name: "g",
-      ctrl: true,
-    },
-  },
-  customSlashCommandDirs: [],
-  customSkillDirs: [],
-  subagentModels: [],
-  loadingStateFrameDuration: 80,
-  loadingStateFrames: ["|", "/", "-", "\\"],
-  promptPrefix: "> ",
-  suppressConfigWarnings: false,
-  asciiOnly: false,
-  suppressStartupDurations: false,
-  suppressToolEditDiffs: false,
-  compactWithStructuredOutput: true,
-  messageQueueDelimiter: "l---\n",
-  reasoning: "provider-default",
-  mcps: {},
-  usageLimit: undefined,
-};
+  dedicatedSummaryRatio,
+  maxTokenCountPerSummary,
+  ConfigSchema,
+  SessionFileSchema,
+  defaultConfig,
+  isSameKey,
+  type Config,
+  type DefaultedConfig,
+  type Key,
+  type Mcp,
+  type ModelMessage,
+  type ModelPricing,
+  type ModelSummary,
+  type ToolEditDiff,
+  type Reasoning,
+  type SdkProvider,
+  type SessionFile,
+  type TranscriptEntry,
+  type UsageLimit,
+} from "./schemas.ts";
 
 export function getUnicodeChar(char: string) {
   const map = {
@@ -652,42 +386,6 @@ export interface SlashCommand {
   content: string;
 }
 
-export const ModelSummarySchema = z.strictObject({
-  compacted: z.string(),
-  compactedAt: z.number(),
-  tokens: z.number(),
-});
-
-export type ModelSummary = z.infer<typeof ModelSummarySchema>;
-
-export const ModelMessageSchema = z.looseObject({
-  role: z.string(),
-  content: z.any(),
-});
-
-export type ModelMessage = z.infer<typeof ModelMessageSchema>;
-
-export interface ToolEditDiff {
-  fileName: string;
-  diffStdout: string;
-}
-
-export const TranscriptEntrySchema = z.strictObject({
-  timestamp: z.number(),
-  role: z.enum(["user", "assistant"]),
-  message: z.string(),
-});
-
-export type TranscriptEntry = z.infer<typeof TranscriptEntrySchema>;
-
-export const SessionFileSchema = z.object({
-  messages: z.array(ModelMessageSchema),
-  summaries: z.array(ModelSummarySchema),
-  transcript: z.array(TranscriptEntrySchema),
-});
-
-export type SessionFile = z.infer<typeof SessionFileSchema>;
-
 export type MCPToolSet = Awaited<ReturnType<MCPClient["tools"]>>;
 
 type MCPClients = Record<string, MCPClient>;
@@ -882,6 +580,10 @@ export function getSystemContent() {
     getState().content.contextStr,
     getState().content.skillsStr,
   ].join("\n\n");
+}
+
+export function getToolsContentStr() {
+  return stringifyTools();
 }
 
 const logStateChange = (actionType: string, before: string, after: string) => {
