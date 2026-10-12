@@ -21,7 +21,10 @@ import {
   type MCPToolSet,
   harnessTools,
   stringifyTools,
-  promptDeps,
+  getSystemContent,
+  getToolsContentStr,
+  getBaseAgentPrompt,
+  getSubagentPrompt,
   maybeCompact,
   getConversationSummary,
   getMergedSummaries,
@@ -29,18 +32,9 @@ import {
   ConfigSchema,
   DefaultedConfigSchema,
   isSameKey,
-  getBaseAgentPrompt,
-  getConversationSummaryPrompt,
-  getMergeSummariesPrompt,
-  getSubagentPrompt,
-  getSessionDir,
   getWebpagesDir,
-  getDataDir,
-  getGlobalConfigDir,
   getGlobalContextDir,
-  getDebugLogDir,
   getGlobalConfigPath,
-  getStateDir,
   getUsageLogLockPath,
   getUsageLogPath,
   SessionFileSchema,
@@ -226,7 +220,6 @@ describe("api", () => {
 
   beforeEach(() => {
     setupTestContext({ model: "claude-sonnet-4-20250514" });
-    mock.method(promptDeps, "getToolsContentStr", stringifyTools);
     actions.setBaseURL("https://api.anthropic.com");
     actions.setContextStr("");
     actions.setSkillsStr("");
@@ -299,8 +292,7 @@ describe("api", () => {
       });
 
       it("passes system content to the api call", async () => {
-        const systemContent = "system-content";
-        mock.method(promptDeps, "getSystemContent", () => systemContent);
+        const systemContent = getSystemContent();
         let capturedInstructions: string | undefined;
         mock.method(aiDeps, "generateText", (opts: Record<string, unknown>) => {
           capturedInstructions = opts["instructions"] as string;
@@ -791,7 +783,7 @@ describe("api", () => {
     const getApproxAdditions = () =>
       strToApproxTokens(
         safeStringify({ ...harnessTools, ...getState().mcp.tools }),
-      ) + strToApproxTokens(promptDeps.getSystemContent());
+      ) + strToApproxTokens(getSystemContent());
 
     describe("decides with approximated tokens", () => {
       it("returns early when below the compact threshold", async () => {
@@ -879,7 +871,7 @@ describe("api", () => {
 
       it("includes the system prompt in the stale approximation when deciding compaction", async () => {
         const systemContent = "s".repeat(100_000);
-        mock.method(promptDeps, "getSystemContent", () => systemContent);
+        actions.setContextStr(systemContent);
         const longUserContent = "a".repeat(190_000);
         actions.setConversationMessages([
           {
@@ -988,7 +980,7 @@ describe("api", () => {
           { role: "assistant", content: "compacted summary" },
         ]);
         assert.deepStrictEqual(getState().usage.promptTokens, {
-          value: 25_000 + withMcpTools,
+          value: 25_000 + withMcpTools + strToApproxTokens(getSystemContent()),
           dirty: false,
         });
         assert.strictEqual(withMcpTools > withoutMcpTools, true);
@@ -2038,406 +2030,6 @@ describe("config-types", () => {
   });
 });
 
-describe("prompts", () => {
-  const baseAgentPromptExpectation = (mcpServersLis: string) =>
-    [
-      "# [lasso] Base system prompt",
-      "",
-      "## [lasso] Core principles",
-      "",
-      "- You are an AI agent being called from a minimal terminal cli called lasso.",
-      "- Be concise: 1 sentence when possible, under 25 words unless detail is required. Questions get answers, no padding.",
-      "- For debugging: give 1 command at a time, never multiple",
-      "- All responses are piped through bat as markdown — always emit valid markdown",
-      "- After a successful file-modifying tool (bash with fileSystemAccessType create-update-delete): the CLI auto-outputs a diff. Do NOT repeat the code, file contents, or a diff of the change in your response — summarize in prose only. Verification via a targeted read (e.g. sed -n) is fine, but don't re-echo what the diff already showed",
-      "",
-      "## [lasso] Web search",
-      "",
-      "",
-      "- When using the `web_fetch_html` or `web_fetch_json` tools for web search, note that Google, Bing, and most other search engines block automated requests.",
-      "- Instead, use the following agent-friendly search engines via constructed urls:",
-      "  - `https://html.duckduckgo.com/html/?q=<url-encoded query>` (use with `web_fetch_html`)",
-      "  - `https://search.marginalia.nu/search?query=<url-encoded query>` (use with `web_fetch_html`)",
-      "  - `https://en.wikipedia.org/w/index.php?search=<url-encoded query>` (use with `web_fetch_html`)",
-      "",
-      "## [lasso] MCP Servers",
-      "",
-      mcpServersLis,
-      "",
-      "## Filesystem actions (via bash)",
-      "",
-      "Note: ${START}, ${END}, ${LINE} are placeholders. Replace with actual line numbers.",
-      "",
-      "### Read a range of lines",
-      "```bash",
-      'sed -n "${START},${END}p" target.txt',
-      "```",
-      "",
-      "### Get total line count",
-      "```bash",
-      "wc -l < target.txt",
-      "```",
-      "",
-      "### Write content to an empty file",
-      "```bash",
-      "cat > target.txt << 'EOF'",
-      "Your content here",
-      'with "quotes" and $variables left literal',
-      "EOF",
-      "```",
-      "",
-      "### Insert content starting after a line",
-      "```bash",
-      "INSERTFILE=$(mktemp)",
-      "cat > \"$INSERTFILE\" << 'EOF'",
-      "Content to insert",
-      "EOF",
-      "TMPFILE=$(mktemp)",
-      'sed -e "${LINE}r $INSERTFILE" target.txt > "$TMPFILE" && mv "$TMPFILE" target.txt',
-      'rm "$INSERTFILE"',
-      "```",
-      "",
-      "### Replace a range of lines",
-      "```bash",
-      "INSERTFILE=$(mktemp)",
-      "cat > \"$INSERTFILE\" << 'EOF'",
-      "Replacement content",
-      "EOF",
-      "TMPFILE=$(mktemp)",
-      'sed -e "${END}r $INSERTFILE" -e "${START},${END}d" target.txt > "$TMPFILE" && mv "$TMPFILE" target.txt',
-      'rm "$INSERTFILE"',
-      "```",
-      "",
-      "### Delete a range of lines",
-      "```bash",
-      "TMPFILE=$(mktemp)",
-      'sed -e "${START},${END}d" target.txt > "$TMPFILE" && mv "$TMPFILE" target.txt',
-      "```",
-    ].join("\n");
-
-  const readOnlySubagentPromptExpectation = (mcpServersLis: string) =>
-    [
-      "# [lasso] Base system prompt",
-      "",
-      "## [lasso] Core principles",
-      "- You are a read-only subagent. Although you have access to a bash tool, you must NOT use it to perform any modifications to the file system.",
-      "",
-      "## [lasso] Web search",
-      "",
-      "",
-      "- When using the `web_fetch_html` or `web_fetch_json` tools for web search, note that Google, Bing, and most other search engines block automated requests.",
-      "- Instead, use the following agent-friendly search engines via constructed urls:",
-      "  - `https://html.duckduckgo.com/html/?q=<url-encoded query>` (use with `web_fetch_html`)",
-      "  - `https://search.marginalia.nu/search?query=<url-encoded query>` (use with `web_fetch_html`)",
-      "  - `https://en.wikipedia.org/w/index.php?search=<url-encoded query>` (use with `web_fetch_html`)",
-      "",
-      "## [lasso] MCP Servers",
-      "",
-      mcpServersLis,
-      "",
-      "## Filesystem actions (via bash)",
-      "",
-      "Note: ${START}, ${END}, ${LINE} are placeholders. Replace with actual line numbers.",
-      "",
-      "### Read a range of lines",
-      "```bash",
-      'sed -n "${START},${END}p" target.txt',
-      "```",
-      "",
-      "### Get total line count",
-      "```bash",
-      "wc -l < target.txt",
-      "```",
-    ].join("\n");
-  const readWriteSubagentPromptExpectation = (mcpServersLis: string) =>
-    [
-      "# [lasso] Base system prompt",
-      "",
-      "## [lasso] Core principles",
-      "- You are a subagent with read-write access.",
-      "",
-      "## [lasso] Web search",
-      "",
-      "",
-      "- When using the `web_fetch_html` or `web_fetch_json` tools for web search, note that Google, Bing, and most other search engines block automated requests.",
-      "- Instead, use the following agent-friendly search engines via constructed urls:",
-      "  - `https://html.duckduckgo.com/html/?q=<url-encoded query>` (use with `web_fetch_html`)",
-      "  - `https://search.marginalia.nu/search?query=<url-encoded query>` (use with `web_fetch_html`)",
-      "  - `https://en.wikipedia.org/w/index.php?search=<url-encoded query>` (use with `web_fetch_html`)",
-      "",
-      "## [lasso] MCP Servers",
-      "",
-      mcpServersLis,
-      "",
-      "## Filesystem actions (via bash)",
-      "",
-      "Note: ${START}, ${END}, ${LINE} are placeholders. Replace with actual line numbers.",
-      "",
-      "### Read a range of lines",
-      "```bash",
-      'sed -n "${START},${END}p" target.txt',
-      "```",
-      "",
-      "### Get total line count",
-      "```bash",
-      "wc -l < target.txt",
-      "```",
-      "",
-      "### Write content to an empty file",
-      "```bash",
-      "cat > target.txt << 'EOF'",
-      "Your content here",
-      'with "quotes" and $variables left literal',
-      "EOF",
-      "```",
-      "",
-      "### Insert content starting after a line",
-      "```bash",
-      "INSERTFILE=$(mktemp)",
-      "cat > \"$INSERTFILE\" << 'EOF'",
-      "Content to insert",
-      "EOF",
-      "TMPFILE=$(mktemp)",
-      'sed -e "${LINE}r $INSERTFILE" target.txt > "$TMPFILE" && mv "$TMPFILE" target.txt',
-      'rm "$INSERTFILE"',
-      "```",
-      "",
-      "### Replace a range of lines",
-      "```bash",
-      "INSERTFILE=$(mktemp)",
-      "cat > \"$INSERTFILE\" << 'EOF'",
-      "Replacement content",
-      "EOF",
-      "TMPFILE=$(mktemp)",
-      'sed -e "${END}r $INSERTFILE" -e "${START},${END}d" target.txt > "$TMPFILE" && mv "$TMPFILE" target.txt',
-      'rm "$INSERTFILE"',
-      "```",
-      "",
-      "### Delete a range of lines",
-      "```bash",
-      "TMPFILE=$(mktemp)",
-      'sed -e "${START},${END}d" target.txt > "$TMPFILE" && mv "$TMPFILE" target.txt',
-      "```",
-    ].join("\n");
-
-  describe("system prompts", () => {
-    it("formats the base agent prompt exactly", () => {
-      assert.strictEqual(
-        getBaseAgentPrompt({}),
-        baseAgentPromptExpectation("No available MCP servers"),
-      );
-    });
-
-    describe("mcp servers", () => {
-      it("formats the base agent prompt with mcp server bullets", () => {
-        assert.strictEqual(
-          getBaseAgentPrompt({
-            alpha: makeFakeMcpClient(),
-            beta: makeFakeMcpClient(),
-          }),
-          baseAgentPromptExpectation("- alpha\n- beta"),
-        );
-      });
-
-      it("lists server instructions in the base agent prompt", () => {
-        assert.strictEqual(
-          getBaseAgentPrompt({
-            alpha: makeFakeMcpClient({
-              instructions: "Call the alpha tool for edits.",
-            }),
-          }),
-          baseAgentPromptExpectation(
-            "- alpha\n  Instructions: Call the alpha tool for edits.",
-          ),
-        );
-      });
-
-      it("formats the read-only subagent prompt with mcp server bullets", () => {
-        assert.strictEqual(
-          getSubagentPrompt("read-only", { alpha: makeFakeMcpClient() }),
-          readOnlySubagentPromptExpectation("- alpha"),
-        );
-      });
-
-      it("lists server instructions in the read-only subagent prompt", () => {
-        assert.strictEqual(
-          getSubagentPrompt("read-only", {
-            alpha: makeFakeMcpClient({
-              instructions: "Call the alpha tool for edits.",
-            }),
-          }),
-          readOnlySubagentPromptExpectation(
-            "- alpha\n  Instructions: Call the alpha tool for edits.",
-          ),
-        );
-      });
-
-      it("formats the read-write subagent prompt with mcp server bullets", () => {
-        assert.strictEqual(
-          getSubagentPrompt("read-write", { alpha: makeFakeMcpClient() }),
-          readWriteSubagentPromptExpectation("- alpha"),
-        );
-      });
-
-      it("lists server instructions in the read-write subagent prompt", () => {
-        assert.strictEqual(
-          getSubagentPrompt("read-write", {
-            alpha: makeFakeMcpClient({
-              instructions: "Call the alpha tool for edits.",
-            }),
-          }),
-          readWriteSubagentPromptExpectation(
-            "- alpha\n  Instructions: Call the alpha tool for edits.",
-          ),
-        );
-      });
-
-      it("uses No available MCP servers as the list when there are none", () => {
-        assert.strictEqual(
-          getBaseAgentPrompt({}),
-          baseAgentPromptExpectation("No available MCP servers"),
-        );
-      });
-    });
-  });
-
-  it("formats a read-only subagent prompt exactly", () => {
-    assert.strictEqual(
-      getSubagentPrompt("read-only", {}),
-      readOnlySubagentPromptExpectation("No available MCP servers"),
-    );
-  });
-
-  it("formats a read-write subagent prompt exactly", () => {
-    assert.strictEqual(
-      getSubagentPrompt("read-write", {}),
-      readWriteSubagentPromptExpectation("No available MCP servers"),
-    );
-  });
-
-  describe("compaction prompts", () => {
-    it("formats the conversation summary prompt exactly", () => {
-      assert.strictEqual(
-        getConversationSummaryPrompt({
-          targetCharLen: 1000,
-          conversation: `## user
-
-hello`,
-        }),
-        [
-          "## [lasso] Compact conversation",
-          "",
-          "- Compact the following conversation.",
-          '- Summarize into exactly two sections: "## Key facts" and "## Everything else".',
-          "- Key facts are details that must survive all future compactions, such as decisions, file paths, task state, and user preferences.",
-          '- Write "## Key facts" as a flat bullet list of short, self-contained facts.',
-          '- When the maximum length is tight, cut from "## Everything else" and never from "## Key facts."',
-          "- Output a plain-text prose summary, not JSON or a code fence.",
-          "- Output a maximum of 1000 characters.",
-          "",
-          "## user",
-          "",
-          "hello",
-        ].join("\n"),
-      );
-    });
-
-    it("formats the merge summaries prompt exactly", () => {
-      assert.strictEqual(
-        getMergeSummariesPrompt({
-          targetCharLen: 500,
-          summaries: `first
-
-second`,
-        }),
-        [
-          "## [lasso] Compact summaries",
-          "",
-          "- Merge the following two summaries into one.",
-          '- Build "## Key facts" from the union of the key facts in both summaries.',
-          "- Keep every existing key fact: you may deduplicate or reword only when needed, but never change their meaning and never delete one.",
-          "- If a key fact is superseded by a later one, delete the outdated one.",
-          '- Summarize into exactly two sections: "## Key facts" and "## Everything else".',
-          "- Key facts are details that must survive all future compactions, such as decisions, file paths, task state, and user preferences.",
-          '- Write "## Key facts" as a flat bullet list of short, self-contained facts.',
-          '- When the maximum length is tight, cut from "## Everything else" and never from "## Key facts."',
-          "- Output a plain-text prose summary, not JSON or a code fence.",
-          "- Output a maximum of 500 characters.",
-          "",
-          "first",
-          "",
-          "second",
-        ].join("\n"),
-      );
-    });
-  });
-});
-
-describe("paths", () => {
-  afterEach(() => {
-    mock.restoreAll();
-  });
-
-  beforeEach(() => {
-    setupTestContext();
-  });
-
-  describe("global config dir", () => {
-    it("uses the home config dir when XDG_CONFIG_HOME is unset", () => {
-      assert.equal(
-        getGlobalConfigDir(),
-        join("/fake-home", ".config", "lasso"),
-      );
-    });
-
-    it("uses XDG_CONFIG_HOME for the global config dir when set", () => {
-      testProcessEnv._set("XDG_CONFIG_HOME", "/xdg-config");
-      const expected = join("/xdg-config", "lasso");
-      assert.equal(getGlobalConfigDir(), expected);
-      assert.equal(getGlobalContextDir(), join(expected, "context"));
-      assert.equal(getGlobalConfigPath(), join(expected, "settings.yaml"));
-    });
-  });
-
-  describe("state dir", () => {
-    it("uses the home state dir when XDG_STATE_HOME is unset", () => {
-      assert.equal(
-        getStateDir(),
-        join("/fake-home", ".local", "state", "lasso"),
-      );
-    });
-
-    it("uses XDG_STATE_HOME for the state dir when set", () => {
-      testProcessEnv._set("XDG_STATE_HOME", "/xdg-state");
-      assert.equal(getStateDir(), join("/xdg-state", "lasso"));
-      assert.equal(getSessionDir(), join("/xdg-state", "lasso", "sessions"));
-      assert.equal(getDebugLogDir(), join("/xdg-state", "lasso", "debug"));
-    });
-  });
-
-  describe("data dir", () => {
-    it("uses the home data dir when XDG_DATA_HOME is unset", () => {
-      assert.equal(
-        getDataDir(),
-        join("/fake-home", ".local", "share", "lasso"),
-      );
-    });
-
-    it("uses XDG_DATA_HOME for the data dir when set", () => {
-      testProcessEnv._set("XDG_DATA_HOME", "/xdg-data");
-      assert.equal(getDataDir(), join("/xdg-data", "lasso"));
-      assert.equal(getUsageLogPath(), join("/xdg-data", "lasso", "usage.json"));
-      assert.equal(
-        getUsageLogLockPath(),
-        join("/xdg-data", "lasso", "usage.lock"),
-      );
-    });
-  });
-});
-
-const realGetSystemContent = promptDeps.getSystemContent;
-const realGetToolsContentStr = promptDeps.getToolsContentStr;
-
 describe("state", () => {
   afterEach(() => {
     mock.restoreAll();
@@ -2449,11 +2041,10 @@ describe("state", () => {
 
   describe("system content", () => {
     it("getSystemContent joins prompt, context, and skills with blank lines", () => {
-      mock.method(promptDeps, "getSystemContent", realGetSystemContent);
       actions.setContextStr("ctx body");
       actions.setSkillsStr("skills body");
       assert.strictEqual(
-        promptDeps.getSystemContent(),
+        getSystemContent(),
         `${getBaseAgentPrompt({})}
 
 ctx body
@@ -2462,9 +2053,8 @@ skills body`,
       );
     });
 
-    it("getToolsContentStr returns an empty string by default", () => {
-      mock.method(promptDeps, "getToolsContentStr", realGetToolsContentStr);
-      assert.strictEqual(promptDeps.getToolsContentStr(), "");
+    it("getToolsContentStr returns the stringified tools", () => {
+      assert.strictEqual(getToolsContentStr(), stringifyTools());
     });
   });
 
@@ -5943,37 +5533,34 @@ describe("usage", () => {
 describe("getPromptOverheadTokensApprox", () => {
   beforeEach(() => {
     setupTestContext();
-    mock.method(promptDeps, "getSystemContent", () => "abc");
-    mock.method(promptDeps, "getToolsContentStr", () => "defdef");
+    actions.setContextStr("abc");
   });
 
   it("sums the approx of system content and tools", () => {
-    assert.strictEqual(getPromptOverheadTokensApprox(), 3);
+    assert.strictEqual(getPromptOverheadTokensApprox(), 1850);
   });
 
   it("takes tools into account when computing the prompt overhead approx", () => {
-    assert.strictEqual(getApproxPromptTokens(), 3);
+    assert.strictEqual(getApproxPromptTokens(), 1850);
   });
 });
 
 describe("getApproxPromptTokens", () => {
   beforeEach(() => {
     setupTestContext();
-    mock.method(promptDeps, "getSystemContent", () => "abc");
-    mock.method(promptDeps, "getToolsContentStr", () => "defdef");
+    actions.setContextStr("abc");
   });
 
   it("sums messages approx with the system instructions approx", () => {
     actions.setConversationMessages([{ role: "user", content: "hello" }]);
-    assert.strictEqual(getApproxPromptTokens(), 14);
+    assert.strictEqual(getApproxPromptTokens(), 1861);
   });
 });
 
 describe("getCurrentPromptTokens", () => {
   beforeEach(() => {
     setupTestContext();
-    mock.method(promptDeps, "getSystemContent", () => "abc");
-    mock.method(promptDeps, "getToolsContentStr", () => "defdef");
+    actions.setContextStr("abc");
   });
 
   it("returns the cached prompt tokens when not dirty", () => {
@@ -5989,15 +5576,13 @@ describe("getCurrentPromptTokens", () => {
   it("returns the approx prompt tokens when dirty", () => {
     actions.setPromptTokens(50);
     actions.setPromptTokensDirty(true);
-    assert.strictEqual(getCurrentPromptTokens(), 3);
+    assert.strictEqual(getCurrentPromptTokens(), 1850);
   });
 });
 
 describe("getTokensByArea", () => {
   beforeEach(() => {
     setupTestContext();
-    mock.method(promptDeps, "getSystemContent", () => "");
-    mock.method(promptDeps, "getToolsContentStr", () => "123456789012");
     actions.setContextStr("123456789");
     actions.setSkillsStr("1234");
     actions.setConversationMessages([{ role: "user", content: "hello" }]);
@@ -6008,7 +5593,7 @@ describe("getTokensByArea", () => {
     assert.deepStrictEqual(getTokensByArea(), {
       messages: 11,
       context: 3,
-      tools: 4,
+      tools: 1067,
       basePrompt: 781,
       skills: 1,
     });
@@ -6019,7 +5604,7 @@ describe("getTokensByArea", () => {
     assert.deepStrictEqual(getTokensByArea(), {
       messages: 11,
       context: 3,
-      tools: 4,
+      tools: 1067,
       basePrompt: 781,
       skills: 1,
     });
@@ -6029,11 +5614,11 @@ describe("getTokensByArea", () => {
     actions.setPromptTokens(1500);
     actions.setPromptTokensDirty(false);
     assert.deepStrictEqual(getTokensByArea(), {
-      messages: 1100,
-      context: 300,
-      tools: 400,
-      basePrompt: 78100,
-      skills: 100,
+      messages: 8.851931330472103,
+      context: 2.4141630901287554,
+      tools: 858.6373390557941,
+      basePrompt: 628.4871244635193,
+      skills: 0.8047210300429185,
     });
   });
 });
@@ -6041,8 +5626,6 @@ describe("getTokensByArea", () => {
 describe("getPrettyTokensByArea", () => {
   beforeEach(() => {
     setupTestContext();
-    mock.method(promptDeps, "getSystemContent", () => "");
-    mock.method(promptDeps, "getToolsContentStr", () => "123456789012");
     actions.setContextStr("123456789");
     actions.setSkillsStr("1234");
     actions.setConversationMessages([{ role: "user", content: "hello" }]);
@@ -6054,7 +5637,7 @@ describe("getPrettyTokensByArea", () => {
       getPrettyTokensByArea(),
       `- Chat messages: 11
 - Context files: 3
-- Harness and MCP tools: 4
+- Harness and MCP tools: 1,067
 - Base system prompt: 781
 - Skill descriptions: 1`,
     );
@@ -6065,11 +5648,11 @@ describe("getPrettyTokensByArea", () => {
     actions.setPromptTokensDirty(false);
     assert.strictEqual(
       getPrettyTokensByArea(),
-      `- Chat messages: 1,100
-- Context files: 300
-- Harness and MCP tools: 400
-- Base system prompt: 78,100
-- Skill descriptions: 100`,
+      `- Chat messages: 9
+- Context files: 2
+- Harness and MCP tools: 859
+- Base system prompt: 628
+- Skill descriptions: 1`,
     );
   });
 });
@@ -6088,18 +5671,18 @@ describe("printLargeContextOverheadWarning", () => {
   });
 
   it("does not warn when prompt overhead is below the dedicated share", () => {
-    mock.method(promptDeps, "getSystemContent", () => "s".repeat(30_000));
+    actions.setContextStr("s".repeat(30_000));
     const getWrites = mockStdoutWrites();
     printLargeContextOverheadWarning();
     assert.deepStrictEqual(getWrites(), []);
   });
 
   it("warns when prompt overhead reaches the dedicated share", () => {
-    mock.method(promptDeps, "getSystemContent", () => "s".repeat(210_000));
+    actions.setContextStr("s".repeat(210_000));
     const getWrites = mockStdoutWrites();
     printLargeContextOverheadWarning();
     assert.deepStrictEqual(getWrites(), [
-      `${YELLOW}The current set of context, skills, and tools is 70% of the 100,000 token context window!\n\nLasso reserves 25% of the context window for compacted summaries with the assumption that at most 70% of the context window will be used for prompt overhead. As is, the prompt overhead is large enough to break this assumption and, along with any user messages, may breach the llm's context window and cause API calls to be rejected. Consider converting some of your context to skills and minimizing MCP servers.${RESET}\n`,
+      `${YELLOW}The current set of context, skills, and tools is 71.85% of the 100,000 token context window!\n\nLasso reserves 25% of the context window for compacted summaries with the assumption that at most 70% of the context window will be used for prompt overhead. As is, the prompt overhead is large enough to break this assumption and, along with any user messages, may breach the llm's context window and cause API calls to be rejected. Consider converting some of your context to skills and minimizing MCP servers.${RESET}\n`,
     ]);
   });
 });
@@ -6573,7 +6156,7 @@ describe("fence", () => {
         fencePrint("Output", { showSessionInfo: true });
 
         assert.deepStrictEqual(getWrites(), [
-          `${GREY}━━ ${BOLD}Output${BOLD_RESET} (500ms) (0 tokens in session) (0% of context window) ━━${RESET}\n`,
+          `${GREY}━━ ${BOLD}Output${BOLD_RESET} (500ms) (0 tokens in session) (1.445% of context window) ━━${RESET}\n`,
         ]);
       });
 
@@ -7012,7 +6595,7 @@ describe("usage-format", () => {
         actions.setModel("test-model");
         actions.setContextWindowPerModel({ "test-model": 10_000 });
         const result = getPrettyContextWindowUsage();
-        assert.strictEqual(result, "0% of context window");
+        assert.strictEqual(result, "18.49% of context window");
       });
 
       it("returns the percent of the context window used", () => {
@@ -7054,7 +6637,7 @@ describe("usage-format", () => {
         actions.setPromptTokens(5_000);
         actions.setPromptTokensDirty(true);
         const result = getPrettyContextWindowUsage();
-        assert.strictEqual(result, "0.12% of context window");
+        assert.strictEqual(result, "18.61% of context window");
       });
 
       it("uses the stored token count when tokens are not stale", () => {
@@ -7073,7 +6656,7 @@ describe("usage-format", () => {
       actions.setModel("test-model");
       actions.setContextWindowPerModel({ "test-model": 10_000 });
       const result = getPrettyContextWindowUsage();
-      assert.strictEqual(result, "0% of context window");
+      assert.strictEqual(result, "18.49% of context window");
     });
   });
 
@@ -12140,7 +11723,7 @@ hello
 
       await initState();
 
-      assert.strictEqual(promptDeps.getToolsContentStr(), stringifyTools());
+      assert.strictEqual(getToolsContentStr(), stringifyTools());
     });
   });
 
@@ -12322,7 +11905,7 @@ hello
 
       await initStateRepeatable();
 
-      assert.strictEqual(promptDeps.getToolsContentStr(), stringifyTools());
+      assert.strictEqual(getToolsContentStr(), stringifyTools());
     });
   });
 
@@ -13717,12 +13300,15 @@ l---
       actions.setConversationSummaries([
         { compacted: "summary", compactedAt: 3, tokens: 5 },
       ]);
-      mock.method(promptDeps, "getSystemContent", () => "abc");
+      actions.setContextStr("abc");
+      const expectedPromptTokens =
+        strToApproxTokens(getSystemContent()) +
+        strToApproxTokens(getToolsContentStr());
       await clearCommand();
       assert.deepStrictEqual(getState().conversation.summaries, []);
       assert.deepStrictEqual(getState().conversation.messages, []);
       assert.deepStrictEqual(getState().usage.promptTokens, {
-        value: strToApproxTokens("abc"),
+        value: expectedPromptTokens,
         dirty: true,
       });
       assert.deepStrictEqual(getWrites(), [
@@ -13734,8 +13320,7 @@ l---
   describe("printTokens", () => {
     beforeEach(() => {
       actions.resetStdout();
-      mock.method(promptDeps, "getSystemContent", () => "");
-      mock.method(promptDeps, "getToolsContentStr", () => "123456789012");
+      actions.setContextStr("");
       actions.setContextStr("123456789");
       actions.setSkillsStr("1234");
       actions.setConversationMessages([{ role: "user", content: "hello" }]);
@@ -13746,10 +13331,10 @@ l---
       printTokens();
       assert.deepStrictEqual(getWrites(), [
         "\n",
-        `${BLUE}Token count: 800 (0.012% of context window)${RESET}\n`,
+        `${BLUE}Token count: 1,863 (1.456% of context window)${RESET}\n`,
         `- Chat messages: 11
 - Context files: 3
-- Harness and MCP tools: 4
+- Harness and MCP tools: 1,067
 - Base system prompt: 781
 - Skill descriptions: 1
 `,
@@ -13763,12 +13348,12 @@ l---
       printTokens();
       assert.deepStrictEqual(getWrites(), [
         "\n",
-        `${BLUE}Token count: 80,000 (1.172% of context window)${RESET}\n`,
-        `- Chat messages: 1,100
-- Context files: 300
-- Harness and MCP tools: 400
-- Base system prompt: 78,100
-- Skill descriptions: 100
+        `${BLUE}Token count: 1,499.195 (1.172% of context window)${RESET}\n`,
+        `- Chat messages: 9
+- Context files: 2
+- Harness and MCP tools: 859
+- Base system prompt: 628
+- Skill descriptions: 1
 `,
         "\n",
       ]);
@@ -13780,10 +13365,10 @@ l---
       printTokens();
       assert.deepStrictEqual(getWrites(), [
         "\n",
-        `${BLUE}Token count: 800 (0.15% of context window)${RESET}\n`,
+        `${BLUE}Token count: 1,863 (18.64% of context window)${RESET}\n`,
         `- Chat messages: 11
 - Context files: 3
-- Harness and MCP tools: 4
+- Harness and MCP tools: 1,067
 - Base system prompt: 781
 - Skill descriptions: 1
 `,
@@ -16602,7 +16187,7 @@ commands diff
             contextWindowPerModel: { "gpt-4": 100_000 },
           }),
         );
-        mock.method(promptDeps, "getSystemContent", () => "s".repeat(210_000));
+        actions.setContextStr("s".repeat(210_000));
         mockExecCalls([
           { stdout: "delta 0.18.2" },
           { stdout: "" },
@@ -16644,7 +16229,7 @@ commands diff
             contextWindowPerModel: { "gpt-4": 100_000 },
           }),
         );
-        mock.method(promptDeps, "getSystemContent", () => "s".repeat(210_000));
+        actions.setContextStr("s".repeat(210_000));
         testProcessEnv._set("LASSO_PAGER", "cat __FILE__");
         mockPagerSpawn();
         mockExecCalls([
