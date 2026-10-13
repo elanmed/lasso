@@ -440,6 +440,45 @@ describe("api", () => {
           dirty: false,
         });
       });
+
+      it("uses final step usage for prompt tokens when it differs from top-level usage", async () => {
+        mock.method(aiDeps, "generateText", () =>
+          Promise.resolve(
+            makeGenerateTextResult({
+              usage: makeMockUsage({ inputTokens: 100, outputTokens: 10 }),
+              finalStepUsage: makeMockUsage({
+                inputTokens: 14,
+                outputTokens: 3,
+              }),
+              responseMessages: [{ role: "assistant", content: "answer" }],
+            }),
+          ),
+        );
+        await resolveApiCall("hello");
+        assert.deepStrictEqual(getState().usage.promptTokens, {
+          value: 17,
+          dirty: false,
+        });
+      });
+
+      it("approximates missing final step output tokens from the text", async () => {
+        mock.method(aiDeps, "generateText", () =>
+          Promise.resolve(
+            makeGenerateTextResult({
+              finalStepUsage: makeMockUsage({
+                inputTokens: 50,
+                outputTokens: undefined,
+              }),
+              responseMessages: [{ role: "assistant", content: "answer" }],
+            }),
+          ),
+        );
+        await resolveApiCall("hello");
+        assert.deepStrictEqual(getState().usage.promptTokens, {
+          value: 54,
+          dirty: false,
+        });
+      });
     });
 
     describe("prints tool call start", () => {

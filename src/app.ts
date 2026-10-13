@@ -2505,14 +2505,18 @@ export async function resolveApiCall(userInput: string) {
     return null;
   }
 
-  const { usage, text, responseMessages } = generateTextResult.value;
+  const { usage, finalStep, text, responseMessages } = generateTextResult.value;
 
   await appendModelUsage(usage);
 
-  const inputTokens = usage.inputTokens ?? getApproxPromptTokens();
-  const outputTokens = orApproxTokens(usage.outputTokens, text);
+  const finalStepInputTokens =
+    finalStep.usage.inputTokens ?? getApproxPromptTokens();
+  const finalStepOutputTokens = orApproxTokens(
+    finalStep.usage.outputTokens,
+    text,
+  );
 
-  actions.setPromptTokens(inputTokens + outputTokens);
+  actions.setPromptTokens(finalStepInputTokens + finalStepOutputTokens);
   actions.setPromptTokensDirty(false);
 
   await syncSessionFile({

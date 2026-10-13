@@ -344,15 +344,34 @@ export function setupTestContext({
 export function makeGenerateTextResult(
   overrides: Record<string, unknown> = {},
 ) {
+  const {
+    finalStepUsage,
+    usage: usageOverrides,
+    ...overridesRest
+  } = { ...overrides } as {
+    finalStepUsage?: Record<string, unknown>;
+    usage?: Record<string, unknown>;
+    [key: string]: unknown;
+  };
+
+  const usage = {
+    inputTokens: 10,
+    outputTokens: 5,
+    inputTokenDetails: { cacheReadTokens: 0, cacheWriteTokens: 0 },
+    ...usageOverrides,
+  };
+  const finalStep = {
+    usage: {
+      ...usage,
+      ...(finalStepUsage ?? {}),
+    },
+  };
   return {
     text: "response text",
-    usage: {
-      inputTokens: 10,
-      outputTokens: 5,
-      inputTokenDetails: { cacheReadTokens: 0, cacheWriteTokens: 0 },
-    },
+    usage,
+    finalStep,
     responseMessages: [],
-    ...overrides,
+    ...overridesRest,
   };
 }
 
