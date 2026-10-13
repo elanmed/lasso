@@ -7,6 +7,7 @@ import { getState } from "./state.ts";
 import { getWebpagesDir } from "./paths.ts";
 import {
   getMessageFromError,
+  getTimeoutError,
   isAbortError,
   tryCatchAsync,
   strToApproxTokens,
@@ -81,6 +82,10 @@ export async function executeBashTool(
   const bashResult = await tryCatchAsync(bashPromise);
   if (!bashResult.ok) {
     if (isAbortError(bashResult.error)) {
+      const timeoutError = getTimeoutError(signal);
+      if (timeoutError !== null) {
+        return { content: getMessageFromError(timeoutError), isError: true };
+      }
       throw bashResult.error;
     }
 
@@ -151,7 +156,13 @@ export async function executeWebFetchHtmlTool(
   );
 
   if (!fetchResult.ok) {
-    if (isAbortError(fetchResult.error)) throw fetchResult.error;
+    if (isAbortError(fetchResult.error)) {
+      const timeoutError = getTimeoutError(signal);
+      if (timeoutError !== null) {
+        return { isError: true, content: getMessageFromError(timeoutError) };
+      }
+      throw fetchResult.error;
+    }
     return {
       isError: true,
       content: getMessageFromError(fetchResult.error),
@@ -171,7 +182,13 @@ export async function executeWebFetchHtmlTool(
 
   const textResult = await tryCatchAsync(response.text());
   if (!textResult.ok) {
-    if (isAbortError(textResult.error)) throw textResult.error;
+    if (isAbortError(textResult.error)) {
+      const timeoutError = getTimeoutError(signal);
+      if (timeoutError !== null) {
+        return { isError: true, content: getMessageFromError(timeoutError) };
+      }
+      throw textResult.error;
+    }
     return {
       isError: true,
       content: getMessageFromError(textResult.error),
@@ -273,7 +290,13 @@ export async function executeWebFetchJsonTool(
   );
 
   if (!fetchResult.ok) {
-    if (isAbortError(fetchResult.error)) throw fetchResult.error;
+    if (isAbortError(fetchResult.error)) {
+      const timeoutError = getTimeoutError(signal);
+      if (timeoutError !== null) {
+        return { isError: true, content: getMessageFromError(timeoutError) };
+      }
+      throw fetchResult.error;
+    }
     return {
       content: getMessageFromError(fetchResult.error),
       isError: true,
@@ -292,7 +315,13 @@ export async function executeWebFetchJsonTool(
 
   const jsonResult = await tryCatchAsync(response.json());
   if (!jsonResult.ok) {
-    if (isAbortError(jsonResult.error)) throw jsonResult.error;
+    if (isAbortError(jsonResult.error)) {
+      const timeoutError = getTimeoutError(signal);
+      if (timeoutError !== null) {
+        return { isError: true, content: getMessageFromError(timeoutError) };
+      }
+      throw jsonResult.error;
+    }
     return {
       content: getMessageFromError(jsonResult.error),
       isError: true,
@@ -434,6 +463,10 @@ export async function executeReadImageTool(
   );
   if (!readFileResult.ok) {
     if (isAbortError(readFileResult.error)) {
+      const timeoutError = getTimeoutError(signal);
+      if (timeoutError !== null) {
+        return { isError: true, content: getMessageFromError(timeoutError) };
+      }
       throw readFileResult.error;
     }
 

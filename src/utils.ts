@@ -54,6 +54,13 @@ export function isAbortError(error: unknown): boolean {
   return error instanceof Error && error.name === "AbortError";
 }
 
+export function getTimeoutError(signal: AbortSignal | undefined): Error | null {
+  if (signal?.aborted !== true) return null;
+  const reason: unknown = signal.reason;
+  if (reason instanceof Error && reason.name === "TimeoutError") return reason;
+  return null;
+}
+
 export function isReadlineClosedError(error: unknown): boolean {
   return (
     error instanceof Error &&

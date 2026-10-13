@@ -23,7 +23,7 @@ import {
   executeWebFetchJsonTool as executeWebFetchJsonToolImpl,
   loadSkillTool,
 } from "./tools.ts";
-import { fsDeps, processDeps } from "./deps.ts";
+import { childProcessDeps, fsDeps, processDeps } from "./deps.ts";
 import {
   BLUE,
   BOLD,
@@ -489,6 +489,33 @@ describe("tools", () => {
       );
       assert.strictEqual(result.isError, true);
       assert.match(result.content, /Command failed: exit 1/);
+    });
+
+    it("returns a timeout error instead of rethrowing an abort", async () => {
+      const controller = new AbortController();
+      const bashPromise = Object.assign(
+        Promise.reject(
+          new DOMException("This operation was aborted", "AbortError"),
+        ),
+        { child: { stdin: null } },
+      );
+      mock.method(childProcessDeps, "exec", () => bashPromise);
+      controller.abort(
+        new DOMException(
+          "The operation was aborted due to timeout",
+          "TimeoutError",
+        ),
+      );
+
+      const result = await executeBashTool(
+        { fileSystemAccessType: "read", command: "slow command" },
+        controller.signal,
+      );
+
+      assert.deepStrictEqual(result, {
+        isError: true,
+        content: "The operation was aborted due to timeout",
+      });
     });
 
     it("runs the command with /bin/bash as the shell", async () => {
@@ -1304,6 +1331,57 @@ skills body`,
             content: "The operation was aborted due to timeout",
           },
         ]);
+      });
+
+      it("returns an error when a subagent is aborted by a timeout", async () => {
+        const controller = new AbortController();
+        let onGenerateTextCalled: () => void = () => undefined;
+        const generateTextCalledPromise = new Promise<void>((resolve) => {
+          onGenerateTextCalled = resolve;
+        });
+        mockGenerateText((options: { abortSignal?: AbortSignal }) => {
+          onGenerateTextCalled();
+          assert(options.abortSignal !== undefined);
+          const { abortSignal } = options;
+          return new Promise((_resolve, reject) => {
+            abortSignal.addEventListener("abort", () => {
+              reject(
+                new DOMException("This operation was aborted", "AbortError"),
+              );
+            });
+          });
+        });
+
+        const resultPromise = createSubagentTool(
+          {
+            tasks: [
+              {
+                prompt: "inspect timeout",
+                access: "read-only",
+                model: "slow-model",
+              },
+            ],
+          },
+          controller.signal,
+        );
+        await generateTextCalledPromise;
+        controller.abort(
+          new DOMException(
+            "The operation was aborted due to timeout",
+            "TimeoutError",
+          ),
+        );
+
+        const result = await resultPromise;
+        assert.deepStrictEqual(JSON.parse(result.content), [
+          {
+            model: "slow-model",
+            prompt: "inspect timeout",
+            isError: true,
+            content: "The operation was aborted due to timeout",
+          },
+        ]);
+        assert.strictEqual(result.isError, true);
       });
 
       it("rethrows when aborted by the caller", async () => {

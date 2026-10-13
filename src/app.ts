@@ -25,6 +25,7 @@ import { format } from "prettier";
 import {
   assertAtBuildtime,
   isAbortError,
+  getTimeoutError,
   tryCatchAsync,
   getMessageFromError,
   safeStringify,
@@ -1910,7 +1911,16 @@ export async function createSubagentTool(
       if (!generateTextResult.ok) {
         await toolCallDiffer.cleanupAllTempFileBefore();
 
+        const timeoutError = getTimeoutError(signal);
         if (isAbortError(generateTextResult.error)) {
+          if (timeoutError !== null) {
+            return {
+              isError: true,
+              content: getMessageFromError(timeoutError),
+              model,
+              prompt: subagentSchema.prompt,
+            };
+          }
           throw generateTextResult.error;
         }
         return {
@@ -1954,12 +1964,13 @@ export async function createSubagentTool(
           if (task === undefined) throw new Error("Missing subagent task");
           const model = task.model;
 
-          return {
+          const ret: SubagentResult = {
             model,
             prompt: task.prompt,
             isError: true,
             content: getMessageFromError(result.reason),
-          } satisfies SubagentResult;
+          };
+          return ret;
         }
         return result.value;
       }),
