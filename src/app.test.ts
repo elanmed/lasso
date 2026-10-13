@@ -966,6 +966,46 @@ describe("api", () => {
         assert.strictEqual(withMcpTools > withoutMcpTools, true);
       });
 
+      it("compacts after an API response pushes tokens over the threshold", async () => {
+        const calls: Record<string, unknown>[] = [];
+        let callCount = 0;
+        mock.method(aiDeps, "generateText", (opts: Record<string, unknown>) => {
+          calls.push(opts);
+          const result = (() => {
+            if (callCount === 0) {
+              return makeGenerateTextResult({
+                text: "answer text",
+                usage: makeMockUsage({
+                  inputTokens: 96_000,
+                  outputTokens: 1_000,
+                }),
+                responseMessages: [
+                  { role: "assistant", content: "answer text" },
+                ],
+              });
+            }
+            return makeGenerateTextResult({
+              output: { compacted: "compacted summary" },
+              usage: makeMockUsage(),
+            });
+          })();
+          callCount = callCount + 1;
+          return Promise.resolve(result);
+        });
+
+        const result = await resolveApiCall("hi");
+        assert.strictEqual(result, "answer text");
+        await maybeCompact("");
+
+        assert.strictEqual(calls.length, 2);
+        assert.deepStrictEqual(getState().conversation.summaries, [
+          { compacted: "compacted summary", compactedAt: 0, tokens: 25_000 },
+        ]);
+        assert.deepStrictEqual(getState().conversation.messages, [
+          { role: "assistant", content: "compacted summary" },
+        ]);
+      });
+
       it("compacts the conversation when above the threshold", async () => {
         actions.setConversationMessages([{ role: "user", content: "hi" }]);
         actions.setPromptTokens(96_000);
@@ -4521,9 +4561,9 @@ describe("getMaxNumberSummaries", () => {
     setupTestContext({ model: null });
   });
 
-  it("returns null when the model is missing", () => {
+  it("uses the default context window when the model is missing", () => {
     const result = getMaxNumberSummaries();
-    assert.strictEqual(result, null);
+    assert.strictEqual(result, 6);
   });
 
   it("uses the configured context window", () => {

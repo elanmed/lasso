@@ -597,7 +597,6 @@ export const maxCharCountPerSummary = approxTokensToCharLen(
 
 export function getMaxNumberSummaries() {
   const { model } = getState().config;
-  if (model === MISSING) return null;
   const contextWindow =
     getState().config.contextWindowPerModel[model] ?? defaultContextWindow;
   const allSummariesTokenCount = dedicatedSummaryRatio * contextWindow;
@@ -2531,7 +2530,6 @@ export async function resolveApiCall(userInput: string) {
 export async function getMergedSummaries() {
   const { summaries } = getState().conversation;
   const maxNumberSummaries = getMaxNumberSummaries();
-  assertAtBuildtime(maxNumberSummaries !== null);
 
   if (summaries.length < maxNumberSummaries) {
     return getState().conversation.summaries;
@@ -2566,7 +2564,6 @@ export async function getMergedSummaries() {
   assertAtBuildtime(secondSummary !== undefined);
 
   const { model } = getState().config;
-  assertAtBuildtime(model !== MISSING);
 
   const compactPrompt = getMergeSummariesPrompt({
     targetCharLen: maxCharCountPerSummary,
@@ -2636,9 +2633,6 @@ export async function getMergedSummaries() {
 }
 
 export async function getConversationSummary() {
-  const { model } = getState().config;
-  assertAtBuildtime(model !== MISSING);
-
   // messages[0..summaries.length) are re-appended summaries, one per entry,
   // so everything from summaries.length on is not yet summarized
   const compactPrompt = getConversationSummaryPrompt({
@@ -2721,7 +2715,6 @@ async function applyCompactedConversation(summaries: ModelSummary[]) {
 
 export async function maybeCompact(userInput: string) {
   const { model } = getState().config;
-  if (model === MISSING) return;
 
   const contextWindow =
     getState().config.contextWindowPerModel[model] ?? defaultContextWindow;

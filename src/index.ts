@@ -54,6 +54,8 @@ async function main() {
     const text = await resolveApiCall(userInput);
     if (text === null) continue;
 
+    await maybeCompact("");
+
     printNewline();
     fencePrint("Output", {
       showSessionInfo: true,
