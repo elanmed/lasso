@@ -1086,14 +1086,10 @@ describe("tools", () => {
 
         assert.deepStrictEqual(JSON.parse(result.content), [
           {
-            model: "model-one",
-            prompt: "inspect one",
             content: "result-1",
             isError: false,
           },
           {
-            model: "model-two",
-            prompt: "inspect two",
             content: "result-2",
             isError: false,
           },
@@ -1182,8 +1178,6 @@ describe("tools", () => {
 
         assert.deepStrictEqual(JSON.parse(result.content), [
           {
-            model: "main-model",
-            prompt: "edit",
             content: "done",
             isError: false,
           },
@@ -1238,8 +1232,6 @@ skills body`,
 
         assert.deepStrictEqual(JSON.parse(result.content), [
           {
-            model: "main-model",
-            prompt: "inspect",
             content: "ok",
             isError: false,
           },
@@ -1260,8 +1252,6 @@ skills body`,
 
         assert.deepStrictEqual(JSON.parse(result.content), [
           {
-            model: "main-model",
-            prompt: "inspect",
             content: "ok",
             isError: false,
           },
@@ -1288,21 +1278,17 @@ skills body`,
         assert.strictEqual(result.isError, true);
         assert.deepStrictEqual(JSON.parse(result.content), [
           {
-            model: "bad-model",
-            prompt: "bad",
             isError: true,
             content: "subagent failed",
           },
           {
-            model: "good-model",
-            prompt: "good",
             content: "ok",
             isError: false,
           },
         ]);
       });
 
-      it("returns a timeout error with subagent metadata", async () => {
+      it("returns a timeout error when a subagent times out", async () => {
         mockGenerateText(() =>
           Promise.reject(
             new DOMException(
@@ -1325,8 +1311,6 @@ skills body`,
         assert.strictEqual(result.isError, true);
         assert.deepStrictEqual(JSON.parse(result.content), [
           {
-            model: "slow-model",
-            prompt: "inspect timeout",
             isError: true,
             content: "The operation was aborted due to timeout",
           },
@@ -1375,8 +1359,6 @@ skills body`,
         const result = await resultPromise;
         assert.deepStrictEqual(JSON.parse(result.content), [
           {
-            model: "slow-model",
-            prompt: "inspect timeout",
             isError: true,
             content: "The operation was aborted due to timeout",
           },

@@ -1829,17 +1829,12 @@ export type CreateSubagentTool = z.infer<typeof createSubagentToolSchema>;
 
 export type CreateSubagentTask = z.infer<typeof createSubagentTaskSchema>;
 
-type SubagentResult = {
-  model?: string;
-  prompt: string;
-} & ToolResult;
-
 export async function createSubagentTool(
   { tasks }: CreateSubagentTool,
   signal?: AbortSignal,
 ): Promise<ToolResult> {
   const subagentPromises = tasks.map(
-    async (subagentSchema): Promise<SubagentResult> => {
+    async (subagentSchema): Promise<ToolResult> => {
       const model = subagentSchema.model;
 
       const systemContent = [
@@ -1917,8 +1912,6 @@ export async function createSubagentTool(
             return {
               isError: true,
               content: getMessageFromError(timeoutError),
-              model,
-              prompt: subagentSchema.prompt,
             };
           }
           throw generateTextResult.error;
@@ -1926,8 +1919,6 @@ export async function createSubagentTool(
         return {
           content: getMessageFromError(generateTextResult.error),
           isError: true,
-          model,
-          prompt: subagentSchema.prompt,
         };
       }
 
@@ -1936,8 +1927,6 @@ export async function createSubagentTool(
       await toolCallDiffer.cleanupAllTempFileBefore();
 
       return {
-        model,
-        prompt: subagentSchema.prompt,
         content: text,
         isError: false,
       };
@@ -1958,15 +1947,9 @@ export async function createSubagentTool(
       (result) => result.status === "rejected" || result.value.isError,
     ),
     content: stringify(
-      results.map((result, idx) => {
+      results.map((result) => {
         if (result.status === "rejected") {
-          const task = tasks[idx];
-          if (task === undefined) throw new Error("Missing subagent task");
-          const model = task.model;
-
-          const ret: SubagentResult = {
-            model,
-            prompt: task.prompt,
+          const ret: ToolResult = {
             isError: true,
             content: getMessageFromError(result.reason),
           };
