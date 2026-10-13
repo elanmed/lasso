@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.12.1 - 2026-10-13
+
+- Remove the `/fetch` command
+- Return tool timeouts as errors instead of propagating aborts
+- Omit redundant prompts and model names from subagent results
+
 ## v0.12.0 - 2026-10-11
 
 - Improve web fetching with URL validation, more reliable retrieval and cleanup
