@@ -8,6 +8,8 @@ import {
   tryCatch,
   safeStringify,
   strToApproxTokens,
+  formatTokenCountAside,
+  formatTokenRangeAside,
   approxTokensToCharLen,
   tryCatchAsync,
   normalizeNewline,
@@ -687,6 +689,18 @@ second line`,
       assert.equal(strToApproxTokens("abc"), 1);
       assert.equal(strToApproxTokens("abcdef"), 2);
       assert.equal(strToApproxTokens("abcdefg"), 2);
+    });
+  });
+
+  describe("formatTokenCountAside", () => {
+    it("formats a token count", () => {
+      assert.equal(formatTokenCountAside("abc"), "_(1 tokens)_");
+    });
+  });
+
+  describe("formatTokenRangeAside", () => {
+    it("formats a token range", () => {
+      assert.equal(formatTokenRangeAside("abc", "abcdef"), "_(1-2 tokens)_");
     });
   });
 

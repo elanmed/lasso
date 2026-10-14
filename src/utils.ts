@@ -42,6 +42,14 @@ export function strToApproxTokens(str: string) {
   return charLenToApproxTokens(str.length);
 }
 
+export function formatTokenCountAside(str: string) {
+  return `_(${strToApproxTokens(str).toLocaleString()} tokens)_`;
+}
+
+export function formatTokenRangeAside(start: string, end: string) {
+  return `_(${strToApproxTokens(start).toLocaleString()}-${strToApproxTokens(end).toLocaleString()} tokens)_`;
+}
+
 function charLenToApproxTokens(charLen: number) {
   return Math.floor(charLen / 3);
 }

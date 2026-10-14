@@ -30,6 +30,8 @@ import {
   getMessageFromError,
   safeStringify,
   strToApproxTokens,
+  formatTokenCountAside,
+  formatTokenRangeAside,
   markdownFence,
   removeMediaReplacer,
   orApproxTokens,
@@ -1678,7 +1680,7 @@ export function getAvailableCommandsStr({
     (command) => {
       const suffix = (() => {
         if (!includeTokenCount) return "";
-        return ` _(${strToApproxTokens(command.content).toLocaleString()} tokens)_`;
+        return ` ${formatTokenCountAside(command.content)}`;
       })();
 
       return `- ${command.filePath}${suffix}`;
@@ -3959,7 +3961,7 @@ export async function pageEditStr({ isTyped = false }: SpacingOpts = {}) {
     return;
   }
 
-  const initialContentStr = `# [lasso] Editor content _(${strToApproxTokens(editorInputValue).toLocaleString()} tokens)_
+  const initialContentStr = `# [lasso] Editor content ${formatTokenCountAside(editorInputValue)}
 
 ${editorInputValue}`;
 
@@ -3995,7 +3997,7 @@ export async function pageSkills({ isTyped = false }: SpacingOpts = {}) {
     .map(
       (
         skill,
-      ) => `- **${skill.name}** _(${strToApproxTokens(skill.description).toLocaleString()}-${strToApproxTokens(skill.content).toLocaleString()} tokens)_: ${skill.description}
+      ) => `- **${skill.name}** ${formatTokenRangeAside(skill.description, skill.content)}: ${skill.description}
   ${skill.dir}`,
     )
     .join("\n");
@@ -4017,7 +4019,7 @@ export async function pageContext({ isTyped = false }: SpacingOpts = {}) {
 
   const contextFiles = getState().content.contextEntries.map(
     (context) =>
-      `- ${context.filePath} _(${strToApproxTokens(context.content).toLocaleString()} tokens)_`,
+      `- ${context.filePath} ${formatTokenCountAside(context.content)}`,
   );
 
   const contextSkillFiles = getState()
@@ -4026,7 +4028,7 @@ export async function pageContext({ isTyped = false }: SpacingOpts = {}) {
     )
     .map(
       (skill) =>
-        `- ${join(skill.dir, "AGENTS.md")} _(${strToApproxTokens(skill.description).toLocaleString()}-${strToApproxTokens(skill.content).toLocaleString()} tokens)_`,
+        `- ${join(skill.dir, "AGENTS.md")} ${formatTokenRangeAside(skill.description, skill.content)}`,
     );
 
   const formatted = contextFiles.concat(contextSkillFiles).join("\n");
@@ -4524,7 +4526,7 @@ export async function pageTools() {
 
     const prefix = context.type === "harness" ? "lasso" : `${context.name} mcp`;
 
-    return `- **[${prefix}] ${name}** _(${strToApproxTokens(safeStringify(tool)).toLocaleString()} tokens)_: ${description}`;
+    return `- **[${prefix}] ${name}** ${formatTokenCountAside(safeStringify(tool))}: ${description}`;
   }
 
   const formattedHarnessTools = Object.entries(harnessTools).map((entry) =>
