@@ -98,14 +98,13 @@ import {
 } from "./prompts.ts";
 import {
   bashToolInputSchema,
-  baseTimeoutSettings,
   createSubagentSafeTools,
   loadSkillToolSchema,
   mcpListResourcesSchema,
   mcpReadResourceSchema,
   mcpResourceTools,
   readImageSchema,
-  subagentTimeoutSettings,
+  timeoutSettings,
   webFetchToolSchema,
   type ToolResult,
 } from "./tools.ts";
@@ -1864,7 +1863,7 @@ export async function createSubagentTool(
           },
           stopWhen: aiDeps.isLoopFinished(),
           ...(signal === undefined ? {} : { abortSignal: signal }),
-          timeout: subagentTimeoutSettings,
+          timeout: timeoutSettings,
           onToolExecutionStart: async ({ toolCall }) => {
             if (subagentSchema.access !== "read-write") return;
             if (toolCall.toolName !== "bash") return;
@@ -2400,7 +2399,7 @@ export async function resolveApiCall(userInput: string) {
       tools: getBaseAgentTools(),
       stopWhen: aiDeps.isLoopFinished(),
       abortSignal: getApiStreamAbortSignal(),
-      timeout: baseTimeoutSettings,
+      timeout: timeoutSettings,
       onToolExecutionStart: async ({ toolCall }) => {
         switch (toolCall.toolName) {
           case "bash": {
@@ -2599,7 +2598,7 @@ export async function getMergedSummaries() {
       messages: [{ content: compactPrompt, role: "user" }],
       stopWhen: aiDeps.isLoopFinished(),
       abortSignal: getApiStreamAbortSignal(),
-      timeout: baseTimeoutSettings,
+      timeout: timeoutSettings,
       ...structuredOutputOpts,
     }),
   );
@@ -2675,7 +2674,7 @@ export async function getConversationSummary() {
       messages: [{ content: compactPrompt, role: "user" }],
       stopWhen: aiDeps.isLoopFinished(),
       abortSignal: getApiStreamAbortSignal(),
-      timeout: baseTimeoutSettings,
+      timeout: timeoutSettings,
       ...structuredOutputOpts,
     }),
   );

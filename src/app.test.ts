@@ -247,11 +247,14 @@ describe("api", () => {
         await resolveApiCall("hello");
 
         assert.deepStrictEqual(capturedOptions?.["timeout"], {
-          totalMs: 600_000,
-          toolMs: 30_000,
           tools: {
-            bashMs: 120_000,
-            create_subagentMs: 300_000,
+            bashMs: 180_000,
+            web_fetch_htmlMs: 30_000,
+            web_fetch_jsonMs: 30_000,
+            load_skillMs: 30_000,
+            read_imageMs: 30_000,
+            mcp_list_resourcesMs: 30_000,
+            mcp_read_resourceMs: 30_000,
           },
         });
       });
@@ -1543,11 +1546,14 @@ describe("api", () => {
         await getConversationSummary();
         assert.strictEqual(getMessages().length, 1);
         assert.deepStrictEqual(capturedOpts?.["timeout"], {
-          totalMs: 600_000,
-          toolMs: 30_000,
           tools: {
-            bashMs: 120_000,
-            create_subagentMs: 300_000,
+            bashMs: 180_000,
+            web_fetch_htmlMs: 30_000,
+            web_fetch_jsonMs: 30_000,
+            load_skillMs: 30_000,
+            read_imageMs: 30_000,
+            mcp_list_resourcesMs: 30_000,
+            mcp_read_resourceMs: 30_000,
           },
         });
         const capturedMessage = getMessages()[0];

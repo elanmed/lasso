@@ -14,6 +14,7 @@ import {
   toolPrint,
 } from "./app.ts";
 import {
+  timeoutSettings,
   bashToolInputSchema,
   executeBashTool,
   executeMcpListResourcesTool,
@@ -61,6 +62,22 @@ function executeWebFetchJsonTool(
 ) {
   return executeWebFetchJsonToolImpl(input, signal, toolOutput);
 }
+
+describe("tool timeout settings", () => {
+  it("sets explicit timeouts for each tool except create_subagent", () => {
+    assert.deepStrictEqual(timeoutSettings, {
+      tools: {
+        bashMs: 180_000,
+        web_fetch_htmlMs: 30_000,
+        web_fetch_jsonMs: 30_000,
+        load_skillMs: 30_000,
+        read_imageMs: 30_000,
+        mcp_list_resourcesMs: 30_000,
+        mcp_read_resourceMs: 30_000,
+      },
+    });
+  });
+});
 
 describe("mcp resource tools", () => {
   afterEach(() => {
@@ -1096,6 +1113,7 @@ describe("tools", () => {
         ]);
         const firstCall = calls[0];
         assert(firstCall !== undefined);
+        assert.strictEqual(firstCall["timeout"], timeoutSettings);
 
         const firstTools = firstCall["tools"];
         const firstMessages = firstCall["messages"] as { role: string }[];

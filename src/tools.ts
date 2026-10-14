@@ -110,20 +110,15 @@ export const webFetchToolSchema = z.object({
 
 export type WebFetchTool = z.infer<typeof webFetchToolSchema>;
 
-export const baseTimeoutSettings = {
-  totalMs: 10 * 60_000,
-  toolMs: 30_000,
+export const timeoutSettings = {
   tools: {
-    bashMs: 2 * 60_000,
-    create_subagentMs: 5 * 60_000,
-  },
-};
-
-export const subagentTimeoutSettings = {
-  totalMs: 4 * 60_000,
-  toolMs: 30_000,
-  tools: {
-    bashMs: 2 * 60_000,
+    bashMs: 3 * 60_000,
+    web_fetch_htmlMs: 30_000,
+    web_fetch_jsonMs: 30_000,
+    load_skillMs: 30_000,
+    read_imageMs: 30_000,
+    mcp_list_resourcesMs: 30_000,
+    mcp_read_resourceMs: 30_000,
   },
 };
 
