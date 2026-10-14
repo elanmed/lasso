@@ -34,7 +34,7 @@ export type BashToolInput =
     }
   | {
       fileSystemAccessType: "create-update-delete";
-      filePath: string;
+      filePaths: string[];
       command: string;
     };
 
@@ -45,11 +45,12 @@ export const bashToolInputSchema = z
       .describe(
         "Use read for commands that only read project files. Use create-update-delete when the command creates, updates, or deletes a project file.",
       ),
-    filePath: z
-      .string()
+    filePaths: z
+      .array(z.string())
+      .min(1)
       .optional()
       .describe(
-        "Target file path of the project file being written; must point to a file, not a directory. Required when fileSystemAccessType is create-update-delete. Temporary scratch files used only as intermediates should not be listed.",
+        "List of affected project file paths; each must point to a file, not a directory. Required when fileSystemAccessType is create-update-delete. Temporary scratch files used only as intermediates should not be listed.",
       ),
     command: z.string().describe("The bash command to run"),
   })
@@ -59,14 +60,14 @@ export const bashToolInputSchema = z
   .refine(
     (input): input is BashToolInput => {
       if (input.fileSystemAccessType === "create-update-delete") {
-        return input.filePath !== undefined;
+        return input.filePaths !== undefined;
       } else {
         return true;
       }
     },
     {
       message:
-        "filePath is required when fileSystemAccessType is create-update-delete",
+        "filePaths is required when fileSystemAccessType is create-update-delete",
     },
   );
 

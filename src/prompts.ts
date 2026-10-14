@@ -52,6 +52,10 @@ const bashIntroHeadingTwo = `## Filesystem actions (via bash)
 
 Note: \${START}, \${END}, \${LINE} are placeholders. Replace with actual line numbers.`;
 
+const bashUsageHeadingTwo = `## [lasso] Bash tool usage`;
+
+const bashUsageLis = `- Bash tools are optional; use them at your discretion. For read-write tasks, another available approach can be more convenient, especially when editing multiple files at once.`;
+
 const toolDiffLi = `- After a successful file-modifying tool (bash with fileSystemAccessType create-update-delete): the CLI auto-outputs a diff. Do NOT repeat the code, file contents, or a diff of the change in your response — summarize in prose only. Verification via a targeted read (e.g. sed -n) is fine, but don't re-echo what the diff already showed`;
 
 const headingOne = `# [lasso] Base system prompt`;
@@ -96,7 +100,7 @@ ${corePrinciplesHeading}
 - All responses are piped through bat as markdown — always emit valid markdown
 ${toolDiffLi}
 
-${webSearchHeadingTwo}
+${bashUsageHeadingTwo}\n\n${bashUsageLis}\n\n${webSearchHeadingTwo}
 
 ${webSearchLis}
 
@@ -120,7 +124,7 @@ export const getSubagentPrompt = (
 ${corePrinciplesHeading}
 - You are a read-only subagent. Although you have access to a bash tool, you must NOT use it to perform any modifications to the file system.
 
-${webSearchHeadingTwo}\n\n${webSearchLis}\n\n${mcpHeadingTwo}
+${bashUsageHeadingTwo}\n\n${bashUsageLis}\n\n${webSearchHeadingTwo}\n\n${webSearchLis}\n\n${mcpHeadingTwo}
 
 ${getMcpLis(mcpClients)}
 
@@ -134,7 +138,7 @@ ${readInstructions}`;
 ${corePrinciplesHeading}
 - You are a subagent with read-write access.
 
-${webSearchHeadingTwo}\n\n${webSearchLis}\n\n${mcpHeadingTwo}
+${bashUsageHeadingTwo}\n\n${bashUsageLis}\n\n${webSearchHeadingTwo}\n\n${webSearchLis}\n\n${mcpHeadingTwo}
 
 ${getMcpLis(mcpClients)}
 

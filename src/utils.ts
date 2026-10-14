@@ -167,11 +167,11 @@ export function stringify(val: unknown) {
   return JSON.stringify(val, null, 2);
 }
 
-export function isExisty(val: unknown) {
+export function isExisty<T>(val: T): val is NonNullable<T> {
   return val !== undefined && val !== null;
 }
 
-export function isNullish(val: unknown) {
+export function isNullish(val: unknown): val is null | undefined {
   return val === undefined || val === null;
 }
 

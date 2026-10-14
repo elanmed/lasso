@@ -2,6 +2,7 @@ import { describe, it, beforeEach, afterEach, mock } from "node:test";
 import assert, { AssertionError } from "node:assert/strict";
 import { join, dirname } from "node:path";
 import os from "node:os";
+import crypto from "node:crypto";
 import { stdin } from "node:process";
 import { type ModelMessage, type LanguageModelUsage } from "ai";
 import {
@@ -619,7 +620,7 @@ describe("api", () => {
                 toolCallId: "call-1",
                 input: {
                   fileSystemAccessType: "create-update-delete",
-                  filePath: "/test/file.txt",
+                  filePaths: ["/test/file.txt"],
                   command: "write",
                 },
               },
@@ -678,7 +679,7 @@ describe("api", () => {
                 toolCallId: "call-1",
                 input: {
                   fileSystemAccessType: "create-update-delete",
-                  filePath: "/test/file.txt",
+                  filePaths: ["/test/file.txt"],
                   command: "write",
                 },
               },
@@ -689,7 +690,7 @@ describe("api", () => {
                 toolCallId: "call-1",
                 input: {
                   fileSystemAccessType: "create-update-delete",
-                  filePath: "/test/file.txt",
+                  filePaths: ["/test/file.txt"],
                   command: "write",
                 },
               },
@@ -730,7 +731,7 @@ describe("api", () => {
                 toolCallId: "call-1",
                 input: {
                   fileSystemAccessType: "create-update-delete",
-                  filePath: "/test/file.txt",
+                  filePaths: ["/test/file.txt"],
                   command: "write",
                 },
               },
@@ -741,7 +742,7 @@ describe("api", () => {
                 toolCallId: "call-1",
                 input: {
                   fileSystemAccessType: "create-update-delete",
-                  filePath: "/test/file.txt",
+                  filePaths: ["/test/file.txt"],
                   command: "write",
                 },
               },
@@ -4451,11 +4452,11 @@ describe("getPromptOverheadTokensApprox", () => {
   });
 
   it("sums the approx of system content and tools", () => {
-    assert.strictEqual(getPromptOverheadTokensApprox(), 1850);
+    assert.strictEqual(getPromptOverheadTokensApprox(), 1958);
   });
 
   it("takes tools into account when computing the prompt overhead approx", () => {
-    assert.strictEqual(getApproxPromptTokens(), 1850);
+    assert.strictEqual(getApproxPromptTokens(), 1958);
   });
 });
 
@@ -4467,7 +4468,7 @@ describe("getApproxPromptTokens", () => {
 
   it("sums messages approx with the system instructions approx", () => {
     actions.setConversationMessages([{ role: "user", content: "hello" }]);
-    assert.strictEqual(getApproxPromptTokens(), 1861);
+    assert.strictEqual(getApproxPromptTokens(), 1969);
   });
 });
 
@@ -4490,7 +4491,7 @@ describe("getCurrentPromptTokens", () => {
   it("returns the approx prompt tokens when dirty", () => {
     actions.setPromptTokens(50);
     actions.setPromptTokensDirty(true);
-    assert.strictEqual(getCurrentPromptTokens(), 1850);
+    assert.strictEqual(getCurrentPromptTokens(), 1958);
   });
 });
 
@@ -4507,8 +4508,8 @@ describe("getTokensByArea", () => {
     assert.deepStrictEqual(getTokensByArea(), {
       messages: 11,
       context: 3,
-      tools: 1067,
-      basePrompt: 781,
+      tools: 1106,
+      basePrompt: 849,
       skills: 1,
     });
   });
@@ -4518,8 +4519,8 @@ describe("getTokensByArea", () => {
     assert.deepStrictEqual(getTokensByArea(), {
       messages: 11,
       context: 3,
-      tools: 1067,
-      basePrompt: 781,
+      tools: 1106,
+      basePrompt: 849,
       skills: 1,
     });
   });
@@ -4528,11 +4529,11 @@ describe("getTokensByArea", () => {
     actions.setPromptTokens(1500);
     actions.setPromptTokensDirty(false);
     assert.deepStrictEqual(getTokensByArea(), {
-      messages: 8.851931330472103,
-      context: 2.4141630901287554,
-      tools: 858.6373390557941,
-      basePrompt: 628.4871244635193,
-      skills: 0.8047210300429185,
+      messages: 8.367139959432048,
+      context: 2.2819472616632863,
+      tools: 841.2778904665315,
+      basePrompt: 645.79107505071,
+      skills: 0.7606490872210954,
     });
   });
 });
@@ -4551,8 +4552,8 @@ describe("getPrettyTokensByArea", () => {
       getPrettyTokensByArea(),
       `- Chat messages: 11
 - Context files: 3
-- Harness and MCP tools: 1,067
-- Base system prompt: 781
+- Harness and MCP tools: 1,106
+- Base system prompt: 849
 - Skill descriptions: 1`,
     );
   });
@@ -4562,10 +4563,10 @@ describe("getPrettyTokensByArea", () => {
     actions.setPromptTokensDirty(false);
     assert.strictEqual(
       getPrettyTokensByArea(),
-      `- Chat messages: 9
+      `- Chat messages: 8
 - Context files: 2
-- Harness and MCP tools: 859
-- Base system prompt: 628
+- Harness and MCP tools: 841
+- Base system prompt: 646
 - Skill descriptions: 1`,
     );
   });
@@ -4596,7 +4597,7 @@ describe("printLargeContextOverheadWarning", () => {
     const getWrites = mockStdoutWrites();
     printLargeContextOverheadWarning();
     assert.deepStrictEqual(getWrites(), [
-      `${YELLOW}The current set of context, skills, and tools is 71.85% of the 100,000 token context window!\n\nLasso reserves 25% of the context window for compacted summaries with the assumption that at most 70% of the context window will be used for prompt overhead. As is, the prompt overhead is large enough to break this assumption and, along with any user messages, may breach the llm's context window and cause API calls to be rejected. Consider converting some of your context to skills and minimizing MCP servers.${RESET}\n`,
+      `${YELLOW}The current set of context, skills, and tools is 71.96% of the 100,000 token context window!\n\nLasso reserves 25% of the context window for compacted summaries with the assumption that at most 70% of the context window will be used for prompt overhead. As is, the prompt overhead is large enough to break this assumption and, along with any user messages, may breach the llm's context window and cause API calls to be rejected. Consider converting some of your context to skills and minimizing MCP servers.${RESET}\n`,
     ]);
   });
 });
@@ -5070,7 +5071,7 @@ describe("fence", () => {
         fencePrint("Output", { showSessionInfo: true });
 
         assert.deepStrictEqual(getWrites(), [
-          `${GREY}━━ ${BOLD}Output${BOLD_RESET} (500ms) (0 tokens in session) (1.445% of context window) ━━${RESET}\n`,
+          `${GREY}━━ ${BOLD}Output${BOLD_RESET} (500ms) (0 tokens in session) (1.529% of context window) ━━${RESET}\n`,
         ]);
       });
 
@@ -5509,7 +5510,7 @@ describe("usage-format", () => {
         actions.setModel("test-model");
         actions.setContextWindowPerModel({ "test-model": 10_000 });
         const result = getPrettyContextWindowUsage();
-        assert.strictEqual(result, "18.49% of context window");
+        assert.strictEqual(result, "19.57% of context window");
       });
 
       it("returns the percent of the context window used", () => {
@@ -5551,7 +5552,7 @@ describe("usage-format", () => {
         actions.setPromptTokens(5_000);
         actions.setPromptTokensDirty(true);
         const result = getPrettyContextWindowUsage();
-        assert.strictEqual(result, "18.61% of context window");
+        assert.strictEqual(result, "19.69% of context window");
       });
 
       it("uses the stored token count when tokens are not stale", () => {
@@ -5570,7 +5571,7 @@ describe("usage-format", () => {
       actions.setModel("test-model");
       actions.setContextWindowPerModel({ "test-model": 10_000 });
       const result = getPrettyContextWindowUsage();
-      assert.strictEqual(result, "18.49% of context window");
+      assert.strictEqual(result, "19.57% of context window");
     });
   });
 
@@ -5666,27 +5667,24 @@ describe("differ", () => {
         testFs._files.set("/source/file.txt", "original content");
         const differ = createToolCallDiffer();
 
-        await differ.setTempFileBefore("call-1", "/source/file.txt");
+        await differ.setTempFiles("call-1", ["/source/file.txt"]);
 
         assert.strictEqual(
           testFs._files.get("/tmp/lasso-test-uuid.txt"),
           "original content",
         );
         assert.strictEqual(
-          differ.getTempFileBefore("call-1"),
+          differ.toolCallIdsMap.get("call-1")?.get("/source/file.txt"),
           "/tmp/lasso-test-uuid.txt",
         );
 
-        await differ.cleanupTempFileBefore("call-1");
+        await differ.cleanupToolCallIdTempFiles("call-1");
 
         assert.strictEqual(
           testFs._files.has("/tmp/lasso-test-uuid.txt"),
           false,
         );
-        assert.strictEqual(
-          differ.toolCallIdToTempFileBefore.has("call-1"),
-          false,
-        );
+        assert.strictEqual(differ.toolCallIdsMap.has("call-1"), false);
       });
 
       it("warns when the before temp file cannot be created", async () => {
@@ -5697,11 +5695,10 @@ describe("differ", () => {
         const writes = mockStdoutWrites();
 
         const differ = createToolCallDiffer();
-        await differ.setTempFileBefore("call-1", "/test/file.txt");
-        await differ.diffAndCleanup("call-1", "/test/file.txt");
+        await differ.setTempFiles("call-1", ["/test/file.txt"]);
+        await differ.diffAndCleanup("call-1", ["/test/file.txt"]);
 
         assert.deepStrictEqual(writes(), [
-          `${RED}Failed to write a temp file with the content from path /test/file.txt: write failed${RESET}\n`,
           `${RED}Failed to write a temp file with the content from path /test/file.txt: write failed${RESET}\n`,
         ]);
         assert.deepStrictEqual(getState().conversation.toolEditDiffs, []);
@@ -5710,11 +5707,11 @@ describe("differ", () => {
       it("registers an empty snapshot when the source file does not exist", async () => {
         const differ = createToolCallDiffer();
 
-        await differ.setTempFileBefore("call-1", "/missing/file.txt");
+        await differ.setTempFiles("call-1", ["/missing/file.txt"]);
 
         assert.equal(testFs._files.get("/tmp/lasso-test-uuid.txt"), "");
         assert.equal(
-          differ.toolCallIdToTempFileBefore.get("call-1"),
+          differ.toolCallIdsMap.get("call-1")?.get("/missing/file.txt"),
           "/tmp/lasso-test-uuid.txt",
         );
       });
@@ -5722,46 +5719,37 @@ describe("differ", () => {
       it("cleans up an empty snapshot", async () => {
         const differ = createToolCallDiffer();
 
-        await differ.setTempFileBefore("call-1", "/missing/file.txt");
-        await differ.cleanupTempFileBefore("call-1");
+        await differ.setTempFiles("call-1", ["/missing/file.txt"]);
+        await differ.cleanupToolCallIdTempFiles("call-1");
 
         assert.equal(testFs._files.has("/tmp/lasso-test-uuid.txt"), false);
-        assert.equal(differ.toolCallIdToTempFileBefore.has("call-1"), false);
+        assert.equal(differ.toolCallIdsMap.has("call-1"), false);
       });
 
       it("cleans up all empty snapshots", async () => {
         const differ = createToolCallDiffer();
 
-        await differ.setTempFileBefore("call-1", "/missing/a.txt");
-        await differ.setTempFileBefore("call-2", "/missing/b.txt");
-        await differ.cleanupAllTempFileBefore();
+        await differ.setTempFiles("call-1", ["/missing/a.txt"]);
+        await differ.setTempFiles("call-2", ["/missing/b.txt"]);
+        await differ.cleanupAllTempFiles();
 
-        assert.deepStrictEqual(
-          [...differ.toolCallIdToTempFileBefore.keys()],
-          [],
-        );
+        assert.deepStrictEqual([...differ.toolCallIdsMap.keys()], []);
         assert.equal(testFs._files.has("/tmp/lasso-test-uuid.txt"), false);
       });
 
       it("cleans up all outstanding tool call snapshots", async () => {
         const differ = createToolCallDiffer();
-        await differ.setTempFileBefore("call-1", "/a");
-        await differ.setTempFileBefore("call-2", "/b");
+        await differ.setTempFiles("call-1", ["/a"]);
+        await differ.setTempFiles("call-2", ["/b"]);
 
-        await differ.cleanupAllTempFileBefore();
+        await differ.cleanupAllTempFiles();
 
         assert.strictEqual(
           testFs._files.has("/tmp/lasso-test-uuid.txt"),
           false,
         );
-        assert.strictEqual(
-          differ.toolCallIdToTempFileBefore.has("call-1"),
-          false,
-        );
-        assert.strictEqual(
-          differ.toolCallIdToTempFileBefore.has("call-2"),
-          false,
-        );
+        assert.strictEqual(differ.toolCallIdsMap.has("call-1"), false);
+        assert.strictEqual(differ.toolCallIdsMap.has("call-2"), false);
       });
     });
 
@@ -5770,10 +5758,10 @@ describe("differ", () => {
         testFs._files.set("/tmp/file.txt", "original content");
         const differ = createToolCallDiffer();
 
-        await differ.setTempFileBefore("call-1", "/tmp/file.txt");
+        await differ.setTempFiles("call-1", ["/tmp/file.txt"]);
 
         assert.equal(testFs._files.has("/tmp/lasso-test-uuid.txt"), false);
-        assert.equal(differ.toolCallIdToTempFileBefore.has("call-1"), false);
+        assert.equal(differ.toolCallIdsMap.has("call-1"), false);
       });
 
       it("does not diff and cleans up the after file for ignored paths", async () => {
@@ -5782,9 +5770,9 @@ describe("differ", () => {
         const differ = createToolCallDiffer();
         mockExecCalls([], commands);
 
-        await differ.setTempFileBefore("call-1", "/tmp/file.txt");
+        await differ.setTempFiles("call-1", ["/tmp/file.txt"]);
         testFs._files.set("/tmp/file.txt", "new content");
-        await differ.diffAndCleanup("call-1", "/tmp/file.txt");
+        await differ.diffAndCleanup("call-1", ["/tmp/file.txt"]);
 
         assert.equal(commands.length, 0);
         assert.deepStrictEqual(getWrites(), []);
@@ -5802,9 +5790,9 @@ describe("differ", () => {
           commands,
         );
 
-        await differ.setTempFileBefore("call-1", "/test/new-file.txt");
+        await differ.setTempFiles("call-1", ["/test/new-file.txt"]);
         testFs._files.set("/test/new-file.txt", "created content");
-        await differ.diffAndCleanup("call-1", "/test/new-file.txt");
+        await differ.diffAndCleanup("call-1", ["/test/new-file.txt"]);
 
         assert.equal(commands.length, 2);
         assert.deepStrictEqual(getWrites(), [
@@ -5816,7 +5804,53 @@ describe("differ", () => {
           { fileName: "/test/new-file.txt", diffStdout: "+created content\n" },
         ]);
         assert.equal(testFs._files.has("/tmp/lasso-test-uuid.txt"), false);
-        assert.equal(differ.toolCallIdToTempFileBefore.has("call-1"), false);
+        assert.equal(differ.toolCallIdsMap.has("call-1"), false);
+      });
+
+      it("diffs multiple affected files against their matching snapshots", async () => {
+        let randomByte = 0;
+        mock.method(crypto, "randomBytes", (size: number) =>
+          Buffer.alloc(size, randomByte++),
+        );
+        testFs._files.set("/test/a.txt", "original a");
+        testFs._files.set("/test/b.txt", "original b");
+        const commands: string[] = [];
+        const differ = createToolCallDiffer();
+        mockExecCalls(
+          [
+            { stdout: "delta 0.18.2" },
+            { stdout: "delta 0.18.2" },
+            { stdout: "+changed a\n" },
+            { stdout: "+changed b\n" },
+          ],
+          commands,
+        );
+
+        await differ.setTempFiles("call-1", ["/test/a.txt", "/test/b.txt"]);
+        const tempFileBeforeA = differ.toolCallIdsMap
+          .get("call-1")
+          ?.get("/test/a.txt");
+        const tempFileBeforeB = differ.toolCallIdsMap
+          .get("call-1")
+          ?.get("/test/b.txt");
+        assert(tempFileBeforeA !== undefined);
+        assert(tempFileBeforeB !== undefined);
+        assert.notStrictEqual(tempFileBeforeA, tempFileBeforeB);
+        assert.equal(testFs._files.get(tempFileBeforeA), "original a");
+        assert.equal(testFs._files.get(tempFileBeforeB), "original b");
+        testFs._files.set("/test/a.txt", "changed a");
+        testFs._files.set("/test/b.txt", "changed b");
+
+        await differ.diffAndCleanup("call-1", ["/test/a.txt", "/test/b.txt"]);
+
+        assert.equal(commands.length, 4);
+        assert.deepStrictEqual(getState().conversation.toolEditDiffs, [
+          { fileName: "/test/a.txt", diffStdout: "+changed a\n" },
+          { fileName: "/test/b.txt", diffStdout: "+changed b\n" },
+        ]);
+        assert.equal(testFs._files.has(tempFileBeforeA), false);
+        assert.equal(testFs._files.has(tempFileBeforeB), false);
+        assert.equal(differ.toolCallIdsMap.has("call-1"), false);
       });
 
       it("suppresses printing, continues recording tool edit diffs", async () => {
@@ -5829,9 +5863,9 @@ describe("differ", () => {
         );
         actions.setSuppressToolEditDiffs(true);
 
-        await differ.setTempFileBefore("call-1", "/test/new-file.txt");
+        await differ.setTempFiles("call-1", ["/test/new-file.txt"]);
         testFs._files.set("/test/new-file.txt", "created content");
-        await differ.diffAndCleanup("call-1", "/test/new-file.txt");
+        await differ.diffAndCleanup("call-1", ["/test/new-file.txt"]);
 
         assert.equal(commands.length, 2);
         assert.deepStrictEqual(getWrites(), []);
@@ -5839,7 +5873,7 @@ describe("differ", () => {
           { fileName: "/test/new-file.txt", diffStdout: "+created content\n" },
         ]);
         assert.equal(testFs._files.has("/tmp/lasso-test-uuid.txt"), false);
-        assert.equal(differ.toolCallIdToTempFileBefore.has("call-1"), false);
+        assert.equal(differ.toolCallIdsMap.has("call-1"), false);
       });
 
       it("diffs a deleted file against an empty after snapshot", async () => {
@@ -5851,15 +5885,16 @@ describe("differ", () => {
           commands,
         );
 
-        await differ.setTempFileBefore("call-1", "/source/file.txt");
-        await differ.diffAndCleanup("call-1", "/missing/after.txt");
+        await differ.setTempFiles("call-1", ["/source/file.txt"]);
+        testFs._files.delete("/source/file.txt");
+        await differ.diffAndCleanup("call-1", ["/source/file.txt"]);
 
         assert.equal(commands.length, 2);
         assert.deepStrictEqual(getState().conversation.toolEditDiffs, [
-          { fileName: "/missing/after.txt", diffStdout: "diff output" },
+          { fileName: "/source/file.txt", diffStdout: "diff output" },
         ]);
         assert.equal(testFs._files.has("/tmp/lasso-test-uuid.txt"), false);
-        assert.equal(differ.toolCallIdToTempFileBefore.has("call-1"), false);
+        assert.equal(differ.toolCallIdsMap.has("call-1"), false);
       });
 
       it("diffs and cleans up a successful tool call", async () => {
@@ -5871,8 +5906,8 @@ describe("differ", () => {
           commands,
         );
 
-        await differ.setTempFileBefore("call-1", "/test/file.txt");
-        await differ.diffAndCleanup("call-1", "/test/file.txt");
+        await differ.setTempFiles("call-1", ["/test/file.txt"]);
+        await differ.diffAndCleanup("call-1", ["/test/file.txt"]);
 
         assert.strictEqual(
           commands[1],
@@ -5882,10 +5917,7 @@ describe("differ", () => {
           testFs._files.has("/tmp/lasso-test-uuid.txt"),
           false,
         );
-        assert.strictEqual(
-          differ.toolCallIdToTempFileBefore.has("call-1"),
-          false,
-        );
+        assert.strictEqual(differ.toolCallIdsMap.has("call-1"), false);
         assert.deepStrictEqual(getState().conversation.toolEditDiffs, [
           { fileName: "/test/file.txt", diffStdout: "diff output" },
         ]);
@@ -5900,8 +5932,8 @@ describe("differ", () => {
           { stdout: "+added line\n" },
         ]);
 
-        await differ.setTempFileBefore("call-1", "/test/file.txt");
-        await differ.diffAndCleanup("call-1", "/test/file.txt");
+        await differ.setTempFiles("call-1", ["/test/file.txt"]);
+        await differ.diffAndCleanup("call-1", ["/test/file.txt"]);
 
         assert.deepStrictEqual(getWrites(), [
           "\n",
@@ -6114,29 +6146,26 @@ describe("differ", () => {
       mockExecCalls([{ stdout: "delta 0.18.2" }, { stdout: "", error: err }]);
       const differ = createToolCallDiffer();
       testFs._files.set("/test/file.txt", "original content");
-      await differ.setTempFileBefore("call-1", "/test/file.txt");
-      await differ.diffAndCleanup("call-1", "/test/file.txt");
+      await differ.setTempFiles("call-1", ["/test/file.txt"]);
+      await differ.diffAndCleanup("call-1", ["/test/file.txt"]);
       assert.deepStrictEqual(getWrites(), [
         `${RED}An error occurred when getting the diff for /test/file.txt: fatal${RESET}\n`,
       ]);
       assert.deepStrictEqual(getState().conversation.toolEditDiffs, []);
       assert.strictEqual(testFs._files.has("/tmp/lasso-test-uuid.txt"), false);
-      assert.strictEqual(
-        differ.toolCallIdToTempFileBefore.has("call-1"),
-        false,
-      );
+      assert.strictEqual(differ.toolCallIdsMap.has("call-1"), false);
     });
 
     it("warns when the after temp file cannot be created", async () => {
       const writes = mockStdoutWrites();
       testFs._files.set("/test/file.txt", "original content");
       const differ = createToolCallDiffer();
-      await differ.setTempFileBefore("call-1", "/test/file.txt");
+      await differ.setTempFiles("call-1", ["/test/file.txt"]);
       mock.method(fsDeps, "writeFile", () =>
         Promise.reject(new Error("write failed")),
       );
 
-      await differ.diffAndCleanup("call-1", "/test/file.txt");
+      await differ.diffAndCleanup("call-1", ["/test/file.txt"]);
 
       assert.deepStrictEqual(writes(), [
         `${RED}Failed to write a temp file with the content from path /test/file.txt: write failed${RESET}\n`,
@@ -6149,8 +6178,8 @@ describe("differ", () => {
       testFs._files.set("/test/file.txt", "original content");
       mockExecCalls([{ stdout: "delta 0.18.2" }, { stdout: "" }]);
       const differ = createToolCallDiffer();
-      await differ.setTempFileBefore("call-1", "/test/file.txt");
-      await differ.diffAndCleanup("call-1", "/test/file.txt");
+      await differ.setTempFiles("call-1", ["/test/file.txt"]);
+      await differ.diffAndCleanup("call-1", ["/test/file.txt"]);
       assert.deepStrictEqual(getWrites(), []);
       assert.deepStrictEqual(getState().conversation.toolEditDiffs, []);
     });
@@ -10841,11 +10870,11 @@ l---
       printTokens();
       assert.deepStrictEqual(getWrites(), [
         "\n",
-        `${BLUE}Token count: 1,863 (1.456% of context window)${RESET}\n`,
+        `${BLUE}Token count: 1,970 (1.541% of context window)${RESET}\n`,
         `- Chat messages: 11
 - Context files: 3
-- Harness and MCP tools: 1,067
-- Base system prompt: 781
+- Harness and MCP tools: 1,106
+- Base system prompt: 849
 - Skill descriptions: 1
 `,
         "\n",
@@ -10858,11 +10887,11 @@ l---
       printTokens();
       assert.deepStrictEqual(getWrites(), [
         "\n",
-        `${BLUE}Token count: 1,499.195 (1.172% of context window)${RESET}\n`,
-        `- Chat messages: 9
+        `${BLUE}Token count: 1,498.479 (1.172% of context window)${RESET}\n`,
+        `- Chat messages: 8
 - Context files: 2
-- Harness and MCP tools: 859
-- Base system prompt: 628
+- Harness and MCP tools: 841
+- Base system prompt: 646
 - Skill descriptions: 1
 `,
         "\n",
@@ -10875,11 +10904,11 @@ l---
       printTokens();
       assert.deepStrictEqual(getWrites(), [
         "\n",
-        `${BLUE}Token count: 1,863 (18.64% of context window)${RESET}\n`,
+        `${BLUE}Token count: 1,970 (19.72% of context window)${RESET}\n`,
         `- Chat messages: 11
 - Context files: 3
-- Harness and MCP tools: 1,067
-- Base system prompt: 781
+- Harness and MCP tools: 1,106
+- Base system prompt: 849
 - Skill descriptions: 1
 `,
         "\n",
@@ -12046,7 +12075,7 @@ editor input
 - **[lasso] web_fetch_html** _(75 tokens)_: Fetch a web page by URL and return its readable content, parsed to extract the main article.
 - **[lasso] web_fetch_json** _(67 tokens)_: Fetch a JSON API endpoint by URL and return the parsed JSON response.
 - **[lasso] load_skill** _(59 tokens)_: Load a skill to get specialized instructions
-- **[lasso] bash** _(202 tokens)_: Execute a bash command and return its output.
+- **[lasso] bash** _(241 tokens)_: Execute a bash command and return its output.
 - **[lasso] read_image** _(62 tokens)_: Read an image file from disk so you can look at it
 - **[lasso] mcp_list_resources** _(93 tokens)_: List the resources of an mcp server
 - **[lasso] mcp_read_resource** _(72 tokens)_: Read a resource from an mcp server
@@ -12085,7 +12114,7 @@ editor input
 - **[lasso] web_fetch_html** _(75 tokens)_: Fetch a web page by URL and return its readable content, parsed to extract the main article.
 - **[lasso] web_fetch_json** _(67 tokens)_: Fetch a JSON API endpoint by URL and return the parsed JSON response.
 - **[lasso] load_skill** _(59 tokens)_: Load a skill to get specialized instructions
-- **[lasso] bash** _(202 tokens)_: Execute a bash command and return its output.
+- **[lasso] bash** _(241 tokens)_: Execute a bash command and return its output.
 - **[lasso] read_image** _(62 tokens)_: Read an image file from disk so you can look at it
 - **[lasso] mcp_list_resources** _(93 tokens)_: List the resources of an mcp server
 - **[lasso] mcp_read_resource** _(72 tokens)_: Read a resource from an mcp server
@@ -12934,7 +12963,7 @@ editor input
 - **[lasso] web_fetch_html** _(75 tokens)_: Fetch a web page by URL and return its readable content, parsed to extract the main article.
 - **[lasso] web_fetch_json** _(67 tokens)_: Fetch a JSON API endpoint by URL and return the parsed JSON response.
 - **[lasso] load_skill** _(59 tokens)_: Load a skill to get specialized instructions
-- **[lasso] bash** _(202 tokens)_: Execute a bash command and return its output.
+- **[lasso] bash** _(241 tokens)_: Execute a bash command and return its output.
 - **[lasso] read_image** _(62 tokens)_: Read an image file from disk so you can look at it
 - **[lasso] mcp_list_resources** _(93 tokens)_: List the resources of an mcp server
 - **[lasso] mcp_read_resource** _(72 tokens)_: Read a resource from an mcp server
@@ -13444,11 +13473,11 @@ log content
         assert.strictEqual(result, null);
         assert.deepStrictEqual(getWrites(), [
           "\n",
-          `${BLUE}Token count: 781 (0% of context window)${RESET}\n`,
+          `${BLUE}Token count: 845 (0% of context window)${RESET}\n`,
           `- Chat messages: 0
 - Context files: 0
 - Harness and MCP tools: 0
-- Base system prompt: 781
+- Base system prompt: 849
 - Skill descriptions: 0
 `,
           "\n",

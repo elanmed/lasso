@@ -300,28 +300,37 @@ describe("tools", () => {
       });
     });
 
-    it("requires a file path for create-update-delete commands", () => {
+    it("requires file paths for create-update-delete commands", () => {
       assert.throws(
         () =>
           bashToolInputSchema.parse({
             fileSystemAccessType: "create-update-delete",
-            command: "write file.txt",
+            command: "write files",
           }),
-        /filePath is required when fileSystemAccessType is create-update-delete/,
+        /filePaths is required when fileSystemAccessType is create-update-delete/,
       );
     });
 
-    it("accepts create-update-delete commands with a file path", () => {
+    it("accepts create-update-delete commands with multiple file paths", () => {
       const result = bashToolInputSchema.parse({
         fileSystemAccessType: "create-update-delete",
-        filePath: "file.txt",
-        command: "write file.txt",
+        filePaths: ["file.txt", "other.txt"],
+        command: "write files",
       });
       assert.deepStrictEqual(result, {
         fileSystemAccessType: "create-update-delete",
-        filePath: "file.txt",
-        command: "write file.txt",
+        filePaths: ["file.txt", "other.txt"],
+        command: "write files",
       });
+    });
+    it("rejects an empty file path list", () => {
+      assert.throws(() =>
+        bashToolInputSchema.parse({
+          fileSystemAccessType: "create-update-delete",
+          filePaths: [],
+          command: "write files",
+        }),
+      );
     });
   });
 
@@ -1166,7 +1175,7 @@ describe("tools", () => {
               toolCallId: "call-1",
               input: {
                 fileSystemAccessType: "create-update-delete",
-                filePath: "/test/file.txt",
+                filePaths: ["/test/file.txt"],
                 command: "write",
               },
             },
@@ -1179,7 +1188,7 @@ describe("tools", () => {
               toolCallId: "call-1",
               input: {
                 fileSystemAccessType: "create-update-delete",
-                filePath: "/test/file.txt",
+                filePaths: ["/test/file.txt"],
                 command: "write",
               },
             },

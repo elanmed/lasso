@@ -996,102 +996,119 @@ export function getPrettyApiDuration({
   return getPrettyDuration(startTime, endTime, { includeMicroseconds });
 }
 
-export function isToolCallDiffIgnoredPath(path: string) {
-  return path.startsWith(os.tmpdir());
+export function isToolCallDiffSafePath(path: string) {
+  return !path.startsWith(os.tmpdir());
 }
 
 export function createToolCallDiffer() {
-  const toolCallIdToTempFileBefore = new Map<string, string>();
+  type ToolCallId = string;
+  type FilePath = string;
+  type TempFilePath = string;
+  const toolCallIdsMap = new Map<ToolCallId, Map<FilePath, TempFilePath>>();
 
-  async function setTempFileBefore(toolCallId: string, path: string) {
-    if (isToolCallDiffIgnoredPath(path)) return;
-    const tempFileBefore = await getTempFileName({ initialContentPath: path });
-    if (tempFileBefore === null) return;
-    toolCallIdToTempFileBefore.set(toolCallId, tempFileBefore);
-  }
+  async function setTempFiles(toolCallId: string, paths: string[]) {
+    const filePathToTempFileBefore = new Map<FilePath, TempFilePath>();
 
-  function getTempFileBefore(toolCallId: string) {
-    const tempFileBefore = toolCallIdToTempFileBefore.get(toolCallId);
-    assertAtRuntime(tempFileBefore !== undefined);
-    return tempFileBefore;
-  }
-
-  async function diffAndCleanup(toolCallId: string, path: string) {
-    const tempFileAfterPath = await getTempFileName({
-      initialContentPath: path,
+    const pathsToSnapshot = Array.from(new Set(paths)).filter(
+      isToolCallDiffSafePath,
+    );
+    const promises = pathsToSnapshot.map(async (path) => {
+      const tempFile = await getTempFileName({ initialContentPath: path });
+      if (tempFile === null) return;
+      filePathToTempFileBefore.set(path, tempFile);
     });
-    if (tempFileAfterPath === null) {
-      if (toolCallIdToTempFileBefore.has(toolCallId)) {
-        await cleanupTempFileBefore(toolCallId);
-      }
-      return;
+    await Promise.all(promises);
+
+    if (filePathToTempFileBefore.size > 0) {
+      toolCallIdsMap.set(toolCallId, filePathToTempFileBefore);
     }
+  }
 
-    if (!toolCallIdToTempFileBefore.has(toolCallId)) {
-      await tryCatchAsync(fsDeps.unlink(tempFileAfterPath));
-      return;
-    }
-
-    const tempFileBeforePath = getTempFileBefore(toolCallId);
-
-    const diffResult = await tryCatchAsync(
-      execGitDiff({
-        tempFileBeforePath,
-        tempFileAfterPath,
-      }),
+  async function diffAndCleanup(toolCallId: string, paths: string[]) {
+    const tempFilesBefore = toolCallIdsMap.get(toolCallId);
+    if (tempFilesBefore === undefined) return;
+    const pathsToDiff = Array.from(new Set(paths)).filter(
+      isToolCallDiffSafePath,
     );
 
-    if (!diffResult.ok) {
-      print.error(
-        `An error occurred when getting the diff for ${path}: ${getMessageFromError(diffResult.error)}`,
-      );
-      await tryCatchAsync(fsDeps.unlink(tempFileAfterPath));
-      await cleanupTempFileBefore(toolCallId);
-      return;
-    }
-
-    if (diffResult.value.stdout.length > 0) {
-      actions.appendToolEditDiff({
-        fileName: path,
-        diffStdout: diffResult.value.stdout,
+    const promises = pathsToDiff.map(async (path) => {
+      const tempFileAfterPath = await getTempFileName({
+        initialContentPath: path,
       });
+      if (tempFileAfterPath === null) return;
 
-      if (!getState().config.suppressToolEditDiffs) {
-        printNewline();
-        fencePrint(`File change: ${path}`);
-        print.plain(normalizeNewline(diffResult.value.stdout));
-        printNewline();
+      const tempFileBeforePath = tempFilesBefore.get(path);
+      if (tempFileBeforePath === undefined) {
+        await tryCatchAsync(fsDeps.unlink(tempFileAfterPath));
+        return;
       }
-    }
 
-    await tryCatchAsync(fsDeps.unlink(tempFileAfterPath));
-    await cleanupTempFileBefore(toolCallId);
+      const diffResult = await tryCatchAsync(
+        execGitDiff({
+          tempFileBeforePath,
+          tempFileAfterPath,
+        }),
+      );
+
+      if (!diffResult.ok) {
+        print.error(
+          `An error occurred when getting the diff for ${path}: ${getMessageFromError(diffResult.error)}`,
+        );
+        await tryCatchAsync(fsDeps.unlink(tempFileAfterPath));
+        return;
+      }
+
+      if (diffResult.value.stdout.length > 0) {
+        actions.appendToolEditDiff({
+          fileName: path,
+          diffStdout: diffResult.value.stdout,
+        });
+
+        if (!getState().config.suppressToolEditDiffs) {
+          printNewline();
+          fencePrint(`File change: ${path}`);
+          print.plain(normalizeNewline(diffResult.value.stdout));
+          printNewline();
+        }
+      }
+
+      await tryCatchAsync(fsDeps.unlink(tempFileAfterPath));
+    });
+    await Promise.all(promises);
+    await cleanupToolCallIdTempFiles(toolCallId);
   }
 
-  async function cleanupTempFileBefore(toolCallId: string) {
-    const tempFile = toolCallIdToTempFileBefore.get(toolCallId);
-    if (tempFile === undefined) return;
-    await tryCatchAsync(fsDeps.unlink(tempFile));
-    toolCallIdToTempFileBefore.delete(toolCallId);
+  async function cleanupToolCallIdTempFiles(toolCallId: string) {
+    const tempFiles = toolCallIdsMap.get(toolCallId);
+    if (tempFiles === undefined) return;
+
+    const promises = tempFiles
+      .values()
+      .map((tempFile) => tryCatchAsync(fsDeps.unlink(tempFile)));
+    await Promise.all(promises);
+    toolCallIdsMap.delete(toolCallId);
   }
 
-  async function cleanupAllTempFileBefore() {
-    for (const tempFile of toolCallIdToTempFileBefore.values()) {
-      await tryCatchAsync(fsDeps.unlink(tempFile));
-    }
-    toolCallIdToTempFileBefore.clear();
+  async function cleanupAllTempFiles() {
+    const promises = toolCallIdsMap
+      .values()
+      .flatMap((tempFiles) =>
+        tempFiles
+          .values()
+          .map((tempFile) => tryCatchAsync(fsDeps.unlink(tempFile))),
+      );
+    await Promise.all(promises);
+    toolCallIdsMap.clear();
   }
 
   return {
-    toolCallIdToTempFileBefore,
-    setTempFileBefore,
-    getTempFileBefore,
+    toolCallIdsMap,
+    setTempFiles,
     diffAndCleanup,
-    cleanupTempFileBefore,
-    cleanupAllTempFileBefore,
+    cleanupToolCallIdTempFiles,
+    cleanupAllTempFiles,
   };
 }
-
 export function getHeaders() {
   const headers: Record<string, string> = {};
   if (getState().config.gateway === "opencode") {
@@ -1872,9 +1889,9 @@ export async function createSubagentTool(
             if (
               bashSchemaResult.fileSystemAccessType === "create-update-delete"
             ) {
-              await toolCallDiffer.setTempFileBefore(
+              await toolCallDiffer.setTempFiles(
                 toolCall.toolCallId,
-                bashSchemaResult.filePath,
+                bashSchemaResult.filePaths,
               );
             }
           },
@@ -1889,12 +1906,14 @@ export async function createSubagentTool(
               bashSchemaResult.fileSystemAccessType === "create-update-delete"
             ) {
               if (!success) {
-                await toolCallDiffer.cleanupTempFileBefore(toolCall.toolCallId);
+                await toolCallDiffer.cleanupToolCallIdTempFiles(
+                  toolCall.toolCallId,
+                );
                 return;
               }
               await toolCallDiffer.diffAndCleanup(
                 toolCall.toolCallId,
-                bashSchemaResult.filePath,
+                bashSchemaResult.filePaths,
               );
             }
           },
@@ -1902,7 +1921,7 @@ export async function createSubagentTool(
       );
 
       if (!generateTextResult.ok) {
-        await toolCallDiffer.cleanupAllTempFileBefore();
+        await toolCallDiffer.cleanupAllTempFiles();
 
         const timeoutError = getTimeoutError(signal);
         if (isAbortError(generateTextResult.error)) {
@@ -1922,7 +1941,7 @@ export async function createSubagentTool(
 
       const { usage, text } = generateTextResult.value;
       await appendModelUsage(usage, model);
-      await toolCallDiffer.cleanupAllTempFileBefore();
+      await toolCallDiffer.cleanupAllTempFiles();
 
       return {
         content: text,
@@ -2406,9 +2425,9 @@ export async function resolveApiCall(userInput: string) {
             const input = bashToolInputSchema.parse(toolCall.input);
             toolPrint("bash", input.command);
             if (input.fileSystemAccessType === "create-update-delete") {
-              await toolCallDiffer.setTempFileBefore(
+              await toolCallDiffer.setTempFiles(
                 toolCall.toolCallId,
-                input.filePath,
+                input.filePaths,
               );
             }
             break;
@@ -2464,12 +2483,14 @@ export async function resolveApiCall(userInput: string) {
         const bashSchemaResult = bashToolInputSchema.parse(toolCall.input);
         if (bashSchemaResult.fileSystemAccessType === "create-update-delete") {
           if (!success) {
-            await toolCallDiffer.cleanupTempFileBefore(toolCall.toolCallId);
+            await toolCallDiffer.cleanupToolCallIdTempFiles(
+              toolCall.toolCallId,
+            );
             return;
           }
           await toolCallDiffer.diffAndCleanup(
             toolCall.toolCallId,
-            bashSchemaResult.filePath,
+            bashSchemaResult.filePaths,
           );
         }
       },
@@ -2481,7 +2502,7 @@ export async function resolveApiCall(userInput: string) {
 
   if (!generateTextResult.ok) {
     actions.setPromptTokensDirty(true);
-    await toolCallDiffer.cleanupAllTempFileBefore();
+    await toolCallDiffer.cleanupAllTempFiles();
 
     if (isAbortError(generateTextResult.error)) {
       const interruptContent = "[Interrupted before a response was generated]";
