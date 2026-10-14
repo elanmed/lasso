@@ -4452,11 +4452,11 @@ describe("getPromptOverheadTokensApprox", () => {
   });
 
   it("sums the approx of system content and tools", () => {
-    assert.strictEqual(getPromptOverheadTokensApprox(), 1958);
+    assert.strictEqual(getPromptOverheadTokensApprox(), 1961);
   });
 
   it("takes tools into account when computing the prompt overhead approx", () => {
-    assert.strictEqual(getApproxPromptTokens(), 1958);
+    assert.strictEqual(getApproxPromptTokens(), 1961);
   });
 });
 
@@ -4468,7 +4468,7 @@ describe("getApproxPromptTokens", () => {
 
   it("sums messages approx with the system instructions approx", () => {
     actions.setConversationMessages([{ role: "user", content: "hello" }]);
-    assert.strictEqual(getApproxPromptTokens(), 1969);
+    assert.strictEqual(getApproxPromptTokens(), 1972);
   });
 });
 
@@ -4491,7 +4491,7 @@ describe("getCurrentPromptTokens", () => {
   it("returns the approx prompt tokens when dirty", () => {
     actions.setPromptTokens(50);
     actions.setPromptTokensDirty(true);
-    assert.strictEqual(getCurrentPromptTokens(), 1958);
+    assert.strictEqual(getCurrentPromptTokens(), 1961);
   });
 });
 
@@ -4509,7 +4509,7 @@ describe("getTokensByArea", () => {
       messages: 11,
       context: 3,
       tools: 1106,
-      basePrompt: 849,
+      basePrompt: 853,
       skills: 1,
     });
   });
@@ -4520,7 +4520,7 @@ describe("getTokensByArea", () => {
       messages: 11,
       context: 3,
       tools: 1106,
-      basePrompt: 849,
+      basePrompt: 853,
       skills: 1,
     });
   });
@@ -4529,11 +4529,11 @@ describe("getTokensByArea", () => {
     actions.setPromptTokens(1500);
     actions.setPromptTokensDirty(false);
     assert.deepStrictEqual(getTokensByArea(), {
-      messages: 8.367139959432048,
-      context: 2.2819472616632863,
-      tools: 841.2778904665315,
-      basePrompt: 645.79107505071,
-      skills: 0.7606490872210954,
+      messages: 8.354430379746836,
+      context: 2.278481012658228,
+      tools: 840,
+      basePrompt: 647.8481012658228,
+      skills: 0.759493670886076,
     });
   });
 });
@@ -4553,7 +4553,7 @@ describe("getPrettyTokensByArea", () => {
       `- Chat messages: 11
 - Context files: 3
 - Harness and MCP tools: 1,106
-- Base system prompt: 849
+- Base system prompt: 853
 - Skill descriptions: 1`,
     );
   });
@@ -4565,8 +4565,8 @@ describe("getPrettyTokensByArea", () => {
       getPrettyTokensByArea(),
       `- Chat messages: 8
 - Context files: 2
-- Harness and MCP tools: 841
-- Base system prompt: 646
+- Harness and MCP tools: 840
+- Base system prompt: 648
 - Skill descriptions: 1`,
     );
   });
@@ -5071,7 +5071,7 @@ describe("fence", () => {
         fencePrint("Output", { showSessionInfo: true });
 
         assert.deepStrictEqual(getWrites(), [
-          `${GREY}━━ ${BOLD}Output${BOLD_RESET} (500ms) (0 tokens in session) (1.529% of context window) ━━${RESET}\n`,
+          `${GREY}━━ ${BOLD}Output${BOLD_RESET} (500ms) (0 tokens in session) (1.531% of context window) ━━${RESET}\n`,
         ]);
       });
 
@@ -5510,7 +5510,7 @@ describe("usage-format", () => {
         actions.setModel("test-model");
         actions.setContextWindowPerModel({ "test-model": 10_000 });
         const result = getPrettyContextWindowUsage();
-        assert.strictEqual(result, "19.57% of context window");
+        assert.strictEqual(result, "19.6% of context window");
       });
 
       it("returns the percent of the context window used", () => {
@@ -5552,7 +5552,7 @@ describe("usage-format", () => {
         actions.setPromptTokens(5_000);
         actions.setPromptTokensDirty(true);
         const result = getPrettyContextWindowUsage();
-        assert.strictEqual(result, "19.69% of context window");
+        assert.strictEqual(result, "19.72% of context window");
       });
 
       it("uses the stored token count when tokens are not stale", () => {
@@ -5571,7 +5571,7 @@ describe("usage-format", () => {
       actions.setModel("test-model");
       actions.setContextWindowPerModel({ "test-model": 10_000 });
       const result = getPrettyContextWindowUsage();
-      assert.strictEqual(result, "19.57% of context window");
+      assert.strictEqual(result, "19.6% of context window");
     });
   });
 
@@ -10870,11 +10870,11 @@ l---
       printTokens();
       assert.deepStrictEqual(getWrites(), [
         "\n",
-        `${BLUE}Token count: 1,970 (1.541% of context window)${RESET}\n`,
+        `${BLUE}Token count: 1,974 (1.543% of context window)${RESET}\n`,
         `- Chat messages: 11
 - Context files: 3
 - Harness and MCP tools: 1,106
-- Base system prompt: 849
+- Base system prompt: 853
 - Skill descriptions: 1
 `,
         "\n",
@@ -10887,11 +10887,11 @@ l---
       printTokens();
       assert.deepStrictEqual(getWrites(), [
         "\n",
-        `${BLUE}Token count: 1,498.479 (1.172% of context window)${RESET}\n`,
+        `${BLUE}Token count: 1,499.241 (1.172% of context window)${RESET}\n`,
         `- Chat messages: 8
 - Context files: 2
-- Harness and MCP tools: 841
-- Base system prompt: 646
+- Harness and MCP tools: 840
+- Base system prompt: 648
 - Skill descriptions: 1
 `,
         "\n",
@@ -10904,11 +10904,11 @@ l---
       printTokens();
       assert.deepStrictEqual(getWrites(), [
         "\n",
-        `${BLUE}Token count: 1,970 (19.72% of context window)${RESET}\n`,
+        `${BLUE}Token count: 1,974 (19.75% of context window)${RESET}\n`,
         `- Chat messages: 11
 - Context files: 3
 - Harness and MCP tools: 1,106
-- Base system prompt: 849
+- Base system prompt: 853
 - Skill descriptions: 1
 `,
         "\n",
@@ -13477,7 +13477,7 @@ log content
           `- Chat messages: 0
 - Context files: 0
 - Harness and MCP tools: 0
-- Base system prompt: 849
+- Base system prompt: 853
 - Skill descriptions: 0
 `,
           "\n",

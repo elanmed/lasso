@@ -41,20 +41,13 @@ sed -e "\${START},\${END}d" target.txt > "$TMPFILE" && mv "$TMPFILE" target.txt
 const readInstructions = `### Read a range of lines
 \`\`\`bash
 sed -n "\${START},\${END}p" target.txt
-\`\`\`
-
-### Get total line count
-\`\`\`bash
-wc -l < target.txt
 \`\`\``;
 
-const bashIntroHeadingTwo = `## Filesystem actions (via bash)
+const bashIntroHeadingTwo = `## Filesystem actions via bash
+
+The following instructions show how to use plain bash to perform basic file operations. These instructions are suggestions - use them at your discretion. For example, you may prefer to write an inline Python or Node.js script, especially when editing multiple files at once.
 
 Note: \${START}, \${END}, \${LINE} are placeholders. Replace with actual line numbers.`;
-
-const bashUsageHeadingTwo = `## [lasso] Bash tool usage`;
-
-const bashUsageLis = `- Bash tools are optional; use them at your discretion. For read-write tasks, another available approach can be more convenient, especially when editing multiple files at once.`;
 
 const toolDiffLi = `- After a successful file-modifying tool (bash with fileSystemAccessType create-update-delete): the CLI auto-outputs a diff. Do NOT repeat the code, file contents, or a diff of the change in your response — summarize in prose only. Verification via a targeted read (e.g. sed -n) is fine, but don't re-echo what the diff already showed`;
 
@@ -83,8 +76,7 @@ const getMcpLis = (mcpClients: MCPClients) => {
 
 const webSearchHeadingTwo = `## [lasso] Web search`;
 
-const webSearchLis = `
-- When using the \`web_fetch_html\` or \`web_fetch_json\` tools for web search, note that Google, Bing, and most other search engines block automated requests.
+const webSearchLis = `- When using the \`web_fetch_html\` or \`web_fetch_json\` tools for web search, note that Google, Bing, and most other search engines block automated requests.
 - Instead, use the following agent-friendly search engines via constructed urls:
   - \`https://html.duckduckgo.com/html/?q=<url-encoded query>\` (use with \`web_fetch_html\`)
   - \`https://search.marginalia.nu/search?query=<url-encoded query>\` (use with \`web_fetch_html\`)
@@ -100,7 +92,7 @@ ${corePrinciplesHeading}
 - All responses are piped through bat as markdown — always emit valid markdown
 ${toolDiffLi}
 
-${bashUsageHeadingTwo}\n\n${bashUsageLis}\n\n${webSearchHeadingTwo}
+${webSearchHeadingTwo}
 
 ${webSearchLis}
 
@@ -122,9 +114,14 @@ export const getSubagentPrompt = (
     return `${headingOne}
 
 ${corePrinciplesHeading}
+
 - You are a read-only subagent. Although you have access to a bash tool, you must NOT use it to perform any modifications to the file system.
 
-${bashUsageHeadingTwo}\n\n${bashUsageLis}\n\n${webSearchHeadingTwo}\n\n${webSearchLis}\n\n${mcpHeadingTwo}
+${webSearchHeadingTwo}
+
+${webSearchLis}
+
+${mcpHeadingTwo}
 
 ${getMcpLis(mcpClients)}
 
@@ -136,9 +133,14 @@ ${readInstructions}`;
   return `${headingOne}
 
 ${corePrinciplesHeading}
+
 - You are a subagent with read-write access.
 
-${bashUsageHeadingTwo}\n\n${bashUsageLis}\n\n${webSearchHeadingTwo}\n\n${webSearchLis}\n\n${mcpHeadingTwo}
+${webSearchHeadingTwo}
+
+${webSearchLis}
+
+${mcpHeadingTwo}
 
 ${getMcpLis(mcpClients)}
 
