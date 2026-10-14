@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.13.0 - 2026-10-14
+
+- Add a second compaction pass after API calls
+- Allow the bash tool to accept a list of updated files
+- Use usage from the final API step when reporting prompt token counts
+
 ## v0.12.1 - 2026-10-13
 
 - Remove the `/fetch` command
