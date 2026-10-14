@@ -795,6 +795,39 @@ describe("api", () => {
           dirty: true,
         });
       });
+
+      it("preserves completed step messages when interrupted", async () => {
+        const err = makeAbortError();
+        mock.method(aiDeps, "generateText", (opts: Record<string, unknown>) => {
+          const onStepFinish = opts["onStepFinish"] as (stepResult: {
+            response: { messages: ModelMessage[] };
+          }) => void;
+          onStepFinish({
+            response: {
+              messages: [{ role: "assistant", content: "completed step 1" }],
+            },
+          });
+          onStepFinish({
+            response: {
+              messages: [{ role: "assistant", content: "completed step 2" }],
+            },
+          });
+          return Promise.reject(err);
+        });
+
+        const result = await resolveApiCall("hello");
+
+        assert.strictEqual(result, null);
+        assert.deepStrictEqual(getState().conversation.messages, [
+          { role: "user", content: "hello" },
+          { role: "assistant", content: "completed step 1" },
+          { role: "assistant", content: "completed step 2" },
+          {
+            role: "assistant",
+            content: "[Interrupted before a response was generated]",
+          },
+        ]);
+      });
     });
   });
 

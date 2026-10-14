@@ -2407,6 +2407,8 @@ export async function resolveApiCall(userInput: string) {
     messages: getAppendedConversationMessages(userMessage),
   });
 
+  const completedStepMessages: AiModelMessage[] = [];
+
   actions.resetToolEditDiffs();
   actions.setApiStartTime();
   actions.setApiStreamAbortController(new AbortController());
@@ -2496,6 +2498,9 @@ export async function resolveApiCall(userInput: string) {
           );
         }
       },
+      onStepFinish: (stepResult) => {
+        completedStepMessages.push(...stepResult.response.messages);
+      },
     }),
   );
   stopLoadingState();
@@ -2513,8 +2518,12 @@ export async function resolveApiCall(userInput: string) {
         content: interruptContent,
       };
 
+      // TODO (later): do I want to save the completedStepMessages to the transcript?
       await syncSessionFile({
-        messages: getAppendedConversationMessages(interruptMessage),
+        messages: getAppendedConversationMessages(
+          ...completedStepMessages,
+          interruptMessage,
+        ),
       });
 
       if (getState().terminal.editorInputValue !== null) {
