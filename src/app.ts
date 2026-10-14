@@ -4024,7 +4024,10 @@ export async function pageContext({ isTyped = false }: SpacingOpts = {}) {
     .content.skills.filter((skill) =>
       skill.name.startsWith(contextFileSkillNamePrefix),
     )
-    .map((skill) => `- ${join(skill.dir, "AGENTS.md")} (as a skill)`);
+    .map(
+      (skill) =>
+        `- ${join(skill.dir, "AGENTS.md")} _(${strToApproxTokens(skill.description).toLocaleString()}-${strToApproxTokens(skill.content).toLocaleString()} tokens)_`,
+    );
 
   const formatted = contextFiles.concat(contextSkillFiles).join("\n");
 

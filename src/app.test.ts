@@ -12181,7 +12181,7 @@ editor input
         `# Available context files:
 
 - /project/AGENTS.md _(2 tokens)_
-- /other/AGENTS.md (as a skill)
+- /other/AGENTS.md _(6-4 tokens)_
 
 `,
       );
