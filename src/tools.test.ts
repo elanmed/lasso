@@ -708,7 +708,7 @@ describe("tools", () => {
           "HTTP 500: Internal Server Error when fetching https://example.com/broken",
       });
       assert.deepStrictEqual(getWrites(), [
-        `${BLUE}${BOLD}HTTP 500: Internal Server Error${BOLD_RESET}: https://example.com/broken${RESET}\n`,
+        `${BLUE}${BOLD}HTTP 500${BOLD_RESET}: https://example.com/broken${RESET}\n`,
       ]);
     });
 
@@ -807,7 +807,7 @@ describe("tools", () => {
           "HTTP 404: Not Found when fetching https://api.example.com/missing",
       });
       assert.deepStrictEqual(getWrites(), [
-        `${BLUE}${BOLD}HTTP 404: Not Found${BOLD_RESET}: https://api.example.com/missing${RESET}\n`,
+        `${BLUE}${BOLD}HTTP 404${BOLD_RESET}: https://api.example.com/missing${RESET}\n`,
       ]);
     });
 

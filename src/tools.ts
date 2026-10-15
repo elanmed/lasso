@@ -167,10 +167,7 @@ export async function executeWebFetchHtmlTool(
 
   const response = fetchResult.value;
   if (!response.ok) {
-    output.toolPrint(
-      `HTTP ${String(response.status)}: ${response.statusText}`,
-      href,
-    );
+    output.toolPrint(`HTTP ${String(response.status)}`, href);
     return {
       isError: true,
       content: `HTTP ${String(response.status)}: ${response.statusText} when fetching ${href}`,
@@ -302,10 +299,7 @@ export async function executeWebFetchJsonTool(
 
   const response = fetchResult.value;
   if (!response.ok) {
-    output.toolPrint(
-      `HTTP ${String(response.status)}: ${response.statusText}`,
-      href,
-    );
+    output.toolPrint(`HTTP ${String(response.status)}`, href);
     return {
       isError: true,
       content: `HTTP ${String(response.status)}: ${response.statusText} when fetching ${href}`,
