@@ -1669,6 +1669,7 @@ export const builtinSlashCommands = [
   "tools",
   "record",
   "mcps",
+  "steer",
 ] as const;
 
 export type BuiltinSlashCommand = (typeof builtinSlashCommands)[number];
@@ -2526,6 +2527,12 @@ export async function resolveApiCall(userInput: string) {
         ),
       });
 
+      if (getState().terminal.isSteering) {
+        print.info("Steering" + getUnicodeChar("…"));
+        actions.setIsSteering(false);
+        return null;
+      }
+
       if (getState().terminal.editorInputValue !== null) {
         await resolveInterruptWithEditor();
       }
@@ -3069,6 +3076,11 @@ export function initKeypress(rl: readline.Interface) {
           }
           case "mcps": {
             await pageMcps();
+            redrawPendingQuestion();
+            return;
+          }
+          case "steer": {
+            steerCommand();
             redrawPendingQuestion();
             return;
           }
@@ -3683,6 +3695,13 @@ async function resolveBuiltinSlashCommand(
       }
 
       await pageMcps({ isTyped: true });
+      return { handled: true, inputFromCommand: null };
+    }
+    case "steer": {
+      if (printUsageIfArgs(commandWithArgs)) {
+        return { handled: true, inputFromCommand: null };
+      }
+      steerCommand({ isTyped: true });
       return { handled: true, inputFromCommand: null };
     }
     case "record": {
@@ -4591,6 +4610,35 @@ ${formatted}`;
     initialContentStr,
     contentType: "markdown",
   });
+}
+
+export function steerCommand({ isTyped = false }: SpacingOpts = {}) {
+  if (isTyped) {
+    errorWithSpacing(() => {
+      print.warning(
+        "/steer can only be triggered via a keymap during an ongoing agent turn",
+      );
+    });
+    return;
+  }
+
+  const apiStream = getState().abortControllers.apiStream;
+  if (apiStream === null) {
+    streamingSupportedWithSpacing(isTyped, () => {
+      print.warning(
+        "/steer can only be triggered during an ongoing agent turn",
+      );
+    });
+    return;
+  }
+
+  if (getState().terminal.editorInputValue === null) {
+    print.warning("The editor is empty, unable to steer");
+    return;
+  }
+
+  apiStream.abort();
+  actions.setIsSteering(true);
 }
 
 export function warnOnMissingTranscribeConfig() {

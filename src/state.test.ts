@@ -76,6 +76,7 @@ describe("state", () => {
         false,
       );
       assert.strictEqual(getState().terminal.isRecording, false);
+      assert.strictEqual(getState().terminal.isSteering, false);
       assert.strictEqual(
         getState().terminal.bufferedInputWhileInitializing,
         "",
@@ -132,6 +133,7 @@ describe("state", () => {
       actions.setPromptTokensDirty(true);
       actions.setEditorInputValue("draft");
       actions.setIsInitializing(true);
+      actions.setIsSteering(true);
       actions.appendBufferedInputWhileInitializing("buffered");
       actions.setSlashCommands([
         {
@@ -280,6 +282,16 @@ describe("state", () => {
       assert.equal(getState().terminal.isRecording, true);
       actions.setIsRecording(false);
       assert.equal(getState().terminal.isRecording, false);
+    });
+  });
+
+  describe("steering state", () => {
+    it("set-is-steering", () => {
+      assert.equal(getState().terminal.isSteering, false);
+      actions.setIsSteering(true);
+      assert.equal(getState().terminal.isSteering, true);
+      actions.setIsSteering(false);
+      assert.equal(getState().terminal.isSteering, false);
     });
   });
 

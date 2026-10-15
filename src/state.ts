@@ -94,6 +94,7 @@ interface TerminalState {
   isNonBlockingProcessOngoing: boolean;
   isInitializing: boolean;
   isRecording: boolean;
+  isSteering: boolean;
   bufferedInputWhileInitializing: string;
   bufferedStdoutWhileEditorOpen: string;
   stdoutTail: string;
@@ -173,6 +174,7 @@ const createInitialState = (): State => ({
     isNonBlockingProcessOngoing: false,
     isInitializing: false,
     isRecording: false,
+    isSteering: false,
     bufferedInputWhileInitializing: "",
     stdoutTail: "",
     rl: null,
@@ -455,6 +457,12 @@ export const actions = {
     const before = state.terminal.isRecording;
     state.terminal.isRecording = isRecording;
     logStateChange("set-is-recording", String(before), String(isRecording));
+  },
+
+  setIsSteering(isSteering: boolean) {
+    const before = state.terminal.isSteering;
+    state.terminal.isSteering = isSteering;
+    logStateChange("set-is-steering", String(before), String(isSteering));
   },
 
   appendBufferedInputWhileInitializing(input: string) {
