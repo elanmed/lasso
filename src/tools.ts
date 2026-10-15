@@ -167,12 +167,13 @@ export async function executeWebFetchHtmlTool(
 
   const response = fetchResult.value;
   if (!response.ok) {
-    const error = `HTTP ${String(response.status)}: ${response.statusText} when fetching ${href}`;
-    output.toolPrint("web_fetch_html", error);
-    output.printDoing(error);
+    output.toolPrint(
+      `HTTP ${String(response.status)}: ${response.statusText}`,
+      href,
+    );
     return {
       isError: true,
-      content: error,
+      content: `HTTP ${String(response.status)}: ${response.statusText} when fetching ${href}`,
     };
   }
 
@@ -301,11 +302,13 @@ export async function executeWebFetchJsonTool(
 
   const response = fetchResult.value;
   if (!response.ok) {
-    const error = `HTTP ${String(response.status)}: ${response.statusText} when fetching ${href}`;
-    output.toolPrint("web_fetch_json", error);
+    output.toolPrint(
+      `HTTP ${String(response.status)}: ${response.statusText}`,
+      href,
+    );
     return {
       isError: true,
-      content: error,
+      content: `HTTP ${String(response.status)}: ${response.statusText} when fetching ${href}`,
     };
   }
 

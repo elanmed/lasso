@@ -708,8 +708,7 @@ describe("tools", () => {
           "HTTP 500: Internal Server Error when fetching https://example.com/broken",
       });
       assert.deepStrictEqual(getWrites(), [
-        `${BLUE}${BOLD}web_fetch_html${BOLD_RESET}: HTTP 500: Internal Server Error when fetching https://example.com/broken${RESET}\n`,
-        `${BLUE}HTTP 500: Internal Server Error when fetching https://example.com/broken${RESET}\n`,
+        `${BLUE}${BOLD}HTTP 500: Internal Server Error${BOLD_RESET}: https://example.com/broken${RESET}\n`,
       ]);
     });
 
@@ -791,6 +790,8 @@ describe("tools", () => {
     });
 
     it("returns isError when response is not ok and includes the URL", async () => {
+      const getWrites = mockStdoutWrites();
+      mock.method(processDeps.stdout, "getColumns", () => 180);
       mock.method(
         globalThis,
         "fetch",
@@ -805,6 +806,9 @@ describe("tools", () => {
         content:
           "HTTP 404: Not Found when fetching https://api.example.com/missing",
       });
+      assert.deepStrictEqual(getWrites(), [
+        `${BLUE}${BOLD}HTTP 404: Not Found${BOLD_RESET}: https://api.example.com/missing${RESET}\n`,
+      ]);
     });
 
     it("returns isError when JSON parsing fails", async () => {
