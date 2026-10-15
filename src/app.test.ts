@@ -130,6 +130,7 @@ import {
   pageLastDiff,
   printKeymaps,
   getAvailableCommandsStr,
+  steerCommand,
 } from "./app.ts";
 import {
   setupTestContext,
@@ -794,6 +795,19 @@ describe("api", () => {
           value: 0,
           dirty: true,
         });
+      });
+
+      it("clears steering state and reports when the stream is steered", async () => {
+        actions.setIsSteering(true);
+        const err = makeAbortError();
+        mock.method(aiDeps, "generateText", () => Promise.reject(err));
+        const getWrites = mockStdoutWrites();
+
+        const result = await resolveApiCall("hello");
+
+        assert.strictEqual(result, null);
+        assert.strictEqual(getState().terminal.isSteering, false);
+        assert.deepStrictEqual(getWrites(), [`${PURPLE}Steering…${RESET}\n`]);
       });
 
       it("preserves completed step messages when interrupted", async () => {
@@ -12302,6 +12316,7 @@ editor input
 - /tools
 - /record
 - /mcps
+- /steer
 - /test/.lasso/commands/custom.md`,
       );
     });
@@ -12339,6 +12354,7 @@ editor input
 - /tools
 - /record
 - /mcps
+- /steer
 - /test/.lasso/commands/custom.md _(2 tokens)_`,
       );
     });
@@ -12387,6 +12403,7 @@ editor input
 - /tools
 - /record
 - /mcps
+- /steer
 - /test/.lasso/commands/custom.md _(2 tokens)_
 
 `,
@@ -12425,6 +12442,24 @@ editor input
     });
 
     describe("types commands into the prompt", () => {
+      it("runs the steer keymap against an active stream and editor input", async () => {
+        const apiStream = new AbortController();
+        actions.setApiStreamAbortController(apiStream);
+        actions.setEditorInputValue("steering input");
+        actions.setQuestionAbortController(null);
+        actions.setKeymaps({
+          ...defaultConfig.keymaps,
+          steer: { name: "s", ctrl: true },
+        });
+
+        harness.emitKey({ name: "s", ctrl: true });
+        await harness.flush();
+
+        assert.strictEqual(apiStream.signal.aborted, true);
+        assert.strictEqual(getState().terminal.isSteering, true);
+        assert.deepStrictEqual(harness.writes, []);
+      });
+
       it("types custom slash command into the prompt when its keymap matches", () => {
         harness.emitKey({ name: "c", ctrl: true });
         assert.deepStrictEqual(harness.writes, [
@@ -12967,6 +13002,7 @@ editor input
 - /tools
 - /record
 - /mcps
+- /steer
 - /test/.lasso/commands/custom.md _(2 tokens)_
 
 `,
@@ -13051,6 +13087,43 @@ editor input
     });
   });
 
+  describe("steerCommand", () => {
+    afterEach(() => {
+      mock.restoreAll();
+    });
+
+    beforeEach(() => {
+      setupTestContext();
+    });
+
+    it("warns when no agent turn is active", () => {
+      const getWrites = mockStdoutWrites();
+
+      steerCommand();
+
+      assert.deepStrictEqual(getWrites(), [
+        "\n",
+        `${YELLOW}/steer can only be triggered during an ongoing agent turn${RESET}\n`,
+        "\n",
+      ]);
+      assert.strictEqual(getState().terminal.isSteering, false);
+    });
+
+    it("warns when editor input is empty during an agent turn", () => {
+      const apiStream = new AbortController();
+      actions.setApiStreamAbortController(apiStream);
+      const getWrites = mockStdoutWrites();
+
+      steerCommand();
+
+      assert.deepStrictEqual(getWrites(), [
+        `${YELLOW}The editor is empty, unable to steer${RESET}\n`,
+      ]);
+      assert.strictEqual(apiStream.signal.aborted, false);
+      assert.strictEqual(getState().terminal.isSteering, false);
+    });
+  });
+
   describe("resolveSlashCommand", () => {
     beforeEach(() => {
       actions.setRl(makeFakeRl({ line: "" }));
@@ -13106,6 +13179,18 @@ editor input
       it("handles /clear command", async () => {
         const result = await resolveSlashCommand("/clear");
         assert.strictEqual(result, null);
+      });
+
+      it("warns that /steer must be triggered by a keymap", async () => {
+        const getWrites = mockStdoutWrites();
+
+        const result = await resolveSlashCommand("/steer");
+
+        assert.strictEqual(result, null);
+        assert.deepStrictEqual(getWrites(), [
+          `${YELLOW}/steer can only be triggered via a keymap during an ongoing agent turn${RESET}\n`,
+          "\n",
+        ]);
       });
 
       it("rejects /model with args", async () => {
