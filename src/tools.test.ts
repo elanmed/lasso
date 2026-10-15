@@ -435,6 +435,15 @@ describe("tools", () => {
     });
 
     describe("caps at five lines", () => {
+      it("supports a custom line cap", () => {
+        mock.method(processDeps.stdout, "getColumns", () => 30);
+        const getWrites = mockStdoutWrites();
+        toolPrint("bash", "a\nb\nc", { maxLines: 2 });
+        assert.deepStrictEqual(getWrites(), [
+          `${BLUE}${BOLD}bash${BOLD_RESET}: a\n       ┊b…${RESET}\n`,
+        ]);
+      });
+
       it("caps the total output at five lines", () => {
         mock.method(processDeps.stdout, "getColumns", () => 30);
         const getWrites = mockStdoutWrites();

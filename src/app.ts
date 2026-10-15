@@ -1749,13 +1749,16 @@ export async function getAvailableSlashCommands() {
   return entries;
 }
 
-export function toolPrint(label: string, detail: string) {
+export function toolPrint(
+  label: string,
+  detail: string,
+  { maxLines = 5 }: { maxLines?: number } = {},
+) {
   const detailArr = detail.split("\n").filter((str) => str.length > 0);
   const colonSpaceLen = 2;
   const labelLen = label.length + colonSpaceLen;
   const indent = " ".repeat(7).concat(getUnicodeChar("┊"));
   const lines = [];
-  const maxLines = 5;
 
   let detailIdx = 0;
   let strIdx = 0;
@@ -2470,7 +2473,9 @@ export async function resolveApiCall(userInput: string) {
           case "create_subagent": {
             const input = createSubagentToolSchema.parse(toolCall.input);
             for (const task of input.tasks) {
-              toolPrint("   create_subagent", `[${task.model}] ${task.prompt}`);
+              toolPrint("create_subagent", `[${task.model}] ${task.prompt}`, {
+                maxLines: 2,
+              });
             }
             break;
           }
