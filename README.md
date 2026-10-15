@@ -7,6 +7,7 @@ _A minimal agent harness to rein in your llm_
 ## Features
 
 - **Minimal**: ~7,300 lines of source code, ~16,800 lines of tests
+- **Simple architecture**:
   - Responses are piped through `bat` to render markdown
   - Multi-line input is supported by spawning an editor of your choice
   - Messages can be queued by typing a custom delimiter (default `l---`) in the spawned editor
@@ -215,8 +216,6 @@ keymaps:
 | ------ | ----- | --------------------------- | -------------------------------------------------------------------- |
 | `edit` | `Key` | `{ name: "g", ctrl: true }` | Call `$LASSO_EDIT` or `$EDITOR __FILE__` to input multi-line prompts |
 
-Pressing a bound key runs the command directly for `edit`/`paste` (editor) and pager commands (`editpage`, `history`, `config`); all other commands, builtin or custom, are typed into the prompt. Custom command keymaps use the command's name (its filename without extension).
-
 Keymaps must be unique across the merged default, global, and local configs — two commands bound to the same key cause a startup validation error.
 
 The default keymaps are chosen as not to conflict with Node `readline`s [builtin](https://nodejs.org/api/readline.html#tty-keybindings) keybindings
@@ -333,6 +332,7 @@ Slash commands are triggered with `/command` at the prompt.
 | `/resume`       | Resume the latest session or select one by start date (`/resume <timestamp>`) |
 | `/summaries`    | View conversation summaries in a pager                                        |
 | `/mcps`         | List configured MCP servers in a pager                                        |
+| `/steer`        | Keymap-only: interrupt the active turn and send the editor's queued input     |
 
 ### Custom Slash Commands
 
