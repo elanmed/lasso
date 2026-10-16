@@ -11346,6 +11346,24 @@ latest question
 `,
       );
     });
+
+    it("skips an interrupted message when opening the latest user message", async () => {
+      mockPagerSpawn();
+      actions.setConversationMessages([
+        { role: "user", content: "latest question" },
+        {
+          role: "user",
+          content: "[Interrupted before a response was generated]",
+        },
+      ]);
+
+      await pageLastMessage();
+
+      assert.strictEqual(
+        testFs._files.get("/tmp/lasso-test-uuid.txt"),
+        `# [lasso] Last message\n\nlatest question\n\n`,
+      );
+    });
   });
 
   describe("pageLastDiff", () => {

@@ -134,6 +134,8 @@ import {
   type TranscriptEntry,
 } from "./schemas.ts";
 
+const interruptContent = "[Interrupted before a response was generated]";
+
 export function getUnicodeChar(char: string) {
   const map = {
     ["┊"]: "|",
@@ -2513,7 +2515,6 @@ export async function resolveApiCall(userInput: string) {
     await toolCallDiffer.cleanupAllTempFiles();
 
     if (isAbortError(generateTextResult.error)) {
-      const interruptContent = "[Interrupted before a response was generated]";
       const interruptMessage: AiModelMessage = {
         role: "assistant",
         content: interruptContent,
@@ -4453,7 +4454,10 @@ ${formattedContentStr}`;
 
 export async function pageLastMessage({ isTyped = false }: SpacingOpts = {}) {
   const { messages } = getState().conversation;
-  const lastMessage = messages.findLast((message) => message.role === "user");
+  const lastMessage = messages.findLast(
+    (message) =>
+      message.role === "user" && message.content !== interruptContent,
+  );
 
   if (lastMessage == undefined) {
     streamingSupportedWithSpacing(isTyped, () =>
