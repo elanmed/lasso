@@ -4000,7 +4000,7 @@ ${editorInputValue}`;
 }
 
 export async function pageCommands() {
-  const initialContentStr = `# Available commands:
+  const initialContentStr = `# [lasso] Available commands:
 
 ${getAvailableCommandsStr({ includeTokenCount: true })}`;
 
@@ -4030,7 +4030,7 @@ export async function pageSkills({ isTyped = false }: SpacingOpts = {}) {
     )
     .join("\n");
 
-  const initialContentStr = `# Available skills:
+  const initialContentStr = `# [lasso] Available skills:
 
 ${skillsList}`;
 
@@ -4061,7 +4061,7 @@ export async function pageContext({ isTyped = false }: SpacingOpts = {}) {
 
   const formatted = contextFiles.concat(contextSkillFiles).join("\n");
 
-  const initialContentStr = `# Available context files:
+  const initialContentStr = `# [lasso] Available context files:
 
 ${formatted}`;
   await openWithPager({ contentType: "markdown", initialContentStr });
@@ -4577,7 +4577,7 @@ export async function pageTools() {
       ),
   );
 
-  const initialContentStr = `# Available tools:
+  const initialContentStr = `# [lasso] Available tools:
 
 ${formattedHarnessTools.concat(formattedMCPTools).join("\n")}`;
 
@@ -4602,7 +4602,7 @@ export async function pageMcps({ isTyped = false }: SpacingOpts = {}) {
     })
     .join("\n");
 
-  const initialContentStr = `# Available MCP servers:
+  const initialContentStr = `# [lasso] Available MCP servers:
 
 ${formatted}`;
 

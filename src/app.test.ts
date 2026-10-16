@@ -11947,7 +11947,7 @@ editor input
       assert.strictEqual(spawned[0], "nano /tmp/lasso-test-uuid.txt");
       assert.strictEqual(
         testFs._files.get("/tmp/lasso-test-uuid.txt"),
-        `# Available skills:
+        `# [lasso] Available skills:
 
 - **test-skill** _(4-4 tokens)_: A test skill
   /skills/test-skill
@@ -11978,7 +11978,7 @@ editor input
 
       assert.strictEqual(
         testFs._files.get("/tmp/lasso-test-uuid.txt"),
-        `# Available skills:
+        `# [lasso] Available skills:
 
 - **real-skill** _(4-4 tokens)_: A real skill
   /skills/real
@@ -12035,7 +12035,7 @@ editor input
       assert.strictEqual(spawned[0], "nano /tmp/lasso-test-uuid.txt");
       assert.strictEqual(
         testFs._files.get("/tmp/lasso-test-uuid.txt"),
-        `# Available MCP servers:
+        `# [lasso] Available MCP servers:
 
 - first _(fake-server v0.0.0)_
 - second _(fake-server v0.0.0)_
@@ -12065,7 +12065,7 @@ editor input
       assert.strictEqual(spawned[0], "nano /tmp/lasso-test-uuid.txt");
       assert.strictEqual(
         testFs._files.get("/tmp/lasso-test-uuid.txt"),
-        `# Available MCP servers:
+        `# [lasso] Available MCP servers:
 
 - first _(my-server v1.2.3)_
 - second _(other-server v0.1.0)_
@@ -12117,7 +12117,7 @@ editor input
       assert.strictEqual(spawned[0], "nano /tmp/lasso-test-uuid.txt");
       assert.strictEqual(
         testFs._files.get("/tmp/lasso-test-uuid.txt"),
-        `# Available tools:
+        `# [lasso] Available tools:
 
 - **[lasso] web_fetch_html** _(75 tokens)_: Fetch a web page by URL and return its readable content, parsed to extract the main article.
 - **[lasso] web_fetch_json** _(67 tokens)_: Fetch a JSON API endpoint by URL and return the parsed JSON response.
@@ -12156,7 +12156,7 @@ editor input
       assert.strictEqual(spawned[0], "nano /tmp/lasso-test-uuid.txt");
       assert.strictEqual(
         testFs._files.get("/tmp/lasso-test-uuid.txt"),
-        `# Available tools:
+        `# [lasso] Available tools:
 
 - **[lasso] web_fetch_html** _(75 tokens)_: Fetch a web page by URL and return its readable content, parsed to extract the main article.
 - **[lasso] web_fetch_json** _(67 tokens)_: Fetch a JSON API endpoint by URL and return the parsed JSON response.
@@ -12192,7 +12192,7 @@ editor input
       assert.strictEqual(spawned[0], "nano /tmp/lasso-test-uuid.txt");
       assert.strictEqual(
         testFs._files.get("/tmp/lasso-test-uuid.txt"),
-        `# Available context files:
+        `# [lasso] Available context files:
 
 - /project/AGENTS.md _(2 tokens)_
 
@@ -12225,7 +12225,7 @@ editor input
 
       assert.strictEqual(
         testFs._files.get("/tmp/lasso-test-uuid.txt"),
-        `# Available context files:
+        `# [lasso] Available context files:
 
 - /project/AGENTS.md _(2 tokens)_
 - /other/AGENTS.md _(6-4 tokens)_
@@ -12378,7 +12378,7 @@ editor input
       await pageCommands();
       assert.strictEqual(
         testFs._files.get("/tmp/lasso-test-uuid.txt"),
-        `# Available commands:
+        `# [lasso] Available commands:
 
 - /edit
 - /editpage
@@ -12977,7 +12977,7 @@ editor input
         await harness.flush();
         assert.strictEqual(
           testFs._files.get("/tmp/lasso-test-uuid.txt"),
-          `# Available commands:
+          `# [lasso] Available commands:
 
 - /edit
 - /editpage
@@ -13027,7 +13027,7 @@ editor input
         await harness.flush();
         assert.strictEqual(
           testFs._files.get("/tmp/lasso-test-uuid.txt"),
-          `# Available tools:
+          `# [lasso] Available tools:
 
 - **[lasso] web_fetch_html** _(75 tokens)_: Fetch a web page by URL and return its readable content, parsed to extract the main article.
 - **[lasso] web_fetch_json** _(67 tokens)_: Fetch a JSON API endpoint by URL and return the parsed JSON response.
@@ -13436,7 +13436,7 @@ log content
         assert.strictEqual(result, null);
         assert.strictEqual(
           testFs._files.get("/tmp/lasso-test-uuid.txt"),
-          `# Available commands:
+          `# [lasso] Available commands:
 
 - /edit
 - /editpage
