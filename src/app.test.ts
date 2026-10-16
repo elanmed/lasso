@@ -589,8 +589,8 @@ describe("api", () => {
         });
         await resolveApiCall("hello");
         assert.deepStrictEqual(getWrites(), [
-          `${BLUE}${BOLD}   create_subagent${BOLD_RESET}: [claude-sonnet-4-20250514] investigate tests${RESET}\n`,
-          `${BLUE}${BOLD}   create_subagent${BOLD_RESET}: [claude-sonnet-4-20250514] write code${RESET}\n`,
+          `${BLUE}${BOLD}create_subagent${BOLD_RESET}: [claude-sonnet-4-20250514] investigate tests${RESET}\n`,
+          `${BLUE}${BOLD}create_subagent${BOLD_RESET}: [claude-sonnet-4-20250514] write code${RESET}\n`,
         ]);
       });
     });

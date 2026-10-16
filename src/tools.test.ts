@@ -435,6 +435,15 @@ describe("tools", () => {
     });
 
     describe("caps at five lines", () => {
+      it("supports a custom line cap", () => {
+        mock.method(processDeps.stdout, "getColumns", () => 30);
+        const getWrites = mockStdoutWrites();
+        toolPrint("bash", "a\nb\nc", { maxLines: 2 });
+        assert.deepStrictEqual(getWrites(), [
+          `${BLUE}${BOLD}bash${BOLD_RESET}: a\n       ┊b…${RESET}\n`,
+        ]);
+      });
+
       it("caps the total output at five lines", () => {
         mock.method(processDeps.stdout, "getColumns", () => 30);
         const getWrites = mockStdoutWrites();
@@ -699,8 +708,7 @@ describe("tools", () => {
           "HTTP 500: Internal Server Error when fetching https://example.com/broken",
       });
       assert.deepStrictEqual(getWrites(), [
-        `${BLUE}${BOLD}web_fetch_html${BOLD_RESET}: HTTP 500: Internal Server Error when fetching https://example.com/broken${RESET}\n`,
-        `${BLUE}HTTP 500: Internal Server Error when fetching https://example.com/broken${RESET}\n`,
+        `${BLUE}${BOLD}HTTP 500${BOLD_RESET}: https://example.com/broken${RESET}\n`,
       ]);
     });
 
@@ -782,6 +790,8 @@ describe("tools", () => {
     });
 
     it("returns isError when response is not ok and includes the URL", async () => {
+      const getWrites = mockStdoutWrites();
+      mock.method(processDeps.stdout, "getColumns", () => 180);
       mock.method(
         globalThis,
         "fetch",
@@ -796,6 +806,9 @@ describe("tools", () => {
         content:
           "HTTP 404: Not Found when fetching https://api.example.com/missing",
       });
+      assert.deepStrictEqual(getWrites(), [
+        `${BLUE}${BOLD}HTTP 404${BOLD_RESET}: https://api.example.com/missing${RESET}\n`,
+      ]);
     });
 
     it("returns isError when JSON parsing fails", async () => {
