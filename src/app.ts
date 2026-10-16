@@ -4806,7 +4806,9 @@ export async function recordAndTranscribeInput({
 
   print.doing("Transcribed: ", { appendNewline: false, whileMuted: true });
   print.plain(transcribeResult.value, { whileMuted: true });
-  return transcribeResult.value;
+  return "[Message transcribed; may contain errors] ".concat(
+    transcribeResult.value,
+  );
 }
 
 export function recordInput(tempFile: string) {

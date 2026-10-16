@@ -12627,7 +12627,7 @@ editor input
         assert.strictEqual(getState().terminal.isRecording, false);
         assert.strictEqual(
           getState().terminal.editorInputValue,
-          "hello from the mic",
+          "[Message transcribed; may contain errors] hello from the mic",
         );
       });
 
@@ -12649,7 +12649,7 @@ editor input
         await harness.flush();
         assert.strictEqual(
           getState().terminal.editorInputValue,
-          `draft\n${defaultConfig.messageQueueDelimiter}hello from the mic`,
+          `draft\n${defaultConfig.messageQueueDelimiter}[Message transcribed; may contain errors] hello from the mic`,
         );
       });
 
@@ -13344,14 +13344,18 @@ editor input
         mockTranscription("hello from the mic");
         testFs._files.set("/tmp/lasso-test-uuid.wav", "wav recording bytes");
         const result = await resolveSlashCommand("/record");
-        assert.strictEqual(result, "hello from the mic");
+        assert.strictEqual(
+          result,
+          "[Message transcribed; may contain errors] hello from the mic",
+        );
         assert.strictEqual(recordingDuringQuestion, true);
         assert.strictEqual(getState().terminal.isRecording, false);
         assert.deepStrictEqual(getState().conversation.transcript, [
           {
             timestamp: 0,
             role: "user",
-            message: "hello from the mic",
+            message:
+              "[Message transcribed; may contain errors] hello from the mic",
           },
         ]);
       });
@@ -14176,7 +14180,10 @@ custom command content`,
       );
       actions.resetStdout();
       const result = await recordAndTranscribeInput();
-      assert.strictEqual(result, "hello from the mic");
+      assert.strictEqual(
+        result,
+        "[Message transcribed; may contain errors] hello from the mic",
+      );
       assert.strictEqual(questionSawController, true);
       assert.strictEqual(getState().abortControllers.recordProcess, null);
       assert.ok(transcribeCalls[0] !== undefined);
@@ -14199,7 +14206,10 @@ custom command content`,
       mockTranscription("hello from the mic");
       testFs._files.set("/tmp/lasso-test-uuid.wav", "wav recording bytes");
       const result = await recordAndTranscribeInput();
-      assert.strictEqual(result, "hello from the mic");
+      assert.strictEqual(
+        result,
+        "[Message transcribed; may contain errors] hello from the mic",
+      );
       assert.strictEqual(testFs._files.has("/tmp/lasso-test-uuid.wav"), false);
     });
 
