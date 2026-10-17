@@ -3329,6 +3329,11 @@ export async function resolveUserInput({
     ) {
       return await resolveSlashCommand(editorInput);
     }
+
+    if (editorInput !== null && shouldExecuteUserInput(editorInput)) {
+      await executeUserInput(editorInput);
+      return null;
+    }
     return editorInput;
   }
 
@@ -3374,6 +3379,12 @@ export async function resolveUserInput({
       ) {
         return await resolveSlashCommand(editorInput);
       }
+
+      if (editorInput !== null && shouldExecuteUserInput(editorInput)) {
+        await executeUserInput(editorInput);
+        return null;
+      }
+
       return editorInput;
     }
 
@@ -3397,8 +3408,15 @@ export async function resolveUserInput({
     return await resolveSlashCommand(rawInput);
   }
 
+  if (shouldExecuteUserInput(rawInput)) {
+    await executeUserInput(rawInput);
+    return null;
+  }
+
   return rawInput.trim();
 }
+
+export async function executeUserInput(rawInput: string) {}
 
 export function shouldResolveSlashCommand(
   rawInput: string | null,
@@ -3421,6 +3439,11 @@ export function shouldResolveSlashCommand(
   }
 
   return true;
+}
+
+export function shouldExecuteUserInput(rawInput: string | null): boolean {
+  if (rawInput === null) return false;
+  return rawInput.trim().at(0) === "!";
 }
 
 async function exitSession({ isTyped = false }: SpacingOpts = {}) {
