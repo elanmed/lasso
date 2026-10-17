@@ -6,22 +6,27 @@ _A minimal agent harness to rein in your llm_
 
 ## Features
 
-- **Minimal**: ~7,300 lines of source code, ~16,800 lines of tests
+- **Minimal**: ~7,400 lines of source code, ~16,900 lines of tests
 - **Simple architecture**:
   - Responses are piped through `bat` to render markdown
-  - Multi-line input is supported by spawning an editor of your choice
+  - Multi-line input is supported by spawning a non-blocking editor of your choice
   - Messages can be queued by typing a custom delimiter (default `l---`) in the spawned editor
+- **Feature-rich interactions**:
+  - LLM calls can be interrupted with `<C-c>`, which redraws the prompt
+    - Executing `/steer` skips the prompt and triggers the next LLM call using the editor's current content
+  - Prefix an input with `!` to execute it directly as bash
+  - Record non-blocking audio transcriptions with `/record`
 - **Tools**: 8 built-in tools, plus tools exposed by configured MCP servers
-  - The agent is given instructions on how to perform crud operations via the bash tool
+  - The agent is given instructions on how to perform filesystem operations via the bash tool
   - File edits made through the bash tool are shown as diffs, rendered with `delta` when available
 - **Multiple providers**: Anthropic, OpenAI, Google, or OpenAI-compatible APIs
 - **MCP support**: Connect HTTP, SSE, and stdio servers
 - **AGENTS.md support**: The root file is included in context, nested files are internally represented as skills
-- **Slash commands**: Change agent settings or execute reusable prompts
+- **Slash commands**: Observe agent state and execute reusable prompts
 - **Token usage tracking**: Track spending per model within a configurable time window
 - **Context compaction**: Conversations are compacted near 95% of the context window
 - **Session history**: Transcripts are persisted per session and past sessions can be resumed with `/resume`
-- **Keymaps**: Customizable shortcuts for executing built-in slash commands
+- **Keymaps**: Customizable shortcuts for executing builtin and custom slash commands
 
 ## Installation
 
@@ -33,12 +38,12 @@ curl -fsSL https://raw.githubusercontent.com/elanmed/lasso/master/scripts/instal
 
 > You should always read a script before curling and executing it!
 
-The installer detects your operating system and architecture, downloads the matching GitHub release binary, and symlinks `lasso` into `~/.local/bin`. Add that directory to `PATH` if needed. Set `XDG_BIN_HOME` or `XDG_DATA_HOME` to override the install locations.
+The installer detects your operating system and architecture, downloads the matching GitHub release binary, and symlinks `lasso` into `${XDG_BIN_HOME:-$HOME/.local/bin}`. Add that directory to `PATH` if needed. Set `XDG_BIN_HOME` or `XDG_DATA_HOME` to override the install locations.
 
-To run the script immediately without adding `~/.local/bin` to `PATH`, export your API key and invoke the symlink directly:
+To run the script immediately without adding `${XDG_BIN_HOME:-$HOME/.local/bin}` to `PATH`, export your API key and invoke the symlink directly:
 
 ```sh
-export LASSO_API_KEY=your-api-key && ~/.local/bin/lasso
+export LASSO_API_KEY=your-api-key && "${XDG_BIN_HOME:-$HOME/.local/bin}/lasso"
 ```
 
 ### Manual installation
@@ -54,46 +59,62 @@ node src/index.ts
 
 ## Configuration
 
-Settings live in `~/.config/lasso/settings.yaml` (global) and `./.lasso/settings.yaml` (local overrides), parsed as YAML 1.2 (the `yaml` package default).
+Settings live in `${XDG_CONFIG_HOME:-$HOME/.config}/lasso/settings.yaml` (global) and `./.lasso/settings.yaml` (local overrides).
 
-If `model`, `baseURL`, or `LASSO_API_KEY` are missing at startup, lasso warns and suggests `/initlocal` or `/initglobal`, which create a starter `settings.yaml` with a sample model and base URL.
+If `model`, `baseURL`, or `LASSO_API_KEY` are missing at startup, lasso warns and suggests running `/initlocal` or `/initglobal` to create a starter `settings.yaml`.
 
 ### Config Options
 
-| Option                        | Type                                                                                 | Default                  | Description                                                                |
-| ----------------------------- | ------------------------------------------------------------------------------------ | ------------------------ | -------------------------------------------------------------------------- |
-| `model`                       | `string`                                                                             | —                        | Model name (required in the merged config)                                 |
-| `sdkProvider`                 | `"anthropic"` \| `"openai"` \| `"google"` \| `"openai-compatible"`                   | `openai-compatible`      | AI SDK provider                                                            |
-| `gateway`                     | `"opencode"`                                                                         | —                        | Used to append gateway-specific headers                                    |
-| `baseURL`                     | `string`                                                                             | `null`                   | API base URL (required for `openai-compatible`)                            |
-| `transcriptionSdkProvider`    | `"google" \| "openai"`                                                               | `google`                 | AI SDK provider for audio transcription                                    |
-| `transcriptionModel`          | `string`                                                                             | —                        | Transcription model name                                                   |
-| `transcriptionBaseURL`        | `string`                                                                             | `null`                   | API base URL for audio transcription                                       |
-| `pricingPerModel`             | `object`                                                                             | `{}`                     | Token pricing per model per million                                        |
-| `contextWindowPerModel`       | `object`                                                                             | `{}`                     | Context window per model (default: 128,000 tokens)                         |
-| `keymaps`                     | `object`                                                                             | see below                | Custom keybindings                                                         |
-| `customSlashCommandDirs`      | `string[]`                                                                           | `[]`                     | Additional directories for custom slash commands                           |
-| `customSkillDirs`             | `string[]`                                                                           | `[]`                     | Additional directories for skills                                          |
-| `subagentModels`              | `string[]`                                                                           | `[]`                     | Models available to subagents                                              |
-| `loadingStateFrames`          | `string[]`                                                                           | `["\|", "/", "-", "\\"]` | Custom spinner frames                                                      |
-| `loadingStateFrameDuration`   | `number`                                                                             | `80`                     | Spinner frame interval in ms                                               |
-| `promptPrefix`                | `string`                                                                             | `"> "`                   | Prompt prefix string                                                       |
-| `suppressConfigWarnings`      | `boolean`                                                                            | `false`                  | Suppress the config warning list shown at startup                          |
-| `suppressStartupDurations`    | `boolean`                                                                            | `false`                  | Hide durations of startup operations from the screen                       |
-| `suppressToolEditDiffs`       | `boolean`                                                                            | `false`                  | Suppress file-change diffs from tool editing files                         |
-| `asciiOnly`                   | `boolean`                                                                            | `false`                  | Replace unicode characters with ASCII equivalents                          |
-| `compactWithStructuredOutput` | `boolean`                                                                            | `true`                   | Compact conversations with structured output when possible                 |
-| `messageQueueDelimiter`       | `string`                                                                             | `l---\\n`                | Delimiter line separating multiple messages in the editor input            |
-| `reasoning`                   | `"provider-default" \| "none" \| "minimal" \| "low" \|"medium" \| "high" \| "xhigh"` | `provider-default`       | Reasoning effort (`provider-default` uses the provider's default behavior) |
-| `mcps`                        | `object`                                                                             | `{}`                     | Named MCP servers                                                          |
-| `usageLimit`                  | `object`                                                                             | `undefined`              | Dollar limit and tracking window                                           |
+| Option                        | Type                                                                                 | Default                  | Description                                                                | Local behavior |
+| ----------------------------- | ------------------------------------------------------------------------------------ | ------------------------ | -------------------------------------------------------------------------- | -------------- |
+| `model`                       | `string`                                                                             | —                        | Model name (required)                                                      | Overwrite      |
+| `sdkProvider`                 | `"anthropic"` \| `"openai"` \| `"google"` \| `"openai-compatible"`                   | `openai-compatible`      | AI SDK provider                                                            | Overwrite      |
+| `gateway`                     | `"opencode"`                                                                         | —                        | Used to append gateway-specific headers                                    | Overwrite      |
+| `baseURL`                     | `string`                                                                             | `null`                   | API base URL (required for `openai-compatible`)                            | Overwrite      |
+| `transcriptionSdkProvider`    | `"google" \| "openai"`                                                               | `google`                 | AI SDK provider for audio transcription                                    | Overwrite      |
+| `transcriptionModel`          | `string`                                                                             | —                        | Transcription model name                                                   | Overwrite      |
+| `transcriptionBaseURL`        | `string`                                                                             | `null`                   | API base URL for audio transcription                                       | Overwrite      |
+| `pricingPerModel`             | `object`                                                                             | `{}`                     | Token pricing per model per million                                        | Extend         |
+| `contextWindowPerModel`       | `object`                                                                             | `{}`                     | Context window per model (default: 128,000 tokens)                         | Extend         |
+| `keymaps`                     | `object`                                                                             | see below                | Custom keybindings                                                         | Extend         |
+| `customSlashCommandDirs`      | `string[]`                                                                           | `[]`                     | Additional directories for custom slash commands                           | Overwrite      |
+| `customSkillDirs`             | `string[]`                                                                           | `[]`                     | Additional directories for skills                                          | Overwrite      |
+| `subagentModels`              | `string[]`                                                                           | `[]`                     | Models available to subagents                                              | Overwrite      |
+| `loadingStateFrames`          | `string[]`                                                                           | `["\|", "/", "-", "\\"]` | Custom spinner frames                                                      | Overwrite      |
+| `loadingStateFrameDuration`   | `number`                                                                             | `80`                     | Spinner frame interval in ms                                               | Overwrite      |
+| `promptPrefix`                | `string`                                                                             | `"> "`                   | Prompt prefix string                                                       | Overwrite      |
+| `suppressConfigWarnings`      | `boolean`                                                                            | `false`                  | Suppress the config warning list shown at startup                          | Overwrite      |
+| `suppressStartupDurations`    | `boolean`                                                                            | `false`                  | Hide durations of startup operations from the screen                       | Overwrite      |
+| `suppressToolEditDiffs`       | `boolean`                                                                            | `false`                  | Suppress file-change diffs from tool editing files                         | Overwrite      |
+| `asciiOnly`                   | `boolean`                                                                            | `false`                  | Replace unicode characters with ASCII equivalents                          | Overwrite      |
+| `compactWithStructuredOutput` | `boolean`                                                                            | `true`                   | Compact conversations with structured output when possible                 | Overwrite      |
+| `messageQueueDelimiter`       | `string`                                                                             | `l---\\n`                | Delimiter line separating multiple messages in the editor input            | Overwrite      |
+| `reasoning`                   | `"provider-default" \| "none" \| "minimal" \| "low" \|"medium" \| "high" \| "xhigh"` | `provider-default`       | Reasoning effort (`provider-default` uses the provider's default behavior) | Overwrite      |
+| `mcps`                        | `object`                                                                             | `{}`                     | Named MCP servers                                                          | Extend         |
+| `usageLimit`                  | `object`                                                                             | `undefined`              | Dollar limit and tracking window                                           | Overwrite      |
 
 ### Local Overwrite vs Extend
 
-The local config either overwrites or extends the global config per option:
+An **Overwrite** option takes its local value in full. An **Extend** option merges local entries with the global and default entries, with local values winning on conflicts. For example, given these global and local settings:
 
-- **Overwrite**: scalar options (`model`, `sdkProvider`, `gateway`, `baseURL`, `transcriptionSdkProvider`, `transcriptionModel`, `transcriptionBaseURL`, `loadingStateFrameDuration`, `promptPrefix`, `suppressConfigWarnings`, `asciiOnly`, `suppressStartupDurations`, `suppressToolEditDiffs`, `messageQueueDelimiter`, `reasoning`, `usageLimit`, `compactWithStructuredOutput`) and arrays (`customSlashCommandDirs`, `customSkillDirs`, `subagentModels`, `loadingStateFrames`) replace the global value wholesale — arrays are not merged.
-- **Extend**: `keymaps`, `mcps`, `pricingPerModel`, and `contextWindowPerModel` merge entry-by-entry with the default and global entries, the local entry winning on conflicts. `pricingPerModel` and `contextWindowPerModel` entries set to `null` cancel the global or default entry (see the relevant sections below).
+Global:
+
+```yaml
+promptPrefix: "> "
+contextWindowPerModel:
+  model-a: 100000
+  model-b: 200000
+```
+
+Local:
+
+```yaml
+promptPrefix: "lasso> "
+contextWindowPerModel:
+  model-a: 120000
+```
+
+The resulting `promptPrefix` is `lasso> `, while the context window map keeps `model-b` and updates `model-a` to `120000`.
 
 ### MCP Servers
 
@@ -105,7 +126,7 @@ The `mcps` option maps server names to MCP server configurations. The `type` fie
 | `sse`     | `url`           | `protocolVersion`, `headers` |
 | `stdio`   | `command`       | `args`                       |
 
-`headers` is an object mapping strings to strings. `args` is an array of strings passed to the stdio command. MCP server entries merge by name across the default, global, and local configurations, with local entries winning on conflicts.
+`headers` is an object mapping strings to strings. `args` is an array of strings passed to the stdio command.
 
 Example:
 
@@ -137,11 +158,7 @@ When `usageLimit` is set, the agent tracks the running dollar cost of usage with
 | `duration`     | `string` | required | Time window, e.g. `"5h"` (`[number][s,m,h,d]`) |
 | `dollarAmount` | `number` | required | Maximum dollar spend in the window             |
 
-Previous usages are loaded from `~/.config/lasso/usage.json` on startup and entries older than `duration` are filtered out.
-
-If the current model has no `pricingPerModel` entry, usage limiting is disabled for that model and a warning is printed at startup.
-
-The current spend is shown as `$<cost> of $<limit>` in the status line.
+Previous usages are loaded from `${XDG_DATA_HOME:-$HOME/.local/share}/lasso/usage.json` on startup and entries older than `duration` are filtered out.
 
 Example:
 
@@ -249,9 +266,12 @@ A complete example including every option:
 
 ```yaml
 model: claude-sonnet-4-6
-sdkProvider: openai-compatible
+sdkProvider: openai-compatible # default
 gateway: opencode
 baseURL: https://api.example.com/v1
+transcriptionSdkProvider: openai
+transcriptionModel: gpt-4o-transcribe
+transcriptionBaseURL: https://api.openai.com/v1
 keymaps:
   edit:
     name: x
@@ -277,11 +297,16 @@ customSkillDirs:
   - /home/me/my-skills
 subagentModels:
   - claude-haiku-4-5
-loadingStateFrames: ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]
-loadingStateFrameDuration: 100
-promptPrefix: "🤖 "
-messageQueueDelimiter: "l---\n"
-reasoning: "high"
+loadingStateFrames: ["|", "/", "-", "\\"] # default
+loadingStateFrameDuration: 80 # default
+promptPrefix: "> " # default
+suppressConfigWarnings: false # default
+suppressStartupDurations: false # default
+suppressToolEditDiffs: false # default
+asciiOnly: false # default
+compactWithStructuredOutput: true # default
+messageQueueDelimiter: "l---\n" # default
+reasoning: "provider-default" # default
 mcps:
   local-tools:
     type: stdio
@@ -307,36 +332,36 @@ usageLimit:
 
 Slash commands are triggered with `/command` at the prompt.
 
-| Command         | Description                                                                   |
-| --------------- | ----------------------------------------------------------------------------- |
-| `/edit`         | Call the `edit` keymap                                                        |
-| `/editpage`     | View the current editor input in a pager                                      |
-| `/clear`        | Clear conversation context                                                    |
-| `/history`      | View chat history in a pager                                                  |
-| `/lastresponse` | View the latest assistant response in a pager                                 |
-| `/lastmessage`  | View the last user message in a pager                                         |
-| `/lastdiff`     | View the last turn's tool edit diffs in a pager                               |
-| `/paste`        | Call the `paste` keymap                                                       |
-| `/record`       | Record audio and transcribe it into the prompt                                |
-| `/skills`       | List available skills                                                         |
-| `/tools`        | List available harness and MCP tools in a pager                               |
-| `/context`      | List available context files                                                  |
-| `/commands`     | List available slash commands (builtin and custom)                            |
-| `/keymaps`      | List configured keybindings                                                   |
-| `/usage`        | Show current session usage                                                    |
-| `/tokens`       | Show current token count by area                                              |
-| `/config`       | View global, local, and applied config in a pager                             |
-| `/reload`       | Reload config and context, diff the result in a pager                         |
-| `/initlocal`    | Create `./.lasso/settings.yaml` if it doesn't exist                           |
-| `/initglobal`   | Create `~/.config/lasso/settings.yaml` if it doesn't exist                    |
-| `/resume`       | Resume the latest session or select one by start date (`/resume <timestamp>`) |
-| `/summaries`    | View conversation summaries in a pager                                        |
-| `/mcps`         | Print configured MCP servers                                                  |
-| `/steer`        | Keymap-only: interrupt the active turn and send the editor's queued input     |
+| Command         | Description                                                                        |
+| --------------- | ---------------------------------------------------------------------------------- |
+| `/edit`         | Call the `edit` keymap                                                             |
+| `/editpage`     | View the current editor input in a pager                                           |
+| `/clear`        | Clear conversation context                                                         |
+| `/history`      | View chat history in a pager                                                       |
+| `/lastresponse` | View the latest assistant response in a pager                                      |
+| `/lastmessage`  | View the last user message in a pager                                              |
+| `/lastdiff`     | View the last turn's tool edit diffs in a pager                                    |
+| `/paste`        | Call the `paste` keymap                                                            |
+| `/record`       | Record audio and transcribe it into the prompt                                     |
+| `/skills`       | List available skills                                                              |
+| `/tools`        | List available harness and MCP tools in a pager                                    |
+| `/context`      | List available context files                                                       |
+| `/commands`     | List available slash commands (builtin and custom)                                 |
+| `/keymaps`      | List configured keybindings                                                        |
+| `/usage`        | Show current session usage                                                         |
+| `/tokens`       | Show current token count by area                                                   |
+| `/config`       | View global, local, and applied config in a pager                                  |
+| `/reload`       | Reload config and context, diff the result in a pager                              |
+| `/initlocal`    | Create `./.lasso/settings.yaml` if it doesn't exist                                |
+| `/initglobal`   | Create `${XDG_CONFIG_HOME:-$HOME/.config}/lasso/settings.yaml` if it doesn't exist |
+| `/resume`       | Resume the latest session or select one by start date (`/resume <timestamp>`)      |
+| `/summaries`    | View conversation summaries in a pager                                             |
+| `/mcps`         | Print configured MCP servers                                                       |
+| `/steer`        | Keymap-only: interrupt the active turn and send the editor's queued input          |
 
 ### Custom Slash Commands
 
-Create custom commands by adding markdown files (`.md`) to `./.lasso/commands/` (local), `~/.config/lasso/commands/` (global), or any directory specified in `customSlashCommandDirs`. Nested subdirectories are supported via `**/*.md` glob. Commands with the same filename are deduplicated with the first occurrence taking precedence, in this priority order: custom dirs → local → global.
+Create custom commands by adding markdown files (`.md`) to `./.lasso/commands/` (local), `${XDG_CONFIG_HOME:-$HOME/.config}/lasso/commands/` (global), or any directory specified in `customSlashCommandDirs`. Nested subdirectories are supported via `**/*.md` glob. Commands with the same filename are deduplicated with the first occurrence taking precedence, in this priority order: custom dirs → local → global.
 
 Running `/command` sends the command's markdown content as a message. Extra content can be passed after the command name: `/command <extra content>` sends the command's instructions followed by the extra content as context, letting you parameterize a command without editing its file, e.g. `/refactor extract the config parsing into a module`.
 
@@ -346,7 +371,7 @@ Running `/command` sends the command's markdown content as a message. Extra cont
 ./.lasso/commands/              # local commands
   help.md
   refactor.md
-~/.config/lasso/commands/      # global commands
+${XDG_CONFIG_HOME:-$HOME/.config}/lasso/commands/      # global commands
   status.md
 /home/me/my-commands/              # custom commands (via customSlashCommandDirs)
   custom.md
@@ -383,13 +408,13 @@ messageQueueDelimiter: "ll\n"
   AGENTS.md                        # always in context
   src/
     AGENTS.md                      # loaded as a skill on demand
-~/.config/lasso/context/       # global context dir
+${XDG_CONFIG_HOME:-$HOME/.config}/lasso/context/       # global context dir
   AGENTS.md                        # always in context
 ```
 
 ### Discovery
 
-- **Root files** — `./AGENTS.md` and `~/.config/lasso/context/AGENTS.md` are always included in the system prompt
+- **Root files** — `./AGENTS.md` and `${XDG_CONFIG_HOME:-$HOME/.config}/lasso/context/AGENTS.md` are always included in the system prompt
 - **Nested files** — all `*/**/AGENTS.md` files under the current working directory are registered as skills. The agent can call `load_skill` to progressively disclose their content when needed
 
 ## Skills
@@ -397,7 +422,7 @@ messageQueueDelimiter: "ll\n"
 ### Directory Structure
 
 ```
-~/.config/lasso/skills/   # global skills
+${XDG_CONFIG_HOME:-$HOME/.config}/lasso/skills/   # global skills
   my-skill/
     SKILL.md
   category/
@@ -417,7 +442,7 @@ Skills are discovered via `**/SKILL.md` glob from three sources in priority orde
 
 1. **Custom skill dirs** — directories specified in `customSkillDirs`
 2. **Local skills** — `./.lasso/skills/`
-3. **Global skills** — `~/.config/lasso/skills/`
+3. **Global skills** — `${XDG_CONFIG_HOME:-$HOME/.config}/lasso/skills/`
 
 Skills with duplicate names are deduplicated, with the first occurrence taking precedence.
 
@@ -440,7 +465,7 @@ Available skills are listed in the system prompt, the LLM can use the `load_skil
 
 ## Tools
 
-- `bash` — run bash commands. All CRUD operations are performed via this tool
+- `bash` — run bash commands. All filesystem operations are performed via this tool
 - `read_image` — read an image file from disk so the model can look at it
 - `web_fetch_html` — fetch a webpage and convert it to Markdown, saving large pages to a local file
 - `web_fetch_json` — fetch a JSON API endpoint and return parsed data
