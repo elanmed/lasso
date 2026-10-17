@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.14.0 - 2026-10-17
+
+- Print `/mcps` output instead of paging
+- Page invalid-command suggestions instead of printing
+- Mark transcriptions as potentially inaccurate
+- Preserve completed step messages
+- Ignore interrupted messages in the last-message pager
+- Prefix pager headings with `lasso`
+- Improve tool-call output for web-fetch HTTP errors and subagent creation
+- Add `/steer` command
+- Show token counts for context skills
+
 ## v0.13.0 - 2026-10-14
 
 - Add a second compaction pass after API calls
