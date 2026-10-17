@@ -121,6 +121,7 @@ describe("state", () => {
       assert.deepStrictEqual(getState().abortControllers, {
         question: null,
         apiStream: null,
+        executeUserInput: null,
         interruptWithEditorContent: null,
         recordProcess: null,
         transcription: null,
@@ -450,6 +451,13 @@ describe("state", () => {
       const controller = new AbortController();
       actions.setApiStreamAbortController(controller);
       assert.equal(getState().abortControllers.apiStream, controller);
+    });
+
+    it("set-execute-user-input-abort-controller", () => {
+      assert.equal(getState().abortControllers.executeUserInput, null);
+      const controller = new AbortController();
+      actions.setExecuteUserInputAbortController(controller);
+      assert.equal(getState().abortControllers.executeUserInput, controller);
     });
 
     it("set-interrupt-with-editor-abort-controller", () => {

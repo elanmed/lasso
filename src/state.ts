@@ -111,6 +111,7 @@ interface ConversationState {
 interface AbortControllersState {
   question: AbortController | null;
   apiStream: AbortController | null;
+  executeUserInput: AbortController | null;
   interruptWithEditorContent: AbortController | null;
   recordProcess: AbortController | null;
   transcription: AbortController | null;
@@ -218,6 +219,7 @@ const createInitialState = (): State => ({
   abortControllers: {
     question: null,
     apiStream: null,
+    executeUserInput: null,
     interruptWithEditorContent: null,
     recordProcess: null,
     transcription: null,
@@ -383,6 +385,16 @@ export const actions = {
     state.abortControllers.apiStream = controller;
     logStateChange(
       "set-api-stream-abort-controller",
+      String(before),
+      String(controller),
+    );
+  },
+
+  setExecuteUserInputAbortController(controller: AbortController | null) {
+    const before = state.abortControllers.executeUserInput;
+    state.abortControllers.executeUserInput = controller;
+    logStateChange(
+      "set-execute-user-input-abort-controller",
       String(before),
       String(controller),
     );

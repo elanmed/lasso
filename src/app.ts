@@ -3208,13 +3208,21 @@ export function initSigInt(rl: readline.Interface) {
     const question = getState().abortControllers.question;
     const recordProcess = getState().abortControllers.recordProcess;
     const transcription = getState().abortControllers.transcription;
+    const executeUserInput = getState().abortControllers.executeUserInput;
+
     const controllers = [
       apiStream,
       interruptWithEditorContent,
       question,
       transcription,
+      executeUserInput,
     ];
     assertAtBuildtime(controllers.filter((c) => c !== null).length <= 1);
+
+    if (executeUserInput !== null) {
+      executeUserInput.abort();
+      return;
+    }
 
     if (recordProcess !== null) {
       recordProcess.abort();
@@ -3331,7 +3339,7 @@ export async function resolveUserInput({
     }
 
     if (editorInput !== null && shouldExecuteUserInput(editorInput)) {
-      await executeUserInput(editorInput);
+      executeUserInput(editorInput);
       return null;
     }
     return editorInput;
@@ -3381,7 +3389,7 @@ export async function resolveUserInput({
       }
 
       if (editorInput !== null && shouldExecuteUserInput(editorInput)) {
-        await executeUserInput(editorInput);
+        executeUserInput(editorInput);
         return null;
       }
 
@@ -3409,14 +3417,40 @@ export async function resolveUserInput({
   }
 
   if (shouldExecuteUserInput(rawInput)) {
-    await executeUserInput(rawInput);
+    executeUserInput(rawInput);
     return null;
   }
 
   return rawInput.trim();
 }
 
-export async function executeUserInput(rawInput: string) {}
+export function executeUserInput(rawInput: string) {
+  const abortController = new AbortController();
+  actions.setExecuteUserInputAbortController(abortController);
+
+  const userInput = rawInput.trim().slice(1);
+  print.doing(`$ ${userInput}`);
+  try {
+    const spawnResult = tryCatch(() =>
+      childProcessDeps.spawnSync(userInput, {
+        shell: true,
+        stdio: "inherit",
+        signal: abortController.signal,
+      }),
+    );
+    if (!spawnResult.ok) {
+      if (isAbortError(spawnResult.error)) {
+        return;
+      }
+      print.error(
+        `Error while executing the user input. Error: ${getMessageFromError(spawnResult.error)}`,
+      );
+      return;
+    }
+  } finally {
+    actions.setExecuteUserInputAbortController(null);
+  }
+}
 
 export function shouldResolveSlashCommand(
   rawInput: string | null,
