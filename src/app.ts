@@ -1640,11 +1640,19 @@ export async function openWithPager({
     return `less ${shellQuote(tempFile)}`;
   })();
 
-  childProcessDeps.spawnSync(pagerCommand, {
-    shell: true,
-    stdio: "inherit",
+  await wrapToOpenNonBlockingProcess(async () => {
+    const pagerProcess = childProcessDeps.spawn(pagerCommand, {
+      shell: true,
+      stdio: "inherit",
+    });
+    const onceResult = await tryCatchAsync(once(pagerProcess, "exit"));
+    if (!onceResult.ok) {
+      print.error(
+        `Error while spawning the pager: ${getMessageFromError(onceResult.error)}`,
+      );
+    }
+    await tryCatchAsync(fsDeps.unlink(tempFile));
   });
-  await tryCatchAsync(fsDeps.unlink(tempFile));
 }
 
 export const builtinSlashCommands = [
@@ -2908,6 +2916,27 @@ export function initReadline() {
 
   initKeypress(rl);
   initSigInt(rl);
+}
+
+async function wrapToOpenNonBlockingProcess<T>(
+  cb: () => Promise<T>,
+  { pauseStdin = true }: { pauseStdin?: boolean } = {},
+) {
+  actions.setIsNonBlockingProcessOngoing(true);
+  stopLoadingState();
+  if (pauseStdin) stdin.pause();
+  const ret = await cb();
+  stdin.resume();
+  actions.setIsNonBlockingProcessOngoing(false);
+  const bufferedStdout = getState().terminal.bufferedStdoutWhileEditorOpen;
+  if (bufferedStdout.length > 0) {
+    processDeps.stdout.write(bufferedStdout);
+    actions.resetBufferedStdoutWhileEditorOpen();
+  }
+  if (getState().abortControllers.apiStream !== null) {
+    startLoadingState();
+  }
+  return ret;
 }
 
 export function initKeypress(rl: readline.Interface) {

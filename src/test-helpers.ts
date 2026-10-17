@@ -575,17 +575,26 @@ export function mockSpawnSync(
   );
 }
 
-export function mockPagerSpawn() {
+export function mockPagerSpawn({ spawnError }: { spawnError?: Error } = {}) {
   const spawned: string[] = [];
+  const spawnOptions: unknown[] = [];
   const unlinked: string[] = [];
-  mock.method(childProcessDeps, "spawnSync", (cmd: string) => {
+  mock.method(childProcessDeps, "spawn", (cmd: string, options: unknown) => {
     spawned.push(cmd);
+    spawnOptions.push(options);
+    const child = new EventEmitter();
+    queueMicrotask(() =>
+      spawnError === undefined
+        ? child.emit("exit")
+        : child.emit("error", spawnError),
+    );
+    return child as unknown as ChildProcess;
   });
   mock.method(fsDeps, "unlink", (path: string) => {
     unlinked.push(path);
     return Promise.resolve();
   });
-  return { spawned, unlinked };
+  return { spawned, spawnOptions, unlinked };
 }
 
 export function mockEditorSpawn(

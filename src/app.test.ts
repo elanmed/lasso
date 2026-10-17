@@ -193,7 +193,7 @@ import {
   stripAnsi,
   mockProcessExit,
 } from "./test-helpers.ts";
-import { aiDeps, processDeps, fsDeps, childProcessDeps } from "./deps.ts";
+import { aiDeps, processDeps, fsDeps } from "./deps.ts";
 
 describe("api", () => {
   afterEach(() => {
@@ -6910,11 +6910,13 @@ describe("terminal", () => {
     });
 
     let spawned: string[];
+    let spawnOptions: unknown[];
     let unlinked: string[];
 
     beforeEach(() => {
       const pager = mockPagerSpawn();
       spawned = pager.spawned;
+      spawnOptions = pager.spawnOptions;
       unlinked = pager.unlinked;
       actions.setBatAvailable(true);
     });
@@ -6979,18 +6981,17 @@ describe("terminal", () => {
       });
 
       it("spawns pager with shell and inherit stdio", async () => {
-        let spawnArgs: unknown[] = [];
-        mock.method(childProcessDeps, "spawnSync", (...args: unknown[]) => {
-          spawnArgs = args;
-        });
         await openWithPager({
           initialContentStr: "",
           contentType: "markdown",
         });
-        assert.deepStrictEqual(spawnArgs, [
-          batPagerCmd("/tmp/lasso-test-uuid.txt"),
-          { shell: true, stdio: "inherit" },
-        ]);
+        assert.deepStrictEqual(
+          { command: spawned[0], options: spawnOptions[0] },
+          {
+            command: batPagerCmd("/tmp/lasso-test-uuid.txt"),
+            options: { shell: true, stdio: "inherit" },
+          },
+        );
       });
 
       it("writes initialContentStr into the temp file", async () => {
@@ -7021,6 +7022,22 @@ describe("terminal", () => {
           contentType: "markdown",
         });
         assert.deepStrictEqual(unlinked, ["/tmp/lasso-test-uuid.txt"]);
+      });
+
+      it("prints an error and deletes the temp file when the pager fails to spawn", async () => {
+        const pagerError = new Error("pager unavailable");
+        const pager = mockPagerSpawn({ spawnError: pagerError });
+        const getWrites = mockStdoutWrites();
+
+        await openWithPager({
+          initialContentStr: "content",
+          contentType: "markdown",
+        });
+
+        assert.deepStrictEqual(getWrites(), [
+          `${RED}Error while spawning the pager: pager unavailable${RESET}\n`,
+        ]);
+        assert.deepStrictEqual(pager.unlinked, ["/tmp/lasso-test-uuid.txt"]);
       });
 
       it("does not spawn a pager when the temp file cannot be created", async () => {
