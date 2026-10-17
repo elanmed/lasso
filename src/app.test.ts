@@ -2318,11 +2318,11 @@ describe("print", () => {
     });
   });
 
-  describe("whileMuted", () => {
+  describe("whileBuffering", () => {
     it("writes to stdout directly while a non-blocking process is ongoing", () => {
       actions.setIsNonBlockingProcessOngoing(true);
       const getWrites = mockStdoutWrites();
-      colorPrint("hello", "blue", { whileMuted: true });
+      colorPrint("hello", "blue", { whileBuffering: true });
       assert.deepStrictEqual(getWrites(), [`${BLUE}hello${RESET}\n`]);
       assert.deepStrictEqual(
         getState().terminal.bufferedStdoutWhileEditorOpen,
@@ -2333,7 +2333,7 @@ describe("print", () => {
     it("writes to stdout directly while a loading state is active", () => {
       actions.setLoadingStateTimeout({} as NodeJS.Timeout);
       const getWrites = mockStdoutWrites();
-      colorPrint("hello", "blue", { whileMuted: true });
+      colorPrint("hello", "blue", { whileBuffering: true });
       assert.deepStrictEqual(getWrites(), [`${BLUE}hello${RESET}\n`]);
     });
   });

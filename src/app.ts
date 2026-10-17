@@ -223,7 +223,7 @@ export async function listSessionFiles() {
 
 interface AppendNewlineOpts {
   appendNewline?: boolean;
-  whileMuted?: boolean;
+  whileBuffering?: boolean;
 }
 
 export const print = {
@@ -254,7 +254,8 @@ export function colorPrint(
     return `${wrapInColor(text, color)}${suffix}`;
   })();
 
-  if (opts.whileMuted === true) {
+  if (opts.whileBuffering === true) {
+    // Print immediately instead of buffering output while the editor is open.
     processDeps.stdout.write(out);
     return;
   }
@@ -4702,7 +4703,7 @@ export function warnOnMissingTranscribeConfig() {
     const warning = `Warning! You're missing required configuration options for /record.
 ${formattedMessages}`;
 
-    print.warning(warning, { whileMuted: true });
+    print.warning(warning, { whileBuffering: true });
     return true;
   }
   return false;
@@ -4737,7 +4738,7 @@ export async function recordAndTranscribeInput({
   const readyResult = await tryCatchAsync(recordingReady);
   if (!readyResult.ok) {
     print.error(`Recording failed: ${getMessageFromError(readyResult.error)}`, {
-      whileMuted: !isTyped,
+      whileBuffering: !isTyped,
     });
     await cleanup();
     return null;
@@ -4751,7 +4752,7 @@ export async function recordAndTranscribeInput({
   } else {
     print.plain(query.concat("\n"), {
       appendNewline: false,
-      whileMuted: true,
+      whileBuffering: true,
     });
     // rl.question writes its prompt through mutedStdout which drops output
     // during the recording, so the banner is printed directly instead
@@ -4765,7 +4766,7 @@ export async function recordAndTranscribeInput({
   if (!recordingResult.ok) {
     print.error(
       `Recording failed: ${getMessageFromError(recordingResult.error)}`,
-      { whileMuted: !isTyped },
+      { whileBuffering: !isTyped },
     );
     await cleanup();
     return null;
@@ -4780,7 +4781,7 @@ export async function recordAndTranscribeInput({
 
     print.error(
       `Error while prompting the user to stop recording: ${getMessageFromError(finishRecordingResult.error)}`,
-      { whileMuted: !isTyped },
+      { whileBuffering: !isTyped },
     );
     await cleanup();
     return null;
@@ -4791,7 +4792,7 @@ export async function recordAndTranscribeInput({
   if (!readResult.ok) {
     print.error(
       `Error while reading the temp file that was recorded to: ${getMessageFromError(readResult.error)}`,
-      { whileMuted: !isTyped },
+      { whileBuffering: !isTyped },
     );
     return null;
   }
@@ -4811,7 +4812,7 @@ export async function recordAndTranscribeInput({
 
     print.error(
       `Error while transcribing: ${getMessageFromError(transcribeResult.error)}`,
-      { whileMuted: !isTyped },
+      { whileBuffering: !isTyped },
     );
     return null;
   }
@@ -4821,8 +4822,8 @@ export async function recordAndTranscribeInput({
     return null;
   }
 
-  print.doing("Transcribed: ", { appendNewline: false, whileMuted: true });
-  print.plain(transcribeResult.value, { whileMuted: true });
+  print.doing("Transcribed: ", { appendNewline: false, whileBuffering: true });
+  print.plain(transcribeResult.value, { whileBuffering: true });
   return "[Message transcribed; may contain errors] ".concat(
     transcribeResult.value,
   );
