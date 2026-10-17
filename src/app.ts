@@ -2846,6 +2846,8 @@ export const mutedStdout = new Writable({
     _encoding: BufferEncoding,
     callback: (error?: Error | null) => void,
   ) {
+    // The main purpose of this is to prevent keypresses from appearing to stdout
+    // TODO: is there a cleaner way?
     if (shouldMuteStdout()) return callback();
 
     processDeps.stdout.write(out);
@@ -2994,7 +2996,7 @@ export function initKeypress(rl: readline.Interface) {
             actions.setIsRecording(true);
             const transcriptionInput = await wrapToOpenNonBlockingProcess(
               recordAndTranscribeInput,
-              { pauseStdin: false },
+              { pauseStdin: false }, // rl.question needs stdin to receive Enter and stop recording.
             );
             actions.setIsRecording(false);
 
