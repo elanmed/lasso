@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.15.0 - 2026-10-17
+
+- Execute user input as bash when prefixed with a `!`
+- Fix truncating the editor content by accounting for the prompt-prefix width
+- Launch pagers asynchronously
+
 ## v0.14.0 - 2026-10-17
 
 - Print `/mcps` output instead of paging
