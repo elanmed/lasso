@@ -3081,7 +3081,7 @@ export function initKeypress(rl: readline.Interface) {
             return;
           }
           case "mcps": {
-            await pageMcps();
+            printMcps();
             redrawPendingQuestion();
             return;
           }
@@ -3700,7 +3700,7 @@ async function resolveBuiltinSlashCommand(
         return { handled: true, inputFromCommand: null };
       }
 
-      await pageMcps({ isTyped: true });
+      printMcps();
       return { handled: true, inputFromCommand: null };
     }
     case "steer": {
@@ -3799,9 +3799,7 @@ export async function resolveSlashCommand(rawInput: string) {
     return customSlashCommandOutcome.inputFromCommand;
   }
 
-  printNewline();
-  print.error(`Invalid command: ${rawInput}, valid commands:`);
-  print.plain(getAvailableCommandsStr());
+  await pageForInvalidCommand(rawInput);
   return null;
 }
 
@@ -3998,6 +3996,19 @@ export async function pageEditStr({ isTyped = false }: SpacingOpts = {}) {
   const initialContentStr = `# [lasso] Editor content ${formatTokenCountAside(editorInputValue)}
 
 ${editorInputValue}`;
+
+  await openWithPager({
+    initialContentStr,
+    contentType: "markdown",
+  });
+}
+
+async function pageForInvalidCommand(rawInput: string) {
+  const initialContentStr = `# Invalid command: \`${rawInput}\`
+
+## Available commands
+
+${getAvailableCommandsStr({ includeTokenCount: true })}`;
 
   await openWithPager({
     initialContentStr,
@@ -4596,28 +4607,24 @@ ${formattedHarnessTools.concat(formattedMCPTools).join("\n")}`;
   });
 }
 
-export async function pageMcps({ isTyped = false }: SpacingOpts = {}) {
+export function printMcps() {
   if (Object.keys(getState().mcp.clients).length === 0) {
-    streamingSupportedWithSpacing(isTyped, () =>
-      print.warning("No available MCP servers"),
-    );
+    successWithSpacing(() => print.warning("No available MCP servers"));
     return;
   }
 
-  const formatted = Object.entries(getState().mcp.clients)
-    .map(([clientName, client]) => {
+  const formatted = Object.entries(getState().mcp.clients).map(
+    ([clientName, client]) => {
       const { serverInfo } = client;
-      return `- ${clientName} _(${serverInfo.name} v${serverInfo.version})_`;
-    })
-    .join("\n");
+      return `- ${clientName} (${serverInfo.name} v${serverInfo.version})`;
+    },
+  );
 
-  const initialContentStr = `# [lasso] Available MCP servers:
-
-${formatted}`;
-
-  await openWithPager({
-    initialContentStr,
-    contentType: "markdown",
+  successWithSpacing(() => {
+    print.doing("Available MCP servers:");
+    for (const server of formatted) {
+      print.plain(server);
+    }
   });
 }
 

@@ -331,7 +331,7 @@ Slash commands are triggered with `/command` at the prompt.
 | `/initglobal`   | Create `~/.config/lasso/settings.yaml` if it doesn't exist                    |
 | `/resume`       | Resume the latest session or select one by start date (`/resume <timestamp>`) |
 | `/summaries`    | View conversation summaries in a pager                                        |
-| `/mcps`         | List configured MCP servers in a pager                                        |
+| `/mcps`         | Print configured MCP servers                                                  |
 | `/steer`        | Keymap-only: interrupt the active turn and send the editor's queued input     |
 
 ### Custom Slash Commands

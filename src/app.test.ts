@@ -123,7 +123,7 @@ import {
   initGlobalConfig,
   pageSummaries,
   pageTools,
-  pageMcps,
+  printMcps,
   pageHistory,
   pageLastMessage,
   pageLastResponse,
@@ -12032,15 +12032,13 @@ editor input
     });
   });
 
-  describe("pageMcps", () => {
+  describe("printMcps", () => {
     beforeEach(() => {
       actions.resetState();
       actions.resetStdout();
     });
 
-    it("opens available MCP servers in a pager", async () => {
-      const { spawned } = mockPagerSpawn();
-      testProcessEnv._set("LASSO_PAGER", "nano __FILE__");
+    it("prints available MCP servers", () => {
       setMcpClients({
         clients: {
           first: makeFakeMcpClient(),
@@ -12048,24 +12046,18 @@ editor input
         },
       });
 
-      await pageMcps();
+      printMcps();
 
-      assert.strictEqual(spawned[0], "nano /tmp/lasso-test-uuid.txt");
-      assert.strictEqual(
-        testFs._files.get("/tmp/lasso-test-uuid.txt"),
-        `# [lasso] Available MCP servers:
-
-- first _(fake-server v0.0.0)_
-- second _(fake-server v0.0.0)_
-
-`,
-      );
-      assert.deepStrictEqual(getWrites(), []);
+      assert.deepStrictEqual(getWrites(), [
+        "\n",
+        `${BLUE}Available MCP servers:${RESET}\n`,
+        "- first (fake-server v0.0.0)\n",
+        "- second (fake-server v0.0.0)\n",
+        "\n",
+      ]);
     });
 
-    it("lists server name and version when available", async () => {
-      const { spawned } = mockPagerSpawn();
-      testProcessEnv._set("LASSO_PAGER", "nano __FILE__");
+    it("prints server name and version when available", () => {
       setMcpClients({
         clients: {
           first: makeFakeMcpClient({
@@ -12078,32 +12070,29 @@ editor input
         },
       });
 
-      await pageMcps();
+      printMcps();
 
-      assert.strictEqual(spawned[0], "nano /tmp/lasso-test-uuid.txt");
-      assert.strictEqual(
-        testFs._files.get("/tmp/lasso-test-uuid.txt"),
-        `# [lasso] Available MCP servers:
-
-- first _(my-server v1.2.3)_
-- second _(other-server v0.1.0)_
-
-`,
-      );
-      assert.deepStrictEqual(getWrites(), []);
+      assert.deepStrictEqual(getWrites(), [
+        "\n",
+        `${BLUE}Available MCP servers:${RESET}\n`,
+        "- first (my-server v1.2.3)\n",
+        "- second (other-server v0.1.0)\n",
+        "\n",
+      ]);
     });
 
     it("prints that there are no available MCP servers when clients map is empty", () => {
-      pageMcps({ isTyped: true });
+      printMcps();
       assert.deepStrictEqual(getWrites(), [
+        "\n",
         `${YELLOW}No available MCP servers${RESET}\n`,
         "\n",
       ]);
       assert.strictEqual(testFs._files.has("/tmp/lasso-test-uuid.txt"), false);
     });
 
-    it("surrounds the message with blank lines when isTyped is false", async () => {
-      await pageMcps();
+    it("surrounds the message with blank lines when isTyped is false", () => {
+      printMcps();
       assert.deepStrictEqual(getWrites(), [
         "\n",
         `${YELLOW}No available MCP servers${RESET}\n`,
@@ -12111,11 +12100,13 @@ editor input
       ]);
     });
 
-    it("does not add spacing when streaming", async () => {
+    it("adds spacing when streaming", () => {
       actions.setApiStreamAbortController(new AbortController());
-      await pageMcps();
+      printMcps();
       assert.deepStrictEqual(getWrites(), [
+        "\n",
         `${YELLOW}No available MCP servers${RESET}\n`,
+        "\n",
       ]);
     });
   });
@@ -12512,7 +12503,6 @@ editor input
       for (const [command, keyName] of [
         ["skills", "l"],
         ["context", "n"],
-        ["mcps", "o"],
       ] as const) {
         it(`opens the /${command} pager when its keymap matches`, async () => {
           const { spawned } = mockPagerSpawn();
@@ -12541,6 +12531,25 @@ editor input
         });
       }
 
+      it("prints MCP servers when the mcps keymap matches", async () => {
+        actions.setQuestionAbortController(null);
+        setMcpClients({ clients: { first: makeFakeMcpClient() } });
+        actions.setKeymaps({
+          ...defaultConfig.keymaps,
+          mcps: { name: "o", ctrl: true },
+        });
+
+        harness.emitKey({ name: "o", ctrl: true });
+        await harness.flush();
+
+        assert.deepStrictEqual(harness.writes, []);
+        assert.deepStrictEqual(getWrites(), [
+          "\n",
+          `${BLUE}Available MCP servers:${RESET}\n`,
+          "- first (fake-server v0.0.0)\n",
+          "\n",
+        ]);
+      });
       it("does not type builtin command when no question is pending", () => {
         actions.setKeymaps({
           ...defaultConfig.keymaps,
@@ -13212,6 +13221,8 @@ editor input
       });
 
       it("rejects /model with args", async () => {
+        const { spawned } = mockPagerSpawn();
+        testProcessEnv._set("LASSO_PAGER", "nano __FILE__");
         actions.setModel("old");
         actions.setSlashCommands([
           {
@@ -13224,71 +13235,20 @@ editor input
         const result = await resolveSlashCommand("/model new-model");
         assert.strictEqual(result, null);
         assert.strictEqual(getState().config.model, "old");
-        assert.deepStrictEqual(getWrites(), [
-          "\n",
-          `${RED}Invalid command: /model new-model, valid commands:${RESET}\n`,
-          `- /edit
-- /editpage
-- /history
-- /clear
-- /paste
-- /skills
-- /context
-- /commands
-- /keymaps
-- /usage
-- /tokens
-- /resume
-- /config
-- /reload
-- /initlocal
-- /initglobal
-- /lastresponse
-- /lastmessage
-- /lastdiff
-- /summaries
-- /tools
-- /record
-- /mcps
-- /test-cwd/.lasso/commands/known.md
-          `,
-        ]);
+        assert.deepStrictEqual(getWrites(), []);
+        assert.strictEqual(spawned[0], "nano /tmp/lasso-test-uuid.txt");
       });
 
       it("rejects /model without args", async () => {
+        const { spawned } = mockPagerSpawn();
+        testProcessEnv._set("LASSO_PAGER", "nano __FILE__");
         actions.setModel("gpt-4");
         actions.resetStdout();
         const result = await resolveSlashCommand("/model");
         assert.strictEqual(result, null);
         assert.strictEqual(getState().config.model, "gpt-4");
-        assert.deepStrictEqual(getWrites(), [
-          "\n",
-          `${RED}Invalid command: /model, valid commands:${RESET}\n`,
-          `- /edit
-- /editpage
-- /history
-- /clear
-- /paste
-- /skills
-- /context
-- /commands
-- /keymaps
-- /usage
-- /tokens
-- /resume
-- /config
-- /reload
-- /initlocal
-- /initglobal
-- /lastresponse
-- /lastmessage
-- /lastdiff
-- /summaries
-- /tools
-- /record
-- /mcps
-          `,
-        ]);
+        assert.deepStrictEqual(getWrites(), []);
+        assert.strictEqual(spawned[0], "nano /tmp/lasso-test-uuid.txt");
       });
 
       it("handles /skills command", async () => {
@@ -14114,6 +14074,8 @@ custom command content`,
       });
 
       it("handles unknown slash command", async () => {
+        const { spawned } = mockPagerSpawn();
+        testProcessEnv._set("LASSO_PAGER", "nano __FILE__");
         actions.setSlashCommands([
           {
             name: "known",
@@ -14124,10 +14086,15 @@ custom command content`,
         actions.resetStdout();
         const result = await resolveSlashCommand("/unknown");
         assert.strictEqual(result, null);
-        assert.deepStrictEqual(getWrites(), [
-          "\n",
-          `${RED}Invalid command: /unknown, valid commands:${RESET}\n`,
-          `- /edit
+        assert.deepStrictEqual(getWrites(), []);
+        assert.strictEqual(spawned[0], "nano /tmp/lasso-test-uuid.txt");
+        assert.strictEqual(
+          testFs._files.get("/tmp/lasso-test-uuid.txt"),
+          `# Invalid command: \`/unknown\`
+
+## Available commands
+
+- /edit
 - /editpage
 - /history
 - /clear
@@ -14150,9 +14117,11 @@ custom command content`,
 - /tools
 - /record
 - /mcps
-- /test-cwd/.lasso/commands/known.md
-          `,
-        ]);
+- /steer
+- /test-cwd/.lasso/commands/known.md _(4 tokens)_
+
+`,
+        );
       });
     });
   });
