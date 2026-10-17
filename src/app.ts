@@ -2954,27 +2954,6 @@ export function initKeypress(rl: readline.Interface) {
     actions.appendStdoutTail(getState().config.promptPrefix);
   }
 
-  async function wrapToOpenNonBlockingProcess(
-    cb: () => Promise<string | null>,
-    { pauseStdin = true }: { pauseStdin?: boolean } = {},
-  ) {
-    actions.setIsNonBlockingProcessOngoing(true);
-    stopLoadingState();
-    if (pauseStdin) stdin.pause();
-    const ret = await cb();
-    stdin.resume();
-    actions.setIsNonBlockingProcessOngoing(false);
-    const bufferedStdout = getState().terminal.bufferedStdoutWhileEditorOpen;
-    if (bufferedStdout.length > 0) {
-      processDeps.stdout.write(bufferedStdout);
-      actions.resetBufferedStdoutWhileEditorOpen();
-    }
-    if (getState().abortControllers.apiStream !== null) {
-      startLoadingState();
-    }
-    return ret;
-  }
-
   stdin.on("keypress", (_char, key: Key) => {
     void (async () => {
       if (key.ctrl === true && key.name === "d") {
