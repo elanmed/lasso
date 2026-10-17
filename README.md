@@ -38,12 +38,12 @@ curl -fsSL https://raw.githubusercontent.com/elanmed/lasso/master/scripts/instal
 
 > You should always read a script before curling and executing it!
 
-The installer detects your operating system and architecture, downloads the matching GitHub release binary, and symlinks `lasso` into `${XDG_BIN_HOME:-$HOME/.local/bin}`. Add that directory to `PATH` if needed. Set `XDG_BIN_HOME` or `XDG_DATA_HOME` to override the install locations.
+The installer detects your operating system and architecture, downloads the matching GitHub release binary, and symlinks `lasso` into `$XDG_BIN_HOME`. Add that directory to `PATH` if needed. Set `XDG_BIN_HOME` or `XDG_DATA_HOME` to override the install locations.
 
-To run the script immediately without adding `${XDG_BIN_HOME:-$HOME/.local/bin}` to `PATH`, export your API key and invoke the symlink directly:
+To run the script immediately without adding `$XDG_BIN_HOME` to `PATH`, export your API key and invoke the symlink directly:
 
 ```sh
-export LASSO_API_KEY=your-api-key && "${XDG_BIN_HOME:-$HOME/.local/bin}/lasso"
+export LASSO_API_KEY=your-api-key && "$XDG_BIN_HOME/lasso"
 ```
 
 ### Manual installation
@@ -59,7 +59,7 @@ node src/index.ts
 
 ## Configuration
 
-Settings live in `${XDG_CONFIG_HOME:-$HOME/.config}/lasso/settings.yaml` (global) and `./.lasso/settings.yaml` (local overrides).
+Settings live in `$XDG_CONFIG_HOME/lasso/settings.yaml` (global) and `./.lasso/settings.yaml` (local overrides).
 
 If `model`, `baseURL`, or `LASSO_API_KEY` are missing at startup, lasso warns and suggests running `/initlocal` or `/initglobal` to create a starter `settings.yaml`.
 
@@ -158,7 +158,7 @@ When `usageLimit` is set, the agent tracks the running dollar cost of usage with
 | `duration`     | `string` | required | Time window, e.g. `"5h"` (`[number][s,m,h,d]`) |
 | `dollarAmount` | `number` | required | Maximum dollar spend in the window             |
 
-Previous usages are loaded from `${XDG_DATA_HOME:-$HOME/.local/share}/lasso/usage.json` on startup and entries older than `duration` are filtered out.
+Previous usages are loaded from `$XDG_DATA_HOME/lasso/usage.json` on startup and entries older than `duration` are filtered out.
 
 Example:
 
@@ -332,36 +332,36 @@ usageLimit:
 
 Slash commands are triggered with `/command` at the prompt.
 
-| Command         | Description                                                                        |
-| --------------- | ---------------------------------------------------------------------------------- |
-| `/edit`         | Call the `edit` keymap                                                             |
-| `/editpage`     | View the current editor input in a pager                                           |
-| `/clear`        | Clear conversation context                                                         |
-| `/history`      | View chat history in a pager                                                       |
-| `/lastresponse` | View the latest assistant response in a pager                                      |
-| `/lastmessage`  | View the last user message in a pager                                              |
-| `/lastdiff`     | View the last turn's tool edit diffs in a pager                                    |
-| `/paste`        | Call the `paste` keymap                                                            |
-| `/record`       | Record audio and transcribe it into the prompt                                     |
-| `/skills`       | List available skills                                                              |
-| `/tools`        | List available harness and MCP tools in a pager                                    |
-| `/context`      | List available context files                                                       |
-| `/commands`     | List available slash commands (builtin and custom)                                 |
-| `/keymaps`      | List configured keybindings                                                        |
-| `/usage`        | Show current session usage                                                         |
-| `/tokens`       | Show current token count by area                                                   |
-| `/config`       | View global, local, and applied config in a pager                                  |
-| `/reload`       | Reload config and context, diff the result in a pager                              |
-| `/initlocal`    | Create `./.lasso/settings.yaml` if it doesn't exist                                |
-| `/initglobal`   | Create `${XDG_CONFIG_HOME:-$HOME/.config}/lasso/settings.yaml` if it doesn't exist |
-| `/resume`       | Resume the latest session or select one by start date (`/resume <timestamp>`)      |
-| `/summaries`    | View conversation summaries in a pager                                             |
-| `/mcps`         | Print configured MCP servers                                                       |
-| `/steer`        | Keymap-only: interrupt the active turn and send the editor's queued input          |
+| Command         | Description                                                                   |
+| --------------- | ----------------------------------------------------------------------------- |
+| `/edit`         | Call the `edit` keymap                                                        |
+| `/editpage`     | View the current editor input in a pager                                      |
+| `/clear`        | Clear conversation context                                                    |
+| `/history`      | View chat history in a pager                                                  |
+| `/lastresponse` | View the latest assistant response in a pager                                 |
+| `/lastmessage`  | View the last user message in a pager                                         |
+| `/lastdiff`     | View the last turn's tool edit diffs in a pager                               |
+| `/paste`        | Call the `paste` keymap                                                       |
+| `/record`       | Record audio and transcribe it into the prompt                                |
+| `/skills`       | List available skills                                                         |
+| `/tools`        | List available harness and MCP tools in a pager                               |
+| `/context`      | List available context files                                                  |
+| `/commands`     | List available slash commands (builtin and custom)                            |
+| `/keymaps`      | List configured keybindings                                                   |
+| `/usage`        | Show current session usage                                                    |
+| `/tokens`       | Show current token count by area                                              |
+| `/config`       | View global, local, and applied config in a pager                             |
+| `/reload`       | Reload config and context, diff the result in a pager                         |
+| `/initlocal`    | Create `./.lasso/settings.yaml` if it doesn't exist                           |
+| `/initglobal`   | Create `$XDG_CONFIG_HOME/lasso/settings.yaml` if it doesn't exist             |
+| `/resume`       | Resume the latest session or select one by start date (`/resume <timestamp>`) |
+| `/summaries`    | View conversation summaries in a pager                                        |
+| `/mcps`         | Print configured MCP servers                                                  |
+| `/steer`        | Keymap-only: interrupt the active turn and send the editor's queued input     |
 
 ### Custom Slash Commands
 
-Create custom commands by adding markdown files (`.md`) to `./.lasso/commands/` (local), `${XDG_CONFIG_HOME:-$HOME/.config}/lasso/commands/` (global), or any directory specified in `customSlashCommandDirs`. Nested subdirectories are supported via `**/*.md` glob. Commands with the same filename are deduplicated with the first occurrence taking precedence, in this priority order: custom dirs → local → global.
+Create custom commands by adding markdown files (`.md`) to `./.lasso/commands/` (local), `$XDG_CONFIG_HOME/lasso/commands/` (global), or any directory specified in `customSlashCommandDirs`. Nested subdirectories are supported via `**/*.md` glob. Commands with the same filename are deduplicated with the first occurrence taking precedence, in this priority order: custom dirs → local → global.
 
 Running `/command` sends the command's markdown content as a message. Extra content can be passed after the command name: `/command <extra content>` sends the command's instructions followed by the extra content as context, letting you parameterize a command without editing its file, e.g. `/refactor extract the config parsing into a module`.
 
@@ -371,7 +371,7 @@ Running `/command` sends the command's markdown content as a message. Extra cont
 ./.lasso/commands/              # local commands
   help.md
   refactor.md
-${XDG_CONFIG_HOME:-$HOME/.config}/lasso/commands/      # global commands
+$XDG_CONFIG_HOME/lasso/commands/      # global commands
   status.md
 /home/me/my-commands/              # custom commands (via customSlashCommandDirs)
   custom.md
@@ -408,13 +408,13 @@ messageQueueDelimiter: "ll\n"
   AGENTS.md                        # always in context
   src/
     AGENTS.md                      # loaded as a skill on demand
-${XDG_CONFIG_HOME:-$HOME/.config}/lasso/context/       # global context dir
+$XDG_CONFIG_HOME/lasso/context/       # global context dir
   AGENTS.md                        # always in context
 ```
 
 ### Discovery
 
-- **Root files** — `./AGENTS.md` and `${XDG_CONFIG_HOME:-$HOME/.config}/lasso/context/AGENTS.md` are always included in the system prompt
+- **Root files** — `./AGENTS.md` and `$XDG_CONFIG_HOME/lasso/context/AGENTS.md` are always included in the system prompt
 - **Nested files** — all `*/**/AGENTS.md` files under the current working directory are registered as skills. The agent can call `load_skill` to progressively disclose their content when needed
 
 ## Skills
@@ -422,7 +422,7 @@ ${XDG_CONFIG_HOME:-$HOME/.config}/lasso/context/       # global context dir
 ### Directory Structure
 
 ```
-${XDG_CONFIG_HOME:-$HOME/.config}/lasso/skills/   # global skills
+$XDG_CONFIG_HOME/lasso/skills/   # global skills
   my-skill/
     SKILL.md
   category/
@@ -442,7 +442,7 @@ Skills are discovered via `**/SKILL.md` glob from three sources in priority orde
 
 1. **Custom skill dirs** — directories specified in `customSkillDirs`
 2. **Local skills** — `./.lasso/skills/`
-3. **Global skills** — `${XDG_CONFIG_HOME:-$HOME/.config}/lasso/skills/`
+3. **Global skills** — `$XDG_CONFIG_HOME/lasso/skills/`
 
 Skills with duplicate names are deduplicated, with the first occurrence taking precedence.
 
