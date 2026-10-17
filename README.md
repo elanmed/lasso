@@ -12,7 +12,7 @@ _A minimal agent harness to rein in your llm_
   - Multi-line input is supported by spawning a non-blocking editor of your choice
   - Messages can be queued by typing a custom delimiter (default `l---`) in the spawned editor
 - **Feature-rich interactions**:
-  - LLM calls can be interrupted with `<C-c>`, which redraws the prompt
+  - Tool calls and LLM responses can be interrupted with `<C-c>`, which redraws the prompt
     - Executing `/steer` skips the prompt and triggers the next LLM call using the editor's current content
   - Prefix an input with `!` to execute it directly as bash
   - Record non-blocking audio transcriptions with `/record`
