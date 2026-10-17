@@ -3187,7 +3187,10 @@ function abortRlQuestionForEditorIfActive(editorContent: string) {
     const rl = clearRlLine();
     assertAtBuildtime(rl !== null);
 
-    const truncatedFirstLine = truncate(editorContent);
+    const truncatedFirstLine = truncate(
+      editorContent,
+      getState().config.promptPrefix.length,
+    );
     rl.write(truncatedFirstLine);
     actions.appendStdoutTail(truncatedFirstLine);
 
@@ -3338,10 +3341,6 @@ export async function resolveUserInput({
       return await resolveSlashCommand(editorInput);
     }
 
-    if (editorInput !== null && shouldExecuteUserInput(editorInput)) {
-      executeUserInput(editorInput);
-      return null;
-    }
     return editorInput;
   }
 
@@ -3388,11 +3387,6 @@ export async function resolveUserInput({
         return await resolveSlashCommand(editorInput);
       }
 
-      if (editorInput !== null && shouldExecuteUserInput(editorInput)) {
-        executeUserInput(editorInput);
-        return null;
-      }
-
       return editorInput;
     }
 
@@ -3417,31 +3411,33 @@ export async function resolveUserInput({
   }
 
   if (shouldExecuteUserInput(rawInput)) {
-    executeUserInput(rawInput);
+    await executeUserInput(rawInput);
     return null;
   }
 
   return rawInput.trim();
 }
 
-export function executeUserInput(rawInput: string) {
+export async function executeUserInput(rawInput: string) {
   const abortController = new AbortController();
   actions.setExecuteUserInputAbortController(abortController);
 
   const userInput = rawInput.trim().slice(1);
   print.doing(`$ ${userInput}`);
   try {
-    const spawnResult = tryCatch(() =>
-      childProcessDeps.spawnSync(userInput, {
-        shell: true,
-        stdio: "inherit",
-        signal: abortController.signal,
-      }),
+    const spawnResult = await tryCatchAsync(
+      (async () => {
+        const userProcess = childProcessDeps.spawn(userInput, {
+          shell: true,
+          stdio: "inherit",
+          signal: abortController.signal,
+        });
+        await once(userProcess, "exit");
+      })(),
     );
     if (!spawnResult.ok) {
-      if (isAbortError(spawnResult.error)) {
-        return;
-      }
+      if (isAbortError(spawnResult.error)) return;
+
       print.error(
         `Error while executing the user input. Error: ${getMessageFromError(spawnResult.error)}`,
       );

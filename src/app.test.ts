@@ -105,6 +105,7 @@ import {
   recordAndTranscribeInput,
   resolveSlashCommand,
   resolveUserInput,
+  executeUserInput,
   shouldResolveSlashCommand,
   clearCommand,
   printTokens,
@@ -181,6 +182,7 @@ import {
   makeInvalidString,
   mockSpawnSync,
   mockPagerSpawn,
+  mockUserInputSpawn,
   first,
   addSessionFile,
   setupKeypressTests,
@@ -10347,6 +10349,81 @@ describe("input", () => {
     });
   });
 
+  describe("executeUserInput", () => {
+    it("spawns the command asynchronously and clears its abort controller after exit", async () => {
+      const { spawned, spawnOptions, children } = mockUserInputSpawn({
+        autoExit: false,
+      });
+      const execution = executeUserInput("! echo hello");
+      const controller = getState().abortControllers.executeUserInput;
+      assert(controller !== null);
+
+      assert.deepStrictEqual(spawned, [" echo hello"]);
+      assert.deepStrictEqual(spawnOptions, [
+        {
+          shell: true,
+          stdio: "inherit",
+          signal: controller.signal,
+        },
+      ]);
+      const child = children[0];
+      assert(child !== undefined);
+      child.emit("exit", 0, null);
+      await execution;
+
+      assert.strictEqual(getState().abortControllers.executeUserInput, null);
+    });
+
+    it("prints an error when the command fails to spawn", async () => {
+      const { spawned } = mockUserInputSpawn({
+        spawnError: new Error("spawn failed"),
+      });
+      const getWrites = mockStdoutWrites();
+
+      await executeUserInput("! echo hello");
+
+      assert.deepStrictEqual(spawned, [" echo hello"]);
+      assert.deepStrictEqual(getWrites(), [
+        `${BLUE}$  echo hello${RESET}\n`,
+        `${RED}Error while executing the user input. Error: spawn failed${RESET}\n`,
+      ]);
+      assert.strictEqual(getState().abortControllers.executeUserInput, null);
+    });
+
+    it("aborts the running command on SIGINT", async () => {
+      let sigint: (() => void) | undefined;
+      const rl = makeFakeRl({
+        on: (_event: string, listener: () => void) => {
+          sigint = listener;
+        },
+      });
+      const { spawnOptions, children } = mockUserInputSpawn({
+        autoExit: false,
+      });
+      const execution = executeUserInput("! sleep 10");
+      const controller = getState().abortControllers.executeUserInput;
+      assert(controller !== null);
+      initSigInt(rl);
+      assert(sigint !== undefined);
+      sigint();
+
+      assert.strictEqual(controller.signal.aborted, true);
+      assert.deepStrictEqual(spawnOptions, [
+        {
+          shell: true,
+          stdio: "inherit",
+          signal: controller.signal,
+        },
+      ]);
+      const child = children[0];
+      assert(child !== undefined);
+      child.emit("error", makeAbortError("The operation was aborted"));
+      await execution;
+
+      assert.strictEqual(getState().abortControllers.executeUserInput, null);
+    });
+  });
+
   describe("resolveUserInput", () => {
     beforeEach(() => {
       actions.resetStdout();
@@ -10362,6 +10439,16 @@ describe("input", () => {
         assert.deepStrictEqual(getState().conversation.transcript, [
           { timestamp: 0, role: "user", message: "editor content" },
         ]);
+      });
+
+      it("returns shell-like editor input without executing it", async () => {
+        const { spawned } = mockUserInputSpawn();
+        actions.setEditorInputValue("!echo hello");
+
+        const result = await resolveUserInput({ isFirstInput: false });
+
+        assert.strictEqual(result, "!echo hello");
+        assert.deepStrictEqual(spawned, []);
       });
 
       it("returns the first queued editor message and keeps the rest for the next iteration", async () => {
@@ -10406,6 +10493,19 @@ second
           { timestamp: 0, role: "user", message: "  hello  " },
         ]);
       });
+
+      it("executes shell input and waits for the command to exit", async () => {
+        const { spawned } = mockUserInputSpawn();
+        mock.method(getTestRl(), "question", () =>
+          Promise.resolve("!echo hello"),
+        );
+
+        const result = await resolveUserInput({ isFirstInput: false });
+
+        assert.strictEqual(result, null);
+        assert.deepStrictEqual(spawned, ["echo hello"]);
+        assert.strictEqual(getState().abortControllers.executeUserInput, null);
+      });
     });
 
     describe("handles errors and aborts", () => {
@@ -10422,18 +10522,20 @@ second
         ]);
       });
 
-      it("returns editor value when aborted by editor", async () => {
+      it("returns shell-like editor input without executing it when aborted by editor", async () => {
+        const { spawned } = mockUserInputSpawn();
         mock.method(getTestRl(), "question", () => {
-          actions.setEditorInputValue("from editor");
+          actions.setEditorInputValue("!echo hello");
           const err = makeAbortError("This operation was aborted");
           return Promise.reject(err);
         });
         const result = await resolveUserInput({ isFirstInput: false });
-        assert.strictEqual(result, "from editor");
+        assert.strictEqual(result, "!echo hello");
         assert.strictEqual(getState().terminal.editorInputValue, null);
         assert.deepStrictEqual(getState().conversation.transcript, [
-          { timestamp: 0, role: "user", message: "from editor" },
+          { timestamp: 0, role: "user", message: "!echo hello" },
         ]);
+        assert.deepStrictEqual(spawned, []);
       });
     });
 
@@ -12809,6 +12911,22 @@ editor input
         await harness.flush();
         assert.deepStrictEqual(prompts, [true]);
         assert.strictEqual(getState().terminal.editorInputValue, null);
+      });
+
+      it("reserves prompt-prefix columns when truncating editor text", async () => {
+        mock.method(processDeps.stdout, "getColumns", () => 10);
+        actions.setPromptPrefix(">>>>>>");
+        mockEditorSpawn(() => {
+          testFs.writeFile("/tmp/lasso-test-uuid.txt", "abcdefghij");
+        });
+        harness.emitKey({ name: "g", ctrl: true });
+        await harness.flush();
+
+        assert.deepStrictEqual(harness.writes, [
+          { chunk: null, key: { ctrl: true, name: "e" } },
+          { chunk: null, key: { ctrl: true, name: "u" } },
+          { chunk: "abc…", key: undefined },
+        ]);
       });
     });
 
