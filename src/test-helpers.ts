@@ -33,6 +33,11 @@ import {
 } from "./schemas.ts";
 import { shellQuote } from "./utils.ts";
 
+export const testConfig = {
+  model: "claude-sonnet-4-6",
+  baseURL: "https://api.example.com",
+};
+
 export function makeMcpTool() {
   return {
     inputSchema: z.object({}),

@@ -1,5 +1,6 @@
 import { describe, it, beforeEach, afterEach, mock } from "node:test";
 import assert from "node:assert/strict";
+import crypto from "node:crypto";
 import { z } from "zod";
 import {
   createSubagentTaskSchema,
@@ -15,13 +16,13 @@ import {
   executeWebFetchHtmlTool as executeWebFetchHtmlToolImpl,
   executeWebFetchJsonTool as executeWebFetchJsonToolImpl,
   loadSkillTool,
+  createToolCallDiffer,
 } from "./tools.ts";
 import { print, toolPrint } from "./printing.ts";
-import { actions } from "./state.ts";
+import { actions, getState } from "./state.ts";
 import { getWebpagesDir } from "./paths.ts";
 import { getSubagentPrompt } from "./prompts.ts";
 import { safeStringify, stringify } from "./utils.ts";
-
 import { childProcessDeps, fsDeps, processDeps } from "./deps.ts";
 import {
   BLUE,
@@ -40,6 +41,8 @@ import {
   setMcpClients,
   makeFakeFetch,
   mockExecRecordingOptions,
+  RED,
+  mockExecCalls,
 } from "./test-helpers.ts";
 
 const toolOutput = {
@@ -1440,6 +1443,338 @@ skills body`,
 
         await assert.rejects(resultPromise, { name: "AbortError" });
       });
+    });
+  });
+});
+
+describe("createToolCallDiffer", () => {
+  beforeEach(() => {
+    setupTestContext();
+  });
+
+  describe("snapshots", () => {
+    it("creates and cleans up a tool call snapshot", async () => {
+      testFs._files.set("/source/file.txt", "original content");
+      const differ = createToolCallDiffer();
+
+      await differ.setTempFiles("call-1", ["/source/file.txt"]);
+
+      assert.strictEqual(
+        testFs._files.get("/tmp/lasso-test-uuid.txt"),
+        "original content",
+      );
+      assert.strictEqual(
+        differ.toolCallIdsMap.get("call-1")?.get("/source/file.txt"),
+        "/tmp/lasso-test-uuid.txt",
+      );
+
+      await differ.cleanupToolCallIdTempFiles("call-1");
+
+      assert.strictEqual(testFs._files.has("/tmp/lasso-test-uuid.txt"), false);
+      assert.strictEqual(differ.toolCallIdsMap.has("call-1"), false);
+    });
+
+    it("warns when the before temp file cannot be created", async () => {
+      testFs._files.set("/test/file.txt", "original content");
+      mock.method(fsDeps, "writeFile", () =>
+        Promise.reject(new Error("write failed")),
+      );
+      const writes = mockStdoutWrites();
+
+      const differ = createToolCallDiffer();
+      await differ.setTempFiles("call-1", ["/test/file.txt"]);
+      await differ.diffAndCleanup("call-1", ["/test/file.txt"]);
+
+      assert.deepStrictEqual(writes(), [
+        `${RED}Failed to write a temp file with the content from path /test/file.txt: write failed${RESET}\n`,
+      ]);
+      assert.deepStrictEqual(getState().conversation.toolEditDiffs, []);
+    });
+
+    it("registers an empty snapshot when the source file does not exist", async () => {
+      const differ = createToolCallDiffer();
+
+      await differ.setTempFiles("call-1", ["/missing/file.txt"]);
+
+      assert.equal(testFs._files.get("/tmp/lasso-test-uuid.txt"), "");
+      assert.equal(
+        differ.toolCallIdsMap.get("call-1")?.get("/missing/file.txt"),
+        "/tmp/lasso-test-uuid.txt",
+      );
+    });
+
+    it("cleans up an empty snapshot", async () => {
+      const differ = createToolCallDiffer();
+
+      await differ.setTempFiles("call-1", ["/missing/file.txt"]);
+      await differ.cleanupToolCallIdTempFiles("call-1");
+
+      assert.equal(testFs._files.has("/tmp/lasso-test-uuid.txt"), false);
+      assert.equal(differ.toolCallIdsMap.has("call-1"), false);
+    });
+
+    it("cleans up all empty snapshots", async () => {
+      const differ = createToolCallDiffer();
+
+      await differ.setTempFiles("call-1", ["/missing/a.txt"]);
+      await differ.setTempFiles("call-2", ["/missing/b.txt"]);
+      await differ.cleanupAllTempFiles();
+
+      assert.deepStrictEqual([...differ.toolCallIdsMap.keys()], []);
+      assert.equal(testFs._files.has("/tmp/lasso-test-uuid.txt"), false);
+    });
+
+    it("cleans up all outstanding tool call snapshots", async () => {
+      const differ = createToolCallDiffer();
+      await differ.setTempFiles("call-1", ["/a"]);
+      await differ.setTempFiles("call-2", ["/b"]);
+
+      await differ.cleanupAllTempFiles();
+
+      assert.strictEqual(testFs._files.has("/tmp/lasso-test-uuid.txt"), false);
+      assert.strictEqual(differ.toolCallIdsMap.has("call-1"), false);
+      assert.strictEqual(differ.toolCallIdsMap.has("call-2"), false);
+    });
+  });
+
+  describe("ignored paths", () => {
+    it("does not snapshot ignores-path files", async () => {
+      testFs._files.set("/tmp/file.txt", "original content");
+      const differ = createToolCallDiffer();
+
+      await differ.setTempFiles("call-1", ["/tmp/file.txt"]);
+
+      assert.equal(testFs._files.has("/tmp/lasso-test-uuid.txt"), false);
+      assert.equal(differ.toolCallIdsMap.has("call-1"), false);
+    });
+
+    it("does not diff and cleans up the after file for ignored paths", async () => {
+      const commands: string[] = [];
+      const getWrites = mockStdoutWrites();
+      const differ = createToolCallDiffer();
+      mockExecCalls([], commands);
+
+      await differ.setTempFiles("call-1", ["/tmp/file.txt"]);
+      testFs._files.set("/tmp/file.txt", "new content");
+      await differ.diffAndCleanup("call-1", ["/tmp/file.txt"]);
+
+      assert.equal(commands.length, 0);
+      assert.deepStrictEqual(getWrites(), []);
+      assert.deepStrictEqual(getState().conversation.toolEditDiffs, []);
+    });
+  });
+
+  describe("diffs", () => {
+    it("prints and records the diff for a newly-created file", async () => {
+      const commands: string[] = [];
+      const getWrites = mockStdoutWrites();
+      const differ = createToolCallDiffer();
+      mockExecCalls(
+        [{ stdout: "delta 0.18.2" }, { stdout: "+created content\n" }],
+        commands,
+      );
+
+      await differ.setTempFiles("call-1", ["/test/new-file.txt"]);
+      testFs._files.set("/test/new-file.txt", "created content");
+      await differ.diffAndCleanup("call-1", ["/test/new-file.txt"]);
+
+      assert.equal(commands.length, 2);
+      assert.deepStrictEqual(getWrites(), [
+        "\n",
+        `${GREY}━━ ${BOLD}File change: /test/new-file.txt${BOLD_RESET} ━━${RESET}\n`,
+        "+created content\n\n",
+      ]);
+      assert.deepStrictEqual(getState().conversation.toolEditDiffs, [
+        { fileName: "/test/new-file.txt", diffStdout: "+created content\n" },
+      ]);
+      assert.equal(testFs._files.has("/tmp/lasso-test-uuid.txt"), false);
+      assert.equal(differ.toolCallIdsMap.has("call-1"), false);
+    });
+
+    it("diffs multiple affected files against their matching snapshots", async () => {
+      let randomByte = 0;
+      mock.method(crypto, "randomBytes", (size: number) =>
+        Buffer.alloc(size, randomByte++),
+      );
+      testFs._files.set("/test/a.txt", "original a");
+      testFs._files.set("/test/b.txt", "original b");
+      const commands: string[] = [];
+      const differ = createToolCallDiffer();
+      mockExecCalls(
+        [
+          { stdout: "delta 0.18.2" },
+          { stdout: "delta 0.18.2" },
+          { stdout: "+changed a\n" },
+          { stdout: "+changed b\n" },
+        ],
+        commands,
+      );
+
+      await differ.setTempFiles("call-1", ["/test/a.txt", "/test/b.txt"]);
+      const tempFileBeforeA = differ.toolCallIdsMap
+        .get("call-1")
+        ?.get("/test/a.txt");
+      const tempFileBeforeB = differ.toolCallIdsMap
+        .get("call-1")
+        ?.get("/test/b.txt");
+      assert(tempFileBeforeA !== undefined);
+      assert(tempFileBeforeB !== undefined);
+      assert.notStrictEqual(tempFileBeforeA, tempFileBeforeB);
+      assert.equal(testFs._files.get(tempFileBeforeA), "original a");
+      assert.equal(testFs._files.get(tempFileBeforeB), "original b");
+      testFs._files.set("/test/a.txt", "changed a");
+      testFs._files.set("/test/b.txt", "changed b");
+
+      await differ.diffAndCleanup("call-1", ["/test/a.txt", "/test/b.txt"]);
+
+      assert.equal(commands.length, 4);
+      assert.deepStrictEqual(getState().conversation.toolEditDiffs, [
+        { fileName: "/test/a.txt", diffStdout: "+changed a\n" },
+        { fileName: "/test/b.txt", diffStdout: "+changed b\n" },
+      ]);
+      assert.equal(testFs._files.has(tempFileBeforeA), false);
+      assert.equal(testFs._files.has(tempFileBeforeB), false);
+      assert.equal(differ.toolCallIdsMap.has("call-1"), false);
+    });
+
+    it("suppresses printing, continues recording tool edit diffs", async () => {
+      const commands: string[] = [];
+      const getWrites = mockStdoutWrites();
+      const differ = createToolCallDiffer();
+      mockExecCalls(
+        [{ stdout: "delta 0.18.2" }, { stdout: "+created content\n" }],
+        commands,
+      );
+      actions.setSuppressToolEditDiffs(true);
+
+      await differ.setTempFiles("call-1", ["/test/new-file.txt"]);
+      testFs._files.set("/test/new-file.txt", "created content");
+      await differ.diffAndCleanup("call-1", ["/test/new-file.txt"]);
+
+      assert.equal(commands.length, 2);
+      assert.deepStrictEqual(getWrites(), []);
+      assert.deepStrictEqual(getState().conversation.toolEditDiffs, [
+        { fileName: "/test/new-file.txt", diffStdout: "+created content\n" },
+      ]);
+      assert.equal(testFs._files.has("/tmp/lasso-test-uuid.txt"), false);
+      assert.equal(differ.toolCallIdsMap.has("call-1"), false);
+    });
+
+    it("diffs a deleted file against an empty after snapshot", async () => {
+      testFs._files.set("/source/file.txt", "original content");
+      const commands: string[] = [];
+      const differ = createToolCallDiffer();
+      mockExecCalls(
+        [{ stdout: "delta 0.18.2" }, { stdout: "diff output" }],
+        commands,
+      );
+
+      await differ.setTempFiles("call-1", ["/source/file.txt"]);
+      testFs._files.delete("/source/file.txt");
+      await differ.diffAndCleanup("call-1", ["/source/file.txt"]);
+
+      assert.equal(commands.length, 2);
+      assert.deepStrictEqual(getState().conversation.toolEditDiffs, [
+        { fileName: "/source/file.txt", diffStdout: "diff output" },
+      ]);
+      assert.equal(testFs._files.has("/tmp/lasso-test-uuid.txt"), false);
+      assert.equal(differ.toolCallIdsMap.has("call-1"), false);
+    });
+
+    it("diffs and cleans up a successful tool call", async () => {
+      testFs._files.set("/test/file.txt", "original content");
+      const commands: string[] = [];
+      const differ = createToolCallDiffer();
+      mockExecCalls(
+        [{ stdout: "delta 0.18.2" }, { stdout: "diff output" }],
+        commands,
+      );
+
+      await differ.setTempFiles("call-1", ["/test/file.txt"]);
+      await differ.diffAndCleanup("call-1", ["/test/file.txt"]);
+
+      assert.strictEqual(
+        commands[1],
+        "git diff --no-index --color=always -U3 /tmp/lasso-test-uuid.txt /tmp/lasso-test-uuid.txt | delta --paging=never --line-numbers --hunk-header-style=omit --file-style=omit",
+      );
+      assert.strictEqual(testFs._files.has("/tmp/lasso-test-uuid.txt"), false);
+      assert.strictEqual(differ.toolCallIdsMap.has("call-1"), false);
+      assert.deepStrictEqual(getState().conversation.toolEditDiffs, [
+        { fileName: "/test/file.txt", diffStdout: "diff output" },
+      ]);
+    });
+
+    it("appends the diff to state and does not print an error when the diff command succeeds", async () => {
+      testFs._files.set("/test/file.txt", "original content");
+      const getWrites = mockStdoutWrites();
+      const differ = createToolCallDiffer();
+      mockExecCalls([{ stdout: "delta 0.18.2" }, { stdout: "+added line\n" }]);
+
+      await differ.setTempFiles("call-1", ["/test/file.txt"]);
+      await differ.diffAndCleanup("call-1", ["/test/file.txt"]);
+
+      assert.deepStrictEqual(getWrites(), [
+        "\n",
+        `${GREY}━━ ${BOLD}File change: /test/file.txt${BOLD_RESET} ━━${RESET}\n`,
+        "+added line\n\n",
+      ]);
+    });
+  });
+});
+
+describe("diffAndCleanup error and empty output", () => {
+  afterEach(() => {
+    mock.restoreAll();
+  });
+
+  describe("diffAndCleanup error and empty output", () => {
+    beforeEach(() => {
+      setupTestContext();
+    });
+
+    it("prints an error and skips appending when the diff command fails", async () => {
+      const getWrites = mockStdoutWrites();
+      const err = new Error("fatal") as Error & { code: number };
+      err.code = 128;
+      mockExecCalls([{ stdout: "delta 0.18.2" }, { stdout: "", error: err }]);
+      const differ = createToolCallDiffer();
+      testFs._files.set("/test/file.txt", "original content");
+      await differ.setTempFiles("call-1", ["/test/file.txt"]);
+      await differ.diffAndCleanup("call-1", ["/test/file.txt"]);
+      assert.deepStrictEqual(getWrites(), [
+        `${RED}An error occurred when getting the diff for /test/file.txt: fatal${RESET}\n`,
+      ]);
+      assert.deepStrictEqual(getState().conversation.toolEditDiffs, []);
+      assert.strictEqual(testFs._files.has("/tmp/lasso-test-uuid.txt"), false);
+      assert.strictEqual(differ.toolCallIdsMap.has("call-1"), false);
+    });
+
+    it("warns when the after temp file cannot be created", async () => {
+      const writes = mockStdoutWrites();
+      testFs._files.set("/test/file.txt", "original content");
+      const differ = createToolCallDiffer();
+      await differ.setTempFiles("call-1", ["/test/file.txt"]);
+      mock.method(fsDeps, "writeFile", () =>
+        Promise.reject(new Error("write failed")),
+      );
+
+      await differ.diffAndCleanup("call-1", ["/test/file.txt"]);
+
+      assert.deepStrictEqual(writes(), [
+        `${RED}Failed to write a temp file with the content from path /test/file.txt: write failed${RESET}\n`,
+      ]);
+      assert.deepStrictEqual(getState().conversation.toolEditDiffs, []);
+    });
+
+    it("does not append or print when the diff stdout is empty", async () => {
+      const getWrites = mockStdoutWrites();
+      testFs._files.set("/test/file.txt", "original content");
+      mockExecCalls([{ stdout: "delta 0.18.2" }, { stdout: "" }]);
+      const differ = createToolCallDiffer();
+      await differ.setTempFiles("call-1", ["/test/file.txt"]);
+      await differ.diffAndCleanup("call-1", ["/test/file.txt"]);
+      assert.deepStrictEqual(getWrites(), []);
+      assert.deepStrictEqual(getState().conversation.toolEditDiffs, []);
     });
   });
 });

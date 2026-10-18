@@ -1,6 +1,5 @@
 import { describe, it, afterEach, mock, beforeEach } from "node:test";
 import assert from "node:assert/strict";
-import { getStrFromAssistantContent } from "./commands.ts";
 import {
   orApproxTokens,
   isAbortError,
@@ -16,6 +15,7 @@ import {
   normalizeNewline,
   getMessageFromError,
   createQueue,
+  createLockUtils,
   getPrettyDuration,
   getPrettyDate,
   getDurationColor,
@@ -26,15 +26,17 @@ import {
   removeMediaReplacer,
   writeDebugLog,
 } from "./utils.ts";
-
 import {
   testProcessEnv,
   setupTestContext,
   testFs,
   makeErrnoError,
   makeAbortError,
+  mockKillWithDeadPid,
+  mockSetTimeout,
+  drainTimerCallbacks,
 } from "./test-helpers.ts";
-import { processDeps } from "./deps.ts";
+import { processDeps, fsDeps } from "./deps.ts";
 
 describe("orApproxTokens", () => {
   it("returns the usage tokens when present", () => {
@@ -152,53 +154,6 @@ describe("utils", () => {
     it("rounds to the configured precision", () => {
       assert.equal(decimalToPercent(1 / 6, { precision: 0 }), "17%");
       assert.equal(decimalToPercent(1 / 6, { precision: 3 }), "16.667%");
-    });
-  });
-
-  describe("getStrFromAssistantContent", () => {
-    it("returns string content unchanged", () => {
-      assert.equal(getStrFromAssistantContent("response"), "response");
-    });
-
-    it("joins text content and excludes non-text content", () => {
-      assert.equal(
-        getStrFromAssistantContent([
-          { type: "text", text: "first" },
-          { type: "reasoning", text: "hidden reasoning" },
-          {
-            type: "tool-call",
-            toolCallId: "call-1",
-            toolName: "tool",
-            input: {},
-          },
-          { type: "text", text: "second" },
-        ]),
-        "first\n\n\nsecond",
-      );
-    });
-
-    it("retuns empty strings for unrecognised content types at runtime", () => {
-      assert.equal(getStrFromAssistantContent([{ type: "wat" } as never]), "");
-    });
-
-    it("excludes tool-result and tool-approval-request content", () => {
-      assert.equal(
-        getStrFromAssistantContent([
-          {
-            type: "tool-result",
-            toolCallId: "call-1",
-            toolName: "tool",
-            output: { type: "text", value: "result" },
-          },
-          {
-            type: "tool-approval-request",
-            toolCallId: "call-2",
-            approvalId: "approval-1",
-          },
-          { type: "text", text: "after tools" },
-        ]),
-        "\n\nafter tools",
-      );
     });
   });
 
@@ -738,6 +693,196 @@ second line`,
       assert.strictEqual(isShellSafePath("/tmp/my file;x.txt"), false);
       assert.strictEqual(isShellSafePath("/tmp/a'b.txt"), false);
       assert.strictEqual(isShellSafePath("/tmp/a`ls`.txt"), false);
+    });
+  });
+});
+
+describe("createLockUtils", () => {
+  afterEach(() => {
+    mock.restoreAll();
+  });
+
+  beforeEach(() => {
+    setupTestContext();
+  });
+
+  describe("createLockUtils", () => {
+    beforeEach(() => {
+      mock.method(
+        fsDeps,
+        "writeFile",
+        (path: string, content: string, options?: { flag?: string }) => {
+          if (options?.flag === "wx" && testFs._files.has(path)) {
+            return Promise.reject(makeErrnoError("EEXIST", `EEXIST: ${path}`));
+          }
+          return testFs.writeFile(path, content);
+        },
+      );
+    });
+
+    describe("acquires the lock", () => {
+      it("creates the lock file with the current pid", async () => {
+        const lockUtils = createLockUtils("/lock");
+        assert.equal(await lockUtils.createLock(), true);
+        assert.equal(testFs._files.get("/lock"), String(process.pid));
+      });
+
+      it("returns false and keeps the file when held by a live process", async () => {
+        testFs._files.set("/lock", "42");
+        mock.method(processDeps, "kill", () => undefined);
+        const timerCallbacks = mockSetTimeout();
+
+        const lockUtils = createLockUtils("/lock");
+        const promise = lockUtils.createLock();
+        await drainTimerCallbacks(timerCallbacks);
+
+        assert.equal(await promise, false);
+        assert.equal(testFs._files.get("/lock"), "42");
+        mock.restoreAll();
+      });
+
+      it("acquires after the holder releases within the retry window", async () => {
+        testFs._files.set("/lock", "42");
+        mock.method(processDeps, "kill", () => undefined);
+        const timerCallbacks = mockSetTimeout();
+
+        const lockUtils = createLockUtils("/lock");
+        const promise = lockUtils.createLock();
+        await new Promise<void>((resolve) => setImmediate(resolve));
+        assert.equal(timerCallbacks.length, 1);
+
+        testFs._files.delete("/lock");
+        const callback = timerCallbacks.shift();
+        assert(callback !== undefined);
+        callback();
+
+        assert.equal(await promise, true);
+        assert.equal(testFs._files.get("/lock"), String(process.pid));
+        mock.restoreAll();
+      });
+
+      it("reports success when the lock is acquired on the final retry", async () => {
+        testFs._files.set("/lock", "42");
+        mock.method(processDeps, "kill", () => undefined);
+        const timerCallbacks = mockSetTimeout();
+
+        const lockUtils = createLockUtils("/lock");
+        const promise = lockUtils.createLock();
+        await drainTimerCallbacks(timerCallbacks, { keep: 1 });
+        await new Promise<void>((resolve) => setImmediate(resolve));
+        testFs._files.delete("/lock");
+        const finalCallback = timerCallbacks.shift();
+        assert(finalCallback !== undefined);
+        finalCallback();
+
+        assert.equal(await promise, true);
+        assert.equal(testFs._files.get("/lock"), String(process.pid));
+        mock.restoreAll();
+      });
+    });
+
+    describe("steals the lock", () => {
+      it("steals the lock from a dead process (ESRCH)", async () => {
+        testFs._files.set("/lock", "42");
+        mock.method(processDeps, "kill", () => {
+          throw makeErrnoError("ESRCH", "No such process");
+        });
+
+        const lockUtils = createLockUtils("/lock");
+        assert.equal(await lockUtils.createLock(), true);
+        assert.equal(testFs._files.get("/lock"), String(process.pid));
+        mock.restoreAll();
+      });
+
+      it("returns false when the holder is alive but not ours (EPERM)", async () => {
+        testFs._files.set("/lock", "42");
+        mock.method(processDeps, "kill", () => {
+          throw makeErrnoError("EPERM", "Operation not permitted");
+        });
+        const timerCallbacks = mockSetTimeout();
+
+        const lockUtils = createLockUtils("/lock");
+        const promise = lockUtils.createLock();
+        await drainTimerCallbacks(timerCallbacks);
+
+        assert.equal(await promise, false);
+        assert.equal(testFs._files.get("/lock"), "42");
+        mock.restoreAll();
+      });
+
+      it("steals the lock when the file content is not a pid", async () => {
+        testFs._files.set("/lock", "not-a-pid");
+
+        const lockUtils = createLockUtils("/lock");
+        assert.equal(await lockUtils.createLock(), true);
+        assert.equal(testFs._files.get("/lock"), String(process.pid));
+      });
+
+      it("steals the lock when the lock file cannot be read", async () => {
+        testFs._files.set("/lock", "42");
+        mock.method(fsDeps, "readFile", () =>
+          Promise.reject(makeErrnoError("EIO", "I/O error")),
+        );
+
+        const lockUtils = createLockUtils("/lock");
+        assert.equal(await lockUtils.createLock(), true);
+        assert.equal(testFs._files.get("/lock"), String(process.pid));
+      });
+
+      it("does not steal the lock when the content changes after the staleness check", async () => {
+        testFs._files.set("/lock", "42");
+        mockKillWithDeadPid(42);
+        let readCount = 0;
+        mock.method(fsDeps, "readFile", () => {
+          readCount += 1;
+          return Promise.resolve(readCount === 1 ? "42" : "99");
+        });
+        const timerCallbacks = mockSetTimeout();
+
+        const lockUtils = createLockUtils("/lock");
+        const promise = lockUtils.createLock();
+        await drainTimerCallbacks(timerCallbacks);
+
+        assert.equal(await promise, false);
+        assert.equal(testFs._files.get("/lock"), "42");
+        mock.restoreAll();
+      });
+
+      it("does not steal the lock when an unreadable lock becomes readable", async () => {
+        testFs._files.set("/lock", "42");
+        mockKillWithDeadPid(42);
+        let readCount = 0;
+        mock.method(fsDeps, "readFile", () => {
+          readCount += 1;
+          if (readCount === 1) {
+            return Promise.reject(makeErrnoError("EIO", "I/O error"));
+          }
+          return Promise.resolve("99");
+        });
+        const timerCallbacks = mockSetTimeout();
+
+        const lockUtils = createLockUtils("/lock");
+        const promise = lockUtils.createLock();
+        await drainTimerCallbacks(timerCallbacks);
+
+        assert.equal(await promise, false);
+        assert.equal(testFs._files.get("/lock"), "42");
+        mock.restoreAll();
+      });
+    });
+
+    describe("deletes the lock", () => {
+      it("deletes the lock file", () => {
+        testFs._files.set("/lock", String(process.pid));
+        const lockUtils = createLockUtils("/lock");
+        lockUtils.deleteLock();
+        assert.equal(testFs._files.has("/lock"), false);
+      });
+
+      it("tolerates deleting a missing lock file", () => {
+        const lockUtils = createLockUtils("/lock");
+        assert.doesNotThrow(() => lockUtils.deleteLock());
+      });
     });
   });
 });
