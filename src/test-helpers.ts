@@ -10,19 +10,20 @@ import { z } from "zod";
 import { type ModelMessage, type ToolSet } from "ai";
 import { type MCPClient } from "@ai-sdk/mcp";
 import {
+  createParallelPerformanceLogger,
+  baseBatFlags,
+  markdownBatFlags,
+} from "./printing.ts";
+import { getMcpLogIdToLabel } from "./mcp.ts";
+import {
   aiDeps,
   childProcessDeps,
   fsDeps,
   mcpDeps,
   processDeps,
 } from "./deps.ts";
-import {
-  getMcpLogIdToLabel,
-  createParallelPerformanceLogger,
-  baseBatFlags,
-  markdownBatFlags,
-  initKeypress,
-} from "./app.ts";
+import { initKeypress } from "./app.ts";
+
 import { actions, getState, type MCPToolSet } from "./state.ts";
 import {
   type Key,

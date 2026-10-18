@@ -1,19 +1,11 @@
 import { describe, it, beforeEach, afterEach, mock } from "node:test";
 import assert from "node:assert/strict";
 import { z } from "zod";
-import { actions } from "./state.ts";
-import { getWebpagesDir } from "./paths.ts";
-import { getSubagentPrompt } from "./prompts.ts";
-import { safeStringify, stringify } from "./utils.ts";
 import {
   createSubagentTaskSchema,
   createSubagentTool,
   harnessTools,
-  print,
   stringifyTools,
-  toolPrint,
-} from "./app.ts";
-import {
   timeoutSettings,
   bashToolInputSchema,
   executeBashTool,
@@ -24,6 +16,12 @@ import {
   executeWebFetchJsonTool as executeWebFetchJsonToolImpl,
   loadSkillTool,
 } from "./tools.ts";
+import { print, toolPrint } from "./printing.ts";
+import { actions } from "./state.ts";
+import { getWebpagesDir } from "./paths.ts";
+import { getSubagentPrompt } from "./prompts.ts";
+import { safeStringify, stringify } from "./utils.ts";
+
 import { childProcessDeps, fsDeps, processDeps } from "./deps.ts";
 import {
   BLUE,

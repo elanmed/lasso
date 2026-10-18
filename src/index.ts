@@ -1,22 +1,25 @@
 import { fileURLToPath } from "node:url";
-import { actions, getState } from "./state.ts";
-import { getMessageFromError } from "./utils.ts";
 import {
   print,
   printNewline,
   printSessionStartDate,
   stopLoadingState,
-  fencePrint,
   executeBat,
-  initState,
+} from "./printing.ts";
+import {
   printMissingConfigErrors,
   printMissingConfigWarnings,
-  printLargeContextOverheadWarning,
+} from "./config.ts";
+import { printLargeContextOverheadWarning } from "./tokenAccounting.ts";
+import { initStdin, initStdout } from "./commands.ts";
+import { actions, getState } from "./state.ts";
+import { getMessageFromError } from "./utils.ts";
+import {
+  fencePrint,
+  initState,
   resolveApiCall,
   maybeCompact,
   initReadline,
-  initStdin,
-  initStdout,
   pollUntilNonBlockingProcessClosed,
   resolveUserInput,
 } from "./app.ts";

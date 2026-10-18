@@ -1,5 +1,6 @@
 import { describe, it, afterEach, mock, beforeEach } from "node:test";
 import assert from "node:assert/strict";
+import { getStrFromAssistantContent } from "./commands.ts";
 import {
   orApproxTokens,
   isAbortError,
@@ -25,7 +26,7 @@ import {
   removeMediaReplacer,
   writeDebugLog,
 } from "./utils.ts";
-import { getStrFromAssistantContent } from "./app.ts";
+
 import {
   testProcessEnv,
   setupTestContext,

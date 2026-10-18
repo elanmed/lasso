@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, it, mock } from "node:test";
 import assert from "node:assert/strict";
+import { initMcpState } from "./mcp.ts";
 import { actions, getState } from "./state.ts";
 import { defaultConfig, MISSING } from "./schemas.ts";
 import { stringify } from "./utils.ts";
@@ -10,7 +11,6 @@ import {
   setupTestContext,
   testFs,
 } from "./test-helpers.ts";
-import { initMcpState } from "./app.ts";
 
 describe("state", () => {
   afterEach(() => {

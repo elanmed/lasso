@@ -107,136 +107,6 @@ import {
   initSigInt,
   createCommands,
 } from "./commands.ts";
-export {
-  getUnicodeChar,
-  truncate,
-  print,
-  colorPrint,
-  createPerformanceLogger,
-  createParallelPerformanceLogger,
-  printNewline,
-  successWithSpacing,
-  errorWithSpacing,
-  startLoadingState,
-  stopLoadingState,
-  printSessionStartDate,
-  wrapInFence,
-  toolPrint,
-  getTempFileName,
-  formatMarkdown,
-  executeBat,
-  spawnBat,
-  markdownBatFlags,
-  baseBatFlags,
-  execGitDiff,
-} from "./printing.ts";
-export type {
-  ParallelPerformanceLogger,
-  LogIdToLabel,
-  ToolPrint,
-  SpacingOpts,
-  GetTempFileNameArgs,
-} from "./printing.ts";
-export {
-  listSessionFiles,
-  getAppendedConversationMessages,
-  getAppendedTranscript,
-  syncSessionFile,
-  resumeFromSessionFile,
-  initSessionFile,
-  deleteExpiredSessionFiles,
-  deleteExpiredWebpageFiles,
-} from "./session.ts";
-export {
-  readConfigFileStr,
-  parseConfigFileStr,
-  printMissingConfigWarnings,
-  printMissingConfigErrors,
-  initStateFromConfig,
-  initStateFirst,
-  initLocalConfig,
-  initGlobalConfig,
-  getHeaders,
-  getLanguageModel,
-  getTranscriptionProvider,
-} from "./config.ts";
-export { initMcpState, getMcpLogIdToLabel, printMcps } from "./mcp.ts";
-export {
-  appendModelUsage,
-  isUsageLimitDisabled,
-  getExpiredTime,
-  syncInitialModelUsageForLimitWindow,
-  syncNewModelUsageForLimitWindow,
-  getPrettyTokenUsage,
-} from "./usage.ts";
-export {
-  createSubagentTaskSchema,
-  createSubagentToolSchema,
-  createSubagentTool,
-  harnessTools,
-  getBaseAgentTools,
-  stringifyTools,
-  isToolCallDiffSafePath,
-  createToolCallDiffer,
-} from "./tools.ts";
-export type { CreateSubagentTool, CreateSubagentTask } from "./tools.ts";
-export {
-  getApproxTokensFromMessages,
-  getSystemContent,
-  getToolsContentStr,
-  compactTriggerRatio,
-  dedicatedPromptOverheadRatio,
-  defaultContextWindow,
-  maxCharCountPerSummary,
-  getMaxNumberSummaries,
-  getPromptOverheadTokensApprox,
-  printLargeContextOverheadWarning,
-  getApproxPromptTokens,
-  getCurrentPromptTokens,
-  getPrettyTokensByArea,
-  getTokensByArea,
-  getPrettyContextWindowUsage,
-} from "./tokenAccounting.ts";
-export {
-  contextFileSkillNamePrefix,
-  builtinSlashCommands,
-  getAvailableCommandsStr,
-  getCustomSlashCommandsStr,
-  openWithPager,
-  spawnAndReadEditorContent,
-  pageEditStr,
-  pageCommands,
-  pageSkills,
-  pageContext,
-  resumeWithNoArgs,
-  resume,
-  printKeymaps,
-  printUsage,
-  printTokens,
-  clearCommand,
-  pageHistory,
-  pageLastResponse,
-  pageLastMessage,
-  pageSummaries,
-  pageLastDiff,
-  pageTools,
-  steerCommand,
-  warnOnMissingTranscribeConfig,
-  recordInput,
-  transcribeInput,
-  recordAndTranscribeInput,
-  getStrFromAssistantContent,
-  shouldResolveSlashCommand,
-  getAvailableSlashCommands,
-  mutedStdout,
-  shouldMuteStdout,
-  initStdin,
-  initStdout,
-  isTypeableKey,
-  initSigInt,
-  clearRlLine,
-} from "./commands.ts";
-export type { BuiltinSlashCommand } from "./commands.ts";
 
 export const fencePrint = createFencePrint({
   sessionInfoSegments: [
@@ -246,7 +116,7 @@ export const fencePrint = createFencePrint({
   ],
 });
 
-export const commands = createCommands({
+const commands = createCommands({
   reloadState: () => initStateRepeatable(),
   onExitRequested: () => exitSession(),
 });
