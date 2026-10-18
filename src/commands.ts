@@ -1332,6 +1332,574 @@ export function clearRlLine(): readline.Interface | null {
   rl.write(null, { ctrl: true, name: "u" });
   return rl;
 }
+async function reload(reloadState: () => Promise<void>) {
+  resetConfigMessages();
+
+  const beforeFiles = await Promise.all(
+    reloadTempFilePrefixes.map((prefix) =>
+      getTempFileName({
+        pathPrefix: `lasso-${prefix}-before`,
+        initialContentStr: getReloadTempFileStr()[prefix],
+      }),
+    ),
+  );
+
+  await reloadState();
+
+  const afterFiles = await Promise.all(
+    reloadTempFilePrefixes.map((prefix) =>
+      getTempFileName({
+        pathPrefix: `lasso-${prefix}-after`,
+        initialContentStr: getReloadTempFileStr()[prefix],
+      }),
+    ),
+  );
+  const diffResults = [];
+  for (let i = 0; i < reloadTempFilePrefixes.length; i++) {
+    const prefix = reloadTempFilePrefixes[i];
+    assertAtBuildtime(prefix !== undefined);
+
+    const beforeFile = beforeFiles[i];
+    if (beforeFile === null || beforeFile === undefined) {
+      continue;
+    }
+
+    const afterFile = afterFiles[i];
+    if (afterFile === null || afterFile === undefined) {
+      await tryCatchAsync(fsDeps.unlink(beforeFile));
+      continue;
+    }
+
+    const diffResult = await tryCatchAsync(
+      execGitDiff({
+        tempFileBeforePath: beforeFile,
+        tempFileAfterPath: afterFile,
+      }),
+    );
+
+    if (!diffResult.ok) {
+      for (const path of beforeFiles
+        .concat(afterFiles)
+        .filter((p) => p !== null)) {
+        await tryCatchAsync(fsDeps.unlink(path));
+      }
+      print.error(
+        `An error occurred when getting the diff: ${getMessageFromError(diffResult.error)}`,
+      );
+      return;
+    }
+
+    if (diffResult.value.stdout.length > 0) {
+      diffResults.push(
+        `${getReloadTempFileDiffTitle()[prefix]}
+${normalizeNewline(diffResult.value.stdout)}`,
+      );
+    }
+  }
+  for (const path of beforeFiles.concat(afterFiles).filter((p) => p !== null)) {
+    await tryCatchAsync(fsDeps.unlink(path));
+  }
+
+  const diff = diffResults.join("\n");
+  if (diff.length === 0) {
+    print.info("No diff from reload");
+  } else {
+    await openWithPager({
+      initialContentStr: diff,
+      contentType: "diff",
+    });
+  }
+  printLargeContextOverheadWarning();
+  printMissingConfigWarnings();
+}
+
+async function resolveBuiltinSlashCommand(
+  commandWithArgs: string,
+  reloadState: () => Promise<void>,
+): Promise<SlashCommandOutcome> {
+  const [commandStr] = splitArgs(commandWithArgs);
+  assertAtBuildtime(commandStr !== undefined);
+
+  const command = commandStr as BuiltinSlashCommand;
+  switch (command) {
+    case "edit": {
+      if (printUsageIfArgs(commandWithArgs)) {
+        return { handled: true, inputFromCommand: null };
+      }
+
+      actions.setIsNonBlockingProcessOngoing(true);
+      const content = await spawnAndReadEditorContent();
+      actions.setIsNonBlockingProcessOngoing(false);
+
+      if (content !== null) {
+        await syncSessionFile({
+          transcript: getAppendedTranscript({
+            message: content,
+            role: "user",
+            timestamp: Date.now(),
+          }),
+        });
+      }
+      return { handled: true, inputFromCommand: content };
+    }
+    case "editpage": {
+      if (printUsageIfArgs(commandWithArgs)) {
+        return { handled: true, inputFromCommand: null };
+      }
+
+      await pageEditStr({ isTyped: true });
+      return { handled: true, inputFromCommand: null };
+    }
+    case "paste": {
+      if (printUsageIfArgs(commandWithArgs)) {
+        return { handled: true, inputFromCommand: null };
+      }
+
+      actions.setIsNonBlockingProcessOngoing(true);
+      const content = await spawnAndReadEditorContent({
+        includeClipboardSuffix: true,
+      });
+      actions.setIsNonBlockingProcessOngoing(false);
+
+      if (content !== null)
+        await syncSessionFile({
+          transcript: getAppendedTranscript({
+            message: content,
+            role: "user",
+            timestamp: Date.now(),
+          }),
+        });
+      return { handled: true, inputFromCommand: content };
+    }
+    case "clear": {
+      if (printUsageIfArgs(commandWithArgs)) {
+        return { handled: true, inputFromCommand: null };
+      }
+
+      await clearCommand();
+      return { handled: true, inputFromCommand: null };
+    }
+    case "history": {
+      if (printUsageIfArgs(commandWithArgs)) {
+        return { handled: true, inputFromCommand: null };
+      }
+
+      await pageHistory({ isTyped: true });
+      return { handled: true, inputFromCommand: null };
+    }
+    case "skills": {
+      if (printUsageIfArgs(commandWithArgs)) {
+        return { handled: true, inputFromCommand: null };
+      }
+
+      await pageSkills();
+      return { handled: true, inputFromCommand: null };
+    }
+    case "context": {
+      if (printUsageIfArgs(commandWithArgs)) {
+        return { handled: true, inputFromCommand: null };
+      }
+
+      await pageContext();
+      return { handled: true, inputFromCommand: null };
+    }
+    case "commands": {
+      if (printUsageIfArgs(commandWithArgs)) {
+        return { handled: true, inputFromCommand: null };
+      }
+
+      await pageCommands();
+      return { handled: true, inputFromCommand: null };
+    }
+    case "keymaps": {
+      if (printUsageIfArgs(commandWithArgs)) {
+        return { handled: true, inputFromCommand: null };
+      }
+
+      printKeymaps();
+      return { handled: true, inputFromCommand: null };
+    }
+    case "usage": {
+      if (printUsageIfArgs(commandWithArgs)) {
+        return { handled: true, inputFromCommand: null };
+      }
+
+      printUsage();
+      return { handled: true, inputFromCommand: null };
+    }
+    case "tokens": {
+      if (printUsageIfArgs(commandWithArgs)) {
+        return { handled: true, inputFromCommand: null };
+      }
+
+      printTokens();
+      return { handled: true, inputFromCommand: null };
+    }
+    case "config": {
+      if (printUsageIfArgs(commandWithArgs)) {
+        return { handled: true, inputFromCommand: null };
+      }
+
+      const initialContentStr = getAllPrettyConfig();
+      await openWithPager({
+        initialContentStr,
+        contentType: "markdown",
+      });
+
+      return { handled: true, inputFromCommand: null };
+    }
+    case "resume": {
+      const inputFromCommand = hasArgs(commandWithArgs)
+        ? await resume(commandWithArgs)
+        : await resumeWithNoArgs();
+
+      if (inputFromCommand !== null) {
+        await syncSessionFile({
+          transcript: getAppendedTranscript({
+            message: inputFromCommand,
+            role: "user",
+            timestamp: Date.now(),
+          }),
+        });
+      }
+      return { handled: true, inputFromCommand };
+    }
+    case "reload": {
+      if (printUsageIfArgs(commandWithArgs)) {
+        return { handled: true, inputFromCommand: null };
+      }
+
+      await reload(reloadState);
+      return { handled: true, inputFromCommand: null };
+    }
+    case "initlocal": {
+      if (printUsageIfArgs(commandWithArgs)) {
+        return { handled: true, inputFromCommand: null };
+      }
+
+      await initLocalConfig();
+      return { handled: true, inputFromCommand: null };
+    }
+    case "initglobal": {
+      if (printUsageIfArgs(commandWithArgs)) {
+        return { handled: true, inputFromCommand: null };
+      }
+
+      await initGlobalConfig();
+      return { handled: true, inputFromCommand: null };
+    }
+    case "lastresponse": {
+      if (printUsageIfArgs(commandWithArgs)) {
+        return { handled: true, inputFromCommand: null };
+      }
+
+      await pageLastResponse({ isTyped: true });
+      return { handled: true, inputFromCommand: null };
+    }
+    case "lastmessage": {
+      if (printUsageIfArgs(commandWithArgs)) {
+        return { handled: true, inputFromCommand: null };
+      }
+
+      await pageLastMessage({ isTyped: true });
+      return { handled: true, inputFromCommand: null };
+    }
+    case "lastdiff": {
+      if (printUsageIfArgs(commandWithArgs)) {
+        return { handled: true, inputFromCommand: null };
+      }
+
+      await pageLastDiff({ isTyped: true });
+      return { handled: true, inputFromCommand: null };
+    }
+    case "summaries": {
+      if (printUsageIfArgs(commandWithArgs)) {
+        return { handled: true, inputFromCommand: null };
+      }
+
+      await pageSummaries({ isTyped: true });
+      return { handled: true, inputFromCommand: null };
+    }
+    case "tools": {
+      if (printUsageIfArgs(commandWithArgs)) {
+        return { handled: true, inputFromCommand: null };
+      }
+
+      await pageTools();
+      return { handled: true, inputFromCommand: null };
+    }
+    case "mcps": {
+      if (printUsageIfArgs(commandWithArgs)) {
+        return { handled: true, inputFromCommand: null };
+      }
+
+      printMcps();
+      return { handled: true, inputFromCommand: null };
+    }
+    case "steer": {
+      if (printUsageIfArgs(commandWithArgs)) {
+        return { handled: true, inputFromCommand: null };
+      }
+      steerCommand({ isTyped: true });
+      return { handled: true, inputFromCommand: null };
+    }
+    case "record": {
+      if (printUsageIfArgs(commandWithArgs)) {
+        return { handled: true, inputFromCommand: null };
+      }
+
+      actions.setIsRecording(true);
+      const inputFromCommand = await recordAndTranscribeInput({
+        isTyped: true,
+      });
+      actions.setIsRecording(false);
+
+      if (inputFromCommand !== null) {
+        await syncSessionFile({
+          transcript: getAppendedTranscript({
+            message: inputFromCommand,
+            role: "user",
+            timestamp: Date.now(),
+          }),
+        });
+      }
+      return { handled: true, inputFromCommand };
+    }
+    default: {
+      command satisfies never;
+      return { handled: false, inputFromCommand: null };
+    }
+  }
+}
+
+async function resolveSlashCommand(
+  reloadState: () => Promise<void>,
+  rawInput: string,
+) {
+  const commandWithoutSlash = rawInput.trim().slice(1);
+  const builtinSlashCommandOutcome = await resolveBuiltinSlashCommand(
+    commandWithoutSlash,
+    reloadState,
+  );
+  if (builtinSlashCommandOutcome.handled) {
+    return builtinSlashCommandOutcome.inputFromCommand;
+  }
+
+  const customSlashCommandOutcome =
+    resolveCustomSlashCommand(commandWithoutSlash);
+  if (customSlashCommandOutcome.handled) {
+    return customSlashCommandOutcome.inputFromCommand;
+  }
+
+  await pageForInvalidCommand(rawInput);
+  return null;
+}
+
+function typeCommand(rl: readline.Interface, command: string) {
+  const output = `/${command}\n`;
+  rl.write(output);
+  actions.appendStdoutTail(output);
+}
+
+// Reprints the readline prompt line and any half-typed input after pager
+// commands so the pending question and its input stay visible and editable
+function redrawPendingQuestion(rl: readline.Interface) {
+  if (getState().abortControllers.question === null) return;
+  rl.prompt(true);
+  actions.appendStdoutTail(getState().config.promptPrefix);
+}
+
+function initKeypress(
+  {
+    reloadState,
+    onExitRequested,
+  }: {
+    reloadState: () => Promise<void>;
+    onExitRequested: () => Promise<void>;
+  },
+  rl: readline.Interface,
+) {
+  stdin.on("keypress", (_char, key: Key) => {
+    void (async () => {
+      if (key.ctrl === true && key.name === "d") {
+        await onExitRequested();
+        return;
+      }
+
+      if (getState().terminal.isNonBlockingProcessOngoing) return;
+      if (getState().terminal.isRecording) return;
+
+      const keymaps = getState().config.keymaps;
+
+      for (const command of builtinSlashCommands) {
+        const keymap = keymaps[command];
+        if (keymap === undefined) continue;
+        if (!isSameKey(key, keymap)) continue;
+
+        switch (command) {
+          case "edit": {
+            const editorContent = await wrapToOpenNonBlockingProcess(
+              spawnAndReadEditorContent,
+            );
+
+            if (editorContent === null) {
+              redrawPendingQuestion(rl);
+            } else {
+              abortRlQuestionForEditorIfActive(editorContent);
+            }
+
+            return;
+          }
+          case "record": {
+            if (getState().abortControllers.question !== null) {
+              typeCommand(rl, command);
+              return;
+            }
+
+            actions.setIsRecording(true);
+            const transcriptionInput = await wrapToOpenNonBlockingProcess(
+              recordAndTranscribeInput,
+              { pauseStdin: false }, // rl.question needs stdin to receive Enter and stop recording.
+            );
+            actions.setIsRecording(false);
+
+            if (transcriptionInput === null) return;
+
+            const { editorInputValue } = getState().terminal;
+            if (editorInputValue === null) {
+              actions.appendEditorInputValue(transcriptionInput);
+            } else {
+              actions.appendEditorInputValue(
+                `\n${getState().config.messageQueueDelimiter}${transcriptionInput}`,
+              );
+            }
+            return;
+          }
+          case "editpage": {
+            await pageEditStr();
+            redrawPendingQuestion(rl);
+            return;
+          }
+          case "paste": {
+            const editorContent = await wrapToOpenNonBlockingProcess(() =>
+              spawnAndReadEditorContent({ includeClipboardSuffix: true }),
+            );
+
+            if (editorContent === null) {
+              redrawPendingQuestion(rl);
+            } else {
+              abortRlQuestionForEditorIfActive(editorContent);
+            }
+            return;
+          }
+          case "history": {
+            await pageHistory();
+            redrawPendingQuestion(rl);
+            return;
+          }
+          case "config": {
+            const initialContentStr = getAllPrettyConfig();
+
+            await openWithPager({
+              initialContentStr,
+              contentType: "markdown",
+            });
+            redrawPendingQuestion(rl);
+
+            return;
+          }
+          case "lastresponse": {
+            await pageLastResponse();
+            redrawPendingQuestion(rl);
+            return;
+          }
+          case "lastmessage": {
+            await pageLastMessage();
+            redrawPendingQuestion(rl);
+            return;
+          }
+          case "lastdiff": {
+            await pageLastDiff();
+            redrawPendingQuestion(rl);
+            return;
+          }
+          case "summaries": {
+            await pageSummaries();
+            redrawPendingQuestion(rl);
+            return;
+          }
+          case "reload": {
+            await reload(reloadState);
+            redrawPendingQuestion(rl);
+            return;
+          }
+          case "commands": {
+            await pageCommands();
+            redrawPendingQuestion(rl);
+            return;
+          }
+          case "tools": {
+            await pageTools();
+            redrawPendingQuestion(rl);
+            return;
+          }
+          case "skills": {
+            await pageSkills();
+            redrawPendingQuestion(rl);
+            return;
+          }
+          case "context": {
+            await pageContext();
+            redrawPendingQuestion(rl);
+            return;
+          }
+          case "mcps": {
+            printMcps();
+            redrawPendingQuestion(rl);
+            return;
+          }
+          case "steer": {
+            steerCommand();
+            redrawPendingQuestion(rl);
+            return;
+          }
+          case "initlocal":
+          case "initglobal":
+          case "keymaps":
+          case "usage":
+          case "tokens":
+          case "resume":
+          case "clear": {
+            if (getState().abortControllers.question !== null) {
+              typeCommand(rl, command);
+            }
+            return;
+          }
+          default: {
+            command satisfies never;
+          }
+        }
+      }
+
+      for (const slashCommand of getState().content.slashCommands) {
+        const keymap = keymaps[slashCommand.name];
+        if (keymap === undefined) continue;
+        if (!isSameKey(key, keymap)) continue;
+
+        if (getState().abortControllers.question !== null) {
+          typeCommand(rl, slashCommand.name);
+        }
+        return;
+      }
+
+      // mutedStdout prevents echoing, but readline's internal state still needs to be cleared
+      if (getState().terminal.loadingStateTimeout !== null) {
+        rl.write(null, { ctrl: true, name: "u" });
+      }
+    })();
+  });
+}
+
 export function createCommands({
   reloadState,
   onExitRequested,
@@ -1339,560 +1907,11 @@ export function createCommands({
   reloadState: () => Promise<void>;
   onExitRequested: () => Promise<void>;
 }) {
-  async function reload() {
-    resetConfigMessages();
-
-    const beforeFiles = await Promise.all(
-      reloadTempFilePrefixes.map((prefix) =>
-        getTempFileName({
-          pathPrefix: `lasso-${prefix}-before`,
-          initialContentStr: getReloadTempFileStr()[prefix],
-        }),
-      ),
-    );
-
-    await reloadState();
-
-    const afterFiles = await Promise.all(
-      reloadTempFilePrefixes.map((prefix) =>
-        getTempFileName({
-          pathPrefix: `lasso-${prefix}-after`,
-          initialContentStr: getReloadTempFileStr()[prefix],
-        }),
-      ),
-    );
-    const diffResults = [];
-    for (let i = 0; i < reloadTempFilePrefixes.length; i++) {
-      const prefix = reloadTempFilePrefixes[i];
-      assertAtBuildtime(prefix !== undefined);
-
-      const beforeFile = beforeFiles[i];
-      if (beforeFile === null || beforeFile === undefined) {
-        continue;
-      }
-
-      const afterFile = afterFiles[i];
-      if (afterFile === null || afterFile === undefined) {
-        await tryCatchAsync(fsDeps.unlink(beforeFile));
-        continue;
-      }
-
-      const diffResult = await tryCatchAsync(
-        execGitDiff({
-          tempFileBeforePath: beforeFile,
-          tempFileAfterPath: afterFile,
-        }),
-      );
-
-      if (!diffResult.ok) {
-        for (const path of beforeFiles
-          .concat(afterFiles)
-          .filter((p) => p !== null)) {
-          await tryCatchAsync(fsDeps.unlink(path));
-        }
-        print.error(
-          `An error occurred when getting the diff: ${getMessageFromError(diffResult.error)}`,
-        );
-        return;
-      }
-
-      if (diffResult.value.stdout.length > 0) {
-        diffResults.push(
-          `${getReloadTempFileDiffTitle()[prefix]}
-${normalizeNewline(diffResult.value.stdout)}`,
-        );
-      }
-    }
-    for (const path of beforeFiles
-      .concat(afterFiles)
-      .filter((p) => p !== null)) {
-      await tryCatchAsync(fsDeps.unlink(path));
-    }
-
-    const diff = diffResults.join("\n");
-    if (diff.length === 0) {
-      print.info("No diff from reload");
-    } else {
-      await openWithPager({
-        initialContentStr: diff,
-        contentType: "diff",
-      });
-    }
-    printLargeContextOverheadWarning();
-    printMissingConfigWarnings();
-  }
-
-  async function resolveBuiltinSlashCommand(
-    commandWithArgs: string,
-  ): Promise<SlashCommandOutcome> {
-    const [commandStr] = splitArgs(commandWithArgs);
-    assertAtBuildtime(commandStr !== undefined);
-
-    const command = commandStr as BuiltinSlashCommand;
-    switch (command) {
-      case "edit": {
-        if (printUsageIfArgs(commandWithArgs)) {
-          return { handled: true, inputFromCommand: null };
-        }
-
-        actions.setIsNonBlockingProcessOngoing(true);
-        const content = await spawnAndReadEditorContent();
-        actions.setIsNonBlockingProcessOngoing(false);
-
-        if (content !== null) {
-          await syncSessionFile({
-            transcript: getAppendedTranscript({
-              message: content,
-              role: "user",
-              timestamp: Date.now(),
-            }),
-          });
-        }
-        return { handled: true, inputFromCommand: content };
-      }
-      case "editpage": {
-        if (printUsageIfArgs(commandWithArgs)) {
-          return { handled: true, inputFromCommand: null };
-        }
-
-        await pageEditStr({ isTyped: true });
-        return { handled: true, inputFromCommand: null };
-      }
-      case "paste": {
-        if (printUsageIfArgs(commandWithArgs)) {
-          return { handled: true, inputFromCommand: null };
-        }
-
-        actions.setIsNonBlockingProcessOngoing(true);
-        const content = await spawnAndReadEditorContent({
-          includeClipboardSuffix: true,
-        });
-        actions.setIsNonBlockingProcessOngoing(false);
-
-        if (content !== null)
-          await syncSessionFile({
-            transcript: getAppendedTranscript({
-              message: content,
-              role: "user",
-              timestamp: Date.now(),
-            }),
-          });
-        return { handled: true, inputFromCommand: content };
-      }
-      case "clear": {
-        if (printUsageIfArgs(commandWithArgs)) {
-          return { handled: true, inputFromCommand: null };
-        }
-
-        await clearCommand();
-        return { handled: true, inputFromCommand: null };
-      }
-      case "history": {
-        if (printUsageIfArgs(commandWithArgs)) {
-          return { handled: true, inputFromCommand: null };
-        }
-
-        await pageHistory({ isTyped: true });
-        return { handled: true, inputFromCommand: null };
-      }
-      case "skills": {
-        if (printUsageIfArgs(commandWithArgs)) {
-          return { handled: true, inputFromCommand: null };
-        }
-
-        await pageSkills();
-        return { handled: true, inputFromCommand: null };
-      }
-      case "context": {
-        if (printUsageIfArgs(commandWithArgs)) {
-          return { handled: true, inputFromCommand: null };
-        }
-
-        await pageContext();
-        return { handled: true, inputFromCommand: null };
-      }
-      case "commands": {
-        if (printUsageIfArgs(commandWithArgs)) {
-          return { handled: true, inputFromCommand: null };
-        }
-
-        await pageCommands();
-        return { handled: true, inputFromCommand: null };
-      }
-      case "keymaps": {
-        if (printUsageIfArgs(commandWithArgs)) {
-          return { handled: true, inputFromCommand: null };
-        }
-
-        printKeymaps();
-        return { handled: true, inputFromCommand: null };
-      }
-      case "usage": {
-        if (printUsageIfArgs(commandWithArgs)) {
-          return { handled: true, inputFromCommand: null };
-        }
-
-        printUsage();
-        return { handled: true, inputFromCommand: null };
-      }
-      case "tokens": {
-        if (printUsageIfArgs(commandWithArgs)) {
-          return { handled: true, inputFromCommand: null };
-        }
-
-        printTokens();
-        return { handled: true, inputFromCommand: null };
-      }
-      case "config": {
-        if (printUsageIfArgs(commandWithArgs)) {
-          return { handled: true, inputFromCommand: null };
-        }
-
-        const initialContentStr = getAllPrettyConfig();
-        await openWithPager({
-          initialContentStr,
-          contentType: "markdown",
-        });
-
-        return { handled: true, inputFromCommand: null };
-      }
-      case "resume": {
-        const inputFromCommand = hasArgs(commandWithArgs)
-          ? await resume(commandWithArgs)
-          : await resumeWithNoArgs();
-
-        if (inputFromCommand !== null) {
-          await syncSessionFile({
-            transcript: getAppendedTranscript({
-              message: inputFromCommand,
-              role: "user",
-              timestamp: Date.now(),
-            }),
-          });
-        }
-        return { handled: true, inputFromCommand };
-      }
-      case "reload": {
-        if (printUsageIfArgs(commandWithArgs)) {
-          return { handled: true, inputFromCommand: null };
-        }
-
-        await reload();
-        return { handled: true, inputFromCommand: null };
-      }
-      case "initlocal": {
-        if (printUsageIfArgs(commandWithArgs)) {
-          return { handled: true, inputFromCommand: null };
-        }
-
-        await initLocalConfig();
-        return { handled: true, inputFromCommand: null };
-      }
-      case "initglobal": {
-        if (printUsageIfArgs(commandWithArgs)) {
-          return { handled: true, inputFromCommand: null };
-        }
-
-        await initGlobalConfig();
-        return { handled: true, inputFromCommand: null };
-      }
-      case "lastresponse": {
-        if (printUsageIfArgs(commandWithArgs)) {
-          return { handled: true, inputFromCommand: null };
-        }
-
-        await pageLastResponse({ isTyped: true });
-        return { handled: true, inputFromCommand: null };
-      }
-      case "lastmessage": {
-        if (printUsageIfArgs(commandWithArgs)) {
-          return { handled: true, inputFromCommand: null };
-        }
-
-        await pageLastMessage({ isTyped: true });
-        return { handled: true, inputFromCommand: null };
-      }
-      case "lastdiff": {
-        if (printUsageIfArgs(commandWithArgs)) {
-          return { handled: true, inputFromCommand: null };
-        }
-
-        await pageLastDiff({ isTyped: true });
-        return { handled: true, inputFromCommand: null };
-      }
-      case "summaries": {
-        if (printUsageIfArgs(commandWithArgs)) {
-          return { handled: true, inputFromCommand: null };
-        }
-
-        await pageSummaries({ isTyped: true });
-        return { handled: true, inputFromCommand: null };
-      }
-      case "tools": {
-        if (printUsageIfArgs(commandWithArgs)) {
-          return { handled: true, inputFromCommand: null };
-        }
-
-        await pageTools();
-        return { handled: true, inputFromCommand: null };
-      }
-      case "mcps": {
-        if (printUsageIfArgs(commandWithArgs)) {
-          return { handled: true, inputFromCommand: null };
-        }
-
-        printMcps();
-        return { handled: true, inputFromCommand: null };
-      }
-      case "steer": {
-        if (printUsageIfArgs(commandWithArgs)) {
-          return { handled: true, inputFromCommand: null };
-        }
-        steerCommand({ isTyped: true });
-        return { handled: true, inputFromCommand: null };
-      }
-      case "record": {
-        if (printUsageIfArgs(commandWithArgs)) {
-          return { handled: true, inputFromCommand: null };
-        }
-
-        actions.setIsRecording(true);
-        const inputFromCommand = await recordAndTranscribeInput({
-          isTyped: true,
-        });
-        actions.setIsRecording(false);
-
-        if (inputFromCommand !== null) {
-          await syncSessionFile({
-            transcript: getAppendedTranscript({
-              message: inputFromCommand,
-              role: "user",
-              timestamp: Date.now(),
-            }),
-          });
-        }
-        return { handled: true, inputFromCommand };
-      }
-      default: {
-        command satisfies never;
-        return { handled: false, inputFromCommand: null };
-      }
-    }
-  }
-
-  async function resolveSlashCommand(rawInput: string) {
-    const commandWithoutSlash = rawInput.trim().slice(1);
-    const builtinSlashCommandOutcome =
-      await resolveBuiltinSlashCommand(commandWithoutSlash);
-    if (builtinSlashCommandOutcome.handled) {
-      return builtinSlashCommandOutcome.inputFromCommand;
-    }
-
-    const customSlashCommandOutcome =
-      resolveCustomSlashCommand(commandWithoutSlash);
-    if (customSlashCommandOutcome.handled) {
-      return customSlashCommandOutcome.inputFromCommand;
-    }
-
-    await pageForInvalidCommand(rawInput);
-    return null;
-  }
-
-  function initKeypress(rl: readline.Interface) {
-    function typeCommand(command: string) {
-      const output = `/${command}\n`;
-      rl.write(output);
-      actions.appendStdoutTail(output);
-    }
-
-    // Reprints the readline prompt line and any half-typed input after pager
-    // commands so the pending question and its input stay visible and editable
-    function redrawPendingQuestion() {
-      if (getState().abortControllers.question === null) return;
-      rl.prompt(true);
-      actions.appendStdoutTail(getState().config.promptPrefix);
-    }
-
-    stdin.on("keypress", (_char, key: Key) => {
-      void (async () => {
-        if (key.ctrl === true && key.name === "d") {
-          await onExitRequested();
-          return;
-        }
-
-        if (getState().terminal.isNonBlockingProcessOngoing) return;
-        if (getState().terminal.isRecording) return;
-
-        const keymaps = getState().config.keymaps;
-
-        for (const command of builtinSlashCommands) {
-          const keymap = keymaps[command];
-          if (keymap === undefined) continue;
-          if (!isSameKey(key, keymap)) continue;
-
-          switch (command) {
-            case "edit": {
-              const editorContent = await wrapToOpenNonBlockingProcess(
-                spawnAndReadEditorContent,
-              );
-
-              if (editorContent === null) {
-                redrawPendingQuestion();
-              } else {
-                abortRlQuestionForEditorIfActive(editorContent);
-              }
-
-              return;
-            }
-            case "record": {
-              if (getState().abortControllers.question !== null) {
-                typeCommand(command);
-                return;
-              }
-
-              actions.setIsRecording(true);
-              const transcriptionInput = await wrapToOpenNonBlockingProcess(
-                recordAndTranscribeInput,
-                { pauseStdin: false }, // rl.question needs stdin to receive Enter and stop recording.
-              );
-              actions.setIsRecording(false);
-
-              if (transcriptionInput === null) return;
-
-              const { editorInputValue } = getState().terminal;
-              if (editorInputValue === null) {
-                actions.appendEditorInputValue(transcriptionInput);
-              } else {
-                actions.appendEditorInputValue(
-                  `\n${getState().config.messageQueueDelimiter}${transcriptionInput}`,
-                );
-              }
-              return;
-            }
-            case "editpage": {
-              await pageEditStr();
-              redrawPendingQuestion();
-              return;
-            }
-            case "paste": {
-              const editorContent = await wrapToOpenNonBlockingProcess(() =>
-                spawnAndReadEditorContent({ includeClipboardSuffix: true }),
-              );
-
-              if (editorContent === null) {
-                redrawPendingQuestion();
-              } else {
-                abortRlQuestionForEditorIfActive(editorContent);
-              }
-              return;
-            }
-            case "history": {
-              await pageHistory();
-              redrawPendingQuestion();
-              return;
-            }
-            case "config": {
-              const initialContentStr = getAllPrettyConfig();
-
-              await openWithPager({
-                initialContentStr,
-                contentType: "markdown",
-              });
-              redrawPendingQuestion();
-
-              return;
-            }
-            case "lastresponse": {
-              await pageLastResponse();
-              redrawPendingQuestion();
-              return;
-            }
-            case "lastmessage": {
-              await pageLastMessage();
-              redrawPendingQuestion();
-              return;
-            }
-            case "lastdiff": {
-              await pageLastDiff();
-              redrawPendingQuestion();
-              return;
-            }
-            case "summaries": {
-              await pageSummaries();
-              redrawPendingQuestion();
-              return;
-            }
-            case "reload": {
-              await reload();
-              redrawPendingQuestion();
-              return;
-            }
-            case "commands": {
-              await pageCommands();
-              redrawPendingQuestion();
-              return;
-            }
-            case "tools": {
-              await pageTools();
-              redrawPendingQuestion();
-              return;
-            }
-            case "skills": {
-              await pageSkills();
-              redrawPendingQuestion();
-              return;
-            }
-            case "context": {
-              await pageContext();
-              redrawPendingQuestion();
-              return;
-            }
-            case "mcps": {
-              printMcps();
-              redrawPendingQuestion();
-              return;
-            }
-            case "steer": {
-              steerCommand();
-              redrawPendingQuestion();
-              return;
-            }
-            case "initlocal":
-            case "initglobal":
-            case "keymaps":
-            case "usage":
-            case "tokens":
-            case "resume":
-            case "clear": {
-              if (getState().abortControllers.question !== null) {
-                typeCommand(command);
-              }
-              return;
-            }
-            default: {
-              command satisfies never;
-            }
-          }
-        }
-
-        for (const slashCommand of getState().content.slashCommands) {
-          const keymap = keymaps[slashCommand.name];
-          if (keymap === undefined) continue;
-          if (!isSameKey(key, keymap)) continue;
-
-          if (getState().abortControllers.question !== null) {
-            typeCommand(slashCommand.name);
-          }
-          return;
-        }
-
-        // mutedStdout prevents echoing, but readline's internal state still needs to be cleared
-        if (getState().terminal.loadingStateTimeout !== null) {
-          rl.write(null, { ctrl: true, name: "u" });
-        }
-      })();
-    });
-  }
-
-  return { resolveSlashCommand, initKeypress };
+  return {
+    resolveSlashCommand: resolveSlashCommand.bind(undefined, reloadState),
+    initKeypress: initKeypress.bind(undefined, {
+      reloadState,
+      onExitRequested,
+    }),
+  };
 }
