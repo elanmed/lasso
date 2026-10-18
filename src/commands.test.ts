@@ -71,7 +71,7 @@ import {
   mockProcessExit,
 } from "./test-helpers.ts";
 import { fsDeps, aiDeps, processDeps } from "./deps.ts";
-import { getSystemContent, getToolsContentStr } from "./tokenAccounting.ts";
+import { getSystemContent, getToolsContentStr } from "./tokens.ts";
 import { print } from "./printing.ts";
 import { strToApproxTokens, sleep } from "./utils.ts";
 import { getGlobalContextDir, getGlobalConfigPath } from "./paths.ts";

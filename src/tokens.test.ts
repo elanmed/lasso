@@ -13,7 +13,7 @@ import {
   printLargeContextOverheadWarning,
   getApproxTokensFromMessages,
   getPrettyContextWindowUsage,
-} from "./tokenAccounting.ts";
+} from "./tokens.ts";
 import { actions, getState } from "./state.ts";
 import { processDeps } from "./deps.ts";
 import { getBaseAgentPrompt } from "./prompts.ts";

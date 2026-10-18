@@ -2,7 +2,7 @@ import { describe, it, beforeEach, afterEach, mock } from "node:test";
 import assert from "node:assert/strict";
 import type { ModelMessage } from "ai";
 import { harnessTools, stringifyTools } from "./tools.ts";
-import { getSystemContent, getToolsContentStr } from "./tokenAccounting.ts";
+import { getSystemContent, getToolsContentStr } from "./tokens.ts";
 import { startLoadingState } from "./printing.ts";
 import { initSigInt } from "./commands.ts";
 

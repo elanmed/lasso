@@ -48,7 +48,7 @@ import {
 } from "./test-helpers.ts";
 import { processDeps, fsDeps } from "./deps.ts";
 import { getPrettyApiDuration } from "./app.ts";
-import { getPrettyContextWindowUsage } from "./tokenAccounting.ts";
+import { getPrettyContextWindowUsage } from "./tokens.ts";
 import { getPrettyTokenUsage } from "./usage.ts";
 
 const fencePrint = createFencePrint({

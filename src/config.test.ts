@@ -29,7 +29,7 @@ import {
   testConfig,
 } from "./test-helpers.ts";
 import { stringifyTools } from "./tools.ts";
-import { getToolsContentStr } from "./tokenAccounting.ts";
+import { getToolsContentStr } from "./tokens.ts";
 import {
   getGlobalContextDir,
   getGlobalConfigPath,

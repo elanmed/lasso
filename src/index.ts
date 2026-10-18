@@ -10,7 +10,7 @@ import {
   printMissingConfigErrors,
   printMissingConfigWarnings,
 } from "./config.ts";
-import { printLargeContextOverheadWarning } from "./tokenAccounting.ts";
+import { printLargeContextOverheadWarning } from "./tokens.ts";
 import { initStdin, initStdout } from "./commands.ts";
 import { actions, getState } from "./state.ts";
 import { getMessageFromError } from "./utils.ts";
