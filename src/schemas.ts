@@ -25,6 +25,14 @@ const ModelPricingSchema = z.object({
 
 export type ModelPricing = z.infer<typeof ModelPricingSchema>;
 
+export interface ModelUsage {
+  inputTokens: number;
+  outputTokens: number;
+  cacheReadTokens: number;
+  cacheWriteTokens: number;
+  date: number;
+}
+
 export const UsageLimitSchema = z.strictObject({
   duration: z.string().refine(
     (duration) => {

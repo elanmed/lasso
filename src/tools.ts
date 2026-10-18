@@ -1,9 +1,10 @@
+import os from "node:os";
 import { extname, join } from "node:path";
 import TurndownService from "turndown";
-import { tool } from "ai";
+import { type ModelMessage as AiModelMessage, tool } from "ai";
 import { z } from "zod";
-import { childProcessDeps, fsDeps } from "./deps.ts";
-import { getState } from "./state.ts";
+import { aiDeps, childProcessDeps, fsDeps } from "./deps.ts";
+import { actions, getState } from "./state.ts";
 import { getWebpagesDir } from "./paths.ts";
 import {
   getMessageFromError,
@@ -12,7 +13,22 @@ import {
   tryCatchAsync,
   strToApproxTokens,
   stringify,
+  safeStringify,
+  normalizeNewline,
 } from "./utils.ts";
+import { getSubagentPrompt } from "./prompts.ts";
+import {
+  createFencePrint,
+  print,
+  printNewline,
+  toolPrint,
+  getTempFileName,
+  execGitDiff,
+} from "./printing.ts";
+import { getLanguageModel } from "./config.ts";
+import { appendModelUsage } from "./usage.ts";
+
+const fencePrint = createFencePrint({ sessionInfoSegments: [] });
 
 export interface ToolOutput {
   toolPrint: (label: string, detail: string) => void;
@@ -543,4 +559,319 @@ export function createSubagentSafeTools(output: ToolOutput) {
       },
     }),
   };
+}
+
+export const createSubagentTaskSchema = z.object({
+  prompt: z
+    .string()
+    .describe("The prompt describing the task for the subagent"),
+  access: z
+    .enum(["read-only", "read-write"])
+    .describe(
+      "Whether the subagent may make changes (read-write) or only investigate (read-only)",
+    ),
+  model: z
+    .string()
+    .min(1)
+    .describe("The model the subagent runs on")
+    .superRefine((value, ctx) => {
+      const configuredModels = getState().config.subagentModels;
+      const allowedModels = (() => {
+        if (configuredModels.length > 0) return configuredModels;
+        return [getState().config.model];
+      })();
+
+      if (!allowedModels.includes(value)) {
+        ctx.addIssue({
+          code: "custom",
+          message: `Invalid model: ${value}`,
+        });
+      }
+    }),
+});
+
+export const createSubagentToolSchema = z.object({
+  tasks: z
+    .array(createSubagentTaskSchema)
+    .describe("The independent subagent tasks to run in parallel"),
+});
+
+export type CreateSubagentTool = z.infer<typeof createSubagentToolSchema>;
+
+export type CreateSubagentTask = z.infer<typeof createSubagentTaskSchema>;
+
+export function isToolCallDiffSafePath(path: string) {
+  return !path.startsWith(os.tmpdir());
+}
+
+export function createToolCallDiffer() {
+  type ToolCallId = string;
+  type FilePath = string;
+  type TempFilePath = string;
+  const toolCallIdsMap = new Map<ToolCallId, Map<FilePath, TempFilePath>>();
+
+  async function setTempFiles(toolCallId: string, paths: string[]) {
+    const filePathToTempFileBefore = new Map<FilePath, TempFilePath>();
+
+    const pathsToSnapshot = Array.from(new Set(paths)).filter(
+      isToolCallDiffSafePath,
+    );
+    const promises = pathsToSnapshot.map(async (path) => {
+      const tempFile = await getTempFileName({ initialContentPath: path });
+      if (tempFile === null) return;
+      filePathToTempFileBefore.set(path, tempFile);
+    });
+    await Promise.all(promises);
+
+    if (filePathToTempFileBefore.size > 0) {
+      toolCallIdsMap.set(toolCallId, filePathToTempFileBefore);
+    }
+  }
+
+  async function diffAndCleanup(toolCallId: string, paths: string[]) {
+    const tempFilesBefore = toolCallIdsMap.get(toolCallId);
+    if (tempFilesBefore === undefined) return;
+    const pathsToDiff = Array.from(new Set(paths)).filter(
+      isToolCallDiffSafePath,
+    );
+
+    const promises = pathsToDiff.map(async (path) => {
+      const tempFileAfterPath = await getTempFileName({
+        initialContentPath: path,
+      });
+      if (tempFileAfterPath === null) return;
+
+      const tempFileBeforePath = tempFilesBefore.get(path);
+      if (tempFileBeforePath === undefined) {
+        await tryCatchAsync(fsDeps.unlink(tempFileAfterPath));
+        return;
+      }
+
+      const diffResult = await tryCatchAsync(
+        execGitDiff({
+          tempFileBeforePath,
+          tempFileAfterPath,
+        }),
+      );
+
+      if (!diffResult.ok) {
+        print.error(
+          `An error occurred when getting the diff for ${path}: ${getMessageFromError(diffResult.error)}`,
+        );
+        await tryCatchAsync(fsDeps.unlink(tempFileAfterPath));
+        return;
+      }
+
+      if (diffResult.value.stdout.length > 0) {
+        actions.appendToolEditDiff({
+          fileName: path,
+          diffStdout: diffResult.value.stdout,
+        });
+
+        if (!getState().config.suppressToolEditDiffs) {
+          printNewline();
+          fencePrint(`File change: ${path}`);
+          print.plain(normalizeNewline(diffResult.value.stdout));
+          printNewline();
+        }
+      }
+
+      await tryCatchAsync(fsDeps.unlink(tempFileAfterPath));
+    });
+    await Promise.all(promises);
+    await cleanupToolCallIdTempFiles(toolCallId);
+  }
+
+  async function cleanupToolCallIdTempFiles(toolCallId: string) {
+    const tempFiles = toolCallIdsMap.get(toolCallId);
+    if (tempFiles === undefined) return;
+
+    const promises = tempFiles
+      .values()
+      .map((tempFile) => tryCatchAsync(fsDeps.unlink(tempFile)));
+    await Promise.all(promises);
+    toolCallIdsMap.delete(toolCallId);
+  }
+
+  async function cleanupAllTempFiles() {
+    const promises = toolCallIdsMap
+      .values()
+      .flatMap((tempFiles) =>
+        tempFiles
+          .values()
+          .map((tempFile) => tryCatchAsync(fsDeps.unlink(tempFile))),
+      );
+    await Promise.all(promises);
+    toolCallIdsMap.clear();
+  }
+
+  return {
+    toolCallIdsMap,
+    setTempFiles,
+    diffAndCleanup,
+    cleanupToolCallIdTempFiles,
+    cleanupAllTempFiles,
+  };
+}
+
+export async function createSubagentTool(
+  { tasks }: CreateSubagentTool,
+  signal?: AbortSignal,
+): Promise<ToolResult> {
+  const subagentPromises = tasks.map(
+    async (subagentSchema): Promise<ToolResult> => {
+      const model = subagentSchema.model;
+
+      const systemContent = [
+        getSubagentPrompt(subagentSchema.access, getState().mcp.clients),
+        getState().content.contextStr,
+        getState().content.skillsStr,
+      ]
+        .filter((content) => content.length > 0)
+        .join("\n\n");
+
+      const toolCallDiffer = createToolCallDiffer();
+
+      const userMessage: AiModelMessage = {
+        role: "user",
+        content: subagentSchema.prompt,
+      };
+
+      const generateTextResult = await tryCatchAsync(
+        aiDeps.generateText({
+          // Subagents should always use the provider's default reasoning
+          model: getLanguageModel(model),
+          instructions: systemContent,
+          messages: [userMessage],
+          tools: {
+            ...subagentSafeTools,
+            ...mcpResourceTools,
+            ...getState().mcp.tools,
+          },
+          stopWhen: aiDeps.isLoopFinished(),
+          ...(signal === undefined ? {} : { abortSignal: signal }),
+          timeout: timeoutSettings,
+          onToolExecutionStart: async ({ toolCall }) => {
+            if (subagentSchema.access !== "read-write") return;
+            if (toolCall.toolName !== "bash") return;
+
+            const bashSchemaResult = bashToolInputSchema.parse(toolCall.input);
+            if (
+              bashSchemaResult.fileSystemAccessType === "create-update-delete"
+            ) {
+              await toolCallDiffer.setTempFiles(
+                toolCall.toolCallId,
+                bashSchemaResult.filePaths,
+              );
+            }
+          },
+          onToolExecutionEnd: async ({ toolCall, toolOutput }) => {
+            if (subagentSchema.access !== "read-write") return;
+            if (toolCall.toolName !== "bash") return;
+            const success = toolOutput.type === "tool-result";
+
+            const bashSchemaResult = bashToolInputSchema.parse(toolCall.input);
+
+            if (
+              bashSchemaResult.fileSystemAccessType === "create-update-delete"
+            ) {
+              if (!success) {
+                await toolCallDiffer.cleanupToolCallIdTempFiles(
+                  toolCall.toolCallId,
+                );
+                return;
+              }
+              await toolCallDiffer.diffAndCleanup(
+                toolCall.toolCallId,
+                bashSchemaResult.filePaths,
+              );
+            }
+          },
+        }),
+      );
+
+      if (!generateTextResult.ok) {
+        await toolCallDiffer.cleanupAllTempFiles();
+
+        const timeoutError = getTimeoutError(signal);
+        if (isAbortError(generateTextResult.error)) {
+          if (timeoutError !== null) {
+            return {
+              isError: true,
+              content: getMessageFromError(timeoutError),
+            };
+          }
+          throw generateTextResult.error;
+        }
+        return {
+          content: getMessageFromError(generateTextResult.error),
+          isError: true,
+        };
+      }
+
+      const { usage, text } = generateTextResult.value;
+      await appendModelUsage(usage, model);
+      await toolCallDiffer.cleanupAllTempFiles();
+
+      return {
+        content: text,
+        isError: false,
+      };
+    },
+  );
+
+  const results = await Promise.allSettled(subagentPromises);
+
+  const abortResult = results.find(
+    (result) => result.status === "rejected" && isAbortError(result.reason),
+  );
+  if (abortResult !== undefined) {
+    throw (abortResult as PromiseRejectedResult).reason;
+  }
+
+  return {
+    isError: results.some(
+      (result) => result.status === "rejected" || result.value.isError,
+    ),
+    content: stringify(
+      results.map((result) => {
+        if (result.status === "rejected") {
+          const ret: ToolResult = {
+            isError: true,
+            content: getMessageFromError(result.reason),
+          };
+          return ret;
+        }
+        return result.value;
+      }),
+    ),
+  };
+}
+
+const subagentSafeTools = createSubagentSafeTools({
+  toolPrint,
+  printDoing: (text) => print.doing(text),
+});
+
+const baseAgentTools = {
+  create_subagent: tool({
+    description:
+      "Launch parallel subagents for independent investigation or implementation. Prefer read-only subagents for parallel work to avoid conflicts. Read-only subagents can fetch web content, inspect files, and load skills; read-write subagents can modify files or execute commands.",
+    inputSchema: createSubagentToolSchema,
+    execute: (args, opts) => createSubagentTool(args, opts.abortSignal),
+  }),
+};
+
+export const harnessTools = {
+  ...subagentSafeTools,
+  ...mcpResourceTools,
+  ...baseAgentTools,
+};
+
+export function getBaseAgentTools() {
+  return { ...harnessTools, ...getState().mcp.tools };
+}
+
+export function stringifyTools() {
+  return safeStringify(getBaseAgentTools());
 }
