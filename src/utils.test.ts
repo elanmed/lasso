@@ -1,16 +1,11 @@
 import { describe, it, afterEach, mock, beforeEach } from "node:test";
 import assert from "node:assert/strict";
 import {
-  orApproxTokens,
   isAbortError,
   isNullish,
   isReadlineClosedError,
   tryCatch,
   safeStringify,
-  strToApproxTokens,
-  formatTokenCountAside,
-  formatTokenRangeAside,
-  approxTokensToCharLen,
   tryCatchAsync,
   normalizeNewline,
   getMessageFromError,
@@ -37,16 +32,6 @@ import {
   drainTimerCallbacks,
 } from "./test-helpers.ts";
 import { processDeps, fsDeps } from "./deps.ts";
-
-describe("orApproxTokens", () => {
-  it("returns the usage tokens when present", () => {
-    assert.strictEqual(orApproxTokens(7, "one two three"), 7);
-  });
-
-  it("returns approx tokens from the text when usage is undefined", () => {
-    assert.strictEqual(orApproxTokens(undefined, "abcdef"), 2);
-  });
-});
 
 describe("debugLog", () => {
   afterEach(() => {
@@ -636,35 +621,6 @@ second line`,
         },
       ];
       assert.deepStrictEqual(stringifyWithoutMedia(messages), messages);
-    });
-  });
-
-  describe("strToApproxTokens", () => {
-    it("splits character length by 3", () => {
-      assert.equal(strToApproxTokens(""), 0);
-      assert.equal(strToApproxTokens("abc"), 1);
-      assert.equal(strToApproxTokens("abcdef"), 2);
-      assert.equal(strToApproxTokens("abcdefg"), 2);
-    });
-  });
-
-  describe("formatTokenCountAside", () => {
-    it("formats a token count", () => {
-      assert.equal(formatTokenCountAside("abc"), "_(1 tokens)_");
-    });
-  });
-
-  describe("formatTokenRangeAside", () => {
-    it("formats a token range", () => {
-      assert.equal(formatTokenRangeAside("abc", "abcdef"), "_(1-2 tokens)_");
-    });
-  });
-
-  describe("approxTokensToCharLen", () => {
-    it("multiplies token count by 3", () => {
-      assert.equal(approxTokensToCharLen(0), 0);
-      assert.equal(approxTokensToCharLen(1), 3);
-      assert.equal(approxTokensToCharLen(250), 750);
     });
   });
 

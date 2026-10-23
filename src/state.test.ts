@@ -52,7 +52,7 @@ describe("state", () => {
       assert.deepStrictEqual(getState().conversation.toolEditDiffs, []);
       assert.deepStrictEqual(getState().usage.promptTokens, {
         value: 0,
-        dirty: true,
+        stale: true,
       });
       assert.deepStrictEqual(getState().usage.modelUsageForSession, {});
       assert.deepStrictEqual(getState().usage.modelUsageForLimitWindow, {});
@@ -131,7 +131,7 @@ describe("state", () => {
     it("resetState restores initial state after mutations", () => {
       actions.setConversationMessages([{ role: "user", content: "hi" }]);
       actions.setPromptTokens(7);
-      actions.setPromptTokensDirty(true);
+      actions.setPromptTokensStale(true);
       actions.setEditorInputValue("draft");
       actions.setIsInitializing(true);
       actions.setIsSteering(true);
@@ -269,10 +269,10 @@ describe("state", () => {
       assert.equal(getState().usage.promptTokens.value, 42);
     });
 
-    it("set-prompt-tokens-dirty", () => {
-      assert.equal(getState().usage.promptTokens.dirty, true);
-      actions.setPromptTokensDirty(false);
-      assert.equal(getState().usage.promptTokens.dirty, false);
+    it("set-prompt-tokens-stale", () => {
+      assert.equal(getState().usage.promptTokens.stale, true);
+      actions.setPromptTokensStale(false);
+      assert.equal(getState().usage.promptTokens.stale, false);
     });
   });
 

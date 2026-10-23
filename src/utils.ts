@@ -38,26 +38,6 @@ export function removeMediaReplacer(_key: string, value: unknown) {
   return isMediaPart(value) ? "[media omitted]" : value;
 }
 
-export function strToApproxTokens(str: string) {
-  return charLenToApproxTokens(str.length);
-}
-
-export function formatTokenCountAside(str: string) {
-  return `_(${strToApproxTokens(str).toLocaleString()} tokens)_`;
-}
-
-export function formatTokenRangeAside(start: string, end: string) {
-  return `_(${strToApproxTokens(start).toLocaleString()}-${strToApproxTokens(end).toLocaleString()} tokens)_`;
-}
-
-function charLenToApproxTokens(charLen: number) {
-  return Math.floor(charLen / 3);
-}
-
-export function approxTokensToCharLen(tokenCount: number) {
-  return 3 * tokenCount;
-}
-
 export function isAbortError(error: unknown): boolean {
   return error instanceof Error && error.name === "AbortError";
 }
@@ -402,10 +382,6 @@ export function getLockQueue(lockPath: string) {
     lockQueues.set(lockPath, queue);
   }
   return queue;
-}
-
-export function orApproxTokens(value: number | undefined, text: string) {
-  return value ?? strToApproxTokens(text);
 }
 
 export function getPrettyMoney(money: number) {

@@ -12,8 +12,6 @@ import {
   tryCatchAsync,
   getMessageFromError,
   safeStringify,
-  formatTokenCountAside,
-  formatTokenRangeAside,
   markdownFence,
   normalizeNewline,
   shellQuote,
@@ -76,6 +74,8 @@ import {
   getPrettyTokensByArea,
   getTokensByArea,
   getPrettyContextWindowUsage,
+  formatTokenCountAside,
+  formatTokenRangeAside,
 } from "./tokens.ts";
 
 import { isSameKey, type Key } from "./schemas.ts";

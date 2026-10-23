@@ -153,7 +153,7 @@ export async function resumeFromSessionFile(sessionFilePath: string) {
   actions.setTranscript(transcript);
   actions.setConversationSummaries(summaries);
   actions.setConversationMessages(messages);
-  actions.setPromptTokensDirty(true);
+  actions.setPromptTokensStale(true);
   return true;
 }
 

@@ -64,7 +64,7 @@ interface SessionState {
 interface UsageState {
   promptTokens: {
     value: number;
-    dirty: boolean;
+    stale: boolean;
   };
   modelUsageForSession: Record<string, ModelUsage[]>;
   modelUsageForLimitWindow: Record<string, ModelUsage[]>;
@@ -148,7 +148,7 @@ const createInitialState = (): State => ({
   usage: {
     promptTokens: {
       value: 0,
-      dirty: true,
+      stale: true,
     },
     modelUsageForLimitWindow: {},
     modelUsageForSession: {},
@@ -282,11 +282,11 @@ export const actions = {
     logStateChange("set-prompt-tokens", String(before), String(tokens));
   },
 
-  setPromptTokensDirty(tokensStale: boolean) {
-    const before = state.usage.promptTokens.dirty;
-    state.usage.promptTokens.dirty = tokensStale;
+  setPromptTokensStale(tokensStale: boolean) {
+    const before = state.usage.promptTokens.stale;
+    state.usage.promptTokens.stale = tokensStale;
     logStateChange(
-      "set-prompt-tokens-dirty",
+      "set-prompt-tokens-stale",
       String(before),
       String(tokensStale),
     );

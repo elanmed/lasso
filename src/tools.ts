@@ -11,7 +11,6 @@ import {
   getTimeoutError,
   isAbortError,
   tryCatchAsync,
-  strToApproxTokens,
   stringify,
   safeStringify,
   normalizeNewline,
@@ -234,7 +233,7 @@ export async function executeWebFetchHtmlTool(
   const markdown = turndownService.turndown(htmlStr);
 
   const maxTokensForInlineFetch = 10_000;
-  const markdownTokensApprox = strToApproxTokens(markdown);
+  const markdownTokensApprox = Math.floor(markdown.length / 3);
   if (markdownTokensApprox <= maxTokensForInlineFetch) {
     return {
       content: markdown,

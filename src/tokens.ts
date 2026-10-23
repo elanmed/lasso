@@ -1,10 +1,28 @@
-import {
-  strToApproxTokens,
-  removeMediaReplacer,
-  approxTokensToCharLen,
-  decimalToPercent,
-} from "./utils.ts";
+import { removeMediaReplacer, decimalToPercent } from "./utils.ts";
 import { getState } from "./state.ts";
+function charLenToApproxTokens(charLen: number) {
+  return Math.floor(charLen / 3);
+}
+
+export function strToApproxTokens(str: string) {
+  return charLenToApproxTokens(str.length);
+}
+
+export function formatTokenCountAside(str: string) {
+  return `_(${strToApproxTokens(str).toLocaleString()} tokens)_`;
+}
+
+export function formatTokenRangeAside(start: string, end: string) {
+  return `_(${strToApproxTokens(start).toLocaleString()}-${strToApproxTokens(end).toLocaleString()} tokens)_`;
+}
+
+export function approxTokensToCharLen(tokenCount: number) {
+  return 3 * tokenCount;
+}
+
+export function orApproxTokens(value: number | undefined, text: string) {
+  return value ?? strToApproxTokens(text);
+}
 import { getBaseAgentPrompt } from "./prompts.ts";
 import {
   dedicatedSummaryRatio,
@@ -80,7 +98,7 @@ export function getApproxPromptTokens() {
 }
 
 export function getCurrentPromptTokens() {
-  if (getState().usage.promptTokens.dirty) {
+  if (getState().usage.promptTokens.stale) {
     return getApproxPromptTokens();
   }
   return getState().usage.promptTokens.value;
@@ -122,7 +140,7 @@ export function getTokensByArea(): TokensByArea {
     skills: strToApproxTokens(getState().content.skillsStr),
   };
 
-  if (getState().usage.promptTokens.dirty) {
+  if (getState().usage.promptTokens.stale) {
     return tokensByAreaApprox;
   }
 

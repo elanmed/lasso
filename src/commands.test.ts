@@ -71,9 +71,13 @@ import {
   mockProcessExit,
 } from "./test-helpers.ts";
 import { fsDeps, aiDeps, processDeps } from "./deps.ts";
-import { getSystemContent, getToolsContentStr } from "./tokens.ts";
+import {
+  getSystemContent,
+  getToolsContentStr,
+  strToApproxTokens,
+} from "./tokens.ts";
 import { print } from "./printing.ts";
-import { strToApproxTokens, sleep } from "./utils.ts";
+import { sleep } from "./utils.ts";
 import { getGlobalContextDir, getGlobalConfigPath } from "./paths.ts";
 import { defaultConfig, type Key } from "./schemas.ts";
 import { resolveSlashCommand } from "./app.ts";
@@ -1057,7 +1061,7 @@ describe("input commands", () => {
       assert.deepStrictEqual(getState().conversation.messages, []);
       assert.deepStrictEqual(getState().usage.promptTokens, {
         value: expectedPromptTokens,
-        dirty: true,
+        stale: true,
       });
       assert.deepStrictEqual(getWrites(), [
         `${GREY}Context cleared (0 tokens in session)${RESET}\n`,
@@ -1074,8 +1078,8 @@ describe("input commands", () => {
       actions.setConversationMessages([{ role: "user", content: "hello" }]);
     });
 
-    it("prints the total and each area with its approx count when the cache is dirty", () => {
-      actions.setPromptTokensDirty(true);
+    it("prints the total and each area with its approx count when the cache is stale", () => {
+      actions.setPromptTokensStale(true);
       printTokens();
       assert.deepStrictEqual(getWrites(), [
         "\n",
@@ -1092,7 +1096,7 @@ describe("input commands", () => {
 
     it("prints the total scaled to the cached token count when clean", () => {
       actions.setPromptTokens(1500);
-      actions.setPromptTokensDirty(false);
+      actions.setPromptTokensStale(false);
       printTokens();
       assert.deepStrictEqual(getWrites(), [
         "\n",
@@ -1185,7 +1189,7 @@ describe("input commands", () => {
       ]);
       assert.deepStrictEqual(getState().usage.promptTokens, {
         value: 0,
-        dirty: true,
+        stale: true,
       });
     });
 

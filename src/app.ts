@@ -10,10 +10,8 @@ import {
   tryCatchAsync,
   getMessageFromError,
   safeStringify,
-  strToApproxTokens,
   markdownFence,
   removeMediaReplacer,
-  orApproxTokens,
   assertAtRuntime,
   tryCatch,
   normalizeNewline,
@@ -98,6 +96,8 @@ import {
   getApproxPromptTokens,
   getCurrentPromptTokens,
   getPrettyContextWindowUsage,
+  strToApproxTokens,
+  orApproxTokens,
 } from "./tokens.ts";
 import {
   contextFileSkillNamePrefix,
@@ -517,7 +517,7 @@ export async function resolveApiCall(userInput: string) {
   actions.setApiEndTime();
 
   if (!generateTextResult.ok) {
-    actions.setPromptTokensDirty(true);
+    actions.setPromptTokensStale(true);
     await toolCallDiffer.cleanupAllTempFiles();
 
     if (isAbortError(generateTextResult.error)) {
@@ -562,7 +562,7 @@ export async function resolveApiCall(userInput: string) {
   );
 
   actions.setPromptTokens(finalStepInputTokens + finalStepOutputTokens);
-  actions.setPromptTokensDirty(false);
+  actions.setPromptTokensStale(false);
 
   await syncSessionFile({
     transcript: getAppendedTranscript({
@@ -799,7 +799,7 @@ export async function maybeCompact(userInput: string) {
     .conversation.summaries.map(({ tokens }) => tokens)
     .reduce((accum, curr) => accum + curr, 0);
   actions.setPromptTokens(summaryTokens + promptOverheadTokensApprox);
-  actions.setPromptTokensDirty(false);
+  actions.setPromptTokensStale(false);
 }
 
 export async function resolveInterruptWithEditor() {
