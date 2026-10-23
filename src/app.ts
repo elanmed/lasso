@@ -34,9 +34,7 @@ import {
   getConversationSummaryPrompt,
   getMergeSummariesPrompt,
 } from "./prompts.ts";
-
 import { type ModelSummary } from "./schemas.ts";
-
 import {
   getUnicodeChar,
   print,

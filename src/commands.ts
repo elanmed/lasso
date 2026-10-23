@@ -78,8 +78,8 @@ import {
   formatTokenCountAside,
   formatTokenRangeAside,
 } from "./tokens.ts";
-
 import { isSameKey, type Key } from "./schemas.ts";
+import { printMcps } from "./mcp.ts";
 
 export const contextFileSkillNamePrefix = "__lasso-context-for";
 
@@ -1068,8 +1068,6 @@ const getReloadTempFileStr = (): Record<ReloadTempFilePrefixes, string> => ({
   commands: getCustomSlashCommandsStr(),
   skills: getState().content.skillsStr,
 });
-
-import { printMcps } from "./mcp.ts";
 
 export async function getAvailableSlashCommands() {
   const seenSlashCommands = new Set<string>();

@@ -18,7 +18,6 @@ import {
   execGitDiff,
   createFencePrint,
 } from "./printing.ts";
-
 import { wrapInColor, bold } from "./utils.ts";
 import { actions, getState } from "./state.ts";
 import {

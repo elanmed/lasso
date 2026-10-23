@@ -1,5 +1,13 @@
 import { removeMediaReplacer, decimalToPercent } from "./utils.ts";
 import { getState } from "./state.ts";
+import { getBaseAgentPrompt } from "./prompts.ts";
+import {
+  dedicatedSummaryRatio,
+  maxTokenCountPerSummary,
+  type ModelMessage,
+} from "./schemas.ts";
+import { print } from "./printing.ts";
+import { stringifyTools } from "./tools.ts";
 
 function charLenToApproxTokens(charLen: number) {
   const { requestInputTokens } = getState().usage;
@@ -35,14 +43,6 @@ export function approxTokensToCharLen(tokenCount: number) {
 export function orApproxTokens(value: number | undefined, text: string) {
   return value ?? strToApproxTokens(text);
 }
-import { getBaseAgentPrompt } from "./prompts.ts";
-import {
-  dedicatedSummaryRatio,
-  maxTokenCountPerSummary,
-  type ModelMessage,
-} from "./schemas.ts";
-import { print } from "./printing.ts";
-import { stringifyTools } from "./tools.ts";
 
 export function getApproxTokensFromMessages(messages: ModelMessage[]) {
   return strToApproxTokens(stringifyMessages(messages));

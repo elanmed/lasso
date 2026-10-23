@@ -9,12 +9,10 @@ import {
 } from "./tokens.ts";
 import { startLoadingState } from "./printing.ts";
 import { initSigInt } from "./commands.ts";
-
 import { actions, getState, type MCPToolSet } from "./state.ts";
 import { safeStringify, parseFrontMatter } from "./utils.ts";
 import { defaultConfig } from "./schemas.ts";
 import { getGlobalContextDir, getGlobalConfigPath } from "./paths.ts";
-
 import {
   maybeCompact,
   getConversationSummary,

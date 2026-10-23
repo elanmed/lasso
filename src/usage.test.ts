@@ -14,7 +14,6 @@ import {
   syncNewModelUsageForLimitWindow,
   getPrettyTokenUsage,
 } from "./usage.ts";
-
 import { actions, getState } from "./state.ts";
 import { getUsageLogLockPath, getUsageLogPath } from "./paths.ts";
 import {

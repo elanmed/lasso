@@ -23,7 +23,6 @@ import {
   processDeps,
 } from "./deps.ts";
 import { initKeypress } from "./app.ts";
-
 import { actions, getState, type MCPToolSet } from "./state.ts";
 import {
   type Key,
