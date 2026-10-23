@@ -79,8 +79,8 @@ describe("state", () => {
 
   describe("system content", () => {
     it("getSystemContent joins prompt, context, and skills with blank lines", () => {
-      actions.setContextStr("ctx body");
-      actions.setSkillsStr("skills body");
+      actions.content.setContextStr("ctx body");
+      actions.content.setSkillsStr("skills body");
       assert.strictEqual(
         getSystemContent(),
         `${getBaseAgentPrompt({})}
@@ -100,7 +100,7 @@ skills body`,
 describe("getPromptOverheadTokensApprox", () => {
   beforeEach(() => {
     setupTestContext();
-    actions.setContextStr("abc");
+    actions.content.setContextStr("abc");
   });
 
   it("sums the approx of system content and tools", () => {
@@ -115,11 +115,11 @@ describe("getPromptOverheadTokensApprox", () => {
 describe("getApproxPromptTokens", () => {
   beforeEach(() => {
     setupTestContext();
-    actions.setContextStr("abc");
+    actions.content.setContextStr("abc");
   });
 
   it("sums messages approx with the system instructions approx", () => {
-    actions.setConversationMessages([{ role: "user", content: "hello" }]);
+    actions.conversation.setMessages([{ role: "user", content: "hello" }]);
     assert.strictEqual(getApproxPromptTokens(), 1972);
   });
 });
@@ -127,12 +127,12 @@ describe("getApproxPromptTokens", () => {
 describe("getCurrentPromptTokens", () => {
   beforeEach(() => {
     setupTestContext();
-    actions.setContextStr("abc");
+    actions.content.setContextStr("abc");
   });
 
   it("returns the cached prompt tokens when not stale", () => {
-    actions.setPromptTokens(50);
-    actions.setPromptTokensStale(false);
+    actions.usage.setPromptTokens(50);
+    actions.usage.setPromptTokensStale(false);
     assert.strictEqual(getCurrentPromptTokens(), 50);
   });
 
@@ -141,8 +141,8 @@ describe("getCurrentPromptTokens", () => {
   });
 
   it("returns the approx prompt tokens when stale", () => {
-    actions.setPromptTokens(50);
-    actions.setPromptTokensStale(true);
+    actions.usage.setPromptTokens(50);
+    actions.usage.setPromptTokensStale(true);
     assert.strictEqual(getCurrentPromptTokens(), 1961);
   });
 });
@@ -150,13 +150,13 @@ describe("getCurrentPromptTokens", () => {
 describe("getTokensByArea", () => {
   beforeEach(() => {
     setupTestContext();
-    actions.setContextStr("123456789");
-    actions.setSkillsStr("1234");
-    actions.setConversationMessages([{ role: "user", content: "hello" }]);
+    actions.content.setContextStr("123456789");
+    actions.content.setSkillsStr("1234");
+    actions.conversation.setMessages([{ role: "user", content: "hello" }]);
   });
 
   it("returns the approx areas when the token cache is stale", () => {
-    actions.setPromptTokensStale(true);
+    actions.usage.setPromptTokensStale(true);
     assert.deepStrictEqual(getTokensByArea(), {
       messages: 11,
       context: 3,
@@ -167,7 +167,7 @@ describe("getTokensByArea", () => {
   });
 
   it("returns the approx areas when the cached token count is zero", () => {
-    actions.setPromptTokensStale(false);
+    actions.usage.setPromptTokensStale(false);
     assert.deepStrictEqual(getTokensByArea(), {
       messages: 11,
       context: 3,
@@ -178,8 +178,8 @@ describe("getTokensByArea", () => {
   });
 
   it("scales the areas to the cached token count when clean", () => {
-    actions.setPromptTokens(1500);
-    actions.setPromptTokensStale(false);
+    actions.usage.setPromptTokens(1500);
+    actions.usage.setPromptTokensStale(false);
     assert.deepStrictEqual(getTokensByArea(), {
       messages: 8.354430379746836,
       context: 2.278481012658228,
@@ -193,13 +193,13 @@ describe("getTokensByArea", () => {
 describe("getPrettyTokensByArea", () => {
   beforeEach(() => {
     setupTestContext();
-    actions.setContextStr("123456789");
-    actions.setSkillsStr("1234");
-    actions.setConversationMessages([{ role: "user", content: "hello" }]);
+    actions.content.setContextStr("123456789");
+    actions.content.setSkillsStr("1234");
+    actions.conversation.setMessages([{ role: "user", content: "hello" }]);
   });
 
   it("returns each area with its approx count when the cache is stale", () => {
-    actions.setPromptTokensStale(true);
+    actions.usage.setPromptTokensStale(true);
     assert.strictEqual(
       getPrettyTokensByArea(),
       `- Chat messages: 11
@@ -211,8 +211,8 @@ describe("getPrettyTokensByArea", () => {
   });
 
   it("returns each area scaled to the cached token count when clean", () => {
-    actions.setPromptTokens(1500);
-    actions.setPromptTokensStale(false);
+    actions.usage.setPromptTokens(1500);
+    actions.usage.setPromptTokensStale(false);
     assert.strictEqual(
       getPrettyTokensByArea(),
       `- Chat messages: 8
@@ -227,25 +227,25 @@ describe("getPrettyTokensByArea", () => {
 describe("printLargeContextOverheadWarning", () => {
   beforeEach(() => {
     setupTestContext({ model: "gpt-4" });
-    actions.setContextWindowPerModel({ "gpt-4": 100_000 });
+    actions.config.setContextWindowPerModel({ "gpt-4": 100_000 });
   });
 
   it("returns early without a warning when the model has no context window", () => {
-    actions.setContextWindowPerModel({});
+    actions.config.setContextWindowPerModel({});
     const getWrites = mockStdoutWrites();
     printLargeContextOverheadWarning();
     assert.deepStrictEqual(getWrites(), []);
   });
 
   it("does not warn when prompt overhead is below the dedicated share", () => {
-    actions.setContextStr("s".repeat(30_000));
+    actions.content.setContextStr("s".repeat(30_000));
     const getWrites = mockStdoutWrites();
     printLargeContextOverheadWarning();
     assert.deepStrictEqual(getWrites(), []);
   });
 
   it("warns when prompt overhead reaches the dedicated share", () => {
-    actions.setContextStr("s".repeat(210_000));
+    actions.content.setContextStr("s".repeat(210_000));
     const getWrites = mockStdoutWrites();
     printLargeContextOverheadWarning();
     assert.deepStrictEqual(getWrites(), [
@@ -265,14 +265,14 @@ describe("getMaxNumberSummaries", () => {
   });
 
   it("uses the configured context window", () => {
-    actions.setModel("test-model");
-    actions.setContextWindowPerModel({ "test-model": 100_000 });
+    actions.config.setModel("test-model");
+    actions.config.setContextWindowPerModel({ "test-model": 100_000 });
     const result = getMaxNumberSummaries();
     assert.strictEqual(result, 5);
   });
 
   it("falls back to the default context window", () => {
-    actions.setModel("test-model");
+    actions.config.setModel("test-model");
     const result = getMaxNumberSummaries();
     assert.strictEqual(result, 6);
   });
@@ -324,46 +324,46 @@ describe("getPrettyContextWindowUsage", () => {
 
   describe("calculates the percentage", () => {
     it("falls back to the default context window when the model has none configured", () => {
-      actions.setModel("unknown-model");
-      actions.setPromptTokens(1_280);
-      actions.setPromptTokensStale(false);
+      actions.config.setModel("unknown-model");
+      actions.usage.setPromptTokens(1_280);
+      actions.usage.setPromptTokensStale(false);
       const result = getPrettyContextWindowUsage();
       assert.strictEqual(result, "1% of context window");
     });
 
     it("returns 0% when no tokens are used", () => {
-      actions.setModel("test-model");
-      actions.setContextWindowPerModel({ "test-model": 10_000 });
+      actions.config.setModel("test-model");
+      actions.config.setContextWindowPerModel({ "test-model": 10_000 });
       const result = getPrettyContextWindowUsage();
       assert.strictEqual(result, "19.6% of context window");
     });
 
     it("returns the percent of the context window used", () => {
-      actions.setModel("test-model");
-      actions.setContextWindowPerModel({ "test-model": 10_000 });
-      actions.setConversationMessages([{ role: "user", content: "hi" }]);
-      actions.setPromptTokens(5_000);
-      actions.setPromptTokensStale(false);
+      actions.config.setModel("test-model");
+      actions.config.setContextWindowPerModel({ "test-model": 10_000 });
+      actions.conversation.setMessages([{ role: "user", content: "hi" }]);
+      actions.usage.setPromptTokens(5_000);
+      actions.usage.setPromptTokensStale(false);
       const result = getPrettyContextWindowUsage();
       assert.strictEqual(result, "50% of context window");
     });
 
     it("rounds partial percents to 3 decimal places", () => {
-      actions.setModel("test-model");
-      actions.setContextWindowPerModel({ "test-model": 10_000 });
-      actions.setConversationMessages([{ role: "user", content: "hi" }]);
-      actions.setPromptTokens(1_666);
-      actions.setPromptTokensStale(false);
+      actions.config.setModel("test-model");
+      actions.config.setContextWindowPerModel({ "test-model": 10_000 });
+      actions.conversation.setMessages([{ role: "user", content: "hi" }]);
+      actions.usage.setPromptTokens(1_666);
+      actions.usage.setPromptTokensStale(false);
       const result = getPrettyContextWindowUsage();
       assert.strictEqual(result, "16.66% of context window");
     });
 
     it("returns percents above 100", () => {
-      actions.setModel("test-model");
-      actions.setContextWindowPerModel({ "test-model": 10_000 });
-      actions.setConversationMessages([{ role: "user", content: "hi" }]);
-      actions.setPromptTokens(15_000);
-      actions.setPromptTokensStale(false);
+      actions.config.setModel("test-model");
+      actions.config.setContextWindowPerModel({ "test-model": 10_000 });
+      actions.conversation.setMessages([{ role: "user", content: "hi" }]);
+      actions.usage.setPromptTokens(15_000);
+      actions.usage.setPromptTokensStale(false);
       const result = getPrettyContextWindowUsage();
       assert.strictEqual(result, "150% of context window");
     });
@@ -371,21 +371,21 @@ describe("getPrettyContextWindowUsage", () => {
 
   describe("token counts", () => {
     it("uses approximated message tokens when tokens are stale", () => {
-      actions.setModel("test-model");
-      actions.setContextWindowPerModel({ "test-model": 10_000 });
-      actions.setConversationMessages([{ role: "user", content: "hihoho" }]);
-      actions.setPromptTokens(5_000);
-      actions.setPromptTokensStale(true);
+      actions.config.setModel("test-model");
+      actions.config.setContextWindowPerModel({ "test-model": 10_000 });
+      actions.conversation.setMessages([{ role: "user", content: "hihoho" }]);
+      actions.usage.setPromptTokens(5_000);
+      actions.usage.setPromptTokensStale(true);
       const result = getPrettyContextWindowUsage();
       assert.strictEqual(result, "19.72% of context window");
     });
 
     it("uses the stored token count when tokens are not stale", () => {
-      actions.setModel("test-model");
-      actions.setContextWindowPerModel({ "test-model": 10_000 });
-      actions.setConversationMessages([{ role: "user", content: "hihoho" }]);
-      actions.setPromptTokens(5_000);
-      actions.setPromptTokensStale(false);
+      actions.config.setModel("test-model");
+      actions.config.setContextWindowPerModel({ "test-model": 10_000 });
+      actions.conversation.setMessages([{ role: "user", content: "hihoho" }]);
+      actions.usage.setPromptTokens(5_000);
+      actions.usage.setPromptTokensStale(false);
       const result = getPrettyContextWindowUsage();
       assert.strictEqual(result, "50% of context window");
     });
@@ -393,8 +393,8 @@ describe("getPrettyContextWindowUsage", () => {
 
   it("ignores terminal width", () => {
     mock.method(processDeps.stdout, "getColumns", () => 79);
-    actions.setModel("test-model");
-    actions.setContextWindowPerModel({ "test-model": 10_000 });
+    actions.config.setModel("test-model");
+    actions.config.setContextWindowPerModel({ "test-model": 10_000 });
     const result = getPrettyContextWindowUsage();
     assert.strictEqual(result, "19.6% of context window");
   });

@@ -68,7 +68,7 @@ async function getMcpClients({
       if (createMcpResult.ok) {
         mcpClients[name] = createMcpResult.value;
       } else {
-        actions.appendConfigWarningMessage(
+        actions.content.appendConfigWarningMessage(
           `Failed to start the ${name} mcp server, ignoring. Error: ${getMessageFromError(createMcpResult.error, { forceSingleLine: true })}`,
         );
       }
@@ -95,7 +95,7 @@ export async function initMcpState({
       if (toolsPromise.ok) {
         return toolsPromise.value;
       } else {
-        actions.appendConfigWarningMessage(
+        actions.content.appendConfigWarningMessage(
           `Failed to import the tools for the \`${name}\` mcp server, ignoring. Error: ${getMessageFromError(toolsPromise.error, { forceSingleLine: true })}`,
         );
         return null;
@@ -106,7 +106,7 @@ export async function initMcpState({
     (toolSet) => toolSet !== null,
   );
   const tools = Object.assign({}, ...toolSetsResult) as MCPToolSet;
-  actions.setMcp(clients, tools);
+  actions.mcp.setClientsAndTools(clients, tools);
 }
 
 export function getMcpLogIdToLabel(): LogIdToLabel {

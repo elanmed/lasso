@@ -96,8 +96,8 @@ export function colorPrint(
 
   const { isNonBlockingProcessOngoing } = getState().terminal;
   if (isNonBlockingProcessOngoing) {
-    actions.appendBufferedStdoutWhileEditorOpen(out);
-    actions.appendStdoutTail(out);
+    actions.terminal.appendBufferedStdoutWhileEditorOpen(out);
+    actions.terminal.appendStdoutTail(out);
     return;
   }
 
@@ -105,7 +105,7 @@ export function colorPrint(
   stopLoadingState();
   processDeps.stdout.write(out);
   if (wasSpinnerActive) startLoadingState();
-  actions.appendStdoutTail(out);
+  actions.terminal.appendStdoutTail(out);
 }
 
 export function createPerformanceLogger({
@@ -210,7 +210,7 @@ export function startLoadingState() {
   const timeout = setInterval(() => {
     writeLoadingStateFrame();
   }, getState().config.loadingStateFrameDuration);
-  actions.setLoadingStateTimeout(timeout);
+  actions.terminal.setLoadingStateTimeout(timeout);
 }
 
 function writeLoadingStateFrame() {
@@ -218,7 +218,7 @@ function writeLoadingStateFrame() {
   processDeps.stdout.write(
     `\r${String(loadingStateFrames[getState().terminal.loadingStateFrameIdx % loadingStateFrames.length])}`,
   );
-  actions.incrementLoadingStateFrameIdx();
+  actions.terminal.incrementLoadingStateFrameIdx();
 }
 
 export function stopLoadingState() {
@@ -226,12 +226,12 @@ export function stopLoadingState() {
   if (loadingStateTimeout === null) return;
 
   clearInterval(loadingStateTimeout);
-  actions.setLoadingStateTimeout(null);
+  actions.terminal.setLoadingStateTimeout(null);
 
   processDeps.stdout.write(
     `\r${" ".repeat(getState().config.loadingStateFrames[0]?.length ?? 0)}\r`,
   );
-  actions.resetLoadingStateFrameIdx();
+  actions.terminal.resetLoadingStateFrameIdx();
 }
 
 export function printSessionStartDate() {
@@ -492,16 +492,16 @@ export async function wrapToOpenNonBlockingProcess<T>(
   cb: () => Promise<T>,
   { pauseStdin = true }: { pauseStdin?: boolean } = {},
 ) {
-  actions.setIsNonBlockingProcessOngoing(true);
+  actions.terminal.setIsNonBlockingProcessOngoing(true);
   stopLoadingState();
   if (pauseStdin) stdin.pause();
   const ret = await cb();
   stdin.resume();
-  actions.setIsNonBlockingProcessOngoing(false);
+  actions.terminal.setIsNonBlockingProcessOngoing(false);
   const bufferedStdout = getState().terminal.bufferedStdoutWhileEditorOpen;
   if (bufferedStdout.length > 0) {
     processDeps.stdout.write(bufferedStdout);
-    actions.resetBufferedStdoutWhileEditorOpen();
+    actions.terminal.resetBufferedStdoutWhileEditorOpen();
   }
   if (getState().abortControllers.apiStream !== null) {
     startLoadingState();

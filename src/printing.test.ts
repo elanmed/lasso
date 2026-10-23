@@ -73,7 +73,7 @@ describe("print", () => {
       actions.resetState();
       const callbacks = mockSetInterval();
       mockClearInterval(callbacks);
-      actions.setLoadingStateFrames(["a", "b", "c"]);
+      actions.config.setLoadingStateFrames(["a", "b", "c"]);
 
       const getWrites = mockStdoutWrites({ includeSpinnerFrames: true });
 
@@ -114,7 +114,7 @@ describe("print", () => {
       const callbacks = mockSetInterval();
       mockClearInterval(callbacks);
       mockStdoutWrites();
-      actions.setLoadingStateFrames(["a", "b", "c"]);
+      actions.config.setLoadingStateFrames(["a", "b", "c"]);
 
       startLoadingState();
       callbacks.forEach((cb) => cb());
@@ -129,7 +129,7 @@ describe("print", () => {
       const callbacks = mockSetInterval();
       mockClearInterval(callbacks);
       const getWrites = mockStdoutWrites();
-      actions.setLoadingStateFrames(["a", "b", "c"]);
+      actions.config.setLoadingStateFrames(["a", "b", "c"]);
 
       startLoadingState();
       callbacks.forEach((cb) => cb());
@@ -305,7 +305,7 @@ describe("print", () => {
 
   describe("whileBuffering", () => {
     it("writes to stdout directly while a non-blocking process is ongoing", () => {
-      actions.setIsNonBlockingProcessOngoing(true);
+      actions.terminal.setIsNonBlockingProcessOngoing(true);
       const getWrites = mockStdoutWrites();
       colorPrint("hello", "blue", { whileBuffering: true });
       assert.deepStrictEqual(getWrites(), [`${BLUE}hello${RESET}\n`]);
@@ -316,7 +316,7 @@ describe("print", () => {
     });
 
     it("writes to stdout directly while a loading state is active", () => {
-      actions.setLoadingStateTimeout({} as NodeJS.Timeout);
+      actions.terminal.setLoadingStateTimeout({} as NodeJS.Timeout);
       const getWrites = mockStdoutWrites();
       colorPrint("hello", "blue", { whileBuffering: true });
       assert.deepStrictEqual(getWrites(), [`${BLUE}hello${RESET}\n`]);
@@ -353,7 +353,7 @@ describe("print", () => {
   describe("printNewline", () => {
     it("prints nothing when stdoutTail already ends with two newlines", () => {
       const getWrites = mockStdoutWrites();
-      actions.appendStdoutTail("\n\n");
+      actions.terminal.appendStdoutTail("\n\n");
       printNewline();
       assert.deepStrictEqual(getWrites(), []);
     });
@@ -392,7 +392,7 @@ describe("print", () => {
   describe("printSessionStartDate", () => {
     beforeEach(() => {
       setupTestContext();
-      actions.resetStdout();
+      actions.terminal.resetStdout();
     });
 
     it("prints the session start date", () => {
@@ -453,7 +453,7 @@ describe("text", () => {
       });
 
       it("truncates with a three-char ellipsis when asciiOnly is set", () => {
-        actions.setAsciiOnly(true);
+        actions.config.setAsciiOnly(true);
         assert.equal(truncate("a".repeat(MAX_LEN + 10)), `${"a".repeat(99)}~`);
         assert.equal(truncate("short\nsecond line"), "short~");
       });
@@ -472,7 +472,7 @@ describe("text", () => {
     });
 
     it("returns the ascii replacement when asciiOnly is on", () => {
-      actions.setAsciiOnly(true);
+      actions.config.setAsciiOnly(true);
       assert.equal(getUnicodeChar("…"), "~");
       assert.equal(getUnicodeChar("┊"), "|");
       assert.equal(getUnicodeChar("━"), "=");
@@ -670,7 +670,7 @@ describe("fence", () => {
   describe("fencePrint", () => {
     beforeEach(() => {
       setupTestContext();
-      actions.resetStdout();
+      actions.terminal.resetStdout();
     });
 
     describe("without session info", () => {
@@ -697,9 +697,9 @@ describe("fence", () => {
       it("prints duration and token usage when showSessionInfo is set", () => {
         const getWrites = mockStdoutWrites();
         mock.method(process.hrtime, "bigint", () => BigInt(1_000_000_000));
-        actions.setApiStartTime();
+        actions.usage.setApiStartTime();
         mock.method(process.hrtime, "bigint", () => BigInt(1_500_000_000));
-        actions.setApiEndTime();
+        actions.usage.setApiEndTime();
 
         fencePrint("Output", { showSessionInfo: true });
 
@@ -711,14 +711,14 @@ describe("fence", () => {
       it("includes context window usage when configured", () => {
         const getWrites = mockStdoutWrites();
         mock.method(process.hrtime, "bigint", () => BigInt(1_000_000_000));
-        actions.setApiStartTime();
+        actions.usage.setApiStartTime();
         mock.method(process.hrtime, "bigint", () => BigInt(1_500_000_000));
-        actions.setApiEndTime();
-        actions.setModel("test-model");
-        actions.setContextWindowPerModel({ "test-model": 10_000 });
-        actions.setConversationMessages([{ role: "user", content: "hi" }]);
-        actions.setPromptTokens(5_000);
-        actions.setPromptTokensStale(false);
+        actions.usage.setApiEndTime();
+        actions.config.setModel("test-model");
+        actions.config.setContextWindowPerModel({ "test-model": 10_000 });
+        actions.conversation.setMessages([{ role: "user", content: "hi" }]);
+        actions.usage.setPromptTokens(5_000);
+        actions.usage.setPromptTokensStale(false);
 
         fencePrint("Output", { showSessionInfo: true });
 
@@ -731,10 +731,10 @@ describe("fence", () => {
         mock.method(processDeps.stdout, "getColumns", () => 20);
         const getWrites = mockStdoutWrites();
         mock.method(process.hrtime, "bigint", () => BigInt(1_000_000_000));
-        actions.setApiStartTime();
+        actions.usage.setApiStartTime();
         mock.method(process.hrtime, "bigint", () => BigInt(1_500_000_000));
-        actions.setApiEndTime();
-        actions.setContextWindowPerModel({ "unknown-model": 10_000 });
+        actions.usage.setApiEndTime();
+        actions.config.setContextWindowPerModel({ "unknown-model": 10_000 });
 
         fencePrint("Output", { showSessionInfo: true });
 
@@ -747,9 +747,9 @@ describe("fence", () => {
         mock.method(processDeps.stdout, "getColumns", () => 19);
         const getWrites = mockStdoutWrites();
         mock.method(process.hrtime, "bigint", () => BigInt(1_000_000_000));
-        actions.setApiStartTime();
+        actions.usage.setApiStartTime();
         mock.method(process.hrtime, "bigint", () => BigInt(1_500_000_000));
-        actions.setApiEndTime();
+        actions.usage.setApiEndTime();
 
         fencePrint("Output", { showSessionInfo: true });
 
@@ -762,9 +762,9 @@ describe("fence", () => {
         const longHeader = "b".repeat(100);
         const getWrites = mockStdoutWrites();
         mock.method(process.hrtime, "bigint", () => BigInt(1_000_000_000));
-        actions.setApiStartTime();
+        actions.usage.setApiStartTime();
         mock.method(process.hrtime, "bigint", () => BigInt(1_500_000_000));
-        actions.setApiEndTime();
+        actions.usage.setApiEndTime();
 
         fencePrint(longHeader, { showSessionInfo: true });
 
@@ -1005,12 +1005,12 @@ describe("terminal formatting", () => {
     beforeEach(() => {
       mock.restoreAll();
       actions.resetState();
-      actions.setModel("test-model");
+      actions.config.setModel("test-model");
     });
 
     describe("uses the bat output", () => {
       it("formats markdown and outputs the content through bat when available", async () => {
-        actions.setBatAvailable(true);
+        actions.content.setBatAvailable(true);
         mockSpawnSync({ echoInput: true });
 
         const getWrites = mockStdoutWrites();
@@ -1021,7 +1021,7 @@ describe("terminal formatting", () => {
       });
 
       it("prints bat stdout when status is null", async () => {
-        actions.setBatAvailable(true);
+        actions.content.setBatAvailable(true);
         mockSpawnSync({
           result: { status: null, stdout: "bat-rendered\n", stderr: "" },
         });
@@ -1034,7 +1034,7 @@ describe("terminal formatting", () => {
       });
 
       it("prints bat stdout when stderr is empty", async () => {
-        actions.setBatAvailable(true);
+        actions.content.setBatAvailable(true);
         mockSpawnSync({
           result: { status: 0, stdout: "bat-rendered\n", stderr: "" },
         });
@@ -1049,7 +1049,7 @@ describe("terminal formatting", () => {
 
     describe("falls back to plain text", () => {
       it("falls back to plain text when bat is not available", async () => {
-        actions.setBatAvailable(false);
+        actions.content.setBatAvailable(false);
 
         const getWrites = mockStdoutWrites();
 
@@ -1059,7 +1059,7 @@ describe("terminal formatting", () => {
       });
 
       it("falls back to plain text when bat spawn fails", async () => {
-        actions.setBatAvailable(true);
+        actions.content.setBatAvailable(true);
         mockSpawnSync({ error: new Error("spawn failed") });
 
         const getWrites = mockStdoutWrites();
@@ -1073,7 +1073,7 @@ describe("terminal formatting", () => {
       });
 
       it("falls back to plain text when bat exits with non-zero status", async () => {
-        actions.setBatAvailable(true);
+        actions.content.setBatAvailable(true);
         mockSpawnSync({
           result: { status: 1, stdout: "bat-rendered\n", stderr: "bat error" },
         });
@@ -1089,7 +1089,7 @@ describe("terminal formatting", () => {
       });
 
       it("falls back to plain text when bat writes stderr", async () => {
-        actions.setBatAvailable(true);
+        actions.content.setBatAvailable(true);
         mockSpawnSync({
           result: {
             status: 0,

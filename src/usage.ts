@@ -108,7 +108,7 @@ export async function appendModelUsage(
   };
 
   await syncNewModelUsageForLimitWindow(model, defaultedUsage);
-  actions.appendToModelUsageForSession(defaultedUsage, model);
+  actions.usage.appendToModelUsageForSession(defaultedUsage, model);
 }
 
 export function isUsageLimitDisabled(model = getState().config.model) {
@@ -205,7 +205,7 @@ export async function syncInitialModelUsageForLimitWindow() {
     await tryCatchAsync(fsDeps.writeFile(path, JSON.stringify(filtered)));
 
     await lockUtils.deleteLock();
-    actions.setModelUsageForLimitWindow(filtered);
+    actions.usage.setModelUsageForLimitWindow(filtered);
   });
 }
 
@@ -278,7 +278,7 @@ export async function syncNewModelUsageForLimitWindow(
     await tryCatchAsync(fsDeps.writeFile(path, JSON.stringify(filtered)));
     await lockUtils.deleteLock();
 
-    actions.setModelUsageForLimitWindow(filtered);
+    actions.usage.setModelUsageForLimitWindow(filtered);
   });
 }
 

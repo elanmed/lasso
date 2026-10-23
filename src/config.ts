@@ -124,7 +124,7 @@ export async function readConfigFileStr(path: string) {
 
   const readResult = await tryCatchAsync(fsDeps.readFile(path, "utf8"));
   if (!readResult.ok) {
-    actions.appendConfigWarningMessage(
+    actions.content.appendConfigWarningMessage(
       `Failed to read the config file at \`${path}\`, using the default config. Error: ${getMessageFromError(readResult.error, { forceSingleLine: true })}`,
     );
     return "{}";
@@ -139,7 +139,7 @@ export function parseConfigFileStr(
 ): Partial<Config> {
   const parseResult = tryCatch((): unknown => YAML.parse(configFileStr));
   if (!parseResult.ok) {
-    actions.appendConfigErrorMessage(
+    actions.content.appendConfigErrorMessage(
       `Invalid YAML in \`${path}\`, using the default config. Error: ${getMessageFromError(parseResult.error, { forceSingleLine: true })}`,
     );
     return {};
@@ -147,7 +147,7 @@ export function parseConfigFileStr(
 
   const configResult = ConfigSchema.safeParse(parseResult.value);
   if (configResult.success) return configResult.data;
-  actions.appendConfigErrorMessage(
+  actions.content.appendConfigErrorMessage(
     `Failed to validate \`${path}\`, using the default config. Error: ${getMessageFromError(configResult.error, { forceSingleLine: true })}`,
   );
   return {};
@@ -228,23 +228,26 @@ export function initStateFromConfig({
     defaultedBaseURL === undefined &&
     defaultedSdkProvider === "openai-compatible"
   ) {
-    actions.appendConfigErrorMessage(
+    actions.content.appendConfigErrorMessage(
       `A \`baseURL\` is required when \`sdkProvider\` is \`openai-compatible\``,
     );
   }
 
-  actions.setModel(defaultedModel);
-  if (defaultedBaseURL !== undefined) actions.setBaseURL(defaultedBaseURL);
-  actions.setSdkProvider(defaultedSdkProvider);
-  actions.setGateway(defaultedGateway);
+  actions.config.setModel(defaultedModel);
+  if (defaultedBaseURL !== undefined)
+    actions.config.setBaseURL(defaultedBaseURL);
+  actions.config.setSdkProvider(defaultedSdkProvider);
+  actions.config.setGateway(defaultedGateway);
   if (defaultedTranscriptionSdkProvider !== undefined) {
-    actions.setTranscriptionSdkProvider(defaultedTranscriptionSdkProvider);
+    actions.config.setTranscriptionSdkProvider(
+      defaultedTranscriptionSdkProvider,
+    );
   }
   if (defaultedTranscriptionModel !== undefined) {
-    actions.setTranscriptionModel(defaultedTranscriptionModel);
+    actions.config.setTranscriptionModel(defaultedTranscriptionModel);
   }
   if (defaultedTranscriptionBaseURL !== undefined) {
-    actions.setTranscriptionBaseURL(defaultedTranscriptionBaseURL);
+    actions.config.setTranscriptionBaseURL(defaultedTranscriptionBaseURL);
   }
 
   const defaultedPricingPerModel = filterNulls({
@@ -252,24 +255,24 @@ export function initStateFromConfig({
     ...globalConfig.pricingPerModel,
     ...localConfig.pricingPerModel,
   });
-  actions.setPricingPerModel(defaultedPricingPerModel);
+  actions.config.setPricingPerModel(defaultedPricingPerModel);
   const defaultedContextWindowPerModel = filterNulls({
     ...defaultConfig.contextWindowPerModel,
     ...globalConfig.contextWindowPerModel,
     ...localConfig.contextWindowPerModel,
   });
-  actions.setContextWindowPerModel(defaultedContextWindowPerModel);
-  actions.setCustomSlashCommandDirs(
+  actions.config.setContextWindowPerModel(defaultedContextWindowPerModel);
+  actions.config.setCustomSlashCommandDirs(
     localConfig.customSlashCommandDirs ??
       globalConfig.customSlashCommandDirs ??
       defaultConfig.customSlashCommandDirs,
   );
-  actions.setCustomSkillDirs(
+  actions.config.setCustomSkillDirs(
     localConfig.customSkillDirs ??
       globalConfig.customSkillDirs ??
       defaultConfig.customSkillDirs,
   );
-  actions.setSubagentModels(
+  actions.config.setSubagentModels(
     localConfig.subagentModels ??
       globalConfig.subagentModels ??
       defaultConfig.subagentModels,
@@ -283,52 +286,52 @@ export function initStateFromConfig({
   for (const [i, [commandA, keymapA]] of keyedCommands.entries()) {
     for (const [commandB, keymapB] of keyedCommands.slice(i + 1)) {
       if (!isSameKey(keymapA, keymapB)) continue;
-      actions.appendConfigErrorMessage(
+      actions.content.appendConfigErrorMessage(
         `\`keymaps\` must be unique: \`${commandA}\` and \`${commandB}\` are both bound to \`${stringify(keymapA)}\``,
       );
     }
   }
 
-  actions.setKeymaps(defaultedKeymaps);
-  actions.setLoadingStateFrames(
+  actions.config.setKeymaps(defaultedKeymaps);
+  actions.config.setLoadingStateFrames(
     localConfig.loadingStateFrames ??
       globalConfig.loadingStateFrames ??
       defaultConfig.loadingStateFrames,
   );
-  actions.setLoadingStateFrameDuration(
+  actions.config.setLoadingStateFrameDuration(
     localConfig.loadingStateFrameDuration ??
       globalConfig.loadingStateFrameDuration ??
       defaultConfig.loadingStateFrameDuration,
   );
-  actions.setPromptPrefix(
+  actions.config.setPromptPrefix(
     localConfig.promptPrefix ??
       globalConfig.promptPrefix ??
       defaultConfig.promptPrefix,
   );
-  actions.setSuppressConfigWarnings(
+  actions.config.setSuppressConfigWarnings(
     localConfig.suppressConfigWarnings ??
       globalConfig.suppressConfigWarnings ??
       defaultConfig.suppressConfigWarnings,
   );
-  actions.setSuppressToolEditDiffs(
+  actions.config.setSuppressToolEditDiffs(
     localConfig.suppressToolEditDiffs ??
       globalConfig.suppressToolEditDiffs ??
       defaultConfig.suppressToolEditDiffs,
   );
-  actions.setAsciiOnly(
+  actions.config.setAsciiOnly(
     localConfig.asciiOnly ?? globalConfig.asciiOnly ?? defaultConfig.asciiOnly,
   );
-  actions.setCompactWithStructuredOutput(
+  actions.config.setCompactWithStructuredOutput(
     localConfig.compactWithStructuredOutput ??
       globalConfig.compactWithStructuredOutput ??
       defaultConfig.compactWithStructuredOutput,
   );
-  actions.setMessageQueueDelimiter(
+  actions.config.setMessageQueueDelimiter(
     localConfig.messageQueueDelimiter ??
       globalConfig.messageQueueDelimiter ??
       defaultConfig.messageQueueDelimiter,
   );
-  actions.setReasoning(
+  actions.config.setReasoning(
     localConfig.reasoning ?? globalConfig.reasoning ?? defaultConfig.reasoning,
   );
   const defaultedMcps = {
@@ -336,7 +339,7 @@ export function initStateFromConfig({
     ...globalConfig.mcps,
     ...localConfig.mcps,
   };
-  actions.setMcps(defaultedMcps);
+  actions.config.setMcps(defaultedMcps);
 
   const defaultedUsageLimit = localConfig.usageLimit ?? globalConfig.usageLimit;
 
@@ -344,55 +347,55 @@ export function initStateFromConfig({
     defaultedUsageLimit !== undefined &&
     defaultedPricingPerModel[defaultedModel] === undefined
   ) {
-    actions.appendConfigWarningMessage(
+    actions.content.appendConfigWarningMessage(
       `Usage limit is disabled because there is no \`pricingPerModel\` entry for the current model \`${defaultedModel}\``,
     );
   }
 
   if (defaultedContextWindowPerModel[defaultedModel] === undefined) {
-    actions.appendConfigWarningMessage(
+    actions.content.appendConfigWarningMessage(
       `A default context window of 128,000 tokens is used because there is no \`contextWindowPerModel\` entry for the current model \`${defaultedModel}\``,
     );
   }
 
-  actions.setUsageLimit(defaultedUsageLimit);
+  actions.config.setUsageLimit(defaultedUsageLimit);
 
   let includeConfigCommand = false;
   if (getState().config.sdkProvider === MISSING) {
     includeConfigCommand = true;
-    actions.appendConfigErrorMessage(
+    actions.content.appendConfigErrorMessage(
       "Set `sdkProvider` in your config file (`openai-compatible` or `anthropic`)",
     );
   }
 
   if (getState().config.model === MISSING) {
     includeConfigCommand = true;
-    actions.appendConfigErrorMessage("Set `model` in your config file");
+    actions.content.appendConfigErrorMessage("Set `model` in your config file");
   }
-  actions.setIncludeConfigInitMessage(includeConfigCommand);
+  actions.content.setIncludeConfigInitMessage(includeConfigCommand);
 
   if (processDeps.env.get("LASSO_API_KEY") === undefined) {
-    actions.appendConfigErrorMessage(
+    actions.content.appendConfigErrorMessage(
       "Set the `LASSO_API_KEY` environment variable, e.g. `export LASSO_API_KEY=...`",
     );
   }
 }
 
 export async function initStateFirst() {
-  actions.setDebugLog(processDeps.env.get("DEBUG") === "1");
+  actions.debug.setLog(processDeps.env.get("DEBUG") === "1");
 
   const globalConfigStr = await readConfigFileStr(getGlobalConfigPath());
   const globalConfig = parseConfigFileStr(
     globalConfigStr,
     getGlobalConfigPath(),
   );
-  actions.setGlobalConfigStr(globalConfigStr);
+  actions.content.setGlobalConfigStr(globalConfigStr);
 
   const localConfigStr = await readConfigFileStr(getLocalConfigPath());
   const localConfig = parseConfigFileStr(localConfigStr, getLocalConfigPath());
-  actions.setLocalConfigStr(localConfigStr);
+  actions.content.setLocalConfigStr(localConfigStr);
 
-  actions.setSuppressStartupDurations(
+  actions.config.setSuppressStartupDurations(
     localConfig.suppressStartupDurations ??
       globalConfig.suppressStartupDurations ??
       defaultConfig.suppressStartupDurations,
@@ -419,9 +422,9 @@ ${markdownFence("yaml", getState().content.localConfigStr)}`;
 }
 
 export function resetConfigMessages() {
-  actions.resetConfigErrorMessages();
-  actions.resetConfigWarningMessages();
-  actions.setIncludeConfigInitMessage(false);
+  actions.content.resetConfigErrorMessages();
+  actions.content.resetConfigWarningMessages();
+  actions.content.setIncludeConfigInitMessage(false);
 }
 
 const getDefaultConfig = (

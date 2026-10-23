@@ -200,8 +200,8 @@ describe("usage", () => {
   describe("appendModelUsage", () => {
     beforeEach(() => {
       setupTestContext();
-      actions.setModel("gpt-4");
-      actions.setPricingPerModel({
+      actions.config.setModel("gpt-4");
+      actions.config.setPricingPerModel({
         "gpt-4": {
           inputPerMillion: 1,
           outputPerMillion: 5,
@@ -215,7 +215,7 @@ describe("usage", () => {
           cacheWritePerMillion: 1.25,
         },
       });
-      actions.setUsageLimit({ duration: "60m", dollarAmount: 10 });
+      actions.config.setUsageLimit({ duration: "60m", dollarAmount: 10 });
     });
 
     it("appends the full usage on the first call", async () => {
@@ -316,7 +316,7 @@ describe("usage", () => {
       } as LanguageModelUsage);
 
       now = 2_000;
-      actions.setModel("claude");
+      actions.config.setModel("claude");
       await appendModelUsage({
         inputTokens: 30,
         outputTokens: 15,
@@ -456,8 +456,8 @@ describe("usage", () => {
 
     it("appends to session usage only when the usage limit is disabled", async () => {
       mock.method(Date, "now", () => 1_000);
-      actions.setPricingPerModel({});
-      actions.setUsageLimit(undefined);
+      actions.config.setPricingPerModel({});
+      actions.config.setUsageLimit(undefined);
 
       await appendModelUsage({
         inputTokens: 100,
@@ -487,8 +487,8 @@ describe("usage", () => {
   describe("syncNewModelUsageForLimitWindow", () => {
     beforeEach(() => {
       setupTestContext();
-      actions.setModel("gpt-4");
-      actions.setPricingPerModel({
+      actions.config.setModel("gpt-4");
+      actions.config.setPricingPerModel({
         "gpt-4": {
           inputPerMillion: 1,
           outputPerMillion: 5,
@@ -496,7 +496,7 @@ describe("usage", () => {
           cacheWritePerMillion: 1.25,
         },
       });
-      actions.setUsageLimit({ duration: "60m", dollarAmount: 10 });
+      actions.config.setUsageLimit({ duration: "60m", dollarAmount: 10 });
       mock.method(Date, "now", () => 4_000_000);
     });
 
@@ -756,8 +756,8 @@ describe("usage", () => {
 
     describe("does nothing", () => {
       it("does nothing when the usage limit is disabled", async () => {
-        actions.setPricingPerModel({});
-        actions.setUsageLimit(undefined);
+        actions.config.setPricingPerModel({});
+        actions.config.setUsageLimit(undefined);
         const usage = {
           inputTokens: 10,
           outputTokens: 5,
@@ -773,7 +773,7 @@ describe("usage", () => {
       });
 
       it("does nothing when the model has no pricing configured", async () => {
-        actions.setPricingPerModel({});
+        actions.config.setPricingPerModel({});
         const usage = {
           inputTokens: 10,
           outputTokens: 5,
@@ -943,8 +943,8 @@ describe("usage", () => {
   describe("syncInitialModelUsageForLimitWindow", () => {
     beforeEach(() => {
       setupTestContext();
-      actions.setModel("gpt-4");
-      actions.setPricingPerModel({
+      actions.config.setModel("gpt-4");
+      actions.config.setPricingPerModel({
         "gpt-4": {
           inputPerMillion: 1,
           outputPerMillion: 5,
@@ -952,12 +952,12 @@ describe("usage", () => {
           cacheWritePerMillion: 1.25,
         },
       });
-      actions.setUsageLimit({ duration: "60m", dollarAmount: 10 });
+      actions.config.setUsageLimit({ duration: "60m", dollarAmount: 10 });
     });
 
     it("does nothing when all usage limit options are undefined", async () => {
-      actions.setPricingPerModel({});
-      actions.setUsageLimit(undefined);
+      actions.config.setPricingPerModel({});
+      actions.config.setUsageLimit(undefined);
 
       await syncInitialModelUsageForLimitWindow();
 
@@ -965,7 +965,7 @@ describe("usage", () => {
     });
 
     it("does nothing when the model has no pricing configured", async () => {
-      actions.setPricingPerModel({});
+      actions.config.setPricingPerModel({});
       testFs._dirs.add(dirname(getUsageLogPath()));
       testFs._files.set(
         getUsageLogPath(),
@@ -1005,8 +1005,8 @@ describe("usage", () => {
 
       for (const [duration, windowMs] of cases) {
         actions.resetState();
-        actions.setModel("gpt-4");
-        actions.setPricingPerModel({
+        actions.config.setModel("gpt-4");
+        actions.config.setPricingPerModel({
           "gpt-4": {
             inputPerMillion: 1,
             outputPerMillion: 5,
@@ -1014,7 +1014,7 @@ describe("usage", () => {
             cacheWritePerMillion: 1.25,
           },
         });
-        actions.setUsageLimit({ duration, dollarAmount: 10 });
+        actions.config.setUsageLimit({ duration, dollarAmount: 10 });
         const recent = {
           inputTokens: 10,
           outputTokens: 5,
@@ -1164,13 +1164,13 @@ describe("usage", () => {
     });
 
     it("returns true when the model has no pricing configured", () => {
-      actions.setModel("unknown-model");
+      actions.config.setModel("unknown-model");
       assert.strictEqual(isUsageLimitDisabled(), true);
     });
 
     it("returns true when the usage limit is undefined", () => {
-      actions.setModel("gpt-4");
-      actions.setPricingPerModel({
+      actions.config.setModel("gpt-4");
+      actions.config.setPricingPerModel({
         "gpt-4": {
           inputPerMillion: 1,
           outputPerMillion: 5,
@@ -1180,26 +1180,26 @@ describe("usage", () => {
     });
 
     it("returns false when pricing and usage limit are configured", () => {
-      actions.setModel("gpt-4");
-      actions.setPricingPerModel({
+      actions.config.setModel("gpt-4");
+      actions.config.setPricingPerModel({
         "gpt-4": {
           inputPerMillion: 1,
           outputPerMillion: 5,
         },
       });
-      actions.setUsageLimit({ duration: "60m", dollarAmount: 10 });
+      actions.config.setUsageLimit({ duration: "60m", dollarAmount: 10 });
       assert.strictEqual(isUsageLimitDisabled(), false);
     });
 
     it("checks the model argument instead of the configured model", () => {
-      actions.setModel("gpt-4");
-      actions.setPricingPerModel({
+      actions.config.setModel("gpt-4");
+      actions.config.setPricingPerModel({
         claude: {
           inputPerMillion: 1,
           outputPerMillion: 5,
         },
       });
-      actions.setUsageLimit({ duration: "60m", dollarAmount: 10 });
+      actions.config.setUsageLimit({ duration: "60m", dollarAmount: 10 });
       assert.strictEqual(isUsageLimitDisabled("claude"), false);
       assert.strictEqual(isUsageLimitDisabled("gpt-4"), true);
     });
@@ -1212,27 +1212,27 @@ describe("usage", () => {
     });
 
     it("throws when the usage limit is undefined", () => {
-      actions.setUsageLimit(undefined);
+      actions.config.setUsageLimit(undefined);
       assert.throws(() => getExpiredTime());
     });
 
     it("computes the expired time for seconds", () => {
-      actions.setUsageLimit({ duration: "100s", dollarAmount: 10 });
+      actions.config.setUsageLimit({ duration: "100s", dollarAmount: 10 });
       assert.strictEqual(getExpiredTime(), 1_000_000 - 100_000);
     });
 
     it("computes the expired time for minutes", () => {
-      actions.setUsageLimit({ duration: "10m", dollarAmount: 10 });
+      actions.config.setUsageLimit({ duration: "10m", dollarAmount: 10 });
       assert.strictEqual(getExpiredTime(), 1_000_000 - 600_000);
     });
 
     it("computes the expired time for hours", () => {
-      actions.setUsageLimit({ duration: "2h", dollarAmount: 10 });
+      actions.config.setUsageLimit({ duration: "2h", dollarAmount: 10 });
       assert.strictEqual(getExpiredTime(), 1_000_000 - 7_200_000);
     });
 
     it("computes the expired time for days", () => {
-      actions.setUsageLimit({ duration: "3d", dollarAmount: 10 });
+      actions.config.setUsageLimit({ duration: "3d", dollarAmount: 10 });
       assert.strictEqual(getExpiredTime(), 1_000_000 - 259_200_000);
     });
   });
@@ -1246,7 +1246,7 @@ describe("usage-format", () => {
   describe("getPrettyTokenUsage", () => {
     beforeEach(() => {
       setupTestContext();
-      actions.setPricingPerModel({
+      actions.config.setPricingPerModel({
         "claude-haiku-4-5": {
           inputPerMillion: 1,
           outputPerMillion: 5,
@@ -1266,19 +1266,19 @@ describe("usage-format", () => {
           cacheWritePerMillion: 6.25,
         },
       });
-      actions.setUsageLimit({ duration: "60m", dollarAmount: 10 });
+      actions.config.setUsageLimit({ duration: "60m", dollarAmount: 10 });
     });
 
     describe("calculates costs", () => {
       it("known model with no modelUsage returns $0.0000", () => {
-        actions.setModel("claude-haiku-4-5");
+        actions.config.setModel("claude-haiku-4-5");
         const result = getPrettyTokenUsage();
         assert.equal(result, "$0.000 in session, $0.000 of $10 limit");
       });
 
       it("calculates prompt token costs correctly", async () => {
         // haiku: input=$1/M, 2_000_000 prompt = $2.0000
-        actions.setModel("claude-haiku-4-5");
+        actions.config.setModel("claude-haiku-4-5");
 
         await appendModelUsage({
           inputTokens: 2_000_000,
@@ -1294,7 +1294,7 @@ describe("usage-format", () => {
 
       it("calculates completion token costs correctly", async () => {
         // haiku: output=$5/M, 600_000 completion = $3.0000
-        actions.setModel("claude-haiku-4-5");
+        actions.config.setModel("claude-haiku-4-5");
         await appendModelUsage({
           inputTokens: 0,
           outputTokens: 600_000,
@@ -1310,7 +1310,7 @@ describe("usage-format", () => {
       it("calculates cache read token costs correctly", async () => {
         // haiku: cacheRead=$0.25/M
         // 1_000_000 input tokens, all cache reads = $0.25
-        actions.setModel("claude-haiku-4-5");
+        actions.config.setModel("claude-haiku-4-5");
         await appendModelUsage({
           inputTokens: 1_000_000,
           outputTokens: 0,
@@ -1326,7 +1326,7 @@ describe("usage-format", () => {
       it("calculates cache write token costs correctly", async () => {
         // haiku: cacheWrite=$1.25/M
         // 1_000_000 input tokens, all cache writes = $1.25
-        actions.setModel("claude-haiku-4-5");
+        actions.config.setModel("claude-haiku-4-5");
         await appendModelUsage({
           inputTokens: 1_000_000,
           outputTokens: 0,
@@ -1343,7 +1343,7 @@ describe("usage-format", () => {
         // haiku: input=$1/M, output=$5/M, cacheRead=$0.25/M, cacheWrite=$1.25/M
         // 900_000 input (500_000 uncached + 300_000 cacheRead + 100_000 cacheWrite) + 200_000 output
         // = $0.50 + $1.00 + $0.075 + $0.125 = $1.70
-        actions.setModel("claude-haiku-4-5");
+        actions.config.setModel("claude-haiku-4-5");
         await appendModelUsage({
           inputTokens: 900_000,
           outputTokens: 200_000,
@@ -1359,8 +1359,8 @@ describe("usage-format", () => {
 
     describe("usage limits", () => {
       it("shows cost against the dollar limit when configured", async () => {
-        actions.setModel("claude-haiku-4-5");
-        actions.setUsageLimit({ duration: "60m", dollarAmount: 10 });
+        actions.config.setModel("claude-haiku-4-5");
+        actions.config.setUsageLimit({ duration: "60m", dollarAmount: 10 });
         await appendModelUsage({
           inputTokens: 900_000,
           outputTokens: 200_000,
@@ -1374,7 +1374,7 @@ describe("usage-format", () => {
       });
 
       it("shows session and limit window costs separately when they differ", async () => {
-        actions.setModel("claude-haiku-4-5");
+        actions.config.setModel("claude-haiku-4-5");
         await appendModelUsage({
           inputTokens: 900_000,
           outputTokens: 200_000,
@@ -1383,7 +1383,7 @@ describe("usage-format", () => {
             cacheWriteTokens: 100_000,
           },
         } as LanguageModelUsage);
-        actions.setModelUsageForLimitWindow({
+        actions.usage.setModelUsageForLimitWindow({
           "claude-haiku-4-5": [
             {
               inputTokens: 100_000,
@@ -1399,8 +1399,8 @@ describe("usage-format", () => {
       });
 
       it("shows only session cost when the usage limit is disabled", async () => {
-        actions.setModel("claude-haiku-4-5");
-        actions.setUsageLimit(undefined);
+        actions.config.setModel("claude-haiku-4-5");
+        actions.config.setUsageLimit(undefined);
         await appendModelUsage({
           inputTokens: 900_000,
           outputTokens: 200_000,
@@ -1422,7 +1422,7 @@ describe("usage-format", () => {
         // usage2: 1_600_000 input (500_000 uncached + 500_000 cacheRead + 600_000 cacheWrite) + 200_000 output
         //   = $0.50 + $1.00 + $0.125 + $0.75 = $2.375
         // total = $3.425
-        actions.setModel("claude-haiku-4-5");
+        actions.config.setModel("claude-haiku-4-5");
         await appendModelUsage({
           inputTokens: 800_000,
           outputTokens: 100_000,
@@ -1444,13 +1444,13 @@ describe("usage-format", () => {
       });
 
       it("falls back to the input price when cache pricing is omitted", async () => {
-        actions.setPricingPerModel({
+        actions.config.setPricingPerModel({
           "test-model": {
             inputPerMillion: 2,
             outputPerMillion: 10,
           },
         });
-        actions.setModel("test-model");
+        actions.config.setModel("test-model");
         await appendModelUsage({
           inputTokens: 2_000_000,
           outputTokens: 0,
@@ -1466,7 +1466,7 @@ describe("usage-format", () => {
       it("formats cost with commas for large totals", async () => {
         // opus: input=$5/M
         // 200_000_000 input tokens = (200_000_000 * 5) / 1_000_000 = $1,000.0000
-        actions.setModel("claude-opus-4-6");
+        actions.config.setModel("claude-opus-4-6");
         await appendModelUsage({
           inputTokens: 200_000_000,
           outputTokens: 0,
@@ -1484,7 +1484,7 @@ describe("usage-format", () => {
         // usage1: 300_000_000 input + 40_000_000 output = $1,500 + $1,000 = $2,500
         // usage2: 400_000_000 input + 120_000_000 output = $2,000 + $3,000 = $5,000
         // total = $7,500.000
-        actions.setModel("claude-opus-4-6");
+        actions.config.setModel("claude-opus-4-6");
         await appendModelUsage({
           inputTokens: 300_000_000,
           outputTokens: 40_000_000,
@@ -1513,13 +1513,13 @@ describe("usage-format", () => {
     });
 
     it("returns token counts for no modelUsage", () => {
-      actions.setModel("unknown-model");
+      actions.config.setModel("unknown-model");
       const result = getPrettyTokenUsage();
       assert.equal(result, "0 tokens in session");
     });
 
     it("returns token counts for modelUsage with no pricing configured", async () => {
-      actions.setModel("unknown-model");
+      actions.config.setModel("unknown-model");
       await appendModelUsage({
         inputTokens: 100,
         outputTokens: 50,
@@ -1533,7 +1533,7 @@ describe("usage-format", () => {
     });
 
     it("formats token counts with commas for numbers above 999", async () => {
-      actions.setModel("unknown-model");
+      actions.config.setModel("unknown-model");
       await appendModelUsage({
         inputTokens: 1_500,
         outputTokens: 2_500,
@@ -1547,7 +1547,7 @@ describe("usage-format", () => {
     });
 
     it("formats token counts with commas for very large numbers", async () => {
-      actions.setModel("unknown-model");
+      actions.config.setModel("unknown-model");
       await appendModelUsage({
         inputTokens: 1_234_567,
         outputTokens: 9_876_543,
@@ -1561,7 +1561,7 @@ describe("usage-format", () => {
     });
 
     it("accumulates token counts across multiple modelUsage and formats with commas", async () => {
-      actions.setModel("unknown-model");
+      actions.config.setModel("unknown-model");
       await appendModelUsage({
         inputTokens: 50_000,
         outputTokens: 10_000,

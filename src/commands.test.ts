@@ -114,7 +114,7 @@ describe("getAvailableSlashCommands", () => {
 
   describe("returns commands", () => {
     it("includes custom slash command dirs", async () => {
-      actions.setCustomSlashCommandDirs(["/custom-commands"]);
+      actions.config.setCustomSlashCommandDirs(["/custom-commands"]);
       testFs._globResults.set("/custom-commands/**/*.md", [
         "/custom-commands/foo.md",
       ]);
@@ -248,7 +248,7 @@ describe("getCustomSlashCommandsStr", () => {
   });
 
   it("normalizes CRLF and strips trailing newlines from content", () => {
-    actions.setSlashCommands([
+    actions.content.setSlashCommands([
       {
         name: "deploy",
         filePath: "/test-cwd/.lasso/commands/deploy.md",
@@ -285,7 +285,7 @@ describe("openWithPager", () => {
       spawned = pager.spawned;
       spawnOptions = pager.spawnOptions;
       unlinked = pager.unlinked;
-      actions.setBatAvailable(true);
+      actions.content.setBatAvailable(true);
     });
 
     describe("selects the pager", () => {
@@ -326,7 +326,7 @@ describe("openWithPager", () => {
       });
 
       it("falls back to less when bat is unavailable", async () => {
-        actions.setBatAvailable(false);
+        actions.content.setBatAvailable(false);
         await openWithPager({
           initialContentStr: "",
           contentType: "markdown",
@@ -447,9 +447,9 @@ describe("input commands", () => {
           sigint = listener;
         },
       });
-      actions.setRl(rl);
+      actions.terminal.setRl(rl);
       const controller = new AbortController();
-      actions.setInterruptWithEditorAbortController(controller);
+      actions.abortControllers.setInterruptWithEditorContent(controller);
 
       initSigInt(rl);
       assert(sigint !== undefined);
@@ -465,9 +465,9 @@ describe("input commands", () => {
           sigint = listener;
         },
       });
-      actions.setRl(rl);
+      actions.terminal.setRl(rl);
       const controller = new AbortController();
-      actions.setTranscriptionAbortController(controller);
+      actions.abortControllers.setTranscription(controller);
 
       initSigInt(rl);
       assert(sigint !== undefined);
@@ -483,9 +483,9 @@ describe("input commands", () => {
           sigint = listener;
         },
       });
-      actions.setRl(rl);
+      actions.terminal.setRl(rl);
       const controller = new AbortController();
-      actions.setRecordProcessAbortController(controller);
+      actions.abortControllers.setRecordProcess(controller);
 
       initSigInt(rl);
       assert(sigint !== undefined);
@@ -501,9 +501,9 @@ describe("input commands", () => {
           sigint = listener;
         },
       });
-      actions.setRl(rl);
+      actions.terminal.setRl(rl);
       const controller = new AbortController();
-      actions.setApiStreamAbortController(controller);
+      actions.abortControllers.setApiStream(controller);
 
       initSigInt(rl);
       assert(sigint !== undefined);
@@ -519,11 +519,11 @@ describe("input commands", () => {
           sigint = listener;
         },
       });
-      actions.setRl(rl);
+      actions.terminal.setRl(rl);
       const streamController = new AbortController();
-      actions.setApiStreamAbortController(streamController);
+      actions.abortControllers.setApiStream(streamController);
       const recordController = new AbortController();
-      actions.setRecordProcessAbortController(recordController);
+      actions.abortControllers.setRecordProcess(recordController);
 
       initSigInt(rl);
       assert(sigint !== undefined);
@@ -545,9 +545,9 @@ describe("input commands", () => {
           writeCount += 1;
         },
       });
-      actions.setRl(rl);
+      actions.terminal.setRl(rl);
       const controller = new AbortController();
-      actions.setQuestionAbortController(controller);
+      actions.abortControllers.setQuestion(controller);
 
       initSigInt(rl);
       assert(sigint !== undefined);
@@ -564,9 +564,9 @@ describe("input commands", () => {
           sigint = listener;
         },
       });
-      actions.setRl(rl);
+      actions.terminal.setRl(rl);
       const controller = new AbortController();
-      actions.setQuestionAbortController(controller);
+      actions.abortControllers.setQuestion(controller);
 
       initSigInt(rl);
       assert(sigint !== undefined);
@@ -582,7 +582,7 @@ describe("input commands", () => {
           sigint = listener;
         },
       });
-      actions.setRl(rl);
+      actions.terminal.setRl(rl);
 
       initSigInt(rl);
       assert(sigint !== undefined);
@@ -596,9 +596,11 @@ describe("input commands", () => {
           sigint = listener;
         },
       });
-      actions.setRl(rl);
-      actions.setApiStreamAbortController(new AbortController());
-      actions.setInterruptWithEditorAbortController(new AbortController());
+      actions.terminal.setRl(rl);
+      actions.abortControllers.setApiStream(new AbortController());
+      actions.abortControllers.setInterruptWithEditorContent(
+        new AbortController(),
+      );
 
       initSigInt(rl);
       assert(sigint !== undefined);
@@ -612,9 +614,9 @@ describe("input commands", () => {
           sigint = listener;
         },
       });
-      actions.setRl(rl);
-      actions.setApiStreamAbortController(new AbortController());
-      actions.setQuestionAbortController(new AbortController());
+      actions.terminal.setRl(rl);
+      actions.abortControllers.setApiStream(new AbortController());
+      actions.abortControllers.setQuestion(new AbortController());
 
       initSigInt(rl);
       assert(sigint !== undefined);
@@ -628,9 +630,11 @@ describe("input commands", () => {
           sigint = listener;
         },
       });
-      actions.setRl(rl);
-      actions.setQuestionAbortController(new AbortController());
-      actions.setInterruptWithEditorAbortController(new AbortController());
+      actions.terminal.setRl(rl);
+      actions.abortControllers.setQuestion(new AbortController());
+      actions.abortControllers.setInterruptWithEditorContent(
+        new AbortController(),
+      );
 
       initSigInt(rl);
       assert(sigint !== undefined);
@@ -655,7 +659,7 @@ describe("input commands", () => {
     });
 
     it("buffers typeable characters while initializing", () => {
-      actions.setIsInitializing(true);
+      actions.terminal.setIsInitializing(true);
       emitKey("a", { name: "a" });
       emitKey(" ", { name: "space" });
       assert.equal(getState().terminal.bufferedInputWhileInitializing, "a ");
@@ -667,23 +671,23 @@ describe("input commands", () => {
     });
 
     it("ignores return and enter keys", () => {
-      actions.setIsInitializing(true);
-      actions.appendBufferedInputWhileInitializing("ab");
+      actions.terminal.setIsInitializing(true);
+      actions.terminal.appendBufferedInputWhileInitializing("ab");
       emitKey("\r", { name: "return" });
       emitKey("\n", { name: "enter" });
       assert.equal(getState().terminal.bufferedInputWhileInitializing, "ab");
     });
 
     it("ignores keys without characters like arrow keys", () => {
-      actions.setIsInitializing(true);
-      actions.appendBufferedInputWhileInitializing("ab");
+      actions.terminal.setIsInitializing(true);
+      actions.terminal.appendBufferedInputWhileInitializing("ab");
       emitKey(undefined, { name: "left" });
       assert.equal(getState().terminal.bufferedInputWhileInitializing, "ab");
     });
 
     it("ignores ctrl and meta keys", () => {
-      actions.setIsInitializing(true);
-      actions.appendBufferedInputWhileInitializing("ab");
+      actions.terminal.setIsInitializing(true);
+      actions.terminal.appendBufferedInputWhileInitializing("ab");
       emitKey("h", { name: "h", ctrl: true });
       emitKey("f", { name: "f", meta: true });
       assert.equal(getState().terminal.bufferedInputWhileInitializing, "ab");
@@ -691,7 +695,7 @@ describe("input commands", () => {
 
     it("exits with code 130 on ctrl c while initializing", () => {
       const exit = mockProcessExit();
-      actions.setIsInitializing(true);
+      actions.terminal.setIsInitializing(true);
       assert.throws(() => {
         emitKey("c", { name: "c", ctrl: true });
       }, /process.exit called/);
@@ -705,7 +709,7 @@ describe("input commands", () => {
 
     beforeEach(() => {
       spawned = [];
-      actions.setRl(makeFakeRl({ line: "" }));
+      actions.terminal.setRl(makeFakeRl({ line: "" }));
       mockEditorSpawn((cmd) => {
         spawned.push(cmd);
       });
@@ -776,7 +780,7 @@ describe("input commands", () => {
       });
 
       it("clears the editor input value and returns null when the editor result is whitespace only", async () => {
-        actions.setEditorInputValue("prefill");
+        actions.terminal.setEditorInputValue("prefill");
         mockEditorSpawn(() => {
           testFs.writeFile("/tmp/lasso-test-uuid.txt", "   \n\t");
         });
@@ -804,7 +808,7 @@ describe("input commands", () => {
       });
 
       it("returns normalized content when editor saves unchanged content", async () => {
-        actions.setRl(makeFakeRl({ line: "hello" }));
+        actions.terminal.setRl(makeFakeRl({ line: "hello" }));
         mockEditorSpawn(() => {
           testFs.writeFile("/tmp/lasso-test-uuid.txt", "hello");
         });
@@ -846,7 +850,7 @@ describe("input commands", () => {
 
     describe("appends clipboard content", () => {
       it("includes clipboard content when includeClipboardSuffix is true", async () => {
-        actions.setRl(makeFakeRl({ line: "hello " }));
+        actions.terminal.setRl(makeFakeRl({ line: "hello " }));
         mockClipboardPaste("world");
         mockEditorSpawn(() => {
           testFs.writeFile(
@@ -861,7 +865,7 @@ describe("input commands", () => {
       });
 
       it("returns content when includeClipboardSuffix is true and editor saves unchanged content", async () => {
-        actions.setRl(makeFakeRl({ line: "query" }));
+        actions.terminal.setRl(makeFakeRl({ line: "query" }));
         mockClipboardPaste("clip");
         mockEditorSpawn(() => {
           testFs.writeFile("/tmp/lasso-test-uuid.txt", "queryclip");
@@ -873,7 +877,7 @@ describe("input commands", () => {
       });
 
       it("returns null when includeClipboardSuffix is true and editor is closed without saving", async () => {
-        actions.setRl(makeFakeRl({ line: "query" }));
+        actions.terminal.setRl(makeFakeRl({ line: "query" }));
         mockClipboardPaste("clip");
         const result = await spawnAndReadEditorContent({
           includeClipboardSuffix: true,
@@ -882,7 +886,7 @@ describe("input commands", () => {
       });
 
       it("uses pbpaste on darwin when LASSO_CLIPBOARD_PASTE is not set", async () => {
-        actions.setRl(makeFakeRl({ line: "query" }));
+        actions.terminal.setRl(makeFakeRl({ line: "query" }));
         mock.method(os, "platform", () => "darwin");
         const commands: string[] = [];
         mockExecCalls([{ stdout: "clip" }], commands);
@@ -894,7 +898,7 @@ describe("input commands", () => {
       });
 
       it("includes a clipboard error marker in the editor content when the paste command fails", async () => {
-        actions.setRl(makeFakeRl({ line: "hello " }));
+        actions.terminal.setRl(makeFakeRl({ line: "hello " }));
         mockClipboardPasteFailure(new Error("boom"));
         let initialEditorContent = "";
         mockEditorSpawn(() => {
@@ -997,7 +1001,7 @@ describe("input commands", () => {
       });
 
       it("returns true for a registered custom slash command when forceKnownCommand is set", () => {
-        actions.setSlashCommands([
+        actions.content.setSlashCommands([
           {
             name: "cwd",
             filePath: "/test/.lasso/commands/cwd.md",
@@ -1011,7 +1015,7 @@ describe("input commands", () => {
       });
 
       it("returns true for a registered custom slash command with args when forceKnownCommand is set", () => {
-        actions.setSlashCommands([
+        actions.content.setSlashCommands([
           {
             name: "cwd",
             filePath: "/test/.lasso/commands/cwd.md",
@@ -1044,15 +1048,15 @@ describe("input commands", () => {
 
   describe("clearCommand", () => {
     beforeEach(() => {
-      actions.resetStdout();
+      actions.terminal.resetStdout();
     });
 
     it("resets params", async () => {
-      actions.setConversationMessages([{ role: "user", content: "hello" }]);
-      actions.setConversationSummaries([
+      actions.conversation.setMessages([{ role: "user", content: "hello" }]);
+      actions.conversation.setSummaries([
         { compacted: "summary", compactedAt: 3, tokens: 5 },
       ]);
-      actions.setContextStr("abc");
+      actions.content.setContextStr("abc");
       const expectedPromptTokens =
         strToApproxTokens(getSystemContent()) +
         strToApproxTokens(getToolsContentStr());
@@ -1071,15 +1075,15 @@ describe("input commands", () => {
 
   describe("printTokens", () => {
     beforeEach(() => {
-      actions.resetStdout();
-      actions.setContextStr("");
-      actions.setContextStr("123456789");
-      actions.setSkillsStr("1234");
-      actions.setConversationMessages([{ role: "user", content: "hello" }]);
+      actions.terminal.resetStdout();
+      actions.content.setContextStr("");
+      actions.content.setContextStr("123456789");
+      actions.content.setSkillsStr("1234");
+      actions.conversation.setMessages([{ role: "user", content: "hello" }]);
     });
 
     it("prints the total and each area with its approx count when the cache is stale", () => {
-      actions.setPromptTokensStale(true);
+      actions.usage.setPromptTokensStale(true);
       printTokens();
       assert.deepStrictEqual(getWrites(), [
         "\n",
@@ -1095,8 +1099,8 @@ describe("input commands", () => {
     });
 
     it("prints the total scaled to the cached token count when clean", () => {
-      actions.setPromptTokens(1500);
-      actions.setPromptTokensStale(false);
+      actions.usage.setPromptTokens(1500);
+      actions.usage.setPromptTokensStale(false);
       printTokens();
       assert.deepStrictEqual(getWrites(), [
         "\n",
@@ -1112,8 +1116,8 @@ describe("input commands", () => {
     });
 
     it("includes the context window usage when configured", () => {
-      actions.setModel("test-model");
-      actions.setContextWindowPerModel({ "test-model": 10_000 });
+      actions.config.setModel("test-model");
+      actions.config.setContextWindowPerModel({ "test-model": 10_000 });
       printTokens();
       assert.deepStrictEqual(getWrites(), [
         "\n",
@@ -1131,7 +1135,7 @@ describe("input commands", () => {
 
   describe("resume", () => {
     beforeEach(() => {
-      actions.resetStdout();
+      actions.terminal.resetStdout();
     });
 
     it("prints usage error when no session start date is provided", async () => {
@@ -1168,7 +1172,7 @@ describe("input commands", () => {
     });
 
     it("loads the session and returns continue when the date matches", async () => {
-      actions.setConversationMessages([{ role: "user", content: "old" }]);
+      actions.conversation.setMessages([{ role: "user", content: "old" }]);
       addSessionFile(1234567890000, {
         messages: [{ role: "user", content: "hello" }],
         summaries: [],
@@ -1238,7 +1242,7 @@ describe("input commands", () => {
 
   describe("resumeWithNoArgs", () => {
     beforeEach(() => {
-      actions.resetStdout();
+      actions.terminal.resetStdout();
     });
 
     it("prints an error when there are no sessions to resume", async () => {
@@ -1251,7 +1255,7 @@ describe("input commands", () => {
     });
 
     it("resumes the most recent session", async () => {
-      actions.setConversationMessages([{ role: "user", content: "hello" }]);
+      actions.conversation.setMessages([{ role: "user", content: "hello" }]);
       addSessionFile(1234567890000, {
         messages: [{ role: "user", content: "older" }],
         summaries: [],
@@ -1287,7 +1291,7 @@ describe("input commands", () => {
           { timestamp: 0, role: "user", message: "newer transcript" },
         ],
       });
-      actions.setSessionFilePath(
+      actions.session.setFilePath(
         "/fake-home/.local/state/lasso/sessions/session-1234567899999.json",
       );
       addSessionFile(1234567890000, {
@@ -1307,7 +1311,7 @@ describe("input commands", () => {
     });
 
     it("prints an error when the current session is the only session", async () => {
-      actions.setSessionFilePath(
+      actions.session.setFilePath(
         "/fake-home/.local/state/lasso/sessions/session-1234567890000.json",
       );
       addSessionFile(1234567890000, {
@@ -1329,7 +1333,7 @@ describe("input commands", () => {
   describe("pageHistory", () => {
     beforeEach(() => {
       actions.resetState();
-      actions.resetStdout();
+      actions.terminal.resetStdout();
     });
 
     it("prints that history is empty when the transcript is empty", () => {
@@ -1350,7 +1354,7 @@ describe("input commands", () => {
     });
 
     it("does not add spacing when streaming", async () => {
-      actions.setApiStreamAbortController(new AbortController());
+      actions.abortControllers.setApiStream(new AbortController());
       await pageHistory();
       assert.deepStrictEqual(getWrites(), [
         `${YELLOW}No chat history${RESET}\n`,
@@ -1360,7 +1364,7 @@ describe("input commands", () => {
     it("opens the chat history newest first in a pager with a heading prepended", async () => {
       const { spawned } = mockPagerSpawn();
       testProcessEnv._set("LASSO_PAGER", "nano __FILE__");
-      actions.setTranscript([
+      actions.conversation.setTranscript([
         {
           timestamp: 1000,
           role: "user",
@@ -1394,7 +1398,7 @@ older content
   describe("pageLastResponse", () => {
     beforeEach(() => {
       actions.resetState();
-      actions.resetStdout();
+      actions.terminal.resetStdout();
     });
 
     it("prints no messages when there is no assistant response", async () => {
@@ -1415,7 +1419,7 @@ older content
     });
 
     it("does not add spacing when streaming", async () => {
-      actions.setApiStreamAbortController(new AbortController());
+      actions.abortControllers.setApiStream(new AbortController());
       await pageLastResponse();
       assert.deepStrictEqual(getWrites(), [
         `${YELLOW}No llm messages${RESET}\n`,
@@ -1425,7 +1429,7 @@ older content
     it("opens the latest assistant response in a pager", async () => {
       const { spawned } = mockPagerSpawn();
       testProcessEnv._set("LASSO_PAGER", "nano __FILE__");
-      actions.setConversationMessages([
+      actions.conversation.setMessages([
         {
           role: "user",
           content: "question",
@@ -1457,7 +1461,7 @@ second
   describe("pageLastMessage", () => {
     beforeEach(() => {
       actions.resetState();
-      actions.resetStdout();
+      actions.terminal.resetStdout();
     });
 
     it("prints no messages when there is no user message", () => {
@@ -1478,7 +1482,7 @@ second
     });
 
     it("does not add spacing when streaming", async () => {
-      actions.setApiStreamAbortController(new AbortController());
+      actions.abortControllers.setApiStream(new AbortController());
       await pageLastMessage();
       assert.deepStrictEqual(getWrites(), [
         `${YELLOW}No user messages${RESET}\n`,
@@ -1488,7 +1492,7 @@ second
     it("opens the latest user message in a pager", async () => {
       const { spawned } = mockPagerSpawn();
       testProcessEnv._set("LASSO_PAGER", "nano __FILE__");
-      actions.setConversationMessages([
+      actions.conversation.setMessages([
         { role: "user", content: "older" },
         {
           role: "assistant",
@@ -1515,7 +1519,7 @@ latest question
 
     it("skips an interrupted message when opening the latest user message", async () => {
       mockPagerSpawn();
-      actions.setConversationMessages([
+      actions.conversation.setMessages([
         { role: "user", content: "latest question" },
         {
           role: "user",
@@ -1535,7 +1539,7 @@ latest question
   describe("pageLastDiff", () => {
     beforeEach(() => {
       actions.resetState();
-      actions.resetStdout();
+      actions.terminal.resetStdout();
     });
 
     it("prints no diffs when there are no diffs", () => {
@@ -1556,7 +1560,7 @@ latest question
     });
 
     it("does not add spacing when streaming", async () => {
-      actions.setApiStreamAbortController(new AbortController());
+      actions.abortControllers.setApiStream(new AbortController());
       await pageLastDiff();
       assert.deepStrictEqual(getWrites(), [
         `${YELLOW}No diffs from the last turn${RESET}\n`,
@@ -1566,8 +1570,14 @@ latest question
     it("opens the diffs in a pager with a fence per file", async () => {
       const { spawned } = mockPagerSpawn();
       testProcessEnv._set("LASSO_PAGER", "nano __FILE__");
-      actions.appendToolEditDiff({ fileName: "/a.ts", diffStdout: "+a\n" });
-      actions.appendToolEditDiff({ fileName: "/b.ts", diffStdout: "+b\n" });
+      actions.conversation.appendToolEditDiff({
+        fileName: "/a.ts",
+        diffStdout: "+a\n",
+      });
+      actions.conversation.appendToolEditDiff({
+        fileName: "/b.ts",
+        diffStdout: "+b\n",
+      });
 
       await pageLastDiff();
 
@@ -1581,7 +1591,10 @@ latest question
     it("opens the diffs with collapsed extra trailing newlines", async () => {
       const { spawned } = mockPagerSpawn();
       testProcessEnv._set("LASSO_PAGER", "nano __FILE__");
-      actions.appendToolEditDiff({ fileName: "/a.ts", diffStdout: "+a\n\n\n" });
+      actions.conversation.appendToolEditDiff({
+        fileName: "/a.ts",
+        diffStdout: "+a\n\n\n",
+      });
 
       await pageLastDiff();
 
@@ -1596,13 +1609,13 @@ latest question
   describe("pageSummaries", () => {
     beforeEach(() => {
       actions.resetState();
-      actions.resetStdout();
+      actions.terminal.resetStdout();
     });
 
     it("opens the summaries list newest first in a pager", async () => {
       const { spawned } = mockPagerSpawn();
       testProcessEnv._set("LASSO_PAGER", "nano __FILE__");
-      actions.setConversationSummaries([
+      actions.conversation.setSummaries([
         { compacted: "older summary", compactedAt: 100, tokens: 10 },
         { compacted: "latest summary", compactedAt: 200, tokens: 20 },
       ]);
@@ -1648,7 +1661,7 @@ older summary
     });
 
     it("does not add spacing when streaming", async () => {
-      actions.setApiStreamAbortController(new AbortController());
+      actions.abortControllers.setApiStream(new AbortController());
       await pageSummaries();
       assert.deepStrictEqual(getWrites(), [
         `${YELLOW}No conversation summaries${RESET}\n`,
@@ -1658,7 +1671,7 @@ older summary
 
   describe("resumeWithNoArgs", () => {
     beforeEach(() => {
-      actions.resetStdout();
+      actions.terminal.resetStdout();
     });
 
     it("prints an error when there are no sessions to resume", async () => {
@@ -1671,7 +1684,7 @@ older summary
     });
 
     it("resumes the most recent session", async () => {
-      actions.setConversationMessages([{ role: "user", content: "hello" }]);
+      actions.conversation.setMessages([{ role: "user", content: "hello" }]);
       addSessionFile(1234567890000, {
         messages: [{ role: "user", content: "older" }],
         summaries: [],
@@ -1707,7 +1720,7 @@ older summary
           { timestamp: 0, role: "user", message: "newer transcript" },
         ],
       });
-      actions.setSessionFilePath(
+      actions.session.setFilePath(
         "/fake-home/.local/state/lasso/sessions/session-1234567899999.json",
       );
       addSessionFile(1234567890000, {
@@ -1727,7 +1740,7 @@ older summary
     });
 
     it("prints an error when the current session is the only session", async () => {
-      actions.setSessionFilePath(
+      actions.session.setFilePath(
         "/fake-home/.local/state/lasso/sessions/session-1234567890000.json",
       );
       addSessionFile(1234567890000, {
@@ -1749,7 +1762,7 @@ older summary
   describe("pageHistory", () => {
     beforeEach(() => {
       actions.resetState();
-      actions.resetStdout();
+      actions.terminal.resetStdout();
     });
 
     it("prints that history is empty when the transcript is empty", () => {
@@ -1770,7 +1783,7 @@ older summary
     });
 
     it("does not add spacing when streaming", async () => {
-      actions.setApiStreamAbortController(new AbortController());
+      actions.abortControllers.setApiStream(new AbortController());
       await pageHistory();
       assert.deepStrictEqual(getWrites(), [
         `${YELLOW}No chat history${RESET}\n`,
@@ -1780,7 +1793,7 @@ older summary
     it("opens the chat history newest first in a pager with a heading prepended", async () => {
       const { spawned } = mockPagerSpawn();
       testProcessEnv._set("LASSO_PAGER", "nano __FILE__");
-      actions.setTranscript([
+      actions.conversation.setTranscript([
         {
           timestamp: 1000,
           role: "user",
@@ -1814,7 +1827,7 @@ older content
   describe("pageLastResponse", () => {
     beforeEach(() => {
       actions.resetState();
-      actions.resetStdout();
+      actions.terminal.resetStdout();
     });
 
     it("prints no messages when there is no assistant response", async () => {
@@ -1835,7 +1848,7 @@ older content
     });
 
     it("does not add spacing when streaming", async () => {
-      actions.setApiStreamAbortController(new AbortController());
+      actions.abortControllers.setApiStream(new AbortController());
       await pageLastResponse();
       assert.deepStrictEqual(getWrites(), [
         `${YELLOW}No llm messages${RESET}\n`,
@@ -1845,7 +1858,7 @@ older content
     it("opens the latest assistant response in a pager", async () => {
       const { spawned } = mockPagerSpawn();
       testProcessEnv._set("LASSO_PAGER", "nano __FILE__");
-      actions.setConversationMessages([
+      actions.conversation.setMessages([
         {
           role: "user",
           content: "question",
@@ -1877,7 +1890,7 @@ second
   describe("pageLastMessage", () => {
     beforeEach(() => {
       actions.resetState();
-      actions.resetStdout();
+      actions.terminal.resetStdout();
     });
 
     it("prints no messages when there is no user message", () => {
@@ -1898,7 +1911,7 @@ second
     });
 
     it("does not add spacing when streaming", async () => {
-      actions.setApiStreamAbortController(new AbortController());
+      actions.abortControllers.setApiStream(new AbortController());
       await pageLastMessage();
       assert.deepStrictEqual(getWrites(), [
         `${YELLOW}No user messages${RESET}\n`,
@@ -1908,7 +1921,7 @@ second
     it("opens the latest user message in a pager", async () => {
       const { spawned } = mockPagerSpawn();
       testProcessEnv._set("LASSO_PAGER", "nano __FILE__");
-      actions.setConversationMessages([
+      actions.conversation.setMessages([
         { role: "user", content: "older" },
         {
           role: "assistant",
@@ -1937,7 +1950,7 @@ latest question
   describe("pageLastDiff", () => {
     beforeEach(() => {
       actions.resetState();
-      actions.resetStdout();
+      actions.terminal.resetStdout();
     });
 
     it("prints no diffs when there are no diffs", () => {
@@ -1958,7 +1971,7 @@ latest question
     });
 
     it("does not add spacing when streaming", async () => {
-      actions.setApiStreamAbortController(new AbortController());
+      actions.abortControllers.setApiStream(new AbortController());
       await pageLastDiff();
       assert.deepStrictEqual(getWrites(), [
         `${YELLOW}No diffs from the last turn${RESET}\n`,
@@ -1968,8 +1981,14 @@ latest question
     it("opens the diffs in a pager with a fence per file", async () => {
       const { spawned } = mockPagerSpawn();
       testProcessEnv._set("LASSO_PAGER", "nano __FILE__");
-      actions.appendToolEditDiff({ fileName: "/a.ts", diffStdout: "+a\n" });
-      actions.appendToolEditDiff({ fileName: "/b.ts", diffStdout: "+b\n" });
+      actions.conversation.appendToolEditDiff({
+        fileName: "/a.ts",
+        diffStdout: "+a\n",
+      });
+      actions.conversation.appendToolEditDiff({
+        fileName: "/b.ts",
+        diffStdout: "+b\n",
+      });
 
       await pageLastDiff();
 
@@ -1983,7 +2002,10 @@ latest question
     it("opens the diffs with collapsed extra trailing newlines", async () => {
       const { spawned } = mockPagerSpawn();
       testProcessEnv._set("LASSO_PAGER", "nano __FILE__");
-      actions.appendToolEditDiff({ fileName: "/a.ts", diffStdout: "+a\n\n\n" });
+      actions.conversation.appendToolEditDiff({
+        fileName: "/a.ts",
+        diffStdout: "+a\n\n\n",
+      });
 
       await pageLastDiff();
 
@@ -1998,13 +2020,13 @@ latest question
   describe("pageSummaries", () => {
     beforeEach(() => {
       actions.resetState();
-      actions.resetStdout();
+      actions.terminal.resetStdout();
     });
 
     it("opens the summaries list newest first in a pager", async () => {
       const { spawned } = mockPagerSpawn();
       testProcessEnv._set("LASSO_PAGER", "nano __FILE__");
-      actions.setConversationSummaries([
+      actions.conversation.setSummaries([
         { compacted: "older summary", compactedAt: 100, tokens: 10 },
         { compacted: "latest summary", compactedAt: 200, tokens: 20 },
       ]);
@@ -2050,7 +2072,7 @@ older summary
     });
 
     it("does not add spacing when streaming", async () => {
-      actions.setApiStreamAbortController(new AbortController());
+      actions.abortControllers.setApiStream(new AbortController());
       await pageSummaries();
       assert.deepStrictEqual(getWrites(), [
         `${YELLOW}No conversation summaries${RESET}\n`,
@@ -2061,7 +2083,7 @@ older summary
   describe("pageEditStr", () => {
     beforeEach(() => {
       actions.resetState();
-      actions.resetStdout();
+      actions.terminal.resetStdout();
     });
 
     it("prints that the editor is empty when editor input is null", () => {
@@ -2082,7 +2104,7 @@ older summary
     });
 
     it("does not add spacing when streaming", async () => {
-      actions.setApiStreamAbortController(new AbortController());
+      actions.abortControllers.setApiStream(new AbortController());
       await pageEditStr();
       assert.deepStrictEqual(getWrites(), [
         `${YELLOW}Editor is empty${RESET}\n`,
@@ -2092,7 +2114,7 @@ older summary
     it("opens the editor input in a pager with a header", async () => {
       const { spawned } = mockPagerSpawn();
       testProcessEnv._set("LASSO_PAGER", "nano __FILE__");
-      actions.setEditorInputValue("editor input");
+      actions.terminal.setEditorInputValue("editor input");
 
       await pageEditStr();
 
@@ -2111,13 +2133,13 @@ editor input
   describe("pageSkills", () => {
     beforeEach(() => {
       actions.resetState();
-      actions.resetStdout();
+      actions.terminal.resetStdout();
     });
 
     it("opens available skills in a pager", async () => {
       const { spawned } = mockPagerSpawn();
       testProcessEnv._set("LASSO_PAGER", "nano __FILE__");
-      actions.setSkills([
+      actions.content.setSkills([
         {
           name: "test-skill",
           description: "A test skill",
@@ -2143,7 +2165,7 @@ editor input
 
     it("filters out context file skills", async () => {
       mockPagerSpawn();
-      actions.setSkills([
+      actions.content.setSkills([
         {
           name: "__lasso-context-for-/ctx",
           description: "Context for /ctx",
@@ -2190,7 +2212,7 @@ editor input
     });
 
     it("does not add spacing when streaming", async () => {
-      actions.setApiStreamAbortController(new AbortController());
+      actions.abortControllers.setApiStream(new AbortController());
       await pageSkills();
       assert.deepStrictEqual(getWrites(), [
         `${YELLOW}No available skills${RESET}\n`,
@@ -2201,7 +2223,7 @@ editor input
   describe("pageTools", () => {
     beforeEach(() => {
       actions.resetState();
-      actions.resetStdout();
+      actions.terminal.resetStdout();
     });
 
     it("opens the harness tools in a pager", async () => {
@@ -2231,7 +2253,7 @@ editor input
     it("opens harness and mcp tools in a pager", async () => {
       const { spawned } = mockPagerSpawn();
       testProcessEnv._set("LASSO_PAGER", "nano __FILE__");
-      actions.setMcp(
+      actions.mcp.setClientsAndTools(
         {
           first: makeFakeMcpClient({
             tools: () =>
@@ -2273,13 +2295,13 @@ editor input
   describe("pageContext", () => {
     beforeEach(() => {
       actions.resetState();
-      actions.resetStdout();
+      actions.terminal.resetStdout();
     });
 
     it("opens available context files in a pager", async () => {
       const { spawned } = mockPagerSpawn();
       testProcessEnv._set("LASSO_PAGER", "nano __FILE__");
-      actions.setContextEntries([
+      actions.content.setContextEntries([
         { filePath: "/project/AGENTS.md", content: "context" },
       ]);
 
@@ -2299,10 +2321,10 @@ editor input
 
     it("includes context file skills", async () => {
       mockPagerSpawn();
-      actions.setContextEntries([
+      actions.content.setContextEntries([
         { filePath: "/project/AGENTS.md", content: "context" },
       ]);
-      actions.setSkills([
+      actions.content.setSkills([
         {
           name: "__lasso-context-for-/other",
           description: "Context for /other",
@@ -2349,7 +2371,7 @@ editor input
     });
 
     it("does not add spacing when streaming", async () => {
-      actions.setApiStreamAbortController(new AbortController());
+      actions.abortControllers.setApiStream(new AbortController());
       await pageContext();
       assert.deepStrictEqual(getWrites(), [
         `${YELLOW}No available context files${RESET}\n`,
@@ -2360,7 +2382,7 @@ editor input
   describe("printKeymaps", () => {
     beforeEach(() => {
       actions.resetState();
-      actions.resetStdout();
+      actions.terminal.resetStdout();
     });
 
     it("prints the keymap list", () => {
@@ -2380,7 +2402,7 @@ editor input
     });
 
     it("formats builtin and custom commands without token counts by default", () => {
-      actions.setSlashCommands([
+      actions.content.setSlashCommands([
         {
           name: "custom.md",
           filePath: "/test/.lasso/commands/custom.md",
@@ -2418,7 +2440,7 @@ editor input
     });
 
     it("includes token counts when includeTokenCount is true", () => {
-      actions.setSlashCommands([
+      actions.content.setSlashCommands([
         {
           name: "custom.md",
           filePath: "/test/.lasso/commands/custom.md",
@@ -2459,12 +2481,12 @@ editor input
   describe("pageCommands", () => {
     beforeEach(() => {
       actions.resetState();
-      actions.resetStdout();
+      actions.terminal.resetStdout();
     });
 
     it("writes builtin and custom commands into the temp file", async () => {
       mockPagerSpawn();
-      actions.setSlashCommands([
+      actions.content.setSlashCommands([
         {
           name: "custom.md",
           filePath: "/test/.lasso/commands/custom.md",
@@ -2519,14 +2541,14 @@ editor input
     let harness: ReturnType<typeof setupKeypressTests>;
 
     beforeEach(() => {
-      actions.setSlashCommands([
+      actions.content.setSlashCommands([
         {
           name: "custom",
           filePath: "/test/.lasso/commands/custom.md",
           content: "custom command content",
         },
       ]);
-      actions.setKeymaps({
+      actions.config.setKeymaps({
         ...defaultConfig.keymaps,
         custom: { name: "c", ctrl: true },
       });
@@ -2540,10 +2562,10 @@ editor input
     describe("types commands into the prompt", () => {
       it("runs the steer keymap against an active stream and editor input", async () => {
         const apiStream = new AbortController();
-        actions.setApiStreamAbortController(apiStream);
-        actions.setEditorInputValue("steering input");
-        actions.setQuestionAbortController(null);
-        actions.setKeymaps({
+        actions.abortControllers.setApiStream(apiStream);
+        actions.terminal.setEditorInputValue("steering input");
+        actions.abortControllers.setQuestion(null);
+        actions.config.setKeymaps({
           ...defaultConfig.keymaps,
           steer: { name: "s", ctrl: true },
         });
@@ -2564,7 +2586,7 @@ editor input
       });
 
       it("does not type custom slash command when no question is pending", () => {
-        actions.setQuestionAbortController(null);
+        actions.abortControllers.setQuestion(null);
         harness.emitKey({ name: "c", ctrl: true });
         assert.deepStrictEqual(harness.writes, []);
       });
@@ -2577,7 +2599,7 @@ editor input
         ["resume", "r"],
       ] as const) {
         it(`types /${command} into the prompt when its keymap matches`, () => {
-          actions.setKeymaps({
+          actions.config.setKeymaps({
             ...defaultConfig.keymaps,
             [command]: { name: keyName, ctrl: true },
           });
@@ -2594,11 +2616,11 @@ editor input
         it(`opens the /${command} pager when its keymap matches`, async () => {
           const { spawned } = mockPagerSpawn();
           testProcessEnv._set("LASSO_PAGER", "nano __FILE__");
-          actions.setQuestionAbortController(null);
-          actions.setContextEntries([
+          actions.abortControllers.setQuestion(null);
+          actions.content.setContextEntries([
             { filePath: "/project/AGENTS.md", content: "context" },
           ]);
-          actions.setSkills([
+          actions.content.setSkills([
             {
               name: "test-skill",
               description: "A test skill",
@@ -2607,7 +2629,7 @@ editor input
             },
           ]);
           setMcpClients({ clients: { first: makeFakeMcpClient() } });
-          actions.setKeymaps({
+          actions.config.setKeymaps({
             ...defaultConfig.keymaps,
             [command]: { name: keyName, ctrl: true },
           });
@@ -2619,9 +2641,9 @@ editor input
       }
 
       it("prints MCP servers when the mcps keymap matches", async () => {
-        actions.setQuestionAbortController(null);
+        actions.abortControllers.setQuestion(null);
         setMcpClients({ clients: { first: makeFakeMcpClient() } });
-        actions.setKeymaps({
+        actions.config.setKeymaps({
           ...defaultConfig.keymaps,
           mcps: { name: "o", ctrl: true },
         });
@@ -2638,17 +2660,17 @@ editor input
         ]);
       });
       it("does not type builtin command when no question is pending", () => {
-        actions.setKeymaps({
+        actions.config.setKeymaps({
           ...defaultConfig.keymaps,
           clear: { name: "k", ctrl: true },
         });
-        actions.setQuestionAbortController(null);
+        actions.abortControllers.setQuestion(null);
         harness.emitKey({ name: "k", ctrl: true });
         assert.deepStrictEqual(harness.writes, []);
       });
 
       it("uses the first matching builtin keymap when commands share a key", () => {
-        actions.setKeymaps({
+        actions.config.setKeymaps({
           ...defaultConfig.keymaps,
           clear: { name: "x", ctrl: true },
           skills: { name: "x", ctrl: true },
@@ -2660,7 +2682,7 @@ editor input
       });
 
       it("prefers builtin commands over custom commands on the same key", () => {
-        actions.setKeymaps({
+        actions.config.setKeymaps({
           ...defaultConfig.keymaps,
           clear: { name: "c", ctrl: true },
         });
@@ -2673,11 +2695,11 @@ editor input
 
     describe("runs edit and paste", () => {
       it("ignores keymaps while the stop-recording question is pending", async () => {
-        actions.setKeymaps({
+        actions.config.setKeymaps({
           ...defaultConfig.keymaps,
           clear: { name: "k", ctrl: true },
         });
-        actions.setIsNonBlockingProcessOngoing(true);
+        actions.terminal.setIsNonBlockingProcessOngoing(true);
         harness.emitKey({ name: "k", ctrl: true });
         await harness.flush();
         assert.deepStrictEqual(harness.writes, []);
@@ -2685,11 +2707,11 @@ editor input
       });
 
       it("ignores keymaps while recording", async () => {
-        actions.setKeymaps({
+        actions.config.setKeymaps({
           ...defaultConfig.keymaps,
           clear: { name: "k", ctrl: true },
         });
-        actions.setIsRecording(true);
+        actions.terminal.setIsRecording(true);
         harness.emitKey({ name: "k", ctrl: true });
         await harness.flush();
         assert.deepStrictEqual(harness.writes, []);
@@ -2697,15 +2719,15 @@ editor input
 
       it("runs the record keymap and toggles isRecording around it", async () => {
         let recordingDuringQuestion: boolean | undefined;
-        actions.setQuestionAbortController(null);
-        actions.setKeymaps({
+        actions.abortControllers.setQuestion(null);
+        actions.config.setKeymaps({
           ...defaultConfig.keymaps,
           record: { name: "r", ctrl: true },
         });
         testProcessEnv._set("LASSO_TRANSCRIPTION_API_KEY", "key");
-        actions.setTranscriptionSdkProvider("openai");
-        actions.setTranscriptionModel("gpt-4o-transcribe");
-        actions.setRl(
+        actions.config.setTranscriptionSdkProvider("openai");
+        actions.config.setTranscriptionModel("gpt-4o-transcribe");
+        actions.terminal.setRl(
           makeFakeRl({
             question: () => {
               recordingDuringQuestion = getState().terminal.isRecording;
@@ -2713,7 +2735,7 @@ editor input
             },
           }),
         );
-        actions.resetStdout();
+        actions.terminal.resetStdout();
         mockRecording();
         mockTranscription("hello from the mic");
         harness.emitKey({ name: "r", ctrl: true });
@@ -2728,17 +2750,19 @@ editor input
       });
 
       it("appends transcription after the delimiter when the editor has content", async () => {
-        actions.setQuestionAbortController(null);
-        actions.setKeymaps({
+        actions.abortControllers.setQuestion(null);
+        actions.config.setKeymaps({
           ...defaultConfig.keymaps,
           record: { name: "r", ctrl: true },
         });
         testProcessEnv._set("LASSO_TRANSCRIPTION_API_KEY", "key");
-        actions.setTranscriptionSdkProvider("openai");
-        actions.setTranscriptionModel("gpt-4o-transcribe");
-        actions.setRl(makeFakeRl({ question: () => Promise.resolve("") }));
-        actions.appendEditorInputValue("draft");
-        actions.resetStdout();
+        actions.config.setTranscriptionSdkProvider("openai");
+        actions.config.setTranscriptionModel("gpt-4o-transcribe");
+        actions.terminal.setRl(
+          makeFakeRl({ question: () => Promise.resolve("") }),
+        );
+        actions.terminal.appendEditorInputValue("draft");
+        actions.terminal.resetStdout();
         mockRecording();
         mockTranscription("hello from the mic");
         harness.emitKey({ name: "r", ctrl: true });
@@ -2750,16 +2774,18 @@ editor input
       });
 
       it("does not append an empty transcription to the editor", async () => {
-        actions.setQuestionAbortController(null);
-        actions.setKeymaps({
+        actions.abortControllers.setQuestion(null);
+        actions.config.setKeymaps({
           ...defaultConfig.keymaps,
           record: { name: "r", ctrl: true },
         });
         testProcessEnv._set("LASSO_TRANSCRIPTION_API_KEY", "key");
-        actions.setTranscriptionSdkProvider("openai");
-        actions.setTranscriptionModel("gpt-4o-transcribe");
-        actions.setRl(makeFakeRl({ question: () => Promise.resolve("") }));
-        actions.resetStdout();
+        actions.config.setTranscriptionSdkProvider("openai");
+        actions.config.setTranscriptionModel("gpt-4o-transcribe");
+        actions.terminal.setRl(
+          makeFakeRl({ question: () => Promise.resolve("") }),
+        );
+        actions.terminal.resetStdout();
         mockRecording();
         mockTranscription("");
         harness.emitKey({ name: "r", ctrl: true });
@@ -2790,7 +2816,7 @@ editor input
       });
 
       it("runs paste command with clipboard when its keymap matches", async () => {
-        actions.setKeymaps({
+        actions.config.setKeymaps({
           ...defaultConfig.keymaps,
           paste: { name: "v", ctrl: true },
         });
@@ -2853,7 +2879,7 @@ editor input
         const getWrites = mockStdoutWrites({ includeSpinnerFrames: true });
         const spinnerFrames = mockSetInterval();
         mockClearInterval(spinnerFrames);
-        actions.setApiStreamAbortController(new AbortController());
+        actions.abortControllers.setApiStream(new AbortController());
         mockEditorSpawn(() => {
           print.info("during editor");
           testFs.writeFile("/tmp/lasso-test-uuid.txt", "");
@@ -2883,7 +2909,7 @@ editor input
 
       it("reserves prompt-prefix columns when truncating editor text", async () => {
         mock.method(processDeps.stdout, "getColumns", () => 10);
-        actions.setPromptPrefix(">>>>>>");
+        actions.config.setPromptPrefix(">>>>>>");
         mockEditorSpawn(() => {
           testFs.writeFile("/tmp/lasso-test-uuid.txt", "abcdefghij");
         });
@@ -2905,12 +2931,12 @@ editor input
           prompts.push(arg);
         });
         const { spawned } = mockPagerSpawn();
-        actions.setBatAvailable(true);
-        actions.setKeymaps({
+        actions.content.setBatAvailable(true);
+        actions.config.setKeymaps({
           ...defaultConfig.keymaps,
           history: { name: "h", ctrl: true },
         });
-        actions.setTranscript([
+        actions.conversation.setTranscript([
           {
             timestamp: 0,
             role: "user",
@@ -2939,13 +2965,13 @@ log content
           prompts.push(arg);
         });
         const { spawned } = mockPagerSpawn();
-        actions.setBatAvailable(true);
-        actions.setQuestionAbortController(null);
-        actions.setKeymaps({
+        actions.content.setBatAvailable(true);
+        actions.abortControllers.setQuestion(null);
+        actions.config.setKeymaps({
           ...defaultConfig.keymaps,
           history: { name: "h", ctrl: true },
         });
-        actions.setTranscript([
+        actions.conversation.setTranscript([
           {
             timestamp: 0,
             role: "user",
@@ -2965,11 +2991,11 @@ log content
         });
         const { spawned } = mockPagerSpawn();
         testProcessEnv._set("LASSO_PAGER", "nano __FILE__");
-        actions.setKeymaps({
+        actions.config.setKeymaps({
           ...defaultConfig.keymaps,
           lastresponse: { name: "u", ctrl: true },
         });
-        actions.setConversationMessages([
+        actions.conversation.setMessages([
           {
             role: "user",
             content: "question",
@@ -2992,11 +3018,14 @@ log content
         });
         const { spawned } = mockPagerSpawn();
         testProcessEnv._set("LASSO_PAGER", "nano __FILE__");
-        actions.setKeymaps({
+        actions.config.setKeymaps({
           ...defaultConfig.keymaps,
           lastdiff: { name: "d", ctrl: true },
         });
-        actions.appendToolEditDiff({ fileName: "/a.ts", diffStdout: "+a\n" });
+        actions.conversation.appendToolEditDiff({
+          fileName: "/a.ts",
+          diffStdout: "+a\n",
+        });
         harness.emitKey({ name: "d", ctrl: true });
         await harness.flush();
         assert.deepStrictEqual(spawned, ["nano /tmp/lasso-test-uuid.txt"]);
@@ -3031,7 +3060,7 @@ log content
           { stdout: "delta 0.18.2" },
           { stdout: "commands diff\n" },
         ]);
-        actions.setKeymaps({
+        actions.config.setKeymaps({
           ...defaultConfig.keymaps,
           reload: { name: "w", ctrl: true },
         });
@@ -3050,11 +3079,11 @@ log content
         });
         const { spawned } = mockPagerSpawn();
         testProcessEnv._set("LASSO_PAGER", "cat __FILE__");
-        actions.setKeymaps({
+        actions.config.setKeymaps({
           ...defaultConfig.keymaps,
           editpage: { name: "e", ctrl: true },
         });
-        actions.setEditorInputValue("editor input");
+        actions.terminal.setEditorInputValue("editor input");
         harness.emitKey({ name: "e", ctrl: true });
         await harness.flush();
         assert.strictEqual(
@@ -3077,7 +3106,7 @@ editor input
         });
         const { spawned } = mockPagerSpawn();
         testProcessEnv._set("LASSO_PAGER", "cat __FILE__");
-        actions.setKeymaps({
+        actions.config.setKeymaps({
           ...defaultConfig.keymaps,
           config: { name: "q", ctrl: true },
         });
@@ -3099,7 +3128,7 @@ editor input
         });
         const { spawned } = mockPagerSpawn();
         testProcessEnv._set("LASSO_PAGER", "cat __FILE__");
-        actions.setKeymaps({
+        actions.config.setKeymaps({
           ...defaultConfig.keymaps,
           commands: { name: "o", ctrl: true },
         });
@@ -3149,7 +3178,7 @@ editor input
         });
         const { spawned } = mockPagerSpawn();
         testProcessEnv._set("LASSO_PAGER", "cat __FILE__");
-        actions.setKeymaps({
+        actions.config.setKeymaps({
           ...defaultConfig.keymaps,
           tools: { name: ".", ctrl: true },
         });
@@ -3183,7 +3212,7 @@ editor input
       });
 
       it("clears the line on unmatched keys during loading", () => {
-        actions.setLoadingStateTimeout({} as NodeJS.Timeout);
+        actions.terminal.setLoadingStateTimeout({} as NodeJS.Timeout);
         harness.emitKey({ name: "z", ctrl: true });
         assert.deepStrictEqual(harness.writes, [
           { chunk: null, key: { ctrl: true, name: "u" } },
@@ -3192,11 +3221,11 @@ editor input
       });
 
       it("types keymap command while loading when a question is pending", () => {
-        actions.setKeymaps({
+        actions.config.setKeymaps({
           ...defaultConfig.keymaps,
           clear: { name: "k", ctrl: true },
         });
-        actions.setLoadingStateTimeout({} as NodeJS.Timeout);
+        actions.terminal.setLoadingStateTimeout({} as NodeJS.Timeout);
         harness.emitKey({ name: "k", ctrl: true });
         assert.deepStrictEqual(harness.writes, [
           { chunk: "/clear\n", key: undefined },
@@ -3204,12 +3233,12 @@ editor input
       });
 
       it("does not clear the line for matched keys during loading", () => {
-        actions.setKeymaps({
+        actions.config.setKeymaps({
           ...defaultConfig.keymaps,
           clear: { name: "k", ctrl: true },
         });
-        actions.setQuestionAbortController(null);
-        actions.setLoadingStateTimeout({} as NodeJS.Timeout);
+        actions.abortControllers.setQuestion(null);
+        actions.terminal.setLoadingStateTimeout({} as NodeJS.Timeout);
         harness.emitKey({ name: "k", ctrl: true });
         assert.deepStrictEqual(getWrites(), []);
         assert.deepStrictEqual(harness.writes, []);
@@ -3241,7 +3270,7 @@ editor input
 
     it("warns when editor input is empty during an agent turn", () => {
       const apiStream = new AbortController();
-      actions.setApiStreamAbortController(apiStream);
+      actions.abortControllers.setApiStream(apiStream);
       const getWrites = mockStdoutWrites();
 
       steerCommand();
@@ -3256,7 +3285,7 @@ editor input
 
   describe("resolveSlashCommand", () => {
     beforeEach(() => {
-      actions.setRl(makeFakeRl({ line: "" }));
+      actions.terminal.setRl(makeFakeRl({ line: "" }));
       mockSpawnSync();
     });
 
@@ -3268,7 +3297,7 @@ editor input
 
       it("handles /editpage command by opening the current editor input in a pager", async () => {
         testProcessEnv._set("LASSO_PAGER", "nano __FILE__");
-        actions.setEditorInputValue("editor input");
+        actions.terminal.setEditorInputValue("editor input");
         const result = await resolveSlashCommand("/editpage");
         assert.strictEqual(result, null);
         assert.strictEqual(
@@ -3326,15 +3355,15 @@ editor input
       it("rejects /model with args", async () => {
         const { spawned } = mockPagerSpawn();
         testProcessEnv._set("LASSO_PAGER", "nano __FILE__");
-        actions.setModel("old");
-        actions.setSlashCommands([
+        actions.config.setModel("old");
+        actions.content.setSlashCommands([
           {
             name: "known",
             filePath: "/test-cwd/.lasso/commands/known.md",
             content: "known content",
           },
         ]);
-        actions.resetStdout();
+        actions.terminal.resetStdout();
         const result = await resolveSlashCommand("/model new-model");
         assert.strictEqual(result, null);
         assert.strictEqual(getState().config.model, "old");
@@ -3345,8 +3374,8 @@ editor input
       it("rejects /model without args", async () => {
         const { spawned } = mockPagerSpawn();
         testProcessEnv._set("LASSO_PAGER", "nano __FILE__");
-        actions.setModel("gpt-4");
-        actions.resetStdout();
+        actions.config.setModel("gpt-4");
+        actions.terminal.resetStdout();
         const result = await resolveSlashCommand("/model");
         assert.strictEqual(result, null);
         assert.strictEqual(getState().config.model, "gpt-4");
@@ -3355,7 +3384,7 @@ editor input
       });
 
       it("handles /skills command", async () => {
-        actions.resetStdout();
+        actions.terminal.resetStdout();
         const result = await resolveSlashCommand("/skills");
         assert.strictEqual(result, null);
         assert.deepStrictEqual(getWrites(), [
@@ -3366,7 +3395,7 @@ editor input
       });
 
       it("handles /context command", async () => {
-        actions.resetStdout();
+        actions.terminal.resetStdout();
         const result = await resolveSlashCommand("/context");
         assert.strictEqual(result, null);
         assert.deepStrictEqual(getWrites(), [
@@ -3376,7 +3405,7 @@ editor input
         ]);
       });
       it("handles /mcps command", async () => {
-        actions.resetStdout();
+        actions.terminal.resetStdout();
         const result = await resolveSlashCommand("/mcps");
         assert.strictEqual(result, null);
         assert.deepStrictEqual(getWrites(), [
@@ -3390,11 +3419,11 @@ editor input
     describe("record commands", () => {
       it("handles /record command and logs the recording to the transcript", async () => {
         testProcessEnv._set("LASSO_TRANSCRIPTION_API_KEY", "key");
-        actions.setTranscriptionSdkProvider("openai");
-        actions.setTranscriptionModel("gpt-4o-transcribe");
-        actions.resetStdout();
+        actions.config.setTranscriptionSdkProvider("openai");
+        actions.config.setTranscriptionModel("gpt-4o-transcribe");
+        actions.terminal.resetStdout();
         let recordingDuringQuestion: boolean | undefined;
-        actions.setRl(
+        actions.terminal.setRl(
           makeFakeRlWithWrites({
             question: () => {
               recordingDuringQuestion = getState().terminal.isRecording;
@@ -3424,7 +3453,7 @@ editor input
       });
 
       it("handles /record command without transcription config by printing a warning", async () => {
-        actions.resetStdout();
+        actions.terminal.resetStdout();
         const result = await resolveSlashCommand("/record");
         assert.strictEqual(result, null);
         assert.deepStrictEqual(getWrites(), [
@@ -3440,7 +3469,7 @@ editor input
     describe("paging commands", () => {
       it("handles /history command by opening chat history in a pager", async () => {
         testProcessEnv._set("LASSO_PAGER", "nano __FILE__");
-        actions.setTranscript([
+        actions.conversation.setTranscript([
           {
             timestamp: 0,
             role: "user",
@@ -3463,7 +3492,7 @@ log content
       it("handles /lastmessage command by opening the last user message in a pager", async () => {
         const { spawned } = mockPagerSpawn();
         testProcessEnv._set("LASSO_PAGER", "nano __FILE__");
-        actions.setConversationMessages([
+        actions.conversation.setMessages([
           {
             role: "user",
             content: "question",
@@ -3477,8 +3506,14 @@ log content
       it("handles /lastdiff command by opening the last turn diffs in a pager", async () => {
         const { spawned } = mockPagerSpawn();
         testProcessEnv._set("LASSO_PAGER", "nano __FILE__");
-        actions.appendToolEditDiff({ fileName: "/a.ts", diffStdout: "+a\n" });
-        actions.appendToolEditDiff({ fileName: "/b.ts", diffStdout: "+b\n" });
+        actions.conversation.appendToolEditDiff({
+          fileName: "/a.ts",
+          diffStdout: "+a\n",
+        });
+        actions.conversation.appendToolEditDiff({
+          fileName: "/b.ts",
+          diffStdout: "+b\n",
+        });
         const result = await resolveSlashCommand("/lastdiff");
         assert.strictEqual(result, null);
         assert.strictEqual(spawned[0], "nano /tmp/lasso-test-uuid.txt");
@@ -3496,7 +3531,7 @@ log content
       });
 
       it("prints no diffs message when a /lastdiff command has no diffs", async () => {
-        actions.resetStdout();
+        actions.terminal.resetStdout();
         const { spawned } = mockPagerSpawn();
         const result = await resolveSlashCommand("/lastdiff");
         assert.strictEqual(result, null);
@@ -3516,7 +3551,7 @@ log content
       });
 
       it("handles /commands command by opening commands in a pager", async () => {
-        actions.resetStdout();
+        actions.terminal.resetStdout();
         const result = await resolveSlashCommand("/commands");
         assert.strictEqual(result, null);
         assert.strictEqual(
@@ -3553,7 +3588,7 @@ log content
 
       it("handles /config command by opening combined config in a pager", async () => {
         testProcessEnv._set("LASSO_PAGER", "nano __FILE__");
-        actions.resetStdout();
+        actions.terminal.resetStdout();
         const result = await resolveSlashCommand("/config");
         assert.strictEqual(result, null);
         assert.deepStrictEqual(getWrites(), []);
@@ -3565,7 +3600,7 @@ log content
       });
 
       it("handles /keymaps command", async () => {
-        actions.resetStdout();
+        actions.terminal.resetStdout();
         const result = await resolveSlashCommand("/keymaps");
         assert.strictEqual(result, null);
         assert.deepStrictEqual(getWrites(), [
@@ -3577,7 +3612,7 @@ log content
       });
 
       it("prints usage when /keymaps receives arguments", async () => {
-        actions.resetStdout();
+        actions.terminal.resetStdout();
         const result = await resolveSlashCommand("/keymaps unexpected");
         assert.strictEqual(result, null);
         assert.deepStrictEqual(getWrites(), [
@@ -3588,8 +3623,8 @@ log content
 
     describe("usage and resume commands", () => {
       it("handles /usage command", async () => {
-        actions.resetStdout();
-        actions.setModel("unknown-model");
+        actions.terminal.resetStdout();
+        actions.config.setModel("unknown-model");
         const result = await resolveSlashCommand("/usage");
         assert.strictEqual(result, null);
         assert.deepStrictEqual(getWrites(), [
@@ -3601,9 +3636,9 @@ log content
       });
 
       it("handles /usage command with a usage limit", async () => {
-        actions.resetStdout();
-        actions.setModel("claude-haiku-4-5");
-        actions.setPricingPerModel({
+        actions.terminal.resetStdout();
+        actions.config.setModel("claude-haiku-4-5");
+        actions.config.setPricingPerModel({
           "claude-haiku-4-5": {
             inputPerMillion: 1,
             outputPerMillion: 5,
@@ -3611,7 +3646,7 @@ log content
             cacheWritePerMillion: 1.25,
           },
         });
-        actions.setUsageLimit({ duration: "60m", dollarAmount: 10 });
+        actions.config.setUsageLimit({ duration: "60m", dollarAmount: 10 });
         const result = await resolveSlashCommand("/usage");
         assert.strictEqual(result, null);
         assert.deepStrictEqual(getWrites(), [
@@ -3624,9 +3659,9 @@ log content
       });
 
       it("handles /usage command with usage and a usage limit", async () => {
-        actions.resetStdout();
-        actions.setModel("claude-haiku-4-5");
-        actions.setPricingPerModel({
+        actions.terminal.resetStdout();
+        actions.config.setModel("claude-haiku-4-5");
+        actions.config.setPricingPerModel({
           "claude-haiku-4-5": {
             inputPerMillion: 1,
             outputPerMillion: 5,
@@ -3634,7 +3669,7 @@ log content
             cacheWritePerMillion: 1.25,
           },
         });
-        actions.setModelUsageForSession({
+        actions.usage.setModelUsageForSession({
           "claude-haiku-4-5": [
             {
               inputTokens: 3_000_000,
@@ -3645,7 +3680,7 @@ log content
             },
           ],
         });
-        actions.setModelUsageForLimitWindow({
+        actions.usage.setModelUsageForLimitWindow({
           "claude-haiku-4-5": [
             {
               inputTokens: 1_500_000,
@@ -3656,7 +3691,7 @@ log content
             },
           ],
         });
-        actions.setUsageLimit({ duration: "60m", dollarAmount: 1234.5 });
+        actions.config.setUsageLimit({ duration: "60m", dollarAmount: 1234.5 });
         const result = await resolveSlashCommand("/usage");
         assert.strictEqual(result, null);
         assert.deepStrictEqual(getWrites(), [
@@ -3669,9 +3704,9 @@ log content
       });
 
       it("handles /tokens command", async () => {
-        actions.resetStdout();
-        actions.setModel("test-model");
-        actions.setContextWindowPerModel({ "test-model": 10_000 });
+        actions.terminal.resetStdout();
+        actions.config.setModel("test-model");
+        actions.config.setContextWindowPerModel({ "test-model": 10_000 });
         const result = await resolveSlashCommand("/tokens");
         assert.strictEqual(result, null);
         assert.deepStrictEqual(getWrites(), [
@@ -3688,7 +3723,7 @@ log content
       });
 
       it("handles /resume without args", async () => {
-        actions.resetStdout();
+        actions.terminal.resetStdout();
         testFs._dirs.add("/fake-home/.local/state/lasso/sessions");
         testFs._files.set(
           "/fake-home/.local/state/lasso/sessions/session-1234567890000.json",
@@ -3859,7 +3894,7 @@ commands diff
             contextWindowPerModel: { "gpt-4": 100_000 },
           }),
         );
-        actions.setContextStr("s".repeat(210_000));
+        actions.content.setContextStr("s".repeat(210_000));
         mockExecCalls([
           { stdout: "delta 0.18.2" },
           { stdout: "" },
@@ -3901,7 +3936,7 @@ commands diff
             contextWindowPerModel: { "gpt-4": 100_000 },
           }),
         );
-        actions.setContextStr("s".repeat(210_000));
+        actions.content.setContextStr("s".repeat(210_000));
         testProcessEnv._set("LASSO_PAGER", "cat __FILE__");
         mockPagerSpawn();
         mockExecCalls([
@@ -4108,7 +4143,7 @@ hello
 
     describe("custom and unknown commands", () => {
       it("handles custom slash command successfully", async () => {
-        actions.setSlashCommands([
+        actions.content.setSlashCommands([
           {
             name: "custom",
             filePath: "/test-cwd/.lasso/commands/custom.md",
@@ -4123,7 +4158,7 @@ hello
       });
 
       it("appends context after custom slash command content", async () => {
-        actions.setSlashCommands([
+        actions.content.setSlashCommands([
           {
             name: "custom",
             filePath: "/test-cwd/.lasso/commands/custom.md",
@@ -4144,7 +4179,7 @@ custom command content`,
       });
 
       it("trims leading whitespace and preserves internal spacing in custom slash command context", async () => {
-        actions.setSlashCommands([
+        actions.content.setSlashCommands([
           {
             name: "custom",
             filePath: "/test-cwd/.lasso/commands/custom.md",
@@ -4165,7 +4200,7 @@ custom command content`,
       });
 
       it("matches custom command with only trailing whitespace", async () => {
-        actions.setSlashCommands([
+        actions.content.setSlashCommands([
           {
             name: "custom",
             filePath: "/test-cwd/.lasso/commands/custom.md",
@@ -4179,14 +4214,14 @@ custom command content`,
       it("handles unknown slash command", async () => {
         const { spawned } = mockPagerSpawn();
         testProcessEnv._set("LASSO_PAGER", "nano __FILE__");
-        actions.setSlashCommands([
+        actions.content.setSlashCommands([
           {
             name: "known",
             filePath: "/test-cwd/.lasso/commands/known.md",
             content: "known content",
           },
         ]);
-        actions.resetStdout();
+        actions.terminal.resetStdout();
         const result = await resolveSlashCommand("/unknown");
         assert.strictEqual(result, null);
         assert.deepStrictEqual(getWrites(), []);
@@ -4231,17 +4266,17 @@ custom command content`,
 
   describe("recordAndTranscribeInput", () => {
     beforeEach(() => {
-      actions.setRl(makeFakeRl({ line: "" }));
+      actions.terminal.setRl(makeFakeRl({ line: "" }));
     });
 
     it("returns the result and sets the record process abort controller", async () => {
-      actions.setTranscriptionSdkProvider("openai");
-      actions.setTranscriptionModel("gpt-4o-transcribe");
+      actions.config.setTranscriptionSdkProvider("openai");
+      actions.config.setTranscriptionModel("gpt-4o-transcribe");
       testProcessEnv._set("LASSO_TRANSCRIPTION_API_KEY", "key");
       mockRecording({ chunk: "wav pcm bytes" });
       const { transcribeCalls } = mockTranscription("hello from the mic");
       let questionSawController = false;
-      actions.setRl(
+      actions.terminal.setRl(
         makeFakeRl({
           question: () => {
             questionSawController =
@@ -4250,7 +4285,7 @@ custom command content`,
           },
         }),
       );
-      actions.resetStdout();
+      actions.terminal.resetStdout();
       const result = await recordAndTranscribeInput();
       assert.strictEqual(
         result,
@@ -4271,8 +4306,8 @@ custom command content`,
     });
 
     it("removes the wav temp file after a successful transcription", async () => {
-      actions.setTranscriptionSdkProvider("openai");
-      actions.setTranscriptionModel("gpt-4o-transcribe");
+      actions.config.setTranscriptionSdkProvider("openai");
+      actions.config.setTranscriptionModel("gpt-4o-transcribe");
       testProcessEnv._set("LASSO_TRANSCRIPTION_API_KEY", "key");
       mockRecording();
       mockTranscription("hello from the mic");
@@ -4286,7 +4321,7 @@ custom command content`,
     });
 
     it("returns null and prints a warning without transcription configuration", async () => {
-      actions.resetStdout();
+      actions.terminal.resetStdout();
       const result = await recordAndTranscribeInput();
       assert.strictEqual(result, null);
       assert.deepStrictEqual(getWrites(), [
@@ -4300,10 +4335,10 @@ custom command content`,
     });
 
     it("prints the configuration warning while stdout is muted", async () => {
-      actions.resetStdout();
-      actions.setIsNonBlockingProcessOngoing(true);
+      actions.terminal.resetStdout();
+      actions.terminal.setIsNonBlockingProcessOngoing(true);
       const result = await recordAndTranscribeInput();
-      actions.setIsNonBlockingProcessOngoing(false);
+      actions.terminal.setIsNonBlockingProcessOngoing(false);
       assert.strictEqual(result, null);
       assert.deepStrictEqual(
         getState().terminal.bufferedStdoutWhileEditorOpen,
@@ -4313,12 +4348,12 @@ custom command content`,
     });
 
     it("returns null and prints an error when the recording process emits an error", async () => {
-      actions.setTranscriptionSdkProvider("openai");
-      actions.setTranscriptionModel("gpt-4o-transcribe");
+      actions.config.setTranscriptionSdkProvider("openai");
+      actions.config.setTranscriptionModel("gpt-4o-transcribe");
       testProcessEnv._set("LASSO_TRANSCRIPTION_API_KEY", "key");
       const { child } = mockRecording();
       const { transcribeCalls } = mockTranscription("hello from the mic");
-      actions.setRl(
+      actions.terminal.setRl(
         makeFakeRl({
           question: () => {
             child.emit("error", new Error("spawn sox ENOENT"));
@@ -4326,7 +4361,7 @@ custom command content`,
           },
         }),
       );
-      actions.resetStdout();
+      actions.terminal.resetStdout();
       const result = await recordAndTranscribeInput();
       assert.strictEqual(result, null);
       assert.deepStrictEqual(getWrites(), [
@@ -4339,13 +4374,13 @@ custom command content`,
     });
 
     it("returns null without prompting when the recording process fails to spawn", async () => {
-      actions.setTranscriptionSdkProvider("openai");
-      actions.setTranscriptionModel("gpt-4o-transcribe");
+      actions.config.setTranscriptionSdkProvider("openai");
+      actions.config.setTranscriptionModel("gpt-4o-transcribe");
       testProcessEnv._set("LASSO_TRANSCRIPTION_API_KEY", "key");
       mockRecording({ spawnError: new Error("spawn sox ENOENT") });
       const { transcribeCalls } = mockTranscription("hello from the mic");
       let questionCalls = 0;
-      actions.setRl(
+      actions.terminal.setRl(
         makeFakeRl({
           question: () => {
             questionCalls += 1;
@@ -4353,7 +4388,7 @@ custom command content`,
           },
         }),
       );
-      actions.resetStdout();
+      actions.terminal.resetStdout();
       const result = await recordAndTranscribeInput();
       assert.strictEqual(result, null);
       assert.strictEqual(questionCalls, 0);
@@ -4366,17 +4401,17 @@ custom command content`,
     });
 
     it("returns null and prints an error when the stop-recording question rejects", async () => {
-      actions.setTranscriptionSdkProvider("openai");
-      actions.setTranscriptionModel("gpt-4o-transcribe");
+      actions.config.setTranscriptionSdkProvider("openai");
+      actions.config.setTranscriptionModel("gpt-4o-transcribe");
       testProcessEnv._set("LASSO_TRANSCRIPTION_API_KEY", "key");
       mockRecording();
       mockTranscription("hello from the mic");
-      actions.setRl(
+      actions.terminal.setRl(
         makeFakeRl({
           question: () => Promise.reject(new Error("boom")),
         }),
       );
-      actions.resetStdout();
+      actions.terminal.resetStdout();
       const result = await recordAndTranscribeInput();
       assert.strictEqual(result, null);
       assert.deepStrictEqual(getWrites(), [
@@ -4388,17 +4423,17 @@ custom command content`,
     });
 
     it("returns null without an error when the stop-recording question is aborted", async () => {
-      actions.setTranscriptionSdkProvider("openai");
-      actions.setTranscriptionModel("gpt-4o-transcribe");
+      actions.config.setTranscriptionSdkProvider("openai");
+      actions.config.setTranscriptionModel("gpt-4o-transcribe");
       testProcessEnv._set("LASSO_TRANSCRIPTION_API_KEY", "key");
       mockRecording();
       mockTranscription("hello from the mic");
-      actions.setRl(
+      actions.terminal.setRl(
         makeFakeRl({
           question: () => Promise.reject(makeAbortError("aborted")),
         }),
       );
-      actions.resetStdout();
+      actions.terminal.resetStdout();
       const result = await recordAndTranscribeInput();
       assert.strictEqual(result, null);
       assert.deepStrictEqual(getWrites(), [
@@ -4410,15 +4445,15 @@ custom command content`,
     });
 
     it("returns null and prints an error when reading the recorded temp file fails", async () => {
-      actions.setTranscriptionSdkProvider("openai");
-      actions.setTranscriptionModel("gpt-4o-transcribe");
+      actions.config.setTranscriptionSdkProvider("openai");
+      actions.config.setTranscriptionModel("gpt-4o-transcribe");
       testProcessEnv._set("LASSO_TRANSCRIPTION_API_KEY", "key");
       mockRecording();
       const { transcribeCalls } = mockTranscription("hello from the mic");
       mock.method(fsDeps, "readFile", () =>
         Promise.reject(makeErrnoError("ENOENT", "ENOENT: no such file")),
       );
-      actions.resetStdout();
+      actions.terminal.resetStdout();
       const result = await recordAndTranscribeInput();
       assert.strictEqual(result, null);
       assert.deepStrictEqual(getWrites(), [
@@ -4431,19 +4466,19 @@ custom command content`,
     });
 
     it("writes the banner directly when stdout is muted", async () => {
-      actions.setTranscriptionSdkProvider("openai");
-      actions.setTranscriptionModel("gpt-4o-transcribe");
+      actions.config.setTranscriptionSdkProvider("openai");
+      actions.config.setTranscriptionModel("gpt-4o-transcribe");
       testProcessEnv._set("LASSO_TRANSCRIPTION_API_KEY", "key");
       mockRecording();
-      actions.setIsNonBlockingProcessOngoing(true);
-      actions.setRl(
+      actions.terminal.setIsNonBlockingProcessOngoing(true);
+      actions.terminal.setRl(
         makeFakeRl({
           question: () => Promise.reject(makeAbortError("aborted")),
         }),
       );
-      actions.resetStdout();
+      actions.terminal.resetStdout();
       const result = await recordAndTranscribeInput();
-      actions.setIsNonBlockingProcessOngoing(false);
+      actions.terminal.setIsNonBlockingProcessOngoing(false);
       assert.strictEqual(result, null);
       assert.deepStrictEqual(getWrites(), [
         `${RED}⏺${RESET} Press enter to stop recording \n`,
@@ -4456,15 +4491,15 @@ custom command content`,
     });
 
     it("returns null and prints an error when transcription fails", async () => {
-      actions.setTranscriptionSdkProvider("openai");
-      actions.setTranscriptionModel("gpt-4o-transcribe");
+      actions.config.setTranscriptionSdkProvider("openai");
+      actions.config.setTranscriptionModel("gpt-4o-transcribe");
       testProcessEnv._set("LASSO_TRANSCRIPTION_API_KEY", "key");
       mockRecording();
       testFs._files.set("/tmp/lasso-test-uuid.wav", "wav recording bytes");
       mock.method(aiDeps, "transcribe", () =>
         Promise.reject(new Error("bad audio")),
       );
-      actions.resetStdout();
+      actions.terminal.resetStdout();
       const result = await recordAndTranscribeInput();
       assert.strictEqual(result, null);
       assert.deepStrictEqual(getWrites(), [
@@ -4476,12 +4511,12 @@ custom command content`,
     });
 
     it("returns null and prints an error when the transcription is empty", async () => {
-      actions.setTranscriptionSdkProvider("openai");
-      actions.setTranscriptionModel("gpt-4o-transcribe");
+      actions.config.setTranscriptionSdkProvider("openai");
+      actions.config.setTranscriptionModel("gpt-4o-transcribe");
       testProcessEnv._set("LASSO_TRANSCRIPTION_API_KEY", "key");
       mockRecording();
       mockTranscription("");
-      actions.resetStdout();
+      actions.terminal.resetStdout();
       const result = await recordAndTranscribeInput();
       assert.strictEqual(result, null);
       assert.deepStrictEqual(getWrites(), [
@@ -4491,8 +4526,8 @@ custom command content`,
     });
 
     it("aborts the transcription when the transcription is aborted", async () => {
-      actions.setTranscriptionSdkProvider("openai");
-      actions.setTranscriptionModel("gpt-4o-transcribe");
+      actions.config.setTranscriptionSdkProvider("openai");
+      actions.config.setTranscriptionModel("gpt-4o-transcribe");
       testProcessEnv._set("LASSO_TRANSCRIPTION_API_KEY", "key");
       mockRecording();
       testFs._files.set("/tmp/lasso-test-uuid.wav", "wav recording bytes");
@@ -4509,7 +4544,7 @@ custom command content`,
           });
         },
       );
-      actions.resetStdout();
+      actions.terminal.resetStdout();
       const resultPromise = recordAndTranscribeInput();
       while (getState().abortControllers.transcription === null) {
         await sleep(10);
@@ -4528,18 +4563,18 @@ custom command content`,
     });
 
     it("shows the transcription error directly when stdout is muted and not typed", async () => {
-      actions.setTranscriptionSdkProvider("openai");
-      actions.setTranscriptionModel("gpt-4o-transcribe");
+      actions.config.setTranscriptionSdkProvider("openai");
+      actions.config.setTranscriptionModel("gpt-4o-transcribe");
       testProcessEnv._set("LASSO_TRANSCRIPTION_API_KEY", "key");
       mockRecording();
       testFs._files.set("/tmp/lasso-test-uuid.wav", "wav recording bytes");
       mock.method(aiDeps, "transcribe", () =>
         Promise.reject(new Error("bad audio")),
       );
-      actions.setIsNonBlockingProcessOngoing(true);
-      actions.resetStdout();
+      actions.terminal.setIsNonBlockingProcessOngoing(true);
+      actions.terminal.resetStdout();
       const result = await recordAndTranscribeInput();
-      actions.setIsNonBlockingProcessOngoing(false);
+      actions.terminal.setIsNonBlockingProcessOngoing(false);
       assert.strictEqual(result, null);
       assert.deepStrictEqual(getWrites(), [
         `${RED}⏺${RESET} Press enter to stop recording \n`,
@@ -4553,18 +4588,18 @@ custom command content`,
     });
 
     it("buffers the transcription error when stdout is muted and typed", async () => {
-      actions.setTranscriptionSdkProvider("openai");
-      actions.setTranscriptionModel("gpt-4o-transcribe");
+      actions.config.setTranscriptionSdkProvider("openai");
+      actions.config.setTranscriptionModel("gpt-4o-transcribe");
       testProcessEnv._set("LASSO_TRANSCRIPTION_API_KEY", "key");
       mockRecording();
       testFs._files.set("/tmp/lasso-test-uuid.wav", "wav recording bytes");
       mock.method(aiDeps, "transcribe", () =>
         Promise.reject(new Error("bad audio")),
       );
-      actions.setIsNonBlockingProcessOngoing(true);
-      actions.resetStdout();
+      actions.terminal.setIsNonBlockingProcessOngoing(true);
+      actions.terminal.resetStdout();
       const result = await recordAndTranscribeInput({ isTyped: true });
-      actions.setIsNonBlockingProcessOngoing(false);
+      actions.terminal.setIsNonBlockingProcessOngoing(false);
       assert.strictEqual(result, null);
       assert.deepStrictEqual(getWrites(), []);
       assert.deepStrictEqual(
@@ -4582,8 +4617,8 @@ custom command content`,
     });
 
     it("drops output while a non-blocking process is ongoing", () => {
-      actions.setIsNonBlockingProcessOngoing(true);
-      actions.resetStdout();
+      actions.terminal.setIsNonBlockingProcessOngoing(true);
+      actions.terminal.resetStdout();
       mutedStdout.write("echo chars");
       assert.deepStrictEqual(getWrites(), []);
     });
@@ -4595,42 +4630,42 @@ custom command content`,
     });
 
     it("is true while the loading state spinner is active", () => {
-      actions.setLoadingStateTimeout({} as NodeJS.Timeout);
+      actions.terminal.setLoadingStateTimeout({} as NodeJS.Timeout);
       assert.strictEqual(shouldMuteStdout(), true);
     });
     it("is true while the loading state spinner is active", () => {
-      actions.setLoadingStateTimeout({} as NodeJS.Timeout);
+      actions.terminal.setLoadingStateTimeout({} as NodeJS.Timeout);
       assert.strictEqual(shouldMuteStdout(), true);
     });
     it("is true while the loading state spinner is active", () => {
-      actions.setLoadingStateTimeout({} as NodeJS.Timeout);
+      actions.terminal.setLoadingStateTimeout({} as NodeJS.Timeout);
       assert.strictEqual(shouldMuteStdout(), true);
     });
     it("is true while the loading state spinner is active", () => {
-      actions.setLoadingStateTimeout({} as NodeJS.Timeout);
+      actions.terminal.setLoadingStateTimeout({} as NodeJS.Timeout);
       assert.strictEqual(shouldMuteStdout(), true);
     });
     it("is true while the loading state spinner is active", () => {
-      actions.setLoadingStateTimeout({} as NodeJS.Timeout);
+      actions.terminal.setLoadingStateTimeout({} as NodeJS.Timeout);
       assert.strictEqual(shouldMuteStdout(), true);
     });
     it("is true while the loading state spinner is active", () => {
-      actions.setLoadingStateTimeout({} as NodeJS.Timeout);
+      actions.terminal.setLoadingStateTimeout({} as NodeJS.Timeout);
       assert.strictEqual(shouldMuteStdout(), true);
     });
     it("is true while the loading state spinner is active", () => {
-      actions.setLoadingStateTimeout({} as NodeJS.Timeout);
+      actions.terminal.setLoadingStateTimeout({} as NodeJS.Timeout);
       assert.strictEqual(shouldMuteStdout(), true);
     });
     it("is true while a non-blocking process is ongoing", () => {
-      actions.setIsNonBlockingProcessOngoing(true);
+      actions.terminal.setIsNonBlockingProcessOngoing(true);
       assert.strictEqual(shouldMuteStdout(), true);
     });
   });
 
   describe("recordInput", () => {
     it("spawns sox with the wav mono 16-bit output config writing to the temp file", () => {
-      actions.setRecordProcessAbortController(new AbortController());
+      actions.abortControllers.setRecordProcess(new AbortController());
       const { spawnCalls } = mockRecording();
       recordInput("/tmp/lasso-test-uuid.wav");
       assert.strictEqual(spawnCalls.length, 1);
@@ -4654,7 +4689,7 @@ custom command content`,
     });
 
     it("resolves recordingFinished with the close args on stop", async () => {
-      actions.setRecordProcessAbortController(new AbortController());
+      actions.abortControllers.setRecordProcess(new AbortController());
       const { killSignals } = mockRecording();
       const { stop, recordingFinished } = recordInput(
         "/tmp/lasso-test-uuid.wav",
@@ -4667,7 +4702,7 @@ custom command content`,
 
     it("kills the recording process when the record process is aborted", () => {
       const controller = new AbortController();
-      actions.setRecordProcessAbortController(controller);
+      actions.abortControllers.setRecordProcess(controller);
       const { killSignals } = mockRecording();
       recordInput("/tmp/lasso-test-uuid.wav");
       controller.abort();
@@ -4675,14 +4710,14 @@ custom command content`,
     });
 
     it("resolves recordingReady when the recording process spawns", async () => {
-      actions.setRecordProcessAbortController(new AbortController());
+      actions.abortControllers.setRecordProcess(new AbortController());
       mockRecording();
       const { recordingReady } = recordInput("/tmp/lasso-test-uuid.wav");
       assert.deepStrictEqual(await recordingReady, []);
     });
 
     it("rejects recordingReady when the recording process fails to spawn", async () => {
-      actions.setRecordProcessAbortController(new AbortController());
+      actions.abortControllers.setRecordProcess(new AbortController());
       mockRecording({ spawnError: new Error("spawn sox ENOENT") });
       const { recordingReady } = recordInput("/tmp/lasso-test-uuid.wav");
       await assert.rejects(recordingReady, { message: "spawn sox ENOENT" });
@@ -4691,11 +4726,11 @@ custom command content`,
 
   describe("transcribeInput", () => {
     it("sends the audio to the transcription model and returns the text", async () => {
-      actions.setTranscriptionSdkProvider("openai");
-      actions.setTranscriptionModel("gpt-4o-transcribe");
+      actions.config.setTranscriptionSdkProvider("openai");
+      actions.config.setTranscriptionModel("gpt-4o-transcribe");
       testProcessEnv._set("LASSO_TRANSCRIPTION_API_KEY", "key");
       const controller = new AbortController();
-      actions.setTranscriptionAbortController(controller);
+      actions.abortControllers.setTranscription(controller);
       const audio = Buffer.from("recording");
       const { transcribeCalls } = mockTranscription("hi");
       const result = await transcribeInput(audio);
@@ -4704,7 +4739,7 @@ custom command content`,
       assert.strictEqual(transcribeCalls[0].audio, audio);
       assert.strictEqual(transcribeCalls[0].abortSignal, controller.signal);
       assert.ok(transcribeCalls[0].model !== undefined);
-      actions.setTranscriptionAbortController(null);
+      actions.abortControllers.setTranscription(null);
     });
   });
 });

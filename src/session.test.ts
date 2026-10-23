@@ -313,15 +313,15 @@ describe("log", () => {
     beforeEach(() => {
       mock.restoreAll();
       setupTestContext({ now: 1_234_567_890_000 });
-      actions.setSessionFilePath(
+      actions.session.setFilePath(
         "/fake-home/.local/state/lasso/sessions/session-1234567890000.json",
       );
     });
 
     it("writes the current state to the session file", async () => {
       testFs._dirs.add("/fake-home/.local/state/lasso/sessions");
-      actions.setConversationMessages([{ role: "user", content: "hello" }]);
-      actions.setTranscript([
+      actions.conversation.setMessages([{ role: "user", content: "hello" }]);
+      actions.conversation.setTranscript([
         {
           timestamp: 0,
           role: "user",
@@ -340,7 +340,7 @@ describe("log", () => {
     });
 
     it("replaces the provided fields and updates state", async () => {
-      actions.setConversationMessages([{ role: "user", content: "old" }]);
+      actions.conversation.setMessages([{ role: "user", content: "old" }]);
       await syncSessionFile({
         messages: [{ role: "assistant", content: "reply" }],
       });
@@ -429,7 +429,7 @@ describe("log", () => {
     });
 
     it("loads messages, summaries, and transcript into state and returns true", async () => {
-      actions.setConversationMessages([{ role: "user", content: "old" }]);
+      actions.conversation.setMessages([{ role: "user", content: "old" }]);
       testFs._files.set(
         "/test/session.json",
         JSON.stringify({
@@ -439,7 +439,7 @@ describe("log", () => {
         }),
       );
 
-      actions.setPromptTokens(100);
+      actions.usage.setPromptTokens(100);
 
       const result = await resumeFromSessionFile("/test/session.json");
 

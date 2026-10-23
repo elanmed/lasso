@@ -662,7 +662,7 @@ export function createToolCallDiffer() {
       }
 
       if (diffResult.value.stdout.length > 0) {
-        actions.appendToolEditDiff({
+        actions.conversation.appendToolEditDiff({
           fileName: path,
           diffStdout: diffResult.value.stdout,
         });

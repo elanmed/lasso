@@ -104,9 +104,9 @@ export async function syncSessionFile({
     transcript,
   };
 
-  actions.setConversationMessages(messages);
-  actions.setConversationSummaries(summaries);
-  actions.setTranscript(transcript);
+  actions.conversation.setMessages(messages);
+  actions.conversation.setSummaries(summaries);
+  actions.conversation.setTranscript(transcript);
 
   const stringifyResult = tryCatch(() => JSON.stringify(next));
   if (!stringifyResult.ok) {
@@ -150,10 +150,10 @@ export async function resumeFromSessionFile(sessionFilePath: string) {
     return false;
   }
   const { messages, summaries, transcript } = parseResult.value;
-  actions.setTranscript(transcript);
-  actions.setConversationSummaries(summaries);
-  actions.setConversationMessages(messages);
-  actions.setPromptTokensStale(true);
+  actions.conversation.setTranscript(transcript);
+  actions.conversation.setSummaries(summaries);
+  actions.conversation.setMessages(messages);
+  actions.usage.setPromptTokensStale(true);
   return true;
 }
 
@@ -163,7 +163,7 @@ export function initSessionFile() {
     sessionDir,
     `session-${getState().session.sessionStartDate.toString()}.json`,
   );
-  actions.setSessionFilePath(sessionFilePath);
+  actions.session.setFilePath(sessionFilePath);
 }
 
 export async function deleteExpiredSessionFiles() {

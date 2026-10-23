@@ -25,7 +25,7 @@ import {
 } from "./app.ts";
 
 async function main() {
-  actions.setIsInitializing(true);
+  actions.terminal.setIsInitializing(true);
   initStdin();
   initStdout();
   await initState();
@@ -33,7 +33,7 @@ async function main() {
   printMissingConfigErrors();
   printMissingConfigWarnings();
   printLargeContextOverheadWarning();
-  actions.setIsInitializing(false);
+  actions.terminal.setIsInitializing(false);
 
   let isFirstInput = true;
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition

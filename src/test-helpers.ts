@@ -340,10 +340,10 @@ export function setupTestContext({
     testProcessEnv._set("LASSO_API_KEY", apiKey);
   }
   if (sdkProvider !== null) {
-    actions.setSdkProvider(sdkProvider);
+    actions.config.setSdkProvider(sdkProvider);
   }
   if (model !== null) {
-    actions.setModel(model);
+    actions.config.setModel(model);
   }
 }
 
@@ -717,12 +717,12 @@ export function batPagerCmd(
 
 export function setupKeypressTests() {
   const { rl, writes } = makeFakeRlWithWrites();
-  actions.setRl(rl);
-  actions.setQuestionAbortController(new AbortController());
+  actions.terminal.setRl(rl);
+  actions.abortControllers.setQuestion(new AbortController());
   initKeypress(rl);
 
   const emitKey = (key: Key) => {
-    actions.resetStdout();
+    actions.terminal.resetStdout();
     writes.length = 0;
     stdin.emit("keypress", key.name, key);
   };
@@ -820,7 +820,10 @@ export function setMcpClients({
   clients: Record<string, unknown>;
   tools?: Record<string, unknown>;
 }) {
-  actions.setMcp(clients as Record<string, MCPClient>, tools as MCPToolSet);
+  actions.mcp.setClientsAndTools(
+    clients as Record<string, MCPClient>,
+    tools as MCPToolSet,
+  );
 }
 
 export function makeFakeMcpToolSet(tools: Record<string, unknown>) {
@@ -844,7 +847,7 @@ export function setMcps(...names: string[]) {
   for (const name of names) {
     mcps[name] = { type: "http", url: "not-a-url" };
   }
-  actions.setMcps(mcps);
+  actions.config.setMcps(mcps);
 }
 
 export function mockMcpClients(...clients: (MCPClient | Error)[]) {

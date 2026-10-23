@@ -958,7 +958,7 @@ describe("tools", () => {
 
   describe("stringifyTools", () => {
     it("returns the harness and mcp tools as compact json", () => {
-      actions.setMcp({}, { mcp_tool: makeMcpTool() });
+      actions.mcp.setClientsAndTools({}, { mcp_tool: makeMcpTool() });
 
       assert.strictEqual(
         stringifyTools(),
@@ -973,7 +973,7 @@ describe("tools", () => {
     });
 
     it("returns loaded skill content when skill exists in state", () => {
-      actions.setSkills([
+      actions.content.setSkills([
         {
           name: "deploy",
           description: "Deploy skill",
@@ -998,7 +998,7 @@ describe("tools", () => {
     });
 
     it("finds the correct skill when multiple skills are stored", () => {
-      actions.setSkills([
+      actions.content.setSkills([
         {
           name: "skill-a",
           description: "Skill A",
@@ -1033,7 +1033,7 @@ describe("tools", () => {
 
   describe("createSubagentTaskSchema", () => {
     it("accepts the current model", () => {
-      actions.setModel("model-a");
+      actions.config.setModel("model-a");
       assert.strictEqual(
         createSubagentTaskSchema.safeParse({
           prompt: "inspect",
@@ -1045,7 +1045,7 @@ describe("tools", () => {
     });
 
     it("requires and validates the model", () => {
-      actions.setModel("model-a");
+      actions.config.setModel("model-a");
       assert.strictEqual(
         createSubagentTaskSchema.safeParse({
           prompt: "inspect",
@@ -1072,8 +1072,8 @@ describe("tools", () => {
     });
 
     it("accepts configured subagent models from state", () => {
-      actions.setModel("main-model");
-      actions.setSubagentModels(["fast-model", "strong-model"]);
+      actions.config.setModel("main-model");
+      actions.config.setSubagentModels(["fast-model", "strong-model"]);
       assert.strictEqual(
         createSubagentTaskSchema.safeParse({
           prompt: "inspect",
@@ -1093,8 +1093,8 @@ describe("tools", () => {
     });
 
     it("uses the current model when configured subagent models are empty", () => {
-      actions.setModel("main-model");
-      actions.setSubagentModels([]);
+      actions.config.setModel("main-model");
+      actions.config.setSubagentModels([]);
       assert.strictEqual(
         createSubagentTaskSchema.safeParse({
           prompt: "inspect",
@@ -1159,7 +1159,7 @@ describe("tools", () => {
 
       it("gives read-write subagents write tools and prints file diffs", async () => {
         const mcpTool = makeMcpTool();
-        actions.setMcp({}, { mcp_tool: mcpTool });
+        actions.mcp.setClientsAndTools({}, { mcp_tool: mcpTool });
         const getWrites = mockStdoutWrites();
         testFs._files.set("/test/file.txt", "original content");
         mockGenerateText(async (options: Record<string, unknown>) => {
@@ -1231,8 +1231,8 @@ describe("tools", () => {
       });
 
       it("builds subagent systemContent from prompt, context, and skills", async () => {
-        actions.setContextStr("ctx body");
-        actions.setSkillsStr("skills body");
+        actions.content.setContextStr("ctx body");
+        actions.content.setSkillsStr("skills body");
         const calls: Record<string, unknown>[] = [];
         mockGenerateText((options: Record<string, unknown>) => {
           calls.push(options);
@@ -1645,7 +1645,7 @@ describe("createToolCallDiffer", () => {
         [{ stdout: "delta 0.18.2" }, { stdout: "+created content\n" }],
         commands,
       );
-      actions.setSuppressToolEditDiffs(true);
+      actions.config.setSuppressToolEditDiffs(true);
 
       await differ.setTempFiles("call-1", ["/test/new-file.txt"]);
       testFs._files.set("/test/new-file.txt", "created content");

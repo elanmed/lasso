@@ -47,7 +47,7 @@ describe("model", () => {
 
   beforeEach(() => {
     setupTestContext({ model: "claude-sonnet-4-20250514" });
-    actions.setBaseURL("https://api.anthropic.com");
+    actions.config.setBaseURL("https://api.anthropic.com");
   });
 
   describe("getLanguageModel", () => {
@@ -60,7 +60,7 @@ describe("model", () => {
     });
 
     it("creates an OpenAI-compatible language model", () => {
-      actions.setSdkProvider("openai-compatible");
+      actions.config.setSdkProvider("openai-compatible");
       const model = getLanguageModel();
       assert.deepStrictEqual(
         { modelId: model.modelId, provider: model.provider },
@@ -72,7 +72,7 @@ describe("model", () => {
     });
 
     it("creates an OpenAI language model", () => {
-      actions.setSdkProvider("openai");
+      actions.config.setSdkProvider("openai");
       const model = getLanguageModel();
       assert.deepStrictEqual(
         { modelId: model.modelId, provider: model.provider },
@@ -81,7 +81,7 @@ describe("model", () => {
     });
 
     it("creates a Google language model", () => {
-      actions.setSdkProvider("google");
+      actions.config.setSdkProvider("google");
       const model = getLanguageModel();
       assert.deepStrictEqual(
         { modelId: model.modelId, provider: model.provider },
@@ -99,14 +99,14 @@ describe("model", () => {
     });
 
     it("creates an OpenAI transcription model", () => {
-      actions.setTranscriptionSdkProvider("openai");
+      actions.config.setTranscriptionSdkProvider("openai");
       const model =
         getTranscriptionProvider().transcription("gpt-4o-transcribe");
       assert.equal(model.provider, "openai.transcription");
     });
 
     it("creates a Google transcription model", () => {
-      actions.setTranscriptionSdkProvider("google");
+      actions.config.setTranscriptionSdkProvider("google");
       const model =
         getTranscriptionProvider().transcription("gemini-2.0-flash");
       assert.equal(model.provider, "google.generative-ai.transcription");
@@ -119,7 +119,7 @@ describe("model", () => {
     });
 
     it("returns session and client headers when gateway is opencode", () => {
-      actions.setGateway("opencode");
+      actions.config.setGateway("opencode");
       assert.deepStrictEqual(getHeaders(), {
         "x-opencode-session": "test-uuid",
         "x-opencode-client": "lasso",
@@ -2235,7 +2235,7 @@ hello
   describe("printMissingConfigErrors", () => {
     beforeEach(() => {
       setupTestContext({ model: "claude-sonnet-4-20250514" });
-      actions.setBaseURL("https://api.anthropic.com");
+      actions.config.setBaseURL("https://api.anthropic.com");
     });
 
     it("returns false and prints nothing when there are no config error messages", () => {
@@ -2245,8 +2245,10 @@ hello
     });
 
     it("prints the config error messages and returns true when there are config error messages", () => {
-      actions.appendConfigErrorMessage("Set `model` in your config file");
-      actions.appendConfigErrorMessage(
+      actions.content.appendConfigErrorMessage(
+        "Set `model` in your config file",
+      );
+      actions.content.appendConfigErrorMessage(
         "Set the `LASSO_API_KEY` environment variable, e.g. `export LASSO_API_KEY=...`",
       );
       const getWrites = mockStdoutWrites();
@@ -2260,8 +2262,10 @@ hello
     });
 
     it("prints the init command hint when includeConfigInitMessage is true", () => {
-      actions.appendConfigErrorMessage("Set `model` in your config file");
-      actions.setIncludeConfigInitMessage(true);
+      actions.content.appendConfigErrorMessage(
+        "Set `model` in your config file",
+      );
+      actions.content.setIncludeConfigInitMessage(true);
       const getWrites = mockStdoutWrites();
       assert.strictEqual(printMissingConfigErrors(), true);
       assert.deepStrictEqual(getWrites(), [
@@ -2290,7 +2294,7 @@ describe("input config", () => {
 
   describe("initLocalConfig and initGlobalConfig", () => {
     it("creates the local config in .lasso/settings.yaml", async () => {
-      actions.resetStdout();
+      actions.terminal.resetStdout();
       await initLocalConfig();
       assert.deepStrictEqual(getWrites(), [
         `${PURPLE}Created the local config at /test-cwd/.lasso/settings.yaml${RESET}\n`,
@@ -2337,7 +2341,7 @@ usageLimit:
 
     it("warns and does not overwrite when the local config already exists", async () => {
       testFs._files.set("/test-cwd/.lasso/settings.yaml", "existing config");
-      actions.resetStdout();
+      actions.terminal.resetStdout();
       await initLocalConfig();
       assert.deepStrictEqual(getWrites(), [
         `${YELLOW}The local config already exists at /test-cwd/.lasso/settings.yaml${RESET}\n`,
@@ -2354,7 +2358,7 @@ usageLimit:
           throw makeErrnoError("EACCES");
         return false;
       });
-      actions.resetStdout();
+      actions.terminal.resetStdout();
       await initLocalConfig();
       assert.deepStrictEqual(getWrites(), [
         `${RED}Failed to check if /test-cwd/.lasso/settings.yaml exists. Error: EACCES${RESET}\n`,
@@ -2370,7 +2374,7 @@ usageLimit:
         if (path === "/test-cwd/.lasso") throw makeErrnoError("EACCES");
         return false;
       });
-      actions.resetStdout();
+      actions.terminal.resetStdout();
       await initLocalConfig();
       assert.deepStrictEqual(getWrites(), [
         `${RED}Failed to check if /test-cwd/.lasso exists. Error: EACCES${RESET}\n`,
@@ -2385,7 +2389,7 @@ usageLimit:
       mock.method(fsDeps, "writeFile", () =>
         Promise.reject(new Error("write failed")),
       );
-      actions.resetStdout();
+      actions.terminal.resetStdout();
       await initLocalConfig();
       assert.deepStrictEqual(getWrites(), [
         `${RED}Failed to write the config to /test-cwd/.lasso/settings.yaml${RESET}\n`,
@@ -2398,7 +2402,7 @@ usageLimit:
           throw makeErrnoError("EACCES");
         return false;
       });
-      actions.resetStdout();
+      actions.terminal.resetStdout();
       await initGlobalConfig();
       assert.deepStrictEqual(getWrites(), [
         `${RED}Failed to check if /fake-home/.config/lasso/settings.yaml exists. Error: EACCES${RESET}\n`,
@@ -2414,7 +2418,7 @@ usageLimit:
         if (path === "/fake-home/.config/lasso") throw makeErrnoError("EACCES");
         return false;
       });
-      actions.resetStdout();
+      actions.terminal.resetStdout();
       await initGlobalConfig();
       assert.deepStrictEqual(getWrites(), [
         `${RED}Failed to check if /fake-home/.config/lasso exists. Error: EACCES${RESET}\n`,
@@ -2426,7 +2430,7 @@ usageLimit:
     });
 
     it("creates the global config in ~/.config/lasso/settings.yaml", async () => {
-      actions.resetStdout();
+      actions.terminal.resetStdout();
       await initGlobalConfig();
       assert.deepStrictEqual(getWrites(), [
         `${PURPLE}Created the global config at /fake-home/.config/lasso/settings.yaml${RESET}\n`,
@@ -2476,7 +2480,7 @@ usageLimit:
         "/fake-home/.config/lasso/settings.yaml",
         "existing config",
       );
-      actions.resetStdout();
+      actions.terminal.resetStdout();
       await initGlobalConfig();
       assert.deepStrictEqual(getWrites(), [
         `${YELLOW}The global config already exists at /fake-home/.config/lasso/settings.yaml${RESET}\n`,
@@ -2491,7 +2495,7 @@ usageLimit:
       mock.method(fsDeps, "writeFile", () =>
         Promise.reject(new Error("write failed")),
       );
-      actions.resetStdout();
+      actions.terminal.resetStdout();
       await initGlobalConfig();
       assert.deepStrictEqual(getWrites(), [
         `${RED}Failed to write the config to /fake-home/.config/lasso/settings.yaml${RESET}\n`,
@@ -2502,7 +2506,7 @@ usageLimit:
       mock.method(fsDeps, "mkdir", () =>
         Promise.reject(new Error("mkdir failed")),
       );
-      actions.resetStdout();
+      actions.terminal.resetStdout();
       await initLocalConfig();
       assert.deepStrictEqual(getWrites(), [
         `${RED}Failed to create the directory: /test-cwd/.lasso${RESET}\n`,

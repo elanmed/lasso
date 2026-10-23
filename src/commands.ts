@@ -324,12 +324,12 @@ export async function spawnAndReadEditorContent(opts?: {
 
   if (trimmedAfter === "") {
     if (trimmedBefore !== "") {
-      actions.setEditorInputValue(null);
+      actions.terminal.setEditorInputValue(null);
     }
     return null;
   }
 
-  actions.setEditorInputValue(readResult.value);
+  actions.terminal.setEditorInputValue(readResult.value);
   return normalizeNewline(readResult.value);
 }
 
@@ -562,8 +562,8 @@ export async function clearCommand() {
   });
   // the next api call only reports its token usage after it completes, so seeding with the
   // system prompt approx keeps the context window percent from displaying 0% in the meantime
-  actions.setPromptTokens(getApproxPromptTokens());
-  actions.setModelUsageForSession({});
+  actions.usage.setPromptTokens(getApproxPromptTokens());
+  actions.usage.setModelUsageForSession({});
 }
 
 export async function pageHistory({ isTyped = false }: SpacingOpts = {}) {
@@ -786,7 +786,7 @@ export function steerCommand({ isTyped = false }: SpacingOpts = {}) {
   }
 
   apiStream.abort();
-  actions.setIsSteering(true);
+  actions.terminal.setIsSteering(true);
 }
 
 export function warnOnMissingTranscribeConfig() {
@@ -897,11 +897,11 @@ export async function recordAndTranscribeInput({
   if (missingConfig) return null;
 
   const abortController = new AbortController();
-  actions.setRecordProcessAbortController(abortController);
+  actions.abortControllers.setRecordProcess(abortController);
 
   const tempFile = await getTempFileName({ extension: "wav" });
   if (tempFile === null) {
-    actions.setRecordProcessAbortController(null);
+    actions.abortControllers.setRecordProcess(null);
     return null;
   }
 
@@ -940,7 +940,7 @@ export async function recordAndTranscribeInput({
   stop();
 
   const recordingResult = await recordingPromise;
-  actions.setRecordProcessAbortController(null);
+  actions.abortControllers.setRecordProcess(null);
   if (!recordingResult.ok) {
     print.error(
       `Recording failed: ${getMessageFromError(recordingResult.error)}`,
@@ -976,11 +976,11 @@ export async function recordAndTranscribeInput({
   }
 
   const transcriptionAbortController = new AbortController();
-  actions.setTranscriptionAbortController(transcriptionAbortController);
+  actions.abortControllers.setTranscription(transcriptionAbortController);
   const transcribeResult = await tryCatchAsync(
     transcribeInput(readResult.value),
   );
-  actions.setTranscriptionAbortController(null);
+  actions.abortControllers.setTranscription(null);
 
   if (!transcribeResult.ok) {
     if (isAbortError(transcribeResult.error)) {
@@ -1085,7 +1085,7 @@ export async function getAvailableSlashCommands() {
     const glob = join(dir, "**/*.md");
     const globResult = await tryCatchAsync(fsDeps.glob(glob));
     if (!globResult.ok) {
-      actions.appendConfigWarningMessage(
+      actions.content.appendConfigWarningMessage(
         `Failed to list the slash command files in \`${dir}\`, ignoring. Error: ${getMessageFromError(globResult.error, { forceSingleLine: true })}`,
       );
       continue;
@@ -1096,7 +1096,7 @@ export async function getAvailableSlashCommands() {
   for (const filePath of slashCommandFilePaths) {
     const readResult = await tryCatchAsync(fsDeps.readFile(filePath, "utf8"));
     if (!readResult.ok) {
-      actions.appendConfigWarningMessage(
+      actions.content.appendConfigWarningMessage(
         `Failed to read the slash command file at \`${filePath}\`, ignoring. Error: ${getMessageFromError(readResult.error, { forceSingleLine: true })}`,
       );
       continue;
@@ -1238,7 +1238,7 @@ export function initStdin() {
     if (key.name === "return" || key.name === "enter") return;
     if (!isTypeableKey(key)) return;
     if (typeof char !== "string") return;
-    actions.appendBufferedInputWhileInitializing(char);
+    actions.terminal.appendBufferedInputWhileInitializing(char);
   });
 }
 
@@ -1261,7 +1261,7 @@ function abortRlQuestionForEditorIfActive(editorContent: string) {
       getState().config.promptPrefix.length,
     );
     rl.write(truncatedFirstLine);
-    actions.appendStdoutTail(truncatedFirstLine);
+    actions.terminal.appendStdoutTail(truncatedFirstLine);
 
     abortController.abort();
   }
@@ -1427,9 +1427,9 @@ async function resolveBuiltinSlashCommand(
         return { handled: true, inputFromCommand: null };
       }
 
-      actions.setIsNonBlockingProcessOngoing(true);
+      actions.terminal.setIsNonBlockingProcessOngoing(true);
       const content = await spawnAndReadEditorContent();
-      actions.setIsNonBlockingProcessOngoing(false);
+      actions.terminal.setIsNonBlockingProcessOngoing(false);
 
       if (content !== null) {
         await syncSessionFile({
@@ -1455,11 +1455,11 @@ async function resolveBuiltinSlashCommand(
         return { handled: true, inputFromCommand: null };
       }
 
-      actions.setIsNonBlockingProcessOngoing(true);
+      actions.terminal.setIsNonBlockingProcessOngoing(true);
       const content = await spawnAndReadEditorContent({
         includeClipboardSuffix: true,
       });
-      actions.setIsNonBlockingProcessOngoing(false);
+      actions.terminal.setIsNonBlockingProcessOngoing(false);
 
       if (content !== null)
         await syncSessionFile({
@@ -1648,11 +1648,11 @@ async function resolveBuiltinSlashCommand(
         return { handled: true, inputFromCommand: null };
       }
 
-      actions.setIsRecording(true);
+      actions.terminal.setIsRecording(true);
       const inputFromCommand = await recordAndTranscribeInput({
         isTyped: true,
       });
-      actions.setIsRecording(false);
+      actions.terminal.setIsRecording(false);
 
       if (inputFromCommand !== null) {
         await syncSessionFile({
@@ -1698,7 +1698,7 @@ async function resolveSlashCommand(
 function typeCommand(rl: readline.Interface, command: string) {
   const output = `/${command}\n`;
   rl.write(output);
-  actions.appendStdoutTail(output);
+  actions.terminal.appendStdoutTail(output);
 }
 
 // Reprints the readline prompt line and any half-typed input after pager
@@ -1706,7 +1706,7 @@ function typeCommand(rl: readline.Interface, command: string) {
 function redrawPendingQuestion(rl: readline.Interface) {
   if (getState().abortControllers.question === null) return;
   rl.prompt(true);
-  actions.appendStdoutTail(getState().config.promptPrefix);
+  actions.terminal.appendStdoutTail(getState().config.promptPrefix);
 }
 
 function initKeypress(
@@ -1756,20 +1756,20 @@ function initKeypress(
               return;
             }
 
-            actions.setIsRecording(true);
+            actions.terminal.setIsRecording(true);
             const transcriptionInput = await wrapToOpenNonBlockingProcess(
               recordAndTranscribeInput,
               { pauseStdin: false }, // rl.question needs stdin to receive Enter and stop recording.
             );
-            actions.setIsRecording(false);
+            actions.terminal.setIsRecording(false);
 
             if (transcriptionInput === null) return;
 
             const { editorInputValue } = getState().terminal;
             if (editorInputValue === null) {
-              actions.appendEditorInputValue(transcriptionInput);
+              actions.terminal.appendEditorInputValue(transcriptionInput);
             } else {
-              actions.appendEditorInputValue(
+              actions.terminal.appendEditorInputValue(
                 `\n${getState().config.messageQueueDelimiter}${transcriptionInput}`,
               );
             }

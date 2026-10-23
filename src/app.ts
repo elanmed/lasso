@@ -155,7 +155,7 @@ export async function getContextEntries() {
     if (!filePathExistsResult.value) continue;
     const readResult = await tryCatchAsync(fsDeps.readFile(filePath, "utf8"));
     if (!readResult.ok) {
-      actions.appendConfigWarningMessage(
+      actions.content.appendConfigWarningMessage(
         `Failed to read the agent file at \`${filePath}\`, ignoring. Error: ${getMessageFromError(readResult.error, { forceSingleLine: true })}`,
       );
       continue;
@@ -204,7 +204,7 @@ export async function getSkills() {
     const glob = join(skillGrandparentDir, "**/SKILL.md");
     const globResult = await tryCatchAsync(fsDeps.glob(glob));
     if (!globResult.ok) {
-      actions.appendConfigWarningMessage(
+      actions.content.appendConfigWarningMessage(
         `Failed to list the skill files in \`${skillGrandparentDir}\`, ignoring. Error: ${getMessageFromError(globResult.error, { forceSingleLine: true })}`,
       );
       continue;
@@ -225,7 +225,7 @@ export async function getSkills() {
     fsDeps.gitLsFiles("**/AGENTS.md"),
   );
   if (!agentFileGlobResult.ok) {
-    actions.appendConfigWarningMessage(
+    actions.content.appendConfigWarningMessage(
       `Failed to list the agent files with git, ignoring. Error: ${getMessageFromError(agentFileGlobResult.error, { forceSingleLine: true })}`,
     );
     return skills;
@@ -238,7 +238,7 @@ export async function getSkills() {
       fsDeps.readFile(agentFilePath, "utf8"),
     );
     if (!readResult.ok) {
-      actions.appendConfigWarningMessage(
+      actions.content.appendConfigWarningMessage(
         `Failed to read the agent file at \`${agentFilePath}\`, ignoring. Error: ${getMessageFromError(readResult.error, { forceSingleLine: true })}`,
       );
       continue;
@@ -260,7 +260,7 @@ export async function getSkills() {
 export async function getSkillJSON(skillMdPath: string) {
   const readResult = await tryCatchAsync(fsDeps.readFile(skillMdPath, "utf8"));
   if (!readResult.ok) {
-    actions.appendConfigWarningMessage(
+    actions.content.appendConfigWarningMessage(
       `Failed to read the skill at ${skillMdPath}, ignoring. Error: ${getMessageFromError(readResult.error)}`,
     );
     return null;
@@ -268,14 +268,14 @@ export async function getSkillJSON(skillMdPath: string) {
 
   const parsed = parseFrontMatter(readResult.value);
   if (parsed === null) {
-    actions.appendConfigWarningMessage(
+    actions.content.appendConfigWarningMessage(
       `Malformed skill at ${skillMdPath}! A skill's front matter must contain valid YAML between \`---\` and \`---\`.`,
     );
     return null;
   }
   const parseResult = skillMetadataSchema.safeParse(parsed.data);
   if (!parseResult.success) {
-    actions.appendConfigWarningMessage(
+    actions.content.appendConfigWarningMessage(
       `Malformed skill at ${skillMdPath}! A skill's front matter must contain a \`name\` and \`description\` field.`,
     );
     return null;
@@ -318,19 +318,19 @@ export async function initStateFromFs({
 
   performanceLogger.start("context");
   const contextEntries = await getContextEntries();
-  actions.setContextEntries(contextEntries);
-  actions.setContextStr(getContextFilesStr(contextEntries));
+  actions.content.setContextEntries(contextEntries);
+  actions.content.setContextStr(getContextFilesStr(contextEntries));
   performanceLogger.end("context");
 
   performanceLogger.start("skills");
   const skills = await getSkills();
-  actions.setSkills(skills);
-  actions.setSkillsStr(getSkillsStr(skills));
+  actions.content.setSkills(skills);
+  actions.content.setSkillsStr(getSkillsStr(skills));
   performanceLogger.end("skills");
 
   performanceLogger.start("commands");
   const slashCommands = await getAvailableSlashCommands();
-  actions.setSlashCommands(slashCommands);
+  actions.content.setSlashCommands(slashCommands);
   performanceLogger.end("commands");
 }
 
@@ -362,9 +362,9 @@ export function getStartupLogIdToLabel(): LogIdToLabel {
 
 export async function initBatAvailable() {
   const batResult = await tryCatchAsync(childProcessDeps.exec("bat --version"));
-  actions.setBatAvailable(batResult.ok);
+  actions.content.setBatAvailable(batResult.ok);
   if (!batResult.ok) {
-    actions.appendConfigWarningMessage(
+    actions.content.appendConfigWarningMessage(
       `\`bat\` is not available; consider installing it to properly render markdown responses`,
     );
   }
@@ -373,7 +373,7 @@ export async function initBatAvailable() {
 export async function initState() {
   const { globalConfig, localConfig } = await initStateFirst();
   const debugLogPath = join(getDebugLogDir(), `debug-${getShortId()}.log`);
-  actions.setDebugLogPath(debugLogPath);
+  actions.debug.setLogPath(debugLogPath);
 
   initStateFromConfig({ globalConfig, localConfig });
 
@@ -416,9 +416,9 @@ export async function resolveApiCall(userInput: string) {
 
   const completedStepMessages: AiModelMessage[] = [];
 
-  actions.resetToolEditDiffs();
-  actions.setApiStartTime();
-  actions.setApiStreamAbortController(new AbortController());
+  actions.conversation.resetToolEditDiffs();
+  actions.usage.setApiStartTime();
+  actions.abortControllers.setApiStream(new AbortController());
   startLoadingState();
   const generateTextResult = await tryCatchAsync(
     aiDeps.generateText({
@@ -513,11 +513,11 @@ export async function resolveApiCall(userInput: string) {
     }),
   );
   stopLoadingState();
-  actions.setApiStreamAbortController(null);
-  actions.setApiEndTime();
+  actions.abortControllers.setApiStream(null);
+  actions.usage.setApiEndTime();
 
   if (!generateTextResult.ok) {
-    actions.setPromptTokensStale(true);
+    actions.usage.setPromptTokensStale(true);
     await toolCallDiffer.cleanupAllTempFiles();
 
     if (isAbortError(generateTextResult.error)) {
@@ -536,7 +536,7 @@ export async function resolveApiCall(userInput: string) {
 
       if (getState().terminal.isSteering) {
         print.info("Steering" + getUnicodeChar("…"));
-        actions.setIsSteering(false);
+        actions.terminal.setIsSteering(false);
         return null;
       }
 
@@ -561,8 +561,8 @@ export async function resolveApiCall(userInput: string) {
     text,
   );
 
-  actions.setPromptTokens(finalStepInputTokens + finalStepOutputTokens);
-  actions.setPromptTokensStale(false);
+  actions.usage.setPromptTokens(finalStepInputTokens + finalStepOutputTokens);
+  actions.usage.setPromptTokensStale(false);
 
   await syncSessionFile({
     transcript: getAppendedTranscript({
@@ -781,32 +781,32 @@ export async function maybeCompact(userInput: string) {
 
   print.doing("Compacting" + getUnicodeChar("…"));
 
-  actions.setApiStreamAbortController(new AbortController());
+  actions.abortControllers.setApiStream(new AbortController());
   // If summarizing the message params failed, don't reset the message params
   const conversationSummary = await getConversationSummary();
   if (conversationSummary === null) {
-    actions.setApiStreamAbortController(null);
+    actions.abortControllers.setApiStream(null);
     return;
   }
 
   // If merging the existing summaries failed, use existing summaries
   const mergedSummaries = await getMergedSummaries();
-  actions.setApiStreamAbortController(null);
+  actions.abortControllers.setApiStream(null);
 
   await applyCompactedConversation([...mergedSummaries, conversationSummary]);
 
   const summaryTokens = getState()
     .conversation.summaries.map(({ tokens }) => tokens)
     .reduce((accum, curr) => accum + curr, 0);
-  actions.setPromptTokens(summaryTokens + promptOverheadTokensApprox);
-  actions.setPromptTokensStale(false);
+  actions.usage.setPromptTokens(summaryTokens + promptOverheadTokensApprox);
+  actions.usage.setPromptTokensStale(false);
 }
 
 export async function resolveInterruptWithEditor() {
   const rl = getState().terminal.rl;
   assertAtBuildtime(rl !== null);
 
-  actions.setInterruptWithEditorAbortController(new AbortController());
+  actions.abortControllers.setInterruptWithEditorContent(new AbortController());
   const abortController =
     getState().abortControllers.interruptWithEditorContent;
   assertAtBuildtime(abortController !== null);
@@ -819,7 +819,7 @@ export async function resolveInterruptWithEditor() {
       },
     ),
   );
-  actions.setInterruptWithEditorAbortController(null);
+  actions.abortControllers.setInterruptWithEditorContent(null);
 
   if (!continueResult.ok) {
     if (isAbortError(continueResult.error)) return;
@@ -828,7 +828,7 @@ export async function resolveInterruptWithEditor() {
   }
 
   if (/^c(lear)?$/i.exec(continueResult.value) !== null) {
-    actions.setEditorInputValue(null);
+    actions.terminal.setEditorInputValue(null);
   }
 }
 
@@ -851,7 +851,7 @@ export function initReadline() {
     output: mutedStdout,
     terminal: true,
   });
-  actions.setRl(rl);
+  actions.terminal.setRl(rl);
 
   initKeypress(rl);
   initSigInt(rl);
@@ -897,14 +897,14 @@ export async function parseInputFromEditor() {
   const [firstMessage, ...rest] = splitByCommandEditorInputValue;
 
   if (firstMessage === undefined) {
-    actions.setEditorInputValue(null);
+    actions.terminal.setEditorInputValue(null);
     return null;
   }
 
   if (rest.length === 0) {
-    actions.setEditorInputValue(null);
+    actions.terminal.setEditorInputValue(null);
   } else {
-    actions.setEditorInputValue(
+    actions.terminal.setEditorInputValue(
       rest.join(getState().config.messageQueueDelimiter),
     );
   }
@@ -949,9 +949,9 @@ export async function resolveUserInput({
     printNewline();
   }
   fencePrint("Input", { color: "yellow" });
-  actions.resetStdout();
+  actions.terminal.resetStdout();
 
-  actions.setQuestionAbortController(new AbortController());
+  actions.abortControllers.setQuestion(new AbortController());
   const abortController = getState().abortControllers.question;
   assertAtBuildtime(abortController !== null);
   const bufferedInputWhileInitializing =
@@ -963,10 +963,10 @@ export async function resolveUserInput({
   );
   if (bufferedInputWhileInitializing.length > 0) {
     rl.write(bufferedInputWhileInitializing);
-    actions.resetBufferedInputWhileInitializing();
+    actions.terminal.resetBufferedInputWhileInitializing();
   }
   const inputResult = await questionResult;
-  actions.setQuestionAbortController(null);
+  actions.abortControllers.setQuestion(null);
 
   if (!inputResult.ok) {
     if (isReadlineClosedError(inputResult.error)) {
@@ -995,7 +995,7 @@ export async function resolveUserInput({
     return null;
   }
 
-  actions.appendStdoutTail(
+  actions.terminal.appendStdoutTail(
     `${getState().config.promptPrefix}${inputResult.value}\n`,
   );
   await syncSessionFile({
@@ -1021,7 +1021,7 @@ export async function resolveUserInput({
 
 export async function executeUserInput(rawInput: string) {
   const abortController = new AbortController();
-  actions.setExecuteUserInputAbortController(abortController);
+  actions.abortControllers.setExecuteUserInput(abortController);
 
   const userInput = rawInput.trim().slice(1);
   print.doing(`$ ${userInput}`);
@@ -1045,7 +1045,7 @@ export async function executeUserInput(rawInput: string) {
       return;
     }
   } finally {
-    actions.setExecuteUserInputAbortController(null);
+    actions.abortControllers.setExecuteUserInput(null);
   }
 }
 
@@ -1068,7 +1068,7 @@ async function resolveExitConfirmation() {
   const rl = getState().terminal.rl;
   assertAtBuildtime(rl !== null);
 
-  actions.setQuestionAbortController(new AbortController());
+  actions.abortControllers.setQuestion(new AbortController());
   const abortController = getState().abortControllers.question;
   assertAtBuildtime(abortController !== null);
   const exitResult = await tryCatchAsync(
@@ -1076,7 +1076,7 @@ async function resolveExitConfirmation() {
       signal: abortController.signal,
     }),
   );
-  actions.setQuestionAbortController(null);
+  actions.abortControllers.setQuestion(null);
 
   if (!exitResult.ok) {
     if (
@@ -1091,7 +1091,7 @@ async function resolveExitConfirmation() {
   }
 
   if (/^y(es)?$/i.exec(exitResult.value) !== null) {
-    actions.appendStdoutTail(
+    actions.terminal.appendStdoutTail(
       `${getState().config.promptPrefix}${exitResult.value}\n`,
     );
 

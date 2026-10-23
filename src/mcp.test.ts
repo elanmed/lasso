@@ -188,7 +188,7 @@ describe("mcp", () => {
 
     it("hides the mcp server start duration when suppressStartupDurations is true", async () => {
       mockMcpClients(makeFakeMcpClient());
-      actions.setSuppressStartupDurations(true);
+      actions.config.setSuppressStartupDurations(true);
       setMcps("first");
 
       const getWrites = mockStdoutWrites({ includeSpinnerFrames: true });
@@ -238,7 +238,7 @@ describe("printMcps", () => {
   describe("printMcps", () => {
     beforeEach(() => {
       actions.resetState();
-      actions.resetStdout();
+      actions.terminal.resetStdout();
     });
 
     it("prints available MCP servers", () => {
@@ -304,7 +304,7 @@ describe("printMcps", () => {
     });
 
     it("adds spacing when streaming", () => {
-      actions.setApiStreamAbortController(new AbortController());
+      actions.abortControllers.setApiStream(new AbortController());
       printMcps();
       assert.deepStrictEqual(getWrites(), [
         "\n",

@@ -74,9 +74,9 @@ describe("api", () => {
 
   beforeEach(() => {
     setupTestContext({ model: "claude-sonnet-4-20250514" });
-    actions.setBaseURL("https://api.anthropic.com");
-    actions.setContextStr("");
-    actions.setSkillsStr("");
+    actions.config.setBaseURL("https://api.anthropic.com");
+    actions.content.setContextStr("");
+    actions.content.setSkillsStr("");
     mock.method(aiDeps, "generateText", () =>
       Promise.resolve(makeGenerateTextResult()),
     );
@@ -96,7 +96,7 @@ describe("api", () => {
         let capturedOptions: Record<string, unknown> | undefined;
         const mcpTool = makeMcpTool();
         const mcpTools: MCPToolSet = { mcp_tool: mcpTool };
-        actions.setMcp({}, mcpTools);
+        actions.mcp.setClientsAndTools({}, mcpTools);
         mockGenerateText(async (options: Record<string, unknown>) => {
           capturedOptions = options;
           return Promise.resolve(makeGenerateTextResult());
@@ -143,7 +143,7 @@ describe("api", () => {
         await resolveApiCall("hello");
         assert.strictEqual(captured[0]?.["reasoning"], "provider-default");
 
-        actions.setReasoning("high");
+        actions.config.setReasoning("high");
         await resolveApiCall("hello");
         assert.strictEqual(captured[1]?.["reasoning"], "high");
       });
@@ -160,7 +160,7 @@ describe("api", () => {
       });
 
       it("includes previous messages in request", async () => {
-        actions.setConversationMessages([
+        actions.conversation.setMessages([
           {
             role: "user",
             content: "previous",
@@ -195,8 +195,8 @@ describe("api", () => {
 
     describe("tracks token usage", () => {
       it("marks prompt tokens stale on non-abort error", async () => {
-        actions.setPromptTokens(50);
-        actions.setPromptTokensStale(false);
+        actions.usage.setPromptTokens(50);
+        actions.usage.setPromptTokensStale(false);
         mock.method(aiDeps, "generateText", () =>
           Promise.reject(new Error("network error")),
         );
@@ -209,8 +209,8 @@ describe("api", () => {
       });
 
       it("leaves the stored token value untouched when marking stale on abort", async () => {
-        actions.setPromptTokens(50);
-        actions.setPromptTokensStale(false);
+        actions.usage.setPromptTokens(50);
+        actions.usage.setPromptTokensStale(false);
         const err = makeAbortError();
         mock.method(aiDeps, "generateText", () => Promise.reject(err));
         const result = await resolveApiCall("hello");
@@ -289,14 +289,14 @@ describe("api", () => {
       });
 
       it("re-baselines tokens from usage when stale after model switch", async () => {
-        actions.setConversationMessages([
+        actions.conversation.setMessages([
           {
             role: "user",
             content: "existing",
           },
         ]);
-        actions.setPromptTokens(100);
-        actions.setPromptTokensStale(true);
+        actions.usage.setPromptTokens(100);
+        actions.usage.setPromptTokensStale(true);
         mock.method(aiDeps, "generateText", () =>
           Promise.resolve(
             makeGenerateTextResult({
@@ -361,7 +361,7 @@ describe("api", () => {
     describe("prints tool call start", () => {
       it("prints the [mcp] prefix on mcp tool call start", async () => {
         const getWrites = mockStdoutWrites();
-        actions.setMcp({}, { mcp_tool: makeMcpTool() });
+        actions.mcp.setClientsAndTools({}, { mcp_tool: makeMcpTool() });
         mockGenerateText(async (options: Record<string, unknown>) => {
           const onStart = options["onToolExecutionStart"] as (
             arg: Record<string, unknown>,
@@ -469,7 +469,7 @@ describe("api", () => {
 
     describe("handles temp files and diffs", () => {
       it("resets the tool edit diffs at the start of the api call", async () => {
-        actions.appendToolEditDiff({
+        actions.conversation.appendToolEditDiff({
           fileName: "/old.ts",
           diffStdout: "old diff",
         });
@@ -634,8 +634,8 @@ describe("api", () => {
 
     describe("aborted calls", () => {
       it("resolves the queued editor input when the api call is interrupted", async () => {
-        actions.setRl(makeFakeRl());
-        actions.setEditorInputValue("queued input");
+        actions.terminal.setRl(makeFakeRl());
+        actions.terminal.setEditorInputValue("queued input");
         const err = makeAbortError();
         mock.method(aiDeps, "generateText", () => Promise.reject(err));
         const getWrites = mockStdoutWrites();
@@ -670,7 +670,7 @@ describe("api", () => {
       });
 
       it("clears steering state and reports when the stream is steered", async () => {
-        actions.setIsSteering(true);
+        actions.terminal.setIsSteering(true);
         const err = makeAbortError();
         mock.method(aiDeps, "generateText", () => Promise.reject(err));
         const getWrites = mockStdoutWrites();
@@ -719,7 +719,9 @@ describe("api", () => {
 
   describe("maybeCompact", () => {
     beforeEach(() => {
-      actions.setContextWindowPerModel({ "claude-sonnet-4-20250514": 100_000 });
+      actions.config.setContextWindowPerModel({
+        "claude-sonnet-4-20250514": 100_000,
+      });
     });
 
     const getApproxAdditions = () =>
@@ -729,9 +731,9 @@ describe("api", () => {
 
     describe("decides with approximated tokens", () => {
       it("returns early when below the compact threshold", async () => {
-        actions.setConversationMessages([{ role: "user", content: "hi" }]);
-        actions.setPromptTokens(60_000);
-        actions.setPromptTokensStale(false);
+        actions.conversation.setMessages([{ role: "user", content: "hi" }]);
+        actions.usage.setPromptTokens(60_000);
+        actions.usage.setPromptTokensStale(false);
         let called = false;
         mock.method(aiDeps, "generateText", () => {
           called = true;
@@ -751,14 +753,14 @@ describe("api", () => {
 
       it("uses approximated tokens when stale to decide compaction", async () => {
         const longUserContent = "a".repeat(300_000);
-        actions.setConversationMessages([
+        actions.conversation.setMessages([
           {
             role: "user",
             content: longUserContent,
           },
         ]);
-        actions.setPromptTokens(0);
-        actions.setPromptTokensStale(true);
+        actions.usage.setPromptTokens(0);
+        actions.usage.setPromptTokensStale(true);
         let capturedOpts: Record<string, unknown> | undefined;
         mock.method(aiDeps, "generateText", (opts: Record<string, unknown>) => {
           capturedOpts = opts;
@@ -786,14 +788,14 @@ describe("api", () => {
 
       it("returns early when approximated tokens are below the compact threshold only even when stale", async () => {
         const longUserContent = "a".repeat(20_000);
-        actions.setConversationMessages([
+        actions.conversation.setMessages([
           {
             role: "user",
             content: longUserContent,
           },
         ]);
-        actions.setPromptTokens(2_000);
-        actions.setPromptTokensStale(true);
+        actions.usage.setPromptTokens(2_000);
+        actions.usage.setPromptTokensStale(true);
         let called = false;
         mock.method(aiDeps, "generateText", () => {
           called = true;
@@ -813,16 +815,16 @@ describe("api", () => {
 
       it("includes the system prompt in the stale approximation when deciding compaction", async () => {
         const systemContent = "s".repeat(100_000);
-        actions.setContextStr(systemContent);
+        actions.content.setContextStr(systemContent);
         const longUserContent = "a".repeat(190_000);
-        actions.setConversationMessages([
+        actions.conversation.setMessages([
           {
             role: "user",
             content: longUserContent,
           },
         ]);
-        actions.setPromptTokens(0);
-        actions.setPromptTokensStale(true);
+        actions.usage.setPromptTokens(0);
+        actions.usage.setPromptTokensStale(true);
         let called = false;
         mock.method(aiDeps, "generateText", () => {
           called = true;
@@ -843,14 +845,14 @@ describe("api", () => {
 
       it("includes the tools in the stale approximation when deciding compaction", async () => {
         const longUserContent = "a".repeat(282_000);
-        actions.setConversationMessages([
+        actions.conversation.setMessages([
           {
             role: "user",
             content: longUserContent,
           },
         ]);
-        actions.setPromptTokens(0);
-        actions.setPromptTokensStale(true);
+        actions.usage.setPromptTokens(0);
+        actions.usage.setPromptTokensStale(true);
         let called = false;
         mock.method(aiDeps, "generateText", () => {
           called = true;
@@ -871,7 +873,7 @@ describe("api", () => {
       });
 
       it("excludes image and file parts from the stale approximation", async () => {
-        actions.setConversationMessages([
+        actions.conversation.setMessages([
           {
             role: "user",
             content: [
@@ -884,8 +886,8 @@ describe("api", () => {
             ],
           },
         ]);
-        actions.setPromptTokens(0);
-        actions.setPromptTokensStale(true);
+        actions.usage.setPromptTokens(0);
+        actions.usage.setPromptTokensStale(true);
         let called = false;
         mock.method(aiDeps, "generateText", () => {
           called = true;
@@ -898,10 +900,10 @@ describe("api", () => {
 
     describe("compacts the conversation", () => {
       it("includes mcp tools in the tokens after compaction", async () => {
-        actions.setMcp({}, { mcp_tool: makeMcpTool() });
-        actions.setConversationMessages([{ role: "user", content: "hi" }]);
-        actions.setPromptTokens(96_000);
-        actions.setPromptTokensStale(false);
+        actions.mcp.setClientsAndTools({}, { mcp_tool: makeMcpTool() });
+        actions.conversation.setMessages([{ role: "user", content: "hi" }]);
+        actions.usage.setPromptTokens(96_000);
+        actions.usage.setPromptTokensStale(false);
         mock.method(aiDeps, "generateText", () =>
           Promise.resolve(
             makeGenerateTextResult({
@@ -969,9 +971,9 @@ describe("api", () => {
       });
 
       it("compacts the conversation when above the threshold", async () => {
-        actions.setConversationMessages([{ role: "user", content: "hi" }]);
-        actions.setPromptTokens(96_000);
-        actions.setPromptTokensStale(false);
+        actions.conversation.setMessages([{ role: "user", content: "hi" }]);
+        actions.usage.setPromptTokens(96_000);
+        actions.usage.setPromptTokensStale(false);
         let capturedOpts: Record<string, unknown> | undefined;
         mock.method(aiDeps, "generateText", (opts: Record<string, unknown>) => {
           capturedOpts = opts;
@@ -1027,9 +1029,9 @@ describe("api", () => {
       });
 
       it("compacts when the user input pushes tokens over the threshold", async () => {
-        actions.setConversationMessages([{ role: "user", content: "hi" }]);
-        actions.setPromptTokens(95_000);
-        actions.setPromptTokensStale(false);
+        actions.conversation.setMessages([{ role: "user", content: "hi" }]);
+        actions.usage.setPromptTokens(95_000);
+        actions.usage.setPromptTokensStale(false);
         let capturedOpts: Record<string, unknown> | undefined;
         mock.method(aiDeps, "generateText", (opts: Record<string, unknown>) => {
           capturedOpts = opts;
@@ -1059,10 +1061,10 @@ describe("api", () => {
       });
 
       it("compacts against the default context window when the model has none configured", async () => {
-        actions.setContextWindowPerModel({});
-        actions.setConversationMessages([{ role: "user", content: "hi" }]);
-        actions.setPromptTokens(122_000);
-        actions.setPromptTokensStale(false);
+        actions.config.setContextWindowPerModel({});
+        actions.conversation.setMessages([{ role: "user", content: "hi" }]);
+        actions.usage.setPromptTokens(122_000);
+        actions.usage.setPromptTokensStale(false);
         mock.method(aiDeps, "generateText", () =>
           Promise.resolve(
             makeGenerateTextResult({
@@ -1081,9 +1083,9 @@ describe("api", () => {
       });
 
       it("resets messages before the api call so the summary and new user input are both sent", async () => {
-        actions.setConversationMessages([{ role: "user", content: "old" }]);
-        actions.setPromptTokens(96_000);
-        actions.setPromptTokensStale(false);
+        actions.conversation.setMessages([{ role: "user", content: "old" }]);
+        actions.usage.setPromptTokens(96_000);
+        actions.usage.setPromptTokensStale(false);
         const calls: ModelMessage[][] = [];
         let callCount = 0;
         mock.method(
@@ -1156,9 +1158,9 @@ describe("api", () => {
 
     describe("keeps messages on failure", () => {
       it("keeps messages when generateText fails", async () => {
-        actions.setConversationMessages([{ role: "user", content: "hi" }]);
-        actions.setPromptTokens(96_000);
-        actions.setPromptTokensStale(false);
+        actions.conversation.setMessages([{ role: "user", content: "hi" }]);
+        actions.usage.setPromptTokens(96_000);
+        actions.usage.setPromptTokensStale(false);
         mock.method(aiDeps, "generateText", () =>
           Promise.reject(new Error("network error")),
         );
@@ -1175,11 +1177,11 @@ describe("api", () => {
 
       it("resolves the queued editor input when compaction is aborted", async () => {
         const getWrites = mockStdoutWrites();
-        actions.setConversationMessages([{ role: "user", content: "hi" }]);
-        actions.setPromptTokens(96_000);
-        actions.setPromptTokensStale(false);
-        actions.setRl(makeFakeRl());
-        actions.setEditorInputValue("queued input");
+        actions.conversation.setMessages([{ role: "user", content: "hi" }]);
+        actions.usage.setPromptTokens(96_000);
+        actions.usage.setPromptTokensStale(false);
+        actions.terminal.setRl(makeFakeRl());
+        actions.terminal.setEditorInputValue("queued input");
         const err = makeAbortError();
         mock.method(aiDeps, "generateText", () => Promise.reject(err));
         await maybeCompact("hi");
@@ -1196,9 +1198,9 @@ describe("api", () => {
 
       it("keeps messages on abort error during compaction", async () => {
         const getWrites = mockStdoutWrites();
-        actions.setConversationMessages([{ role: "user", content: "hi" }]);
-        actions.setPromptTokens(96_000);
-        actions.setPromptTokensStale(false);
+        actions.conversation.setMessages([{ role: "user", content: "hi" }]);
+        actions.usage.setPromptTokens(96_000);
+        actions.usage.setPromptTokensStale(false);
         const err = makeAbortError();
         mock.method(aiDeps, "generateText", () => Promise.reject(err));
         await maybeCompact("hi");
@@ -1216,14 +1218,14 @@ describe("api", () => {
 
       it("aborts the merge when the controller is aborted after summarizing", async () => {
         for (const i of [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]) {
-          actions.setConversationSummaries([
+          actions.conversation.setSummaries([
             ...getState().conversation.summaries,
             { compacted: `summary ${String(i)}`, compactedAt: i, tokens: 100 },
           ]);
         }
-        actions.setConversationMessages([{ role: "user", content: "hi" }]);
-        actions.setPromptTokens(96_000);
-        actions.setPromptTokensStale(false);
+        actions.conversation.setMessages([{ role: "user", content: "hi" }]);
+        actions.usage.setPromptTokens(96_000);
+        actions.usage.setPromptTokensStale(false);
         const calls: boolean[] = [];
         mock.method(aiDeps, "generateText", () => {
           const signal = getState().abortControllers.apiStream?.signal;
@@ -1263,21 +1265,21 @@ describe("api", () => {
     describe("merges summaries", () => {
       it("merges existing summaries when at the summary max during compaction", async () => {
         for (const i of [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]) {
-          actions.setConversationSummaries([
+          actions.conversation.setSummaries([
             ...getState().conversation.summaries,
             { compacted: `summary ${String(i)}`, compactedAt: i, tokens: 100 },
           ]);
-          actions.setConversationMessages([
+          actions.conversation.setMessages([
             ...getState().conversation.messages,
             { role: "assistant", content: `summary ${String(i)}` },
           ]);
         }
-        actions.setConversationMessages([
+        actions.conversation.setMessages([
           ...getState().conversation.messages,
           { role: "user", content: "hi" },
         ]);
-        actions.setPromptTokens(96_000);
-        actions.setPromptTokensStale(false);
+        actions.usage.setPromptTokens(96_000);
+        actions.usage.setPromptTokensStale(false);
         const generate = mockGenerateTextResults([
           {
             output: { compacted: "compacted summary" },
@@ -1322,21 +1324,21 @@ describe("api", () => {
 
       it("keeps the existing summaries when merging fails during compaction", async () => {
         for (const i of [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]) {
-          actions.setConversationSummaries([
+          actions.conversation.setSummaries([
             ...getState().conversation.summaries,
             { compacted: `summary ${String(i)}`, compactedAt: i, tokens: 100 },
           ]);
-          actions.setConversationMessages([
+          actions.conversation.setMessages([
             ...getState().conversation.messages,
             { role: "assistant", content: `summary ${String(i)}` },
           ]);
         }
-        actions.setConversationMessages([
+        actions.conversation.setMessages([
           ...getState().conversation.messages,
           { role: "user", content: "hi" },
         ]);
-        actions.setPromptTokens(96_000);
-        actions.setPromptTokensStale(false);
+        actions.usage.setPromptTokens(96_000);
+        actions.usage.setPromptTokensStale(false);
         const generate = mockGenerateTextResults([
           {
             output: { compacted: "compacted summary" },
@@ -1382,18 +1384,20 @@ describe("api", () => {
 
   describe("getConversationSummary", () => {
     beforeEach(() => {
-      actions.setApiStreamAbortController(new AbortController());
-      actions.setContextWindowPerModel({ "claude-sonnet-4-20250514": 100_000 });
+      actions.abortControllers.setApiStream(new AbortController());
+      actions.config.setContextWindowPerModel({
+        "claude-sonnet-4-20250514": 100_000,
+      });
       mock.method(Date, "now", () => 42);
     });
 
     const usage = makeMockUsage();
 
     const seedConversation = () => {
-      actions.setConversationSummaries([
+      actions.conversation.setSummaries([
         { compacted: "prior summary", compactedAt: 1, tokens: 10 },
       ]);
-      actions.setConversationMessages([
+      actions.conversation.setMessages([
         {
           role: "assistant",
           content: "prior summary",
@@ -1403,14 +1407,14 @@ describe("api", () => {
           content: "not yet summarized",
         },
       ]);
-      actions.setPromptTokens(85_000);
-      actions.setPromptTokensStale(false);
+      actions.usage.setPromptTokens(85_000);
+      actions.usage.setPromptTokensStale(false);
     };
 
     describe("summarizes the conversation", () => {
       it("strips image data from tool results in the compact prompt", async () => {
-        actions.setConversationSummaries([]);
-        actions.setConversationMessages([
+        actions.conversation.setSummaries([]);
+        actions.conversation.setMessages([
           {
             role: "tool",
             content: [
@@ -1432,8 +1436,8 @@ describe("api", () => {
             ],
           },
         ]);
-        actions.setPromptTokens(85_000);
-        actions.setPromptTokensStale(false);
+        actions.usage.setPromptTokens(85_000);
+        actions.usage.setPromptTokensStale(false);
         let capturedOpts: Record<string, unknown> | undefined;
         mock.method(aiDeps, "generateText", (opts: Record<string, unknown>) => {
           capturedOpts = opts;
@@ -1544,7 +1548,7 @@ describe("api", () => {
 
       it("uses the plain text result when compactWithStructuredOutput is false", async () => {
         seedConversation();
-        actions.setCompactWithStructuredOutput(false);
+        actions.config.setCompactWithStructuredOutput(false);
         let capturedOpts: Record<string, unknown> | undefined;
         mock.method(aiDeps, "generateText", (opts: Record<string, unknown>) => {
           capturedOpts = opts;
@@ -1626,8 +1630,8 @@ describe("api", () => {
 
       it("resolves the queued editor input on abort error", async () => {
         seedConversation();
-        actions.setRl(makeFakeRl());
-        actions.setEditorInputValue("queued input");
+        actions.terminal.setRl(makeFakeRl());
+        actions.terminal.setEditorInputValue("queued input");
         const getWrites = mockStdoutWrites();
         const err = makeAbortError();
         mock.method(aiDeps, "generateText", () => Promise.reject(err));
@@ -1647,8 +1651,10 @@ describe("api", () => {
 
   describe("getMergedSummaries", () => {
     beforeEach(() => {
-      actions.setApiStreamAbortController(new AbortController());
-      actions.setContextWindowPerModel({ "claude-sonnet-4-20250514": 100_000 });
+      actions.abortControllers.setApiStream(new AbortController());
+      actions.config.setContextWindowPerModel({
+        "claude-sonnet-4-20250514": 100_000,
+      });
       mock.method(Date, "now", () => 42);
     });
 
@@ -1656,11 +1662,11 @@ describe("api", () => {
 
     const seedSummaries = () => {
       for (const i of [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]) {
-        actions.setConversationSummaries([
+        actions.conversation.setSummaries([
           ...getState().conversation.summaries,
           { compacted: `summary ${String(i)}`, compactedAt: i, tokens: 100 },
         ]);
-        actions.setConversationMessages([
+        actions.conversation.setMessages([
           {
             role: "assistant",
             content: `summary ${String(i)}`,
@@ -1671,7 +1677,7 @@ describe("api", () => {
 
     describe("merges summaries", () => {
       it("returns the existing summaries without calling the api when below the summary max", async () => {
-        actions.setConversationSummaries([
+        actions.conversation.setSummaries([
           { compacted: "summary", compactedAt: 1, tokens: 100 },
         ]);
         let called = false;
@@ -1758,10 +1764,10 @@ describe("api", () => {
       });
 
       it("merges when the summaries reach the max for a 40,000 token context window", async () => {
-        actions.setContextWindowPerModel({
+        actions.config.setContextWindowPerModel({
           "claude-sonnet-4-20250514": 40_000,
         });
-        actions.setConversationSummaries([
+        actions.conversation.setSummaries([
           { compacted: "summary 1", compactedAt: 1, tokens: 100 },
           { compacted: "summary 2", compactedAt: 2, tokens: 100 },
         ]);
@@ -1825,7 +1831,7 @@ describe("api", () => {
 
       it("uses the plain text result when compactWithStructuredOutput is false", async () => {
         seedSummaries();
-        actions.setCompactWithStructuredOutput(false);
+        actions.config.setCompactWithStructuredOutput(false);
         let capturedOpts: Record<string, unknown> | undefined;
         mock.method(aiDeps, "generateText", (opts: Record<string, unknown>) => {
           capturedOpts = opts;
@@ -2291,7 +2297,7 @@ would benefit from specialized instructions.
 
     describe("custom skill dirs", () => {
       it("includes skills from custom skill dirs", async () => {
-        actions.setCustomSkillDirs(["/custom/skills"]);
+        actions.config.setCustomSkillDirs(["/custom/skills"]);
         testFs._globResults.set("/custom/skills/**/SKILL.md", [
           "/custom/skills/custom-skill/SKILL.md",
         ]);
@@ -2318,7 +2324,7 @@ would benefit from specialized instructions.
       });
 
       it("prioritizes custom skill dirs over local and global", async () => {
-        actions.setCustomSkillDirs(["/custom/skills"]);
+        actions.config.setCustomSkillDirs(["/custom/skills"]);
         testFs._globResults.set("/custom/skills/**/SKILL.md", [
           "/custom/skills/deploy/SKILL.md",
         ]);
@@ -2574,7 +2580,7 @@ description: A test skill
       });
 
       it("returns skills from custom, local, and global dirs in order", async () => {
-        actions.setCustomSkillDirs(["/custom/skills"]);
+        actions.config.setCustomSkillDirs(["/custom/skills"]);
         testFs._globResults.set("/custom/skills/**/SKILL.md", [
           "/custom/skills/custom-skill/SKILL.md",
         ]);
@@ -2959,9 +2965,9 @@ describe("fence", () => {
     describe("milliseconds", () => {
       it("formats sub-second duration as milliseconds", () => {
         mock.method(process.hrtime, "bigint", () => BigInt(1_000_000_000));
-        actions.setApiStartTime();
+        actions.usage.setApiStartTime();
         mock.method(process.hrtime, "bigint", () => BigInt(1_500_000_000));
-        actions.setApiEndTime();
+        actions.usage.setApiEndTime();
 
         const result = getPrettyApiDuration();
         assert.strictEqual(result, "500ms");
@@ -2969,9 +2975,9 @@ describe("fence", () => {
 
       it("includes microseconds when requested", () => {
         mock.method(process.hrtime, "bigint", () => BigInt(1_000_000_000));
-        actions.setApiStartTime();
+        actions.usage.setApiStartTime();
         mock.method(process.hrtime, "bigint", () => BigInt(1_234_567_890));
-        actions.setApiEndTime();
+        actions.usage.setApiEndTime();
 
         const result = getPrettyApiDuration({ includeMicroseconds: true });
         assert.strictEqual(result, "234.567ms");
@@ -2979,9 +2985,9 @@ describe("fence", () => {
 
       it("truncates nanoseconds", () => {
         mock.method(process.hrtime, "bigint", () => BigInt(1_000_000_000));
-        actions.setApiStartTime();
+        actions.usage.setApiStartTime();
         mock.method(process.hrtime, "bigint", () => BigInt(1_000_123_456));
-        actions.setApiEndTime();
+        actions.usage.setApiEndTime();
 
         const result = getPrettyApiDuration({ includeMicroseconds: true });
         assert.strictEqual(result, "0.123ms");
@@ -2991,9 +2997,9 @@ describe("fence", () => {
     describe("seconds and minutes", () => {
       it("formats seconds and milliseconds", () => {
         mock.method(process.hrtime, "bigint", () => BigInt(1_000_000_000));
-        actions.setApiStartTime();
+        actions.usage.setApiStartTime();
         mock.method(process.hrtime, "bigint", () => BigInt(6_500_000_000));
-        actions.setApiEndTime();
+        actions.usage.setApiEndTime();
 
         const result = getPrettyApiDuration();
         assert.strictEqual(result, "5s 500ms");
@@ -3001,9 +3007,9 @@ describe("fence", () => {
 
       it("formats minutes, zero seconds, and milliseconds", () => {
         mock.method(process.hrtime, "bigint", () => BigInt(1_000_000_000));
-        actions.setApiStartTime();
+        actions.usage.setApiStartTime();
         mock.method(process.hrtime, "bigint", () => BigInt(121_500_000_000));
-        actions.setApiEndTime();
+        actions.usage.setApiEndTime();
 
         const result = getPrettyApiDuration();
         assert.strictEqual(result, "2m 0s 500ms");
@@ -3011,9 +3017,9 @@ describe("fence", () => {
 
       it("formats minutes, seconds, and milliseconds", () => {
         mock.method(process.hrtime, "bigint", () => BigInt(1_000_000_000));
-        actions.setApiStartTime();
+        actions.usage.setApiStartTime();
         mock.method(process.hrtime, "bigint", () => BigInt(126_500_000_000));
-        actions.setApiEndTime();
+        actions.usage.setApiEndTime();
 
         const result = getPrettyApiDuration();
         assert.strictEqual(result, "2m 5s 500ms");
@@ -3022,9 +3028,9 @@ describe("fence", () => {
 
     it("clamps negative durations from clock skew to zero", () => {
       mock.method(process.hrtime, "bigint", () => BigInt(1_000_000_000));
-      actions.setApiStartTime();
+      actions.usage.setApiStartTime();
       mock.method(process.hrtime, "bigint", () => BigInt(500_000_000));
-      actions.setApiEndTime();
+      actions.usage.setApiEndTime();
 
       const result = getPrettyApiDuration();
       assert.strictEqual(result, "0ms");
@@ -3093,8 +3099,10 @@ describe("config", () => {
 });
 
 async function resolveInterruptWithAnswer(answer: string) {
-  actions.setEditorInputValue("queued input");
-  actions.setRl(makeFakeRl({ question: () => Promise.resolve(answer) }));
+  actions.terminal.setEditorInputValue("queued input");
+  actions.terminal.setRl(
+    makeFakeRl({ question: () => Promise.resolve(answer) }),
+  );
   await resolveInterruptWithEditor();
 }
 
@@ -3113,11 +3121,11 @@ describe("resolveInterruptWithEditor", () => {
   it("waits for enter and clears the interrupt controller", async () => {
     const prompts: string[] = [];
     let questionOptions: { signal: AbortSignal } | undefined;
-    actions.setKeymaps({
+    actions.config.setKeymaps({
       ...defaultConfig.keymaps,
       edit: { name: "e", ctrl: true },
     });
-    actions.setRl(
+    actions.terminal.setRl(
       makeFakeRl({
         question: (prompt: string, options: { signal: AbortSignal }) => {
           prompts.push(prompt);
@@ -3156,7 +3164,7 @@ describe("resolveInterruptWithEditor", () => {
   });
 
   it("returns normally when interrupted", async () => {
-    actions.setRl(
+    actions.terminal.setRl(
       makeFakeRl({
         question: () => {
           const error = makeAbortError("interrupted");
@@ -3171,7 +3179,7 @@ describe("resolveInterruptWithEditor", () => {
   });
 
   it("prints the error when the question fails for a reason other than abort", async () => {
-    actions.setRl(
+    actions.terminal.setRl(
       makeFakeRl({
         question: () => Promise.reject(new Error("boom")),
       }),
@@ -3205,8 +3213,8 @@ describe("input", () => {
       const { rl, writes } = makeFakeRlWithWrites({
         question: () => new Promise(() => undefined),
       });
-      actions.setRl(rl);
-      actions.appendBufferedInputWhileInitializing("ab");
+      actions.terminal.setRl(rl);
+      actions.terminal.appendBufferedInputWhileInitializing("ab");
       void resolveUserInput({ isFirstInput: true });
       assert.deepStrictEqual(
         writes.map((write) => write.chunk),
@@ -3293,13 +3301,13 @@ describe("input", () => {
 
   describe("resolveUserInput", () => {
     beforeEach(() => {
-      actions.resetStdout();
-      actions.setRl(makeFakeRl());
+      actions.terminal.resetStdout();
+      actions.terminal.setRl(makeFakeRl());
     });
 
     describe("editor input", () => {
       it("returns editor input value when set and clears it", async () => {
-        actions.setEditorInputValue("editor content");
+        actions.terminal.setEditorInputValue("editor content");
         const result = await resolveUserInput({ isFirstInput: false });
         assert.strictEqual(result, "editor content");
         assert.strictEqual(getState().terminal.editorInputValue, null);
@@ -3310,7 +3318,7 @@ describe("input", () => {
 
       it("returns shell-like editor input without executing it", async () => {
         const { spawned } = mockUserInputSpawn();
-        actions.setEditorInputValue("!echo hello");
+        actions.terminal.setEditorInputValue("!echo hello");
 
         const result = await resolveUserInput({ isFirstInput: false });
 
@@ -3319,7 +3327,7 @@ describe("input", () => {
       });
 
       it("returns the first queued editor message and keeps the rest for the next iteration", async () => {
-        actions.setEditorInputValue("first\nl---\nsecond\n");
+        actions.terminal.setEditorInputValue("first\nl---\nsecond\n");
         const result = await resolveUserInput({ isFirstInput: false });
         assert.strictEqual(result, "first\n");
         assert.strictEqual(getState().terminal.editorInputValue, "second\n");
@@ -3329,7 +3337,7 @@ describe("input", () => {
       });
 
       it("drains queued editor messages across iterations", async () => {
-        actions.setEditorInputValue(`first
+        actions.terminal.setEditorInputValue(`first
 l---
 second
 `);
@@ -3392,7 +3400,7 @@ second
       it("returns shell-like editor input without executing it when aborted by editor", async () => {
         const { spawned } = mockUserInputSpawn();
         mock.method(getTestRl(), "question", () => {
-          actions.setEditorInputValue("!echo hello");
+          actions.terminal.setEditorInputValue("!echo hello");
           const err = makeAbortError("This operation was aborted");
           return Promise.reject(err);
         });
@@ -3454,8 +3462,8 @@ second
         mockClearInterval(intervalCallbacks);
         startLoadingState();
         assert.notStrictEqual(getState().terminal.loadingStateTimeout, null);
-        actions.setRl(makeFakeRl());
-        actions.resetStdout();
+        actions.terminal.setRl(makeFakeRl());
+        actions.terminal.resetStdout();
         const err = makeAbortError("This operation was aborted");
         const questionMock = mock.method(getTestRl(), "question", () =>
           Promise.resolve("yes"),
@@ -3480,8 +3488,8 @@ second
         setupTestContext({ now: 42_000 });
         getWrites = mockStdoutWrites();
         mockProcessExit();
-        actions.setRl(makeFakeRl());
-        actions.resetStdout();
+        actions.terminal.setRl(makeFakeRl());
+        actions.terminal.resetStdout();
         const questionMock = mock.method(getTestRl(), "question", () =>
           Promise.reject(
             makeErrnoError("ERR_USE_AFTER_CLOSE", "readline was closed"),
@@ -3510,8 +3518,8 @@ second
         setupTestContext({ now: 42_000 });
         getWrites = mockStdoutWrites();
         mockProcessExit();
-        actions.setRl(makeFakeRl());
-        actions.resetStdout();
+        actions.terminal.setRl(makeFakeRl());
+        actions.terminal.resetStdout();
         const questionMock = mock.method(getTestRl(), "question", () =>
           Promise.reject(
             makeErrnoError("ERR_USE_AFTER_CLOSE", "readline was closed"),
@@ -3538,7 +3546,7 @@ second
   describe("parseInputFromEditor", () => {
     describe("splits on the delimiter", () => {
       it("returns the whole editor value and clears it when no delimiter is present", async () => {
-        actions.setEditorInputValue("editor content");
+        actions.terminal.setEditorInputValue("editor content");
         const result = await parseInputFromEditor();
         assert.strictEqual(result, "editor content");
         assert.strictEqual(getState().terminal.editorInputValue, null);
@@ -3548,7 +3556,7 @@ second
       });
 
       it("splits on the delimiter, returns the first message, and keeps the rest", async () => {
-        actions.setEditorInputValue(`first
+        actions.terminal.setEditorInputValue(`first
 l---
 second
 l---
@@ -3569,7 +3577,7 @@ third
       });
 
       it("returns queued messages one per call until the queue is drained", async () => {
-        actions.setEditorInputValue(`first
+        actions.terminal.setEditorInputValue(`first
 l---
 second
 l---
@@ -3582,7 +3590,7 @@ third
       });
 
       it("filters empty parts around the delimiter", async () => {
-        actions.setEditorInputValue(`l---
+        actions.terminal.setEditorInputValue(`l---
 msg
 l---
 `);
@@ -3592,7 +3600,7 @@ l---
       });
 
       it("returns null when the editor value is nothing but delimiters", async () => {
-        actions.setEditorInputValue(`l---
+        actions.terminal.setEditorInputValue(`l---
 l---
 `);
         assert.strictEqual(await parseInputFromEditor(), null);
@@ -3602,14 +3610,14 @@ l---
 
     describe("splits slash commands", () => {
       it("splits slash command lines into their own messages", async () => {
-        actions.setSlashCommands([
+        actions.content.setSlashCommands([
           {
             name: "cwd",
             filePath: "/test/.lasso/commands/cwd.md",
             content: "cwd",
           },
         ]);
-        actions.setEditorInputValue(`message 2
+        actions.terminal.setEditorInputValue(`message 2
 /cwd
 `);
         assert.strictEqual(await parseInputFromEditor(), "message 2\n");
@@ -3620,14 +3628,14 @@ l---
       });
 
       it("keeps the user's internal newlines when a command splits multi-line text", async () => {
-        actions.setSlashCommands([
+        actions.content.setSlashCommands([
           {
             name: "cwd",
             filePath: "/test/.lasso/commands/cwd.md",
             content: "cwd",
           },
         ]);
-        actions.setEditorInputValue(`line one
+        actions.terminal.setEditorInputValue(`line one
 line two
 /cwd
 line three
@@ -3646,14 +3654,14 @@ line three
       });
 
       it("keeps arguments on the slash command line intact", async () => {
-        actions.setSlashCommands([
+        actions.content.setSlashCommands([
           {
             name: "cwd",
             filePath: "/test/.lasso/commands/cwd.md",
             content: "cwd",
           },
         ]);
-        actions.setEditorInputValue(`context
+        actions.terminal.setEditorInputValue(`context
 /cwd /some/path
 `);
         assert.strictEqual(await parseInputFromEditor(), "context\n");
@@ -3664,21 +3672,21 @@ line three
       });
 
       it("returns the slash command when it is the first message", async () => {
-        actions.setSlashCommands([
+        actions.content.setSlashCommands([
           {
             name: "cwd",
             filePath: "/test/.lasso/commands/cwd.md",
             content: "cwd",
           },
         ]);
-        actions.setEditorInputValue(`/cwd
+        actions.terminal.setEditorInputValue(`/cwd
 rest`);
         assert.strictEqual(await parseInputFromEditor(), "/cwd\n");
         assert.strictEqual(getState().terminal.editorInputValue, "rest");
       });
 
       it("splits multiple slash commands within a single chunk", async () => {
-        actions.setSlashCommands([
+        actions.content.setSlashCommands([
           {
             name: "cwd",
             filePath: "/test/.lasso/commands/cwd.md",
@@ -3690,7 +3698,7 @@ rest`);
             content: "pwd",
           },
         ]);
-        actions.setEditorInputValue(`first
+        actions.terminal.setEditorInputValue(`first
 /cwd
 second
 /pwd
@@ -3708,7 +3716,7 @@ l---
       });
 
       it("returns queued slash commands one per call until the queue is drained", async () => {
-        actions.setSlashCommands([
+        actions.content.setSlashCommands([
           {
             name: "cwd",
             filePath: "/test/.lasso/commands/cwd.md",
@@ -3720,7 +3728,7 @@ l---
             content: "pwd",
           },
         ]);
-        actions.setEditorInputValue(`first
+        actions.terminal.setEditorInputValue(`first
 l---
 /cwd
 l---
