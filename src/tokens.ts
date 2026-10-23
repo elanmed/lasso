@@ -33,7 +33,11 @@ import { print } from "./printing.ts";
 import { stringifyTools } from "./tools.ts";
 
 export function getApproxTokensFromMessages(messages: ModelMessage[]) {
-  return strToApproxTokens(JSON.stringify(messages, removeMediaReplacer));
+  return strToApproxTokens(stringifyMessages(messages));
+}
+
+export function stringifyMessages(messages: ModelMessage[]) {
+  return JSON.stringify(messages, removeMediaReplacer);
 }
 
 export function getSystemContent() {
@@ -68,9 +72,11 @@ export function getMaxNumberSummaries() {
 }
 
 export function getPromptOverheadTokensApprox() {
-  const systemContentTokensApprox = strToApproxTokens(getSystemContent());
-  const toolsTokensApprox = strToApproxTokens(stringifyTools());
-  return systemContentTokensApprox + toolsTokensApprox;
+  return strToApproxTokens(getPromptOverheadStr());
+}
+
+export function getPromptOverheadStr() {
+  return getSystemContent() + stringifyTools();
 }
 
 export function printLargeContextOverheadWarning() {
@@ -90,16 +96,23 @@ Lasso reserves ${decimalToPercent(dedicatedSummaryRatio)} of the context window 
   }
 }
 
-export function getApproxPromptTokens() {
+export function getApproxInputTokens() {
   return (
     getApproxTokensFromMessages(getState().conversation.messages) +
     getPromptOverheadTokensApprox()
   );
 }
 
+export function getInputCharLength() {
+  return (
+    stringifyMessages(getState().conversation.messages).length +
+    getPromptOverheadStr().length
+  );
+}
+
 export function getCurrentPromptTokens() {
   if (getState().usage.promptTokens.stale) {
-    return getApproxPromptTokens();
+    return getApproxInputTokens();
   }
   return getState().usage.promptTokens.value;
 }
@@ -145,7 +158,7 @@ export function getTokensByArea(): TokensByArea {
   }
 
   const realTokens = getState().usage.promptTokens.value;
-  const approxTotal = getApproxPromptTokens();
+  const approxTotal = getApproxInputTokens();
   if (realTokens === 0 || approxTotal === 0) {
     return tokensByAreaApprox;
   }

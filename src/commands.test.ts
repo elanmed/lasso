@@ -71,11 +71,6 @@ import {
   mockProcessExit,
 } from "./test-helpers.ts";
 import { fsDeps, aiDeps, processDeps } from "./deps.ts";
-import {
-  getSystemContent,
-  getToolsContentStr,
-  strToApproxTokens,
-} from "./tokens.ts";
 import { print } from "./printing.ts";
 import { sleep } from "./utils.ts";
 import { getGlobalContextDir, getGlobalConfigPath } from "./paths.ts";
@@ -1057,15 +1052,13 @@ describe("input commands", () => {
         { compacted: "summary", compactedAt: 3, tokens: 5 },
       ]);
       actions.content.setContextStr("abc");
-      const expectedPromptTokens =
-        strToApproxTokens(getSystemContent()) +
-        strToApproxTokens(getToolsContentStr());
       await clearCommand();
       assert.deepStrictEqual(getState().conversation.summaries, []);
       assert.deepStrictEqual(getState().conversation.messages, []);
       assert.deepStrictEqual(getState().usage.promptTokens, {
-        value: expectedPromptTokens,
+        value: 1962,
         stale: true,
+        charLength: 5888,
       });
       assert.deepStrictEqual(getWrites(), [
         `${GREY}Context cleared (0 tokens in session)${RESET}\n`,
@@ -1087,7 +1080,7 @@ describe("input commands", () => {
       printTokens();
       assert.deepStrictEqual(getWrites(), [
         "\n",
-        `${BLUE}Token count: 1,974 (1.543% of context window)${RESET}\n`,
+        `${BLUE}Token count: 1,974 (1.544% of context window)${RESET}\n`,
         `- Chat messages: 11
 - Context files: 3
 - Harness and MCP tools: 1,106
@@ -1104,7 +1097,7 @@ describe("input commands", () => {
       printTokens();
       assert.deepStrictEqual(getWrites(), [
         "\n",
-        `${BLUE}Token count: 1,499.241 (1.172% of context window)${RESET}\n`,
+        `${BLUE}Token count: 1,498.482 (1.172% of context window)${RESET}\n`,
         `- Chat messages: 8
 - Context files: 2
 - Harness and MCP tools: 840
@@ -1121,7 +1114,7 @@ describe("input commands", () => {
       printTokens();
       assert.deepStrictEqual(getWrites(), [
         "\n",
-        `${BLUE}Token count: 1,974 (19.75% of context window)${RESET}\n`,
+        `${BLUE}Token count: 1,974 (19.76% of context window)${RESET}\n`,
         `- Chat messages: 11
 - Context files: 3
 - Harness and MCP tools: 1,106
@@ -1194,6 +1187,7 @@ describe("input commands", () => {
       assert.deepStrictEqual(getState().usage.promptTokens, {
         value: 0,
         stale: true,
+        charLength: 0,
       });
     });
 

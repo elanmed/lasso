@@ -4,11 +4,14 @@ import { stringifyTools } from "./tools.ts";
 import {
   getSystemContent,
   getToolsContentStr,
-  getApproxPromptTokens,
+  getApproxInputTokens,
   getCurrentPromptTokens,
   getMaxNumberSummaries,
   getPrettyTokensByArea,
   getPromptOverheadTokensApprox,
+  getPromptOverheadStr,
+  getInputCharLength,
+  stringifyMessages,
   getTokensByArea,
   printLargeContextOverheadWarning,
   getApproxTokensFromMessages,
@@ -104,15 +107,43 @@ describe("getPromptOverheadTokensApprox", () => {
   });
 
   it("sums the approx of system content and tools", () => {
-    assert.strictEqual(getPromptOverheadTokensApprox(), 1961);
+    assert.strictEqual(getPromptOverheadTokensApprox(), 1962);
   });
 
   it("takes tools into account when computing the prompt overhead approx", () => {
-    assert.strictEqual(getApproxPromptTokens(), 1961);
+    assert.strictEqual(getApproxInputTokens(), 1962);
+  });
+
+  it("combines system content and tools for prompt overhead", () => {
+    assert.strictEqual(
+      getPromptOverheadStr(),
+      getSystemContent() + getToolsContentStr(),
+    );
   });
 });
 
-describe("getApproxPromptTokens", () => {
+describe("stringifyMessages", () => {
+  it("serializes messages as compact json", () => {
+    assert.strictEqual(
+      stringifyMessages([{ role: "user", content: "hello" }]),
+      '[{"role":"user","content":"hello"}]',
+    );
+  });
+});
+
+describe("getInputCharLength", () => {
+  beforeEach(() => {
+    setupTestContext();
+    actions.content.setContextStr("abc");
+    actions.conversation.setMessages([{ role: "user", content: "hello" }]);
+  });
+
+  it("counts serialized messages and prompt overhead characters", () => {
+    assert.strictEqual(getInputCharLength(), 5921);
+  });
+});
+
+describe("getApproxInputTokens", () => {
   beforeEach(() => {
     setupTestContext();
     actions.content.setContextStr("abc");
@@ -120,7 +151,7 @@ describe("getApproxPromptTokens", () => {
 
   it("sums messages approx with the system instructions approx", () => {
     actions.conversation.setMessages([{ role: "user", content: "hello" }]);
-    assert.strictEqual(getApproxPromptTokens(), 1972);
+    assert.strictEqual(getApproxInputTokens(), 1973);
   });
 });
 
@@ -143,7 +174,7 @@ describe("getCurrentPromptTokens", () => {
   it("returns the approx prompt tokens when stale", () => {
     actions.usage.setPromptTokens(50);
     actions.usage.setPromptTokensStale(true);
-    assert.strictEqual(getCurrentPromptTokens(), 1961);
+    assert.strictEqual(getCurrentPromptTokens(), 1962);
   });
 });
 
@@ -181,11 +212,11 @@ describe("getTokensByArea", () => {
     actions.usage.setPromptTokens(1500);
     actions.usage.setPromptTokensStale(false);
     assert.deepStrictEqual(getTokensByArea(), {
-      messages: 8.354430379746836,
-      context: 2.278481012658228,
-      tools: 840,
-      basePrompt: 647.8481012658228,
-      skills: 0.759493670886076,
+      messages: 8.350202429149798,
+      context: 2.2773279352226723,
+      tools: 839.5748987854251,
+      basePrompt: 647.5202429149798,
+      skills: 0.7591093117408907,
     });
   });
 });
@@ -335,7 +366,7 @@ describe("getPrettyContextWindowUsage", () => {
       actions.config.setModel("test-model");
       actions.config.setContextWindowPerModel({ "test-model": 10_000 });
       const result = getPrettyContextWindowUsage();
-      assert.strictEqual(result, "19.6% of context window");
+      assert.strictEqual(result, "19.61% of context window");
     });
 
     it("returns the percent of the context window used", () => {
@@ -377,7 +408,7 @@ describe("getPrettyContextWindowUsage", () => {
       actions.usage.setPromptTokens(5_000);
       actions.usage.setPromptTokensStale(true);
       const result = getPrettyContextWindowUsage();
-      assert.strictEqual(result, "19.72% of context window");
+      assert.strictEqual(result, "19.73% of context window");
     });
 
     it("uses the stored token count when tokens are not stale", () => {
@@ -396,6 +427,6 @@ describe("getPrettyContextWindowUsage", () => {
     actions.config.setModel("test-model");
     actions.config.setContextWindowPerModel({ "test-model": 10_000 });
     const result = getPrettyContextWindowUsage();
-    assert.strictEqual(result, "19.6% of context window");
+    assert.strictEqual(result, "19.61% of context window");
   });
 });

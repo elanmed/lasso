@@ -53,6 +53,7 @@ describe("state", () => {
       assert.deepStrictEqual(getState().usage.promptTokens, {
         value: 0,
         stale: true,
+        charLength: 0,
       });
       assert.deepStrictEqual(getState().usage.modelUsageForSession, {});
       assert.deepStrictEqual(getState().usage.modelUsageForLimitWindow, {});
@@ -279,6 +280,20 @@ describe("state", () => {
       assert.equal(getState().usage.promptTokens.stale, true);
       actions.usage.setPromptTokensStale(false);
       assert.equal(getState().usage.promptTokens.stale, false);
+    });
+
+    it("set-prompt-tokens-char-length", () => {
+      assert.deepStrictEqual(getState().usage.promptTokens, {
+        value: 0,
+        stale: true,
+        charLength: 0,
+      });
+      actions.usage.setPromptTokensCharLength(123);
+      assert.deepStrictEqual(getState().usage.promptTokens, {
+        value: 0,
+        stale: true,
+        charLength: 123,
+      });
     });
   });
 

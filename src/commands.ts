@@ -70,7 +70,8 @@ import {
 import { harnessTools } from "./tools.ts";
 import {
   printLargeContextOverheadWarning,
-  getApproxPromptTokens,
+  getApproxInputTokens,
+  getInputCharLength,
   getPrettyTokensByArea,
   getTokensByArea,
   getPrettyContextWindowUsage,
@@ -562,7 +563,8 @@ export async function clearCommand() {
   });
   // the next api call only reports its token usage after it completes, so seeding with the
   // system prompt approx keeps the context window percent from displaying 0% in the meantime
-  actions.usage.setPromptTokens(getApproxPromptTokens());
+  actions.usage.setPromptTokens(getApproxInputTokens());
+  actions.usage.setPromptTokensCharLength(getInputCharLength());
   actions.usage.setModelUsageForSession({});
 }
 

@@ -456,6 +456,7 @@ describe("log", () => {
       assert.deepStrictEqual(getState().usage.promptTokens, {
         value: 100,
         stale: true,
+        charLength: 0,
       });
     });
 

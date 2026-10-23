@@ -65,6 +65,7 @@ interface UsageState {
   promptTokens: {
     value: number;
     stale: boolean;
+    charLength: number;
   };
   modelUsageForSession: Record<string, ModelUsage[]>;
   modelUsageForLimitWindow: Record<string, ModelUsage[]>;
@@ -149,6 +150,7 @@ const createInitialState = (): State => ({
     promptTokens: {
       value: 0,
       stale: true,
+      charLength: 0,
     },
     modelUsageForLimitWindow: {},
     modelUsageForSession: {},
@@ -313,6 +315,15 @@ export const actions = {
         "set-prompt-tokens-stale",
         String(before),
         String(tokensStale),
+      );
+    },
+    setPromptTokensCharLength(charLength: number) {
+      const before = state.usage.promptTokens.charLength;
+      state.usage.promptTokens.charLength = charLength;
+      logStateChange(
+        "set-prompt-tokens-char-length",
+        String(before),
+        String(charLength),
       );
     },
     setModelUsageForLimitWindow(

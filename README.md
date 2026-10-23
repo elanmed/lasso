@@ -6,7 +6,7 @@ _A minimal agent harness to rein in your llm_
 
 ## Features
 
-- **Minimal**: ~7,700 lines of source code, ~17,100 lines of tests
+- **Minimal**: ~7,700 lines of source code, ~17,200 lines of tests
 - **Simple architecture**:
   - Responses are piped through `bat` to render markdown
   - Multi-line input is supported by spawning a non-blocking editor of your choice

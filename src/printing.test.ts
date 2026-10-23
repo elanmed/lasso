@@ -704,7 +704,7 @@ describe("fence", () => {
         fencePrint("Output", { showSessionInfo: true });
 
         assert.deepStrictEqual(getWrites(), [
-          `${GREY}━━ ${BOLD}Output${BOLD_RESET} (500ms) (0 tokens in session) (1.531% of context window) ━━${RESET}\n`,
+          `${GREY}━━ ${BOLD}Output${BOLD_RESET} (500ms) (0 tokens in session) (1.532% of context window) ━━${RESET}\n`,
         ]);
       });
 

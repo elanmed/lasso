@@ -205,6 +205,7 @@ describe("api", () => {
         assert.deepStrictEqual(getState().usage.promptTokens, {
           value: 50,
           stale: true,
+          charLength: 0,
         });
       });
 
@@ -218,6 +219,7 @@ describe("api", () => {
         assert.deepStrictEqual(getState().usage.promptTokens, {
           value: 50,
           stale: true,
+          charLength: 0,
         });
       });
 
@@ -260,6 +262,7 @@ describe("api", () => {
         assert.deepStrictEqual(getState().usage.promptTokens, {
           value: 49,
           stale: false,
+          charLength: 5931,
         });
       });
 
@@ -285,6 +288,7 @@ describe("api", () => {
         assert.deepStrictEqual(getState().usage.promptTokens, {
           value: 17,
           stale: false,
+          charLength: 5966,
         });
       });
 
@@ -315,6 +319,7 @@ describe("api", () => {
         assert.deepStrictEqual(getState().usage.promptTokens, {
           value: 55,
           stale: false,
+          charLength: 5968,
         });
       });
 
@@ -335,6 +340,7 @@ describe("api", () => {
         assert.deepStrictEqual(getState().usage.promptTokens, {
           value: 17,
           stale: false,
+          charLength: 5931,
         });
       });
 
@@ -354,6 +360,7 @@ describe("api", () => {
         assert.deepStrictEqual(getState().usage.promptTokens, {
           value: 54,
           stale: false,
+          charLength: 5931,
         });
       });
     });
@@ -666,6 +673,7 @@ describe("api", () => {
         assert.deepStrictEqual(getState().usage.promptTokens, {
           value: 0,
           stale: true,
+          charLength: 0,
         });
       });
 
@@ -724,11 +732,6 @@ describe("api", () => {
       });
     });
 
-    const getApproxAdditions = () =>
-      strToApproxTokens(
-        safeStringify({ ...harnessTools, ...getState().mcp.tools }),
-      ) + strToApproxTokens(getSystemContent());
-
     describe("decides with approximated tokens", () => {
       it("returns early when below the compact threshold", async () => {
         actions.conversation.setMessages([{ role: "user", content: "hi" }]);
@@ -748,6 +751,7 @@ describe("api", () => {
         assert.deepStrictEqual(getState().usage.promptTokens, {
           value: 60_000,
           stale: false,
+          charLength: 0,
         });
       });
 
@@ -781,8 +785,9 @@ describe("api", () => {
           { role: "assistant", content: "compacted summary" },
         ]);
         assert.deepStrictEqual(getState().usage.promptTokens, {
-          value: 25_000 + getApproxAdditions(),
+          value: 26_961,
           stale: false,
+          charLength: 5900,
         });
       });
 
@@ -810,6 +815,7 @@ describe("api", () => {
         assert.deepStrictEqual(getState().usage.promptTokens, {
           value: 2_000,
           stale: true,
+          charLength: 0,
         });
       });
 
@@ -926,6 +932,7 @@ describe("api", () => {
         assert.deepStrictEqual(getState().usage.promptTokens, {
           value: 25_000 + withMcpTools + strToApproxTokens(getSystemContent()),
           stale: false,
+          charLength: 5980,
         });
         assert.strictEqual(withMcpTools > withoutMcpTools, true);
       });
@@ -1012,8 +1019,9 @@ describe("api", () => {
           { role: "assistant", content: "compacted summary" },
         ]);
         assert.deepStrictEqual(getState().usage.promptTokens, {
-          value: 25_000 + getApproxAdditions(),
+          value: 26_961,
           stale: false,
+          charLength: 5900,
         });
         assert.deepStrictEqual(getState().usage.modelUsageForSession, {
           "claude-sonnet-4-20250514": [
@@ -1055,8 +1063,9 @@ describe("api", () => {
           { role: "assistant", content: "compacted summary" },
         ]);
         assert.deepStrictEqual(getState().usage.promptTokens, {
-          value: 25_000 + getApproxAdditions(),
+          value: 26_961,
           stale: false,
+          charLength: 5900,
         });
       });
 
@@ -1125,6 +1134,7 @@ describe("api", () => {
         assert.deepStrictEqual(getState().usage.promptTokens, {
           value: 25,
           stale: false,
+          charLength: 5984,
         });
         const compactionCall = calls[0];
         assert(compactionCall !== undefined);
@@ -1172,6 +1182,7 @@ describe("api", () => {
         assert.deepStrictEqual(getState().usage.promptTokens, {
           value: 96_000,
           stale: false,
+          charLength: 0,
         });
       });
 
@@ -1212,6 +1223,7 @@ describe("api", () => {
         assert.deepStrictEqual(getState().usage.promptTokens, {
           value: 96_000,
           stale: false,
+          charLength: 0,
         });
         assert.deepStrictEqual(getWrites(), [`${BLUE}Compacting…${RESET}\n`]);
       });
@@ -1317,8 +1329,9 @@ describe("api", () => {
           { role: "assistant", content: "compacted summary" },
         ]);
         assert.deepStrictEqual(getState().usage.promptTokens, {
-          value: 15 + 800 + 20 + getApproxAdditions(),
+          value: 2_796,
           stale: false,
+          charLength: 5987,
         });
       });
 
@@ -1375,8 +1388,9 @@ describe("api", () => {
           { role: "assistant", content: "compacted summary" },
         ]);
         assert.deepStrictEqual(getState().usage.promptTokens, {
-          value: 1000 + 20 + getApproxAdditions(),
+          value: 2_981,
           stale: false,
+          charLength: 5991,
         });
       });
     });
@@ -1603,6 +1617,7 @@ describe("api", () => {
         assert.deepStrictEqual(getState().usage.promptTokens, {
           value: 85_000,
           stale: false,
+          charLength: 0,
         });
       });
 
@@ -1624,6 +1639,7 @@ describe("api", () => {
         assert.deepStrictEqual(getState().usage.promptTokens, {
           value: 85_000,
           stale: false,
+          charLength: 0,
         });
         assert.deepStrictEqual(getWrites(), []);
       });

@@ -93,11 +93,13 @@ import {
   maxCharCountPerSummary,
   getMaxNumberSummaries,
   getPromptOverheadTokensApprox,
-  getApproxPromptTokens,
+  getApproxInputTokens,
   getCurrentPromptTokens,
   getPrettyContextWindowUsage,
   strToApproxTokens,
   orApproxTokens,
+  getInputCharLength,
+  getPromptOverheadStr,
 } from "./tokens.ts";
 import {
   contextFileSkillNamePrefix,
@@ -555,13 +557,14 @@ export async function resolveApiCall(userInput: string) {
   await appendModelUsage(usage);
 
   const finalStepInputTokens =
-    finalStep.usage.inputTokens ?? getApproxPromptTokens();
+    finalStep.usage.inputTokens ?? getApproxInputTokens();
   const finalStepOutputTokens = orApproxTokens(
     finalStep.usage.outputTokens,
     text,
   );
 
   actions.usage.setPromptTokens(finalStepInputTokens + finalStepOutputTokens);
+  actions.usage.setPromptTokensCharLength(getInputCharLength() + text.length);
   actions.usage.setPromptTokensStale(false);
 
   await syncSessionFile({
@@ -798,7 +801,15 @@ export async function maybeCompact(userInput: string) {
   const summaryTokens = getState()
     .conversation.summaries.map(({ tokens }) => tokens)
     .reduce((accum, curr) => accum + curr, 0);
+
+  const summaryCharLengths = getState()
+    .conversation.summaries.map(({ compacted }) => compacted)
+    .reduce((accum, curr) => accum + curr.length, 0);
+
   actions.usage.setPromptTokens(summaryTokens + promptOverheadTokensApprox);
+  actions.usage.setPromptTokensCharLength(
+    summaryCharLengths + getPromptOverheadStr().length,
+  );
   actions.usage.setPromptTokensStale(false);
 }
 
