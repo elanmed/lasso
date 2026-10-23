@@ -159,18 +159,18 @@ export function getTokensByArea(): TokensByArea {
     return tokensByAreaApprox;
   }
 
-  const realTokens = getState().usage.requestInputTokens.value;
-  const approxTotal = getApproxRequestInputTokens();
-  if (realTokens === 0 || approxTotal === 0) {
+  const inputTokens = getState().usage.requestInputTokens.value;
+  const approxInputTokens = getApproxRequestInputTokens();
+  if (inputTokens === 0 || approxInputTokens === 0) {
     return tokensByAreaApprox;
   }
 
-  const realToApproxRatio = realTokens / approxTotal;
-  const realTokensByArea = { ...tokensByAreaApprox };
-  for (const area of Object.keys(realTokensByArea) as TokenArea[]) {
-    realTokensByArea[area] = realTokensByArea[area] * realToApproxRatio;
+  const inputToApproxRatio = inputTokens / approxInputTokens;
+  const inputTokensByArea = { ...tokensByAreaApprox };
+  for (const area of Object.keys(inputTokensByArea) as TokenArea[]) {
+    inputTokensByArea[area] = inputTokensByArea[area] * inputToApproxRatio;
   }
-  return realTokensByArea;
+  return inputTokensByArea;
 }
 
 export function getPrettyContextWindowUsage() {
@@ -178,8 +178,8 @@ export function getPrettyContextWindowUsage() {
   const contextWindow =
     getState().config.contextWindowPerModel[model] ?? defaultContextWindow;
 
-  const currTokens = resolveRequestInputTokens();
+  const inputTokens = resolveRequestInputTokens();
 
-  const currRatio = currTokens / contextWindow;
-  return `${decimalToPercent(currRatio, { precision: 3 })} of context window`;
+  const inputRatio = inputTokens / contextWindow;
+  return `${decimalToPercent(inputRatio, { precision: 3 })} of context window`;
 }

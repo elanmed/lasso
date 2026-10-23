@@ -782,11 +782,10 @@ export async function maybeCompact(userInput: string) {
   const requestInputOverheadTokensApprox =
     getRequestInputOverheadTokensApprox();
 
-  const nextRequestInputTokens =
-    resolveRequestInputTokens() + userInputTokensApprox;
+  const nextInputTokens = resolveRequestInputTokens() + userInputTokensApprox;
 
-  const currRatio = nextRequestInputTokens / contextWindow;
-  if (currRatio <= compactTriggerRatio) return;
+  const nextInputRatio = nextInputTokens / contextWindow;
+  if (nextInputRatio <= compactTriggerRatio) return;
 
   print.doing("Compacting" + getUnicodeChar("…"));
 
