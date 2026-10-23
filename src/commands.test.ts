@@ -76,6 +76,7 @@ import { sleep } from "./utils.ts";
 import { getGlobalContextDir, getGlobalConfigPath } from "./paths.ts";
 import { defaultConfig, type Key } from "./schemas.ts";
 import { resolveSlashCommand } from "./app.ts";
+import { getRequestInputCharLength } from "./tokens.ts";
 
 describe("getAvailableSlashCommands", () => {
   afterEach(() => {
@@ -1091,17 +1092,20 @@ describe("input commands", () => {
       ]);
     });
 
-    it("prints the total scaled to the cached token count when clean", () => {
+    it("prints calibrated area estimates when the cache is clean", () => {
       actions.usage.setRequestInputTokens(1500);
+      actions.usage.setRequestInputTokensCharLength(
+        getRequestInputCharLength(),
+      );
       actions.usage.setRequestInputTokensStale(false);
       printTokens();
       assert.deepStrictEqual(getWrites(), [
         "\n",
-        `${BLUE}Token count: 1,498.482 (1.172% of context window)${RESET}\n`,
+        `${BLUE}Token count: 1,497 (1.172% of context window)${RESET}\n`,
         `- Chat messages: 8
 - Context files: 2
-- Harness and MCP tools: 840
-- Base system prompt: 648
+- Harness and MCP tools: 839
+- Base system prompt: 647
 - Skill descriptions: 1
 `,
         "\n",

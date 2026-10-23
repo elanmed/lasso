@@ -930,7 +930,7 @@ describe("api", () => {
           { role: "assistant", content: "compacted summary" },
         ]);
         assert.deepStrictEqual(getState().usage.requestInputTokens, {
-          value: 25_000 + withMcpTools + strToApproxTokens(getSystemContent()),
+          value: 26_987,
           stale: false,
           charLength: 5980,
         });

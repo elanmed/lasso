@@ -1,7 +1,19 @@
 import { removeMediaReplacer, decimalToPercent } from "./utils.ts";
 import { getState } from "./state.ts";
+
 function charLenToApproxTokens(charLen: number) {
-  return Math.floor(charLen / 3);
+  const { requestInputTokens } = getState().usage;
+  if (
+    requestInputTokens.stale ||
+    requestInputTokens.value === 0 ||
+    requestInputTokens.charLength === 0
+  ) {
+    return Math.floor(charLen / 3);
+  }
+
+  const tokensPerChar =
+    requestInputTokens.value / requestInputTokens.charLength;
+  return Math.floor(charLen * tokensPerChar);
 }
 
 export function strToApproxTokens(str: string) {
@@ -147,30 +159,13 @@ export function getPrettyTokensByArea() {
 }
 
 export function getTokensByArea(): TokensByArea {
-  const tokensByAreaApprox: TokensByArea = {
+  return {
     messages: getApproxTokensFromMessages(getState().conversation.messages),
     context: strToApproxTokens(getState().content.contextStr),
     tools: strToApproxTokens(stringifyTools()),
     basePrompt: strToApproxTokens(getBaseAgentPrompt(getState().mcp.clients)),
     skills: strToApproxTokens(getState().content.skillsStr),
   };
-
-  if (getState().usage.requestInputTokens.stale) {
-    return tokensByAreaApprox;
-  }
-
-  const inputTokens = getState().usage.requestInputTokens.value;
-  const approxInputTokens = getApproxRequestInputTokens();
-  if (inputTokens === 0 || approxInputTokens === 0) {
-    return tokensByAreaApprox;
-  }
-
-  const inputToApproxRatio = inputTokens / approxInputTokens;
-  const inputTokensByArea = { ...tokensByAreaApprox };
-  for (const area of Object.keys(inputTokensByArea) as TokenArea[]) {
-    inputTokensByArea[area] = inputTokensByArea[area] * inputToApproxRatio;
-  }
-  return inputTokensByArea;
 }
 
 export function getPrettyContextWindowUsage() {

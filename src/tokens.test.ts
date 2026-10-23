@@ -71,6 +71,37 @@ describe("token utilities", () => {
   });
 });
 
+describe("strToApproxTokens", () => {
+  afterEach(() => {
+    mock.restoreAll();
+  });
+
+  beforeEach(() => {
+    setupTestContext();
+  });
+
+  it("uses cached request input usage to calibrate the approximation", () => {
+    actions.usage.setRequestInputTokens(10);
+    actions.usage.setRequestInputTokensCharLength(6);
+    actions.usage.setRequestInputTokensStale(false);
+
+    assert.deepStrictEqual(
+      [strToApproxTokens("abc"), strToApproxTokens("abcdef")],
+      [5, 10],
+    );
+  });
+
+  it("uses the default approximation when the cache cannot calibrate it", () => {
+    actions.usage.setRequestInputTokens(10);
+    actions.usage.setRequestInputTokensStale(false);
+    assert.strictEqual(strToApproxTokens("abcdef"), 2);
+
+    actions.usage.setRequestInputTokensCharLength(6);
+    actions.usage.setRequestInputTokens(0);
+    assert.strictEqual(strToApproxTokens("abcdef"), 2);
+  });
+});
+
 describe("state", () => {
   afterEach(() => {
     mock.restoreAll();
@@ -208,15 +239,16 @@ describe("getTokensByArea", () => {
     });
   });
 
-  it("scales the areas to the cached token count when clean", () => {
+  it("uses cached input-to-character ratio when clean", () => {
     actions.usage.setRequestInputTokens(1500);
+    actions.usage.setRequestInputTokensCharLength(getRequestInputCharLength());
     actions.usage.setRequestInputTokensStale(false);
     assert.deepStrictEqual(getTokensByArea(), {
-      messages: 8.350202429149798,
-      context: 2.2773279352226723,
-      tools: 839.5748987854251,
-      basePrompt: 647.5202429149798,
-      skills: 0.7591093117408907,
+      messages: 8,
+      context: 2,
+      tools: 839,
+      basePrompt: 647,
+      skills: 1,
     });
   });
 });
@@ -241,15 +273,16 @@ describe("getPrettyTokensByArea", () => {
     );
   });
 
-  it("returns each area scaled to the cached token count when clean", () => {
+  it("returns each area using the cached input-to-character ratio when clean", () => {
     actions.usage.setRequestInputTokens(1500);
+    actions.usage.setRequestInputTokensCharLength(getRequestInputCharLength());
     actions.usage.setRequestInputTokensStale(false);
     assert.strictEqual(
       getPrettyTokensByArea(),
       `- Chat messages: 8
 - Context files: 2
-- Harness and MCP tools: 840
-- Base system prompt: 648
+- Harness and MCP tools: 839
+- Base system prompt: 647
 - Skill descriptions: 1`,
     );
   });
