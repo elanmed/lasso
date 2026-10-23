@@ -54,7 +54,7 @@ export function getToolsContentStr() {
 
 export const compactTriggerRatio = 0.95;
 
-export const dedicatedPromptOverheadRatio =
+export const dedicatedRequestInputOverheadRatio =
   compactTriggerRatio - dedicatedSummaryRatio;
 
 export const defaultContextWindow = 128_000;
@@ -71,11 +71,11 @@ export function getMaxNumberSummaries() {
   return Math.floor(allSummariesTokenCount / maxTokenCountPerSummary);
 }
 
-export function getPromptOverheadTokensApprox() {
-  return strToApproxTokens(getPromptOverheadStr());
+export function getRequestInputOverheadTokensApprox() {
+  return strToApproxTokens(getRequestInputOverheadStr());
 }
 
-export function getPromptOverheadStr() {
+export function getRequestInputOverheadStr() {
   return getSystemContent() + stringifyTools();
 }
 
@@ -84,37 +84,39 @@ export function printLargeContextOverheadWarning() {
   const contextWindow =
     getState().config.contextWindowPerModel[model] ?? defaultContextWindow;
 
-  const promptOverheadTokensApprox = getPromptOverheadTokensApprox();
+  const requestInputOverheadTokensApprox =
+    getRequestInputOverheadTokensApprox();
 
-  const promptOverheadRatio = promptOverheadTokensApprox / contextWindow;
-  if (promptOverheadRatio >= dedicatedPromptOverheadRatio) {
+  const requestInputOverheadRatio =
+    requestInputOverheadTokensApprox / contextWindow;
+  if (requestInputOverheadRatio >= dedicatedRequestInputOverheadRatio) {
     print.warning(
-      `The current set of context, skills, and tools is ${decimalToPercent(promptOverheadRatio)} of the ${contextWindow.toLocaleString()} token context window!
+      `The current set of context, skills, and tools is ${decimalToPercent(requestInputOverheadRatio)} of the ${contextWindow.toLocaleString()} token context window!
 
-Lasso reserves ${decimalToPercent(dedicatedSummaryRatio)} of the context window for compacted summaries with the assumption that at most ${decimalToPercent(dedicatedPromptOverheadRatio)} of the context window will be used for prompt overhead. As is, the prompt overhead is large enough to break this assumption and, along with any user messages, may breach the llm's context window and cause API calls to be rejected. Consider converting some of your context to skills and minimizing MCP servers.`,
+Lasso reserves ${decimalToPercent(dedicatedSummaryRatio)} of the context window for compacted summaries with the assumption that at most ${decimalToPercent(dedicatedRequestInputOverheadRatio)} of the context window will be used for input overhead. As is, the input overhead is large enough to break this assumption and, along with any user messages, may breach the llm's context window and cause API calls to be rejected. Consider converting some of your context to skills and minimizing MCP servers.`,
     );
   }
 }
 
-export function getApproxInputTokens() {
+export function getApproxRequestInputTokens() {
   return (
     getApproxTokensFromMessages(getState().conversation.messages) +
-    getPromptOverheadTokensApprox()
+    getRequestInputOverheadTokensApprox()
   );
 }
 
-export function getInputCharLength() {
+export function getRequestInputCharLength() {
   return (
     stringifyMessages(getState().conversation.messages).length +
-    getPromptOverheadStr().length
+    getRequestInputOverheadStr().length
   );
 }
 
-export function getCurrentPromptTokens() {
-  if (getState().usage.promptTokens.stale) {
-    return getApproxInputTokens();
+export function resolveRequestInputTokens() {
+  if (getState().usage.requestInputTokens.stale) {
+    return getApproxRequestInputTokens();
   }
-  return getState().usage.promptTokens.value;
+  return getState().usage.requestInputTokens.value;
 }
 
 interface TokensByArea {
@@ -153,12 +155,12 @@ export function getTokensByArea(): TokensByArea {
     skills: strToApproxTokens(getState().content.skillsStr),
   };
 
-  if (getState().usage.promptTokens.stale) {
+  if (getState().usage.requestInputTokens.stale) {
     return tokensByAreaApprox;
   }
 
-  const realTokens = getState().usage.promptTokens.value;
-  const approxTotal = getApproxInputTokens();
+  const realTokens = getState().usage.requestInputTokens.value;
+  const approxTotal = getApproxRequestInputTokens();
   if (realTokens === 0 || approxTotal === 0) {
     return tokensByAreaApprox;
   }
@@ -176,7 +178,7 @@ export function getPrettyContextWindowUsage() {
   const contextWindow =
     getState().config.contextWindowPerModel[model] ?? defaultContextWindow;
 
-  const currTokens = getCurrentPromptTokens();
+  const currTokens = resolveRequestInputTokens();
 
   const currRatio = currTokens / contextWindow;
   return `${decimalToPercent(currRatio, { precision: 3 })} of context window`;

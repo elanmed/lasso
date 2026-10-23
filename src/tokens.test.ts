@@ -4,13 +4,13 @@ import { stringifyTools } from "./tools.ts";
 import {
   getSystemContent,
   getToolsContentStr,
-  getApproxInputTokens,
-  getCurrentPromptTokens,
+  getApproxRequestInputTokens,
+  resolveRequestInputTokens,
   getMaxNumberSummaries,
   getPrettyTokensByArea,
-  getPromptOverheadTokensApprox,
-  getPromptOverheadStr,
-  getInputCharLength,
+  getRequestInputOverheadTokensApprox,
+  getRequestInputOverheadStr,
+  getRequestInputCharLength,
   stringifyMessages,
   getTokensByArea,
   printLargeContextOverheadWarning,
@@ -100,23 +100,23 @@ skills body`,
   });
 });
 
-describe("getPromptOverheadTokensApprox", () => {
+describe("getRequestInputOverheadTokensApprox", () => {
   beforeEach(() => {
     setupTestContext();
     actions.content.setContextStr("abc");
   });
 
   it("sums the approx of system content and tools", () => {
-    assert.strictEqual(getPromptOverheadTokensApprox(), 1962);
+    assert.strictEqual(getRequestInputOverheadTokensApprox(), 1962);
   });
 
-  it("takes tools into account when computing the prompt overhead approx", () => {
-    assert.strictEqual(getApproxInputTokens(), 1962);
+  it("takes tools into account when computing the input overhead approx", () => {
+    assert.strictEqual(getApproxRequestInputTokens(), 1962);
   });
 
-  it("combines system content and tools for prompt overhead", () => {
+  it("combines system content and tools for input overhead", () => {
     assert.strictEqual(
-      getPromptOverheadStr(),
+      getRequestInputOverheadStr(),
       getSystemContent() + getToolsContentStr(),
     );
   });
@@ -131,19 +131,19 @@ describe("stringifyMessages", () => {
   });
 });
 
-describe("getInputCharLength", () => {
+describe("getRequestInputCharLength", () => {
   beforeEach(() => {
     setupTestContext();
     actions.content.setContextStr("abc");
     actions.conversation.setMessages([{ role: "user", content: "hello" }]);
   });
 
-  it("counts serialized messages and prompt overhead characters", () => {
-    assert.strictEqual(getInputCharLength(), 5921);
+  it("counts serialized messages and input overhead characters", () => {
+    assert.strictEqual(getRequestInputCharLength(), 5921);
   });
 });
 
-describe("getApproxInputTokens", () => {
+describe("getApproxRequestInputTokens", () => {
   beforeEach(() => {
     setupTestContext();
     actions.content.setContextStr("abc");
@@ -151,30 +151,30 @@ describe("getApproxInputTokens", () => {
 
   it("sums messages approx with the system instructions approx", () => {
     actions.conversation.setMessages([{ role: "user", content: "hello" }]);
-    assert.strictEqual(getApproxInputTokens(), 1973);
+    assert.strictEqual(getApproxRequestInputTokens(), 1973);
   });
 });
 
-describe("getCurrentPromptTokens", () => {
+describe("resolveRequestInputTokens", () => {
   beforeEach(() => {
     setupTestContext();
     actions.content.setContextStr("abc");
   });
 
-  it("returns the cached prompt tokens when not stale", () => {
-    actions.usage.setPromptTokens(50);
-    actions.usage.setPromptTokensStale(false);
-    assert.strictEqual(getCurrentPromptTokens(), 50);
+  it("returns the cached request input tokens when not stale", () => {
+    actions.usage.setRequestInputTokens(50);
+    actions.usage.setRequestInputTokensStale(false);
+    assert.strictEqual(resolveRequestInputTokens(), 50);
   });
 
   it("starts with the token cache marked stale", () => {
-    assert.strictEqual(getState().usage.promptTokens.stale, true);
+    assert.strictEqual(getState().usage.requestInputTokens.stale, true);
   });
 
-  it("returns the approx prompt tokens when stale", () => {
-    actions.usage.setPromptTokens(50);
-    actions.usage.setPromptTokensStale(true);
-    assert.strictEqual(getCurrentPromptTokens(), 1962);
+  it("returns the approx request input tokens when stale", () => {
+    actions.usage.setRequestInputTokens(50);
+    actions.usage.setRequestInputTokensStale(true);
+    assert.strictEqual(resolveRequestInputTokens(), 1962);
   });
 });
 
@@ -187,7 +187,7 @@ describe("getTokensByArea", () => {
   });
 
   it("returns the approx areas when the token cache is stale", () => {
-    actions.usage.setPromptTokensStale(true);
+    actions.usage.setRequestInputTokensStale(true);
     assert.deepStrictEqual(getTokensByArea(), {
       messages: 11,
       context: 3,
@@ -198,7 +198,7 @@ describe("getTokensByArea", () => {
   });
 
   it("returns the approx areas when the cached token count is zero", () => {
-    actions.usage.setPromptTokensStale(false);
+    actions.usage.setRequestInputTokensStale(false);
     assert.deepStrictEqual(getTokensByArea(), {
       messages: 11,
       context: 3,
@@ -209,8 +209,8 @@ describe("getTokensByArea", () => {
   });
 
   it("scales the areas to the cached token count when clean", () => {
-    actions.usage.setPromptTokens(1500);
-    actions.usage.setPromptTokensStale(false);
+    actions.usage.setRequestInputTokens(1500);
+    actions.usage.setRequestInputTokensStale(false);
     assert.deepStrictEqual(getTokensByArea(), {
       messages: 8.350202429149798,
       context: 2.2773279352226723,
@@ -230,7 +230,7 @@ describe("getPrettyTokensByArea", () => {
   });
 
   it("returns each area with its approx count when the cache is stale", () => {
-    actions.usage.setPromptTokensStale(true);
+    actions.usage.setRequestInputTokensStale(true);
     assert.strictEqual(
       getPrettyTokensByArea(),
       `- Chat messages: 11
@@ -242,8 +242,8 @@ describe("getPrettyTokensByArea", () => {
   });
 
   it("returns each area scaled to the cached token count when clean", () => {
-    actions.usage.setPromptTokens(1500);
-    actions.usage.setPromptTokensStale(false);
+    actions.usage.setRequestInputTokens(1500);
+    actions.usage.setRequestInputTokensStale(false);
     assert.strictEqual(
       getPrettyTokensByArea(),
       `- Chat messages: 8
@@ -268,19 +268,19 @@ describe("printLargeContextOverheadWarning", () => {
     assert.deepStrictEqual(getWrites(), []);
   });
 
-  it("does not warn when prompt overhead is below the dedicated share", () => {
+  it("does not warn when input overhead is below the dedicated share", () => {
     actions.content.setContextStr("s".repeat(30_000));
     const getWrites = mockStdoutWrites();
     printLargeContextOverheadWarning();
     assert.deepStrictEqual(getWrites(), []);
   });
 
-  it("warns when prompt overhead reaches the dedicated share", () => {
+  it("warns when input overhead reaches the dedicated share", () => {
     actions.content.setContextStr("s".repeat(210_000));
     const getWrites = mockStdoutWrites();
     printLargeContextOverheadWarning();
     assert.deepStrictEqual(getWrites(), [
-      `${YELLOW}The current set of context, skills, and tools is 71.96% of the 100,000 token context window!\n\nLasso reserves 25% of the context window for compacted summaries with the assumption that at most 70% of the context window will be used for prompt overhead. As is, the prompt overhead is large enough to break this assumption and, along with any user messages, may breach the llm's context window and cause API calls to be rejected. Consider converting some of your context to skills and minimizing MCP servers.${RESET}\n`,
+      `${YELLOW}The current set of context, skills, and tools is 71.96% of the 100,000 token context window!\n\nLasso reserves 25% of the context window for compacted summaries with the assumption that at most 70% of the context window will be used for input overhead. As is, the input overhead is large enough to break this assumption and, along with any user messages, may breach the llm's context window and cause API calls to be rejected. Consider converting some of your context to skills and minimizing MCP servers.${RESET}\n`,
     ]);
   });
 });
@@ -356,8 +356,8 @@ describe("getPrettyContextWindowUsage", () => {
   describe("calculates the percentage", () => {
     it("falls back to the default context window when the model has none configured", () => {
       actions.config.setModel("unknown-model");
-      actions.usage.setPromptTokens(1_280);
-      actions.usage.setPromptTokensStale(false);
+      actions.usage.setRequestInputTokens(1_280);
+      actions.usage.setRequestInputTokensStale(false);
       const result = getPrettyContextWindowUsage();
       assert.strictEqual(result, "1% of context window");
     });
@@ -373,8 +373,8 @@ describe("getPrettyContextWindowUsage", () => {
       actions.config.setModel("test-model");
       actions.config.setContextWindowPerModel({ "test-model": 10_000 });
       actions.conversation.setMessages([{ role: "user", content: "hi" }]);
-      actions.usage.setPromptTokens(5_000);
-      actions.usage.setPromptTokensStale(false);
+      actions.usage.setRequestInputTokens(5_000);
+      actions.usage.setRequestInputTokensStale(false);
       const result = getPrettyContextWindowUsage();
       assert.strictEqual(result, "50% of context window");
     });
@@ -383,8 +383,8 @@ describe("getPrettyContextWindowUsage", () => {
       actions.config.setModel("test-model");
       actions.config.setContextWindowPerModel({ "test-model": 10_000 });
       actions.conversation.setMessages([{ role: "user", content: "hi" }]);
-      actions.usage.setPromptTokens(1_666);
-      actions.usage.setPromptTokensStale(false);
+      actions.usage.setRequestInputTokens(1_666);
+      actions.usage.setRequestInputTokensStale(false);
       const result = getPrettyContextWindowUsage();
       assert.strictEqual(result, "16.66% of context window");
     });
@@ -393,8 +393,8 @@ describe("getPrettyContextWindowUsage", () => {
       actions.config.setModel("test-model");
       actions.config.setContextWindowPerModel({ "test-model": 10_000 });
       actions.conversation.setMessages([{ role: "user", content: "hi" }]);
-      actions.usage.setPromptTokens(15_000);
-      actions.usage.setPromptTokensStale(false);
+      actions.usage.setRequestInputTokens(15_000);
+      actions.usage.setRequestInputTokensStale(false);
       const result = getPrettyContextWindowUsage();
       assert.strictEqual(result, "150% of context window");
     });
@@ -405,8 +405,8 @@ describe("getPrettyContextWindowUsage", () => {
       actions.config.setModel("test-model");
       actions.config.setContextWindowPerModel({ "test-model": 10_000 });
       actions.conversation.setMessages([{ role: "user", content: "hihoho" }]);
-      actions.usage.setPromptTokens(5_000);
-      actions.usage.setPromptTokensStale(true);
+      actions.usage.setRequestInputTokens(5_000);
+      actions.usage.setRequestInputTokensStale(true);
       const result = getPrettyContextWindowUsage();
       assert.strictEqual(result, "19.73% of context window");
     });
@@ -415,8 +415,8 @@ describe("getPrettyContextWindowUsage", () => {
       actions.config.setModel("test-model");
       actions.config.setContextWindowPerModel({ "test-model": 10_000 });
       actions.conversation.setMessages([{ role: "user", content: "hihoho" }]);
-      actions.usage.setPromptTokens(5_000);
-      actions.usage.setPromptTokensStale(false);
+      actions.usage.setRequestInputTokens(5_000);
+      actions.usage.setRequestInputTokensStale(false);
       const result = getPrettyContextWindowUsage();
       assert.strictEqual(result, "50% of context window");
     });

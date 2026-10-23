@@ -439,7 +439,7 @@ describe("log", () => {
         }),
       );
 
-      actions.usage.setPromptTokens(100);
+      actions.usage.setRequestInputTokens(100);
 
       const result = await resumeFromSessionFile("/test/session.json");
 
@@ -453,7 +453,7 @@ describe("log", () => {
       assert.deepStrictEqual(getState().conversation.transcript, [
         { timestamp: 0, role: "user", message: "hello" },
       ]);
-      assert.deepStrictEqual(getState().usage.promptTokens, {
+      assert.deepStrictEqual(getState().usage.requestInputTokens, {
         value: 100,
         stale: true,
         charLength: 0,

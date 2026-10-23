@@ -62,7 +62,7 @@ interface SessionState {
 }
 
 interface UsageState {
-  promptTokens: {
+  requestInputTokens: {
     value: number;
     stale: boolean;
     charLength: number;
@@ -147,7 +147,7 @@ const createInitialState = (): State => ({
     toolEditDiffs: [],
   },
   usage: {
-    promptTokens: {
+    requestInputTokens: {
       value: 0,
       stale: true,
       charLength: 0,
@@ -303,25 +303,29 @@ export const actions = {
     },
   },
   usage: {
-    setPromptTokens(tokens: number) {
-      const before = state.usage.promptTokens.value;
-      state.usage.promptTokens.value = tokens;
-      logStateChange("set-prompt-tokens", String(before), String(tokens));
-    },
-    setPromptTokensStale(tokensStale: boolean) {
-      const before = state.usage.promptTokens.stale;
-      state.usage.promptTokens.stale = tokensStale;
+    setRequestInputTokens(tokens: number) {
+      const before = state.usage.requestInputTokens.value;
+      state.usage.requestInputTokens.value = tokens;
       logStateChange(
-        "set-prompt-tokens-stale",
+        "set-request-input-tokens",
+        String(before),
+        String(tokens),
+      );
+    },
+    setRequestInputTokensStale(tokensStale: boolean) {
+      const before = state.usage.requestInputTokens.stale;
+      state.usage.requestInputTokens.stale = tokensStale;
+      logStateChange(
+        "set-request-input-tokens-stale",
         String(before),
         String(tokensStale),
       );
     },
-    setPromptTokensCharLength(charLength: number) {
-      const before = state.usage.promptTokens.charLength;
-      state.usage.promptTokens.charLength = charLength;
+    setRequestInputTokensCharLength(charLength: number) {
+      const before = state.usage.requestInputTokens.charLength;
+      state.usage.requestInputTokens.charLength = charLength;
       logStateChange(
-        "set-prompt-tokens-char-length",
+        "set-request-input-tokens-char-length",
         String(before),
         String(charLength),
       );

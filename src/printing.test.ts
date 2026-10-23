@@ -717,8 +717,8 @@ describe("fence", () => {
         actions.config.setModel("test-model");
         actions.config.setContextWindowPerModel({ "test-model": 10_000 });
         actions.conversation.setMessages([{ role: "user", content: "hi" }]);
-        actions.usage.setPromptTokens(5_000);
-        actions.usage.setPromptTokensStale(false);
+        actions.usage.setRequestInputTokens(5_000);
+        actions.usage.setRequestInputTokensStale(false);
 
         fencePrint("Output", { showSessionInfo: true });
 

@@ -1055,7 +1055,7 @@ describe("input commands", () => {
       await clearCommand();
       assert.deepStrictEqual(getState().conversation.summaries, []);
       assert.deepStrictEqual(getState().conversation.messages, []);
-      assert.deepStrictEqual(getState().usage.promptTokens, {
+      assert.deepStrictEqual(getState().usage.requestInputTokens, {
         value: 1962,
         stale: true,
         charLength: 5888,
@@ -1076,7 +1076,7 @@ describe("input commands", () => {
     });
 
     it("prints the total and each area with its approx count when the cache is stale", () => {
-      actions.usage.setPromptTokensStale(true);
+      actions.usage.setRequestInputTokensStale(true);
       printTokens();
       assert.deepStrictEqual(getWrites(), [
         "\n",
@@ -1092,8 +1092,8 @@ describe("input commands", () => {
     });
 
     it("prints the total scaled to the cached token count when clean", () => {
-      actions.usage.setPromptTokens(1500);
-      actions.usage.setPromptTokensStale(false);
+      actions.usage.setRequestInputTokens(1500);
+      actions.usage.setRequestInputTokensStale(false);
       printTokens();
       assert.deepStrictEqual(getWrites(), [
         "\n",
@@ -1184,7 +1184,7 @@ describe("input commands", () => {
       assert.deepStrictEqual(getState().conversation.transcript, [
         { timestamp: 0, role: "user", message: "transcript content" },
       ]);
-      assert.deepStrictEqual(getState().usage.promptTokens, {
+      assert.deepStrictEqual(getState().usage.requestInputTokens, {
         value: 0,
         stale: true,
         charLength: 0,
@@ -3879,7 +3879,7 @@ commands diff
         ]);
       });
 
-      it("warns on large prompt overhead when reload produces no diff", async () => {
+      it("warns on large input overhead when reload produces no diff", async () => {
         testFs._files.set(
           getGlobalConfigPath(),
           JSON.stringify({
@@ -3921,7 +3921,7 @@ commands diff
         );
       });
 
-      it("warns when a reloaded config leaves little room for prompt overhead", async () => {
+      it("warns when a reloaded config leaves little room for input overhead", async () => {
         testFs._files.set(
           getGlobalConfigPath(),
           JSON.stringify({

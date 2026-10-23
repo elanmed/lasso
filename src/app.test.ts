@@ -194,15 +194,15 @@ describe("api", () => {
     });
 
     describe("tracks token usage", () => {
-      it("marks prompt tokens stale on non-abort error", async () => {
-        actions.usage.setPromptTokens(50);
-        actions.usage.setPromptTokensStale(false);
+      it("marks request input tokens stale on non-abort error", async () => {
+        actions.usage.setRequestInputTokens(50);
+        actions.usage.setRequestInputTokensStale(false);
         mock.method(aiDeps, "generateText", () =>
           Promise.reject(new Error("network error")),
         );
         const result = await resolveApiCall("hello");
         assert.strictEqual(result, null);
-        assert.deepStrictEqual(getState().usage.promptTokens, {
+        assert.deepStrictEqual(getState().usage.requestInputTokens, {
           value: 50,
           stale: true,
           charLength: 0,
@@ -210,13 +210,13 @@ describe("api", () => {
       });
 
       it("leaves the stored token value untouched when marking stale on abort", async () => {
-        actions.usage.setPromptTokens(50);
-        actions.usage.setPromptTokensStale(false);
+        actions.usage.setRequestInputTokens(50);
+        actions.usage.setRequestInputTokensStale(false);
         const err = makeAbortError();
         mock.method(aiDeps, "generateText", () => Promise.reject(err));
         const result = await resolveApiCall("hello");
         assert.strictEqual(result, null);
-        assert.deepStrictEqual(getState().usage.promptTokens, {
+        assert.deepStrictEqual(getState().usage.requestInputTokens, {
           value: 50,
           stale: true,
           charLength: 0,
@@ -259,7 +259,7 @@ describe("api", () => {
           { role: "assistant", content: "tool call" },
           { role: "tool", content: "tool result" },
         ]);
-        assert.deepStrictEqual(getState().usage.promptTokens, {
+        assert.deepStrictEqual(getState().usage.requestInputTokens, {
           value: 49,
           stale: false,
           charLength: 5931,
@@ -268,7 +268,7 @@ describe("api", () => {
 
       it("sets tokens to input plus output tokens on each call", async () => {
         await resolveApiCall("first");
-        assert.strictEqual(getState().usage.promptTokens.value, 15);
+        assert.strictEqual(getState().usage.requestInputTokens.value, 15);
 
         mock.method(aiDeps, "generateText", () =>
           Promise.resolve(
@@ -285,7 +285,7 @@ describe("api", () => {
           { role: "user", content: "second" },
           { role: "assistant", content: "answer" },
         ]);
-        assert.deepStrictEqual(getState().usage.promptTokens, {
+        assert.deepStrictEqual(getState().usage.requestInputTokens, {
           value: 17,
           stale: false,
           charLength: 5966,
@@ -299,8 +299,8 @@ describe("api", () => {
             content: "existing",
           },
         ]);
-        actions.usage.setPromptTokens(100);
-        actions.usage.setPromptTokensStale(true);
+        actions.usage.setRequestInputTokens(100);
+        actions.usage.setRequestInputTokensStale(true);
         mock.method(aiDeps, "generateText", () =>
           Promise.resolve(
             makeGenerateTextResult({
@@ -316,14 +316,14 @@ describe("api", () => {
           { role: "user", content: "hello" },
           { role: "assistant", content: "answer" },
         ]);
-        assert.deepStrictEqual(getState().usage.promptTokens, {
+        assert.deepStrictEqual(getState().usage.requestInputTokens, {
           value: 55,
           stale: false,
           charLength: 5968,
         });
       });
 
-      it("uses final step usage for prompt tokens when it differs from top-level usage", async () => {
+      it("uses final step usage for request input tokens when it differs from top-level usage", async () => {
         mock.method(aiDeps, "generateText", () =>
           Promise.resolve(
             makeGenerateTextResult({
@@ -337,7 +337,7 @@ describe("api", () => {
           ),
         );
         await resolveApiCall("hello");
-        assert.deepStrictEqual(getState().usage.promptTokens, {
+        assert.deepStrictEqual(getState().usage.requestInputTokens, {
           value: 17,
           stale: false,
           charLength: 5931,
@@ -357,7 +357,7 @@ describe("api", () => {
           ),
         );
         await resolveApiCall("hello");
-        assert.deepStrictEqual(getState().usage.promptTokens, {
+        assert.deepStrictEqual(getState().usage.requestInputTokens, {
           value: 54,
           stale: false,
           charLength: 5931,
@@ -670,7 +670,7 @@ describe("api", () => {
             content: "[Interrupted before a response was generated]",
           },
         ]);
-        assert.deepStrictEqual(getState().usage.promptTokens, {
+        assert.deepStrictEqual(getState().usage.requestInputTokens, {
           value: 0,
           stale: true,
           charLength: 0,
@@ -735,8 +735,8 @@ describe("api", () => {
     describe("decides with approximated tokens", () => {
       it("returns early when below the compact threshold", async () => {
         actions.conversation.setMessages([{ role: "user", content: "hi" }]);
-        actions.usage.setPromptTokens(60_000);
-        actions.usage.setPromptTokensStale(false);
+        actions.usage.setRequestInputTokens(60_000);
+        actions.usage.setRequestInputTokensStale(false);
         let called = false;
         mock.method(aiDeps, "generateText", () => {
           called = true;
@@ -748,7 +748,7 @@ describe("api", () => {
         assert.deepStrictEqual(getState().conversation.messages, [
           { role: "user", content: "hi" },
         ]);
-        assert.deepStrictEqual(getState().usage.promptTokens, {
+        assert.deepStrictEqual(getState().usage.requestInputTokens, {
           value: 60_000,
           stale: false,
           charLength: 0,
@@ -763,8 +763,8 @@ describe("api", () => {
             content: longUserContent,
           },
         ]);
-        actions.usage.setPromptTokens(0);
-        actions.usage.setPromptTokensStale(true);
+        actions.usage.setRequestInputTokens(0);
+        actions.usage.setRequestInputTokensStale(true);
         let capturedOpts: Record<string, unknown> | undefined;
         mock.method(aiDeps, "generateText", (opts: Record<string, unknown>) => {
           capturedOpts = opts;
@@ -784,7 +784,7 @@ describe("api", () => {
         assert.deepStrictEqual(getState().conversation.messages, [
           { role: "assistant", content: "compacted summary" },
         ]);
-        assert.deepStrictEqual(getState().usage.promptTokens, {
+        assert.deepStrictEqual(getState().usage.requestInputTokens, {
           value: 26_961,
           stale: false,
           charLength: 5900,
@@ -799,8 +799,8 @@ describe("api", () => {
             content: longUserContent,
           },
         ]);
-        actions.usage.setPromptTokens(2_000);
-        actions.usage.setPromptTokensStale(true);
+        actions.usage.setRequestInputTokens(2_000);
+        actions.usage.setRequestInputTokensStale(true);
         let called = false;
         mock.method(aiDeps, "generateText", () => {
           called = true;
@@ -812,7 +812,7 @@ describe("api", () => {
         assert.deepStrictEqual(getState().conversation.messages, [
           { role: "user", content: longUserContent },
         ]);
-        assert.deepStrictEqual(getState().usage.promptTokens, {
+        assert.deepStrictEqual(getState().usage.requestInputTokens, {
           value: 2_000,
           stale: true,
           charLength: 0,
@@ -829,8 +829,8 @@ describe("api", () => {
             content: longUserContent,
           },
         ]);
-        actions.usage.setPromptTokens(0);
-        actions.usage.setPromptTokensStale(true);
+        actions.usage.setRequestInputTokens(0);
+        actions.usage.setRequestInputTokensStale(true);
         let called = false;
         mock.method(aiDeps, "generateText", () => {
           called = true;
@@ -857,8 +857,8 @@ describe("api", () => {
             content: longUserContent,
           },
         ]);
-        actions.usage.setPromptTokens(0);
-        actions.usage.setPromptTokensStale(true);
+        actions.usage.setRequestInputTokens(0);
+        actions.usage.setRequestInputTokensStale(true);
         let called = false;
         mock.method(aiDeps, "generateText", () => {
           called = true;
@@ -892,8 +892,8 @@ describe("api", () => {
             ],
           },
         ]);
-        actions.usage.setPromptTokens(0);
-        actions.usage.setPromptTokensStale(true);
+        actions.usage.setRequestInputTokens(0);
+        actions.usage.setRequestInputTokensStale(true);
         let called = false;
         mock.method(aiDeps, "generateText", () => {
           called = true;
@@ -908,8 +908,8 @@ describe("api", () => {
       it("includes mcp tools in the tokens after compaction", async () => {
         actions.mcp.setClientsAndTools({}, { mcp_tool: makeMcpTool() });
         actions.conversation.setMessages([{ role: "user", content: "hi" }]);
-        actions.usage.setPromptTokens(96_000);
-        actions.usage.setPromptTokensStale(false);
+        actions.usage.setRequestInputTokens(96_000);
+        actions.usage.setRequestInputTokensStale(false);
         mock.method(aiDeps, "generateText", () =>
           Promise.resolve(
             makeGenerateTextResult({
@@ -929,7 +929,7 @@ describe("api", () => {
         assert.deepStrictEqual(getState().conversation.messages, [
           { role: "assistant", content: "compacted summary" },
         ]);
-        assert.deepStrictEqual(getState().usage.promptTokens, {
+        assert.deepStrictEqual(getState().usage.requestInputTokens, {
           value: 25_000 + withMcpTools + strToApproxTokens(getSystemContent()),
           stale: false,
           charLength: 5980,
@@ -979,8 +979,8 @@ describe("api", () => {
 
       it("compacts the conversation when above the threshold", async () => {
         actions.conversation.setMessages([{ role: "user", content: "hi" }]);
-        actions.usage.setPromptTokens(96_000);
-        actions.usage.setPromptTokensStale(false);
+        actions.usage.setRequestInputTokens(96_000);
+        actions.usage.setRequestInputTokensStale(false);
         let capturedOpts: Record<string, unknown> | undefined;
         mock.method(aiDeps, "generateText", (opts: Record<string, unknown>) => {
           capturedOpts = opts;
@@ -1018,7 +1018,7 @@ describe("api", () => {
         assert.deepStrictEqual(getState().conversation.messages, [
           { role: "assistant", content: "compacted summary" },
         ]);
-        assert.deepStrictEqual(getState().usage.promptTokens, {
+        assert.deepStrictEqual(getState().usage.requestInputTokens, {
           value: 26_961,
           stale: false,
           charLength: 5900,
@@ -1038,8 +1038,8 @@ describe("api", () => {
 
       it("compacts when the user input pushes tokens over the threshold", async () => {
         actions.conversation.setMessages([{ role: "user", content: "hi" }]);
-        actions.usage.setPromptTokens(95_000);
-        actions.usage.setPromptTokensStale(false);
+        actions.usage.setRequestInputTokens(95_000);
+        actions.usage.setRequestInputTokensStale(false);
         let capturedOpts: Record<string, unknown> | undefined;
         mock.method(aiDeps, "generateText", (opts: Record<string, unknown>) => {
           capturedOpts = opts;
@@ -1062,7 +1062,7 @@ describe("api", () => {
         assert.deepStrictEqual(getState().conversation.messages, [
           { role: "assistant", content: "compacted summary" },
         ]);
-        assert.deepStrictEqual(getState().usage.promptTokens, {
+        assert.deepStrictEqual(getState().usage.requestInputTokens, {
           value: 26_961,
           stale: false,
           charLength: 5900,
@@ -1072,8 +1072,8 @@ describe("api", () => {
       it("compacts against the default context window when the model has none configured", async () => {
         actions.config.setContextWindowPerModel({});
         actions.conversation.setMessages([{ role: "user", content: "hi" }]);
-        actions.usage.setPromptTokens(122_000);
-        actions.usage.setPromptTokensStale(false);
+        actions.usage.setRequestInputTokens(122_000);
+        actions.usage.setRequestInputTokensStale(false);
         mock.method(aiDeps, "generateText", () =>
           Promise.resolve(
             makeGenerateTextResult({
@@ -1093,8 +1093,8 @@ describe("api", () => {
 
       it("resets messages before the api call so the summary and new user input are both sent", async () => {
         actions.conversation.setMessages([{ role: "user", content: "old" }]);
-        actions.usage.setPromptTokens(96_000);
-        actions.usage.setPromptTokensStale(false);
+        actions.usage.setRequestInputTokens(96_000);
+        actions.usage.setRequestInputTokensStale(false);
         const calls: ModelMessage[][] = [];
         let callCount = 0;
         mock.method(
@@ -1131,7 +1131,7 @@ describe("api", () => {
           { role: "user", content: "new input" },
           { role: "assistant", content: "answer text" },
         ]);
-        assert.deepStrictEqual(getState().usage.promptTokens, {
+        assert.deepStrictEqual(getState().usage.requestInputTokens, {
           value: 25,
           stale: false,
           charLength: 5984,
@@ -1169,8 +1169,8 @@ describe("api", () => {
     describe("keeps messages on failure", () => {
       it("keeps messages when generateText fails", async () => {
         actions.conversation.setMessages([{ role: "user", content: "hi" }]);
-        actions.usage.setPromptTokens(96_000);
-        actions.usage.setPromptTokensStale(false);
+        actions.usage.setRequestInputTokens(96_000);
+        actions.usage.setRequestInputTokensStale(false);
         mock.method(aiDeps, "generateText", () =>
           Promise.reject(new Error("network error")),
         );
@@ -1179,7 +1179,7 @@ describe("api", () => {
         assert.deepStrictEqual(getState().conversation.messages, [
           { role: "user", content: "hi" },
         ]);
-        assert.deepStrictEqual(getState().usage.promptTokens, {
+        assert.deepStrictEqual(getState().usage.requestInputTokens, {
           value: 96_000,
           stale: false,
           charLength: 0,
@@ -1189,8 +1189,8 @@ describe("api", () => {
       it("resolves the queued editor input when compaction is aborted", async () => {
         const getWrites = mockStdoutWrites();
         actions.conversation.setMessages([{ role: "user", content: "hi" }]);
-        actions.usage.setPromptTokens(96_000);
-        actions.usage.setPromptTokensStale(false);
+        actions.usage.setRequestInputTokens(96_000);
+        actions.usage.setRequestInputTokensStale(false);
         actions.terminal.setRl(makeFakeRl());
         actions.terminal.setEditorInputValue("queued input");
         const err = makeAbortError();
@@ -1210,8 +1210,8 @@ describe("api", () => {
       it("keeps messages on abort error during compaction", async () => {
         const getWrites = mockStdoutWrites();
         actions.conversation.setMessages([{ role: "user", content: "hi" }]);
-        actions.usage.setPromptTokens(96_000);
-        actions.usage.setPromptTokensStale(false);
+        actions.usage.setRequestInputTokens(96_000);
+        actions.usage.setRequestInputTokensStale(false);
         const err = makeAbortError();
         mock.method(aiDeps, "generateText", () => Promise.reject(err));
         await maybeCompact("hi");
@@ -1220,7 +1220,7 @@ describe("api", () => {
         assert.deepStrictEqual(getState().conversation.messages, [
           { role: "user", content: "hi" },
         ]);
-        assert.deepStrictEqual(getState().usage.promptTokens, {
+        assert.deepStrictEqual(getState().usage.requestInputTokens, {
           value: 96_000,
           stale: false,
           charLength: 0,
@@ -1236,8 +1236,8 @@ describe("api", () => {
           ]);
         }
         actions.conversation.setMessages([{ role: "user", content: "hi" }]);
-        actions.usage.setPromptTokens(96_000);
-        actions.usage.setPromptTokensStale(false);
+        actions.usage.setRequestInputTokens(96_000);
+        actions.usage.setRequestInputTokensStale(false);
         const calls: boolean[] = [];
         mock.method(aiDeps, "generateText", () => {
           const signal = getState().abortControllers.apiStream?.signal;
@@ -1290,8 +1290,8 @@ describe("api", () => {
           ...getState().conversation.messages,
           { role: "user", content: "hi" },
         ]);
-        actions.usage.setPromptTokens(96_000);
-        actions.usage.setPromptTokensStale(false);
+        actions.usage.setRequestInputTokens(96_000);
+        actions.usage.setRequestInputTokensStale(false);
         const generate = mockGenerateTextResults([
           {
             output: { compacted: "compacted summary" },
@@ -1328,7 +1328,7 @@ describe("api", () => {
           { role: "assistant", content: "summary 10" },
           { role: "assistant", content: "compacted summary" },
         ]);
-        assert.deepStrictEqual(getState().usage.promptTokens, {
+        assert.deepStrictEqual(getState().usage.requestInputTokens, {
           value: 2_796,
           stale: false,
           charLength: 5987,
@@ -1350,8 +1350,8 @@ describe("api", () => {
           ...getState().conversation.messages,
           { role: "user", content: "hi" },
         ]);
-        actions.usage.setPromptTokens(96_000);
-        actions.usage.setPromptTokensStale(false);
+        actions.usage.setRequestInputTokens(96_000);
+        actions.usage.setRequestInputTokensStale(false);
         const generate = mockGenerateTextResults([
           {
             output: { compacted: "compacted summary" },
@@ -1387,7 +1387,7 @@ describe("api", () => {
           { role: "assistant", content: "summary 10" },
           { role: "assistant", content: "compacted summary" },
         ]);
-        assert.deepStrictEqual(getState().usage.promptTokens, {
+        assert.deepStrictEqual(getState().usage.requestInputTokens, {
           value: 2_981,
           stale: false,
           charLength: 5991,
@@ -1421,8 +1421,8 @@ describe("api", () => {
           content: "not yet summarized",
         },
       ]);
-      actions.usage.setPromptTokens(85_000);
-      actions.usage.setPromptTokensStale(false);
+      actions.usage.setRequestInputTokens(85_000);
+      actions.usage.setRequestInputTokensStale(false);
     };
 
     describe("summarizes the conversation", () => {
@@ -1450,8 +1450,8 @@ describe("api", () => {
             ],
           },
         ]);
-        actions.usage.setPromptTokens(85_000);
-        actions.usage.setPromptTokensStale(false);
+        actions.usage.setRequestInputTokens(85_000);
+        actions.usage.setRequestInputTokensStale(false);
         let capturedOpts: Record<string, unknown> | undefined;
         mock.method(aiDeps, "generateText", (opts: Record<string, unknown>) => {
           capturedOpts = opts;
@@ -1614,7 +1614,7 @@ describe("api", () => {
           { role: "assistant", content: "prior summary" },
           { role: "user", content: "not yet summarized" },
         ]);
-        assert.deepStrictEqual(getState().usage.promptTokens, {
+        assert.deepStrictEqual(getState().usage.requestInputTokens, {
           value: 85_000,
           stale: false,
           charLength: 0,
@@ -1636,7 +1636,7 @@ describe("api", () => {
           { role: "assistant", content: "prior summary" },
           { role: "user", content: "not yet summarized" },
         ]);
-        assert.deepStrictEqual(getState().usage.promptTokens, {
+        assert.deepStrictEqual(getState().usage.requestInputTokens, {
           value: 85_000,
           stale: false,
           charLength: 0,

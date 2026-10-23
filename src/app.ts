@@ -92,14 +92,14 @@ import {
   defaultContextWindow,
   maxCharCountPerSummary,
   getMaxNumberSummaries,
-  getPromptOverheadTokensApprox,
-  getApproxInputTokens,
-  getCurrentPromptTokens,
+  getRequestInputOverheadTokensApprox,
+  getApproxRequestInputTokens,
+  resolveRequestInputTokens,
   getPrettyContextWindowUsage,
   strToApproxTokens,
   orApproxTokens,
-  getInputCharLength,
-  getPromptOverheadStr,
+  getRequestInputCharLength,
+  getRequestInputOverheadStr,
 } from "./tokens.ts";
 import {
   contextFileSkillNamePrefix,
@@ -519,7 +519,7 @@ export async function resolveApiCall(userInput: string) {
   actions.usage.setApiEndTime();
 
   if (!generateTextResult.ok) {
-    actions.usage.setPromptTokensStale(true);
+    actions.usage.setRequestInputTokensStale(true);
     await toolCallDiffer.cleanupAllTempFiles();
 
     if (isAbortError(generateTextResult.error)) {
@@ -557,15 +557,19 @@ export async function resolveApiCall(userInput: string) {
   await appendModelUsage(usage);
 
   const finalStepInputTokens =
-    finalStep.usage.inputTokens ?? getApproxInputTokens();
+    finalStep.usage.inputTokens ?? getApproxRequestInputTokens();
   const finalStepOutputTokens = orApproxTokens(
     finalStep.usage.outputTokens,
     text,
   );
 
-  actions.usage.setPromptTokens(finalStepInputTokens + finalStepOutputTokens);
-  actions.usage.setPromptTokensCharLength(getInputCharLength() + text.length);
-  actions.usage.setPromptTokensStale(false);
+  actions.usage.setRequestInputTokens(
+    finalStepInputTokens + finalStepOutputTokens,
+  );
+  actions.usage.setRequestInputTokensCharLength(
+    getRequestInputCharLength() + text.length,
+  );
+  actions.usage.setRequestInputTokensStale(false);
 
   await syncSessionFile({
     transcript: getAppendedTranscript({
@@ -775,11 +779,13 @@ export async function maybeCompact(userInput: string) {
   // count of userInput until after the API call. This can be problematic when the userInput
   // would large enough to trigger compaction, so we approximate for the userInput
   const userInputTokensApprox = strToApproxTokens(userInput);
-  const promptOverheadTokensApprox = getPromptOverheadTokensApprox();
+  const requestInputOverheadTokensApprox =
+    getRequestInputOverheadTokensApprox();
 
-  const nextApiTokens = getCurrentPromptTokens() + userInputTokensApprox;
+  const nextRequestInputTokens =
+    resolveRequestInputTokens() + userInputTokensApprox;
 
-  const currRatio = nextApiTokens / contextWindow;
+  const currRatio = nextRequestInputTokens / contextWindow;
   if (currRatio <= compactTriggerRatio) return;
 
   print.doing("Compacting" + getUnicodeChar("…"));
@@ -806,11 +812,13 @@ export async function maybeCompact(userInput: string) {
     .conversation.summaries.map(({ compacted }) => compacted)
     .reduce((accum, curr) => accum + curr.length, 0);
 
-  actions.usage.setPromptTokens(summaryTokens + promptOverheadTokensApprox);
-  actions.usage.setPromptTokensCharLength(
-    summaryCharLengths + getPromptOverheadStr().length,
+  actions.usage.setRequestInputTokens(
+    summaryTokens + requestInputOverheadTokensApprox,
   );
-  actions.usage.setPromptTokensStale(false);
+  actions.usage.setRequestInputTokensCharLength(
+    summaryCharLengths + getRequestInputOverheadStr().length,
+  );
+  actions.usage.setRequestInputTokensStale(false);
 }
 
 export async function resolveInterruptWithEditor() {

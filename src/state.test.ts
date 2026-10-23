@@ -50,7 +50,7 @@ describe("state", () => {
       assert.deepStrictEqual(getState().conversation.summaries, []);
       assert.deepStrictEqual(getState().conversation.transcript, []);
       assert.deepStrictEqual(getState().conversation.toolEditDiffs, []);
-      assert.deepStrictEqual(getState().usage.promptTokens, {
+      assert.deepStrictEqual(getState().usage.requestInputTokens, {
         value: 0,
         stale: true,
         charLength: 0,
@@ -131,8 +131,8 @@ describe("state", () => {
 
     it("resetState restores initial state after mutations", () => {
       actions.conversation.setMessages([{ role: "user", content: "hi" }]);
-      actions.usage.setPromptTokens(7);
-      actions.usage.setPromptTokensStale(true);
+      actions.usage.setRequestInputTokens(7);
+      actions.usage.setRequestInputTokensStale(true);
       actions.terminal.setEditorInputValue("draft");
       actions.terminal.setIsInitializing(true);
       actions.terminal.setIsSteering(true);
@@ -269,27 +269,27 @@ describe("state", () => {
     });
   });
 
-  describe("prompt tokens", () => {
-    it("set-prompt-tokens", () => {
-      assert.equal(getState().usage.promptTokens.value, 0);
-      actions.usage.setPromptTokens(42);
-      assert.equal(getState().usage.promptTokens.value, 42);
+  describe("request input tokens", () => {
+    it("set-request-input-tokens", () => {
+      assert.equal(getState().usage.requestInputTokens.value, 0);
+      actions.usage.setRequestInputTokens(42);
+      assert.equal(getState().usage.requestInputTokens.value, 42);
     });
 
-    it("set-prompt-tokens-stale", () => {
-      assert.equal(getState().usage.promptTokens.stale, true);
-      actions.usage.setPromptTokensStale(false);
-      assert.equal(getState().usage.promptTokens.stale, false);
+    it("set-request-input-tokens-stale", () => {
+      assert.equal(getState().usage.requestInputTokens.stale, true);
+      actions.usage.setRequestInputTokensStale(false);
+      assert.equal(getState().usage.requestInputTokens.stale, false);
     });
 
-    it("set-prompt-tokens-char-length", () => {
-      assert.deepStrictEqual(getState().usage.promptTokens, {
+    it("set-request-input-tokens-char-length", () => {
+      assert.deepStrictEqual(getState().usage.requestInputTokens, {
         value: 0,
         stale: true,
         charLength: 0,
       });
-      actions.usage.setPromptTokensCharLength(123);
-      assert.deepStrictEqual(getState().usage.promptTokens, {
+      actions.usage.setRequestInputTokensCharLength(123);
+      assert.deepStrictEqual(getState().usage.requestInputTokens, {
         value: 0,
         stale: true,
         charLength: 123,
