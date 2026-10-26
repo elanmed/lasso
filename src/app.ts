@@ -1043,14 +1043,7 @@ export async function executeUserInput(rawInput: string) {
   print.doing(`$ ${userInput}`);
   try {
     const spawnResult = await tryCatchAsync(
-      (async () => {
-        const userProcess = childProcessDeps.spawn(userInput, {
-          shell: true,
-          stdio: "inherit",
-          signal: abortController.signal,
-        });
-        await once(userProcess, "exit");
-      })(),
+      runUserInput(userInput, abortController.signal),
     );
     if (!spawnResult.ok) {
       if (isAbortError(spawnResult.error)) return;
@@ -1063,6 +1056,19 @@ export async function executeUserInput(rawInput: string) {
   } finally {
     actions.abortControllers.setExecuteUserInput(null);
   }
+}
+
+async function runUserInput(userInput: string, signal: AbortSignal) {
+  const userShell = processDeps.env.get("SHELL") ?? "/bin/sh";
+  const userProcess = childProcessDeps.spawn(
+    userShell,
+    ["-i", "-c", userInput],
+    {
+      stdio: "inherit",
+      signal,
+    },
+  );
+  await once(userProcess, "exit");
 }
 
 export function shouldExecuteUserInput(rawInput: string | null): boolean {

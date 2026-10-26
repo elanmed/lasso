@@ -585,23 +585,29 @@ export function mockUserInputSpawn({
   spawnError,
 }: { autoExit?: boolean; spawnError?: Error } = {}) {
   const spawned: string[] = [];
+  const spawnArgs: string[][] = [];
   const spawnOptions: unknown[] = [];
   const children: EventEmitter[] = [];
-  mock.method(childProcessDeps, "spawn", (cmd: string, options: unknown) => {
-    spawned.push(cmd);
-    spawnOptions.push(options);
-    const child = new EventEmitter();
-    children.push(child);
-    if (autoExit) {
-      queueMicrotask(() =>
-        spawnError === undefined
-          ? child.emit("exit", 0, null)
-          : child.emit("error", spawnError),
-      );
-    }
-    return child as unknown as ChildProcess;
-  });
-  return { spawned, spawnOptions, children };
+  mock.method(
+    childProcessDeps,
+    "spawn",
+    (cmd: string, args: readonly string[], options: unknown) => {
+      spawned.push(cmd);
+      spawnArgs.push([...args]);
+      spawnOptions.push(options);
+      const child = new EventEmitter();
+      children.push(child);
+      if (autoExit) {
+        queueMicrotask(() =>
+          spawnError === undefined
+            ? child.emit("exit", 0, null)
+            : child.emit("error", spawnError),
+        );
+      }
+      return child as unknown as ChildProcess;
+    },
+  );
+  return { spawned, spawnArgs, spawnOptions, children };
 }
 
 export function mockPagerSpawn({ spawnError }: { spawnError?: Error } = {}) {

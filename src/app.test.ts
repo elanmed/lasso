@@ -59,6 +59,7 @@ import {
   mockGitLsFilesRejection,
   makeErrnoError,
   mockUserInputSpawn,
+  testProcessEnv,
   mockProcessExit,
   testConfig,
   makeFakeRlWithWrites,
@@ -3218,6 +3219,7 @@ describe("input", () => {
 
   beforeEach(() => {
     setupTestContext();
+    testProcessEnv._set("SHELL", "/bin/zsh");
     getWrites = mockStdoutWrites();
   });
 
@@ -3240,17 +3242,19 @@ describe("input", () => {
 
   describe("executeUserInput", () => {
     it("spawns the command asynchronously and clears its abort controller after exit", async () => {
-      const { spawned, spawnOptions, children } = mockUserInputSpawn({
-        autoExit: false,
-      });
+      const { spawned, spawnArgs, spawnOptions, children } = mockUserInputSpawn(
+        {
+          autoExit: false,
+        },
+      );
       const execution = executeUserInput("! echo hello");
       const controller = getState().abortControllers.executeUserInput;
       assert(controller !== null);
 
-      assert.deepStrictEqual(spawned, [" echo hello"]);
+      assert.deepStrictEqual(spawned, ["/bin/zsh"]);
+      assert.deepStrictEqual(spawnArgs, [["-i", "-c", " echo hello"]]);
       assert.deepStrictEqual(spawnOptions, [
         {
-          shell: true,
           stdio: "inherit",
           signal: controller.signal,
         },
@@ -3263,15 +3267,26 @@ describe("input", () => {
       assert.strictEqual(getState().abortControllers.executeUserInput, null);
     });
 
+    it("falls back to /bin/sh when SHELL is unset", async () => {
+      testProcessEnv._clear();
+      const { spawned, spawnArgs } = mockUserInputSpawn();
+
+      await executeUserInput("! echo hello");
+
+      assert.deepStrictEqual(spawned, ["/bin/sh"]);
+      assert.deepStrictEqual(spawnArgs, [["-i", "-c", " echo hello"]]);
+    });
+
     it("prints an error when the command fails to spawn", async () => {
-      const { spawned } = mockUserInputSpawn({
+      const { spawned, spawnArgs } = mockUserInputSpawn({
         spawnError: new Error("spawn failed"),
       });
       const getWrites = mockStdoutWrites();
 
       await executeUserInput("! echo hello");
 
-      assert.deepStrictEqual(spawned, [" echo hello"]);
+      assert.deepStrictEqual(spawned, ["/bin/zsh"]);
+      assert.deepStrictEqual(spawnArgs, [["-i", "-c", " echo hello"]]);
       assert.deepStrictEqual(getWrites(), [
         `${BLUE}$  echo hello${RESET}\n`,
         `${RED}Error while executing the user input. Error: spawn failed${RESET}\n`,
@@ -3286,7 +3301,7 @@ describe("input", () => {
           sigint = listener;
         },
       });
-      const { spawnOptions, children } = mockUserInputSpawn({
+      const { spawnArgs, spawnOptions, children } = mockUserInputSpawn({
         autoExit: false,
       });
       const execution = executeUserInput("! sleep 10");
@@ -3297,9 +3312,9 @@ describe("input", () => {
       sigint();
 
       assert.strictEqual(controller.signal.aborted, true);
+      assert.deepStrictEqual(spawnArgs, [["-i", "-c", " sleep 10"]]);
       assert.deepStrictEqual(spawnOptions, [
         {
-          shell: true,
           stdio: "inherit",
           signal: controller.signal,
         },
@@ -3392,7 +3407,7 @@ second
         const result = await resolveUserInput({ isFirstInput: false });
 
         assert.strictEqual(result, null);
-        assert.deepStrictEqual(spawned, ["echo hello"]);
+        assert.deepStrictEqual(spawned, ["/bin/zsh"]);
         assert.strictEqual(getState().abortControllers.executeUserInput, null);
       });
     });
