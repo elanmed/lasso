@@ -692,15 +692,15 @@ describe("api", () => {
       it("preserves completed step messages when interrupted", async () => {
         const err = makeAbortError();
         mock.method(aiDeps, "generateText", (opts: Record<string, unknown>) => {
-          const onStepFinish = opts["onStepFinish"] as (stepResult: {
+          const onStepEnd = opts["onStepEnd"] as (stepResult: {
             response: { messages: ModelMessage[] };
           }) => void;
-          onStepFinish({
+          onStepEnd({
             response: {
               messages: [{ role: "assistant", content: "completed step 1" }],
             },
           });
-          onStepFinish({
+          onStepEnd({
             response: {
               messages: [{ role: "assistant", content: "completed step 2" }],
             },

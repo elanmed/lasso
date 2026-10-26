@@ -507,7 +507,7 @@ export async function resolveApiCall(userInput: string) {
           );
         }
       },
-      onStepFinish: (stepResult) => {
+      onStepEnd: (stepResult) => {
         completedStepMessages.push(...stepResult.response.messages);
       },
     }),

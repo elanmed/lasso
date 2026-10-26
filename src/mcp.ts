@@ -1,4 +1,3 @@
-// eslint-disable-next-line import/no-unresolved
 import { Experimental_StdioMCPTransport as StdioClientTransport } from "@ai-sdk/mcp/mcp-stdio";
 import { tryCatchAsync, getMessageFromError } from "./utils.ts";
 import {

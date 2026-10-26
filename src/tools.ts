@@ -1,7 +1,7 @@
 import os from "node:os";
 import { extname, join } from "node:path";
 import TurndownService from "turndown";
-import { type ModelMessage as AiModelMessage, tool } from "ai";
+import { type FilePart, type ModelMessage as AiModelMessage, tool } from "ai";
 import { z } from "zod";
 import { aiDeps, childProcessDeps, fsDeps } from "./deps.ts";
 import { actions, getState } from "./state.ts";
@@ -545,15 +545,15 @@ export function createSubagentSafeTools(output: ToolOutput) {
           return { type: "text", value: output.content };
         }
 
+        const filePart = {
+          type: "file",
+          data: { type: "data", data: output.base64Data },
+          mediaType: output.mediaType,
+        } satisfies FilePart;
+
         return {
           type: "content",
-          value: [
-            {
-              type: "file",
-              data: { type: "data", data: output.base64Data },
-              mediaType: output.mediaType,
-            },
-          ],
+          value: [filePart],
         };
       },
     }),

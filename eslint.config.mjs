@@ -1,14 +1,16 @@
-import importPlugin from "eslint-plugin-import";
+import { defineConfig } from "eslint/config";
+import { importX } from "eslint-plugin-import-x";
 import eslint from "@eslint/js";
 import tseslint from "typescript-eslint";
 
-export default [
+export default defineConfig([
   eslint.configs.recommended,
-  importPlugin.flatConfigs.recommended,
-  importPlugin.flatConfigs.typescript,
+  importX.flatConfigs.recommended,
+  importX.flatConfigs.typescript,
   ...tseslint.configs.strictTypeChecked,
   ...tseslint.configs.stylisticTypeChecked,
   {
+    files: ["**/*.ts"],
     languageOptions: {
       parserOptions: {
         projectService: true,
@@ -16,8 +18,13 @@ export default [
       },
     },
     rules: {
-      "import/no-cycle": "error",
-      "import/order": "error",
+      "import-x/no-cycle": "error",
+      "import-x/order": ["error", { "newlines-between": "never" }],
+      "padding-line-between-statements": [
+        "error",
+        { blankLine: "always", prev: "import", next: "*" },
+        { blankLine: "never", prev: "import", next: "import" },
+      ],
       "@typescript-eslint/no-confusing-void-expression": "off",
       "@typescript-eslint/strict-boolean-expressions": [
         "error",
@@ -35,4 +42,4 @@ export default [
       "@typescript-eslint/no-floating-promises": "off",
     },
   },
-];
+]);

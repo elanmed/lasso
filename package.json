@@ -21,26 +21,27 @@
     "compile": "./scripts/compile.sh"
   },
   "devDependencies": {
-    "@eslint/js": "^9.39.5",
+    "@eslint/js": "^10.0.1",
     "@types/node": "^26.6.5",
     "@types/turndown": "^5.0.6",
-    "cloc": "2.6.0-cloc",
-    "eslint": "^9.39.5",
-    "eslint-plugin-import": "^2.32.0",
-    "typescript": "^5.9.3",
-    "typescript-eslint": "^8.71.1"
+    "cloc": "2.10.0-cloc",
+    "eslint": "^10.13.0",
+    "eslint-import-resolver-typescript": "^4.4.5",
+    "eslint-plugin-import-x": "^4.17.1",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.72.1"
   },
   "dependencies": {
-    "@ai-sdk/anthropic": "^4.0.78",
-    "@ai-sdk/google": "^4.0.93",
-    "@ai-sdk/mcp": "^2.0.73",
-    "@ai-sdk/openai": "^4.0.91",
-    "@ai-sdk/openai-compatible": "^3.0.67",
-    "ai": "^7.0.137",
-    "prettier": "^3.9.9",
+    "@ai-sdk/anthropic": "^4.0.89",
+    "@ai-sdk/google": "^4.0.106",
+    "@ai-sdk/mcp": "^2.0.85",
+    "@ai-sdk/openai": "^4.0.103",
+    "@ai-sdk/openai-compatible": "^3.0.79",
+    "ai": "^7.0.154",
+    "prettier": "^3.9.10",
     "turndown": "^7.2.4",
     "yaml": "^2.9.1",
-    "zod": "^4.6.5"
+    "zod": "^4.6.7"
   },
   "engines": {
     "node": ">=22"
