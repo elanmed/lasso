@@ -22,7 +22,8 @@
     "module": "preserve",
     "noEmit": true,
 
-    "lib": ["ESNext"]
+    "lib": ["ESNext"],
+    "types": ["node"]
   },
   "include": ["src", "scripts"]
 }
