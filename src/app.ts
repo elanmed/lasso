@@ -821,6 +821,8 @@ export function splitMessagesToCompact() {
     const messageTokens = strToApproxTokens(messageStr);
 
     if (tokenCount + messageTokens > availableTokensToCompact) {
+      // unlikely edge case: currChunk could be empty if the message itself
+      // is larger than `availableTokensToCompact`
       chunks.push(currChunk);
       currChunk = [];
       tokenCount = 0;
