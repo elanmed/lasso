@@ -768,9 +768,7 @@ export async function maybeCompact(userInput: string) {
 
   print.doing("Compacting" + getUnicodeChar("…"));
 
-  const unsummarizedMessages = getState().conversation.messages.slice(
-    getState().conversation.summaries.length,
-  );
+  const { unsummarizedMessages } = getState().conversation;
   let summarizedMessageCount = 0;
 
   actions.abortControllers.setApiStream(new AbortController());
@@ -834,7 +832,7 @@ export function splitMessagesToCompact() {
     targetCharLen: maxCharCountPerSummary,
     conversation: markdownFence("json", ""),
   });
-  const { messages, summaries } = getState().conversation;
+  const { unsummarizedMessages } = getState().conversation;
   const availableTokensToCompact = Math.max(
     0,
     getDefaultedContextWindow() -
@@ -846,7 +844,7 @@ export function splitMessagesToCompact() {
   let currChunk: string[] = [];
   let tokenCount = 0;
 
-  for (const message of messages.slice(summaries.length)) {
+  for (const message of unsummarizedMessages) {
     const messageStr = JSON.stringify(message, removeMediaReplacer);
     const messageTokens = strToApproxTokens(messageStr);
 

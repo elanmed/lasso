@@ -219,6 +219,29 @@ describe("state", () => {
       ]);
     });
 
+    it("keeps messages separate from summarized messages", () => {
+      const summaryMessage = { role: "assistant", content: "summary" };
+      const userMessage = { role: "user", content: "hello" };
+      actions.conversation.setMessages([summaryMessage, userMessage]);
+      actions.conversation.setSummaries([
+        { compacted: "summary", compactedAt: 0, tokens: 1 },
+      ]);
+
+      assert.deepStrictEqual(getState().conversation.unsummarizedMessages, [
+        userMessage,
+      ]);
+      assert.deepStrictEqual(getState().conversation.messages, [
+        summaryMessage,
+        userMessage,
+      ]);
+
+      actions.conversation.setSummaries([]);
+      assert.deepStrictEqual(getState().conversation.unsummarizedMessages, [
+        summaryMessage,
+        userMessage,
+      ]);
+    });
+
     it("set-transcript", () => {
       assert.deepStrictEqual(getState().conversation.transcript, []);
       actions.conversation.setTranscript([

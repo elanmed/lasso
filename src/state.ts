@@ -104,6 +104,7 @@ interface TerminalState {
 
 interface ConversationState {
   messages: ModelMessage[];
+  unsummarizedMessages: ModelMessage[];
   summaries: ModelSummary[];
   transcript: TranscriptEntry[];
   toolEditDiffs: ToolEditDiff[];
@@ -142,6 +143,7 @@ const createInitialState = (): State => ({
   },
   conversation: {
     messages: [],
+    unsummarizedMessages: [],
     summaries: [],
     transcript: [],
     toolEditDiffs: [],
@@ -265,6 +267,8 @@ export const actions = {
     setSummaries(summaries: ModelSummary[]) {
       const before = state.conversation.summaries;
       state.conversation.summaries = summaries;
+      state.conversation.unsummarizedMessages =
+        state.conversation.messages.slice(summaries.length);
       logStateChange(
         "set-conversation-summaries",
         stringify(before),
@@ -274,6 +278,9 @@ export const actions = {
     setMessages(messages: ModelMessage[]) {
       const before = state.conversation.messages;
       state.conversation.messages = messages;
+      state.conversation.unsummarizedMessages = messages.slice(
+        state.conversation.summaries.length,
+      );
       logStateChange(
         "set-conversation-messages",
         String(before.length),
