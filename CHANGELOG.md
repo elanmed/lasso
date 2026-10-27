@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.16.0 - 2026-03-22
+
+- Chunk conversation compaction to fit the token budget, updating state after each chunk
+- Run `!`-prefixed user input in an interactive login shell
+- Improve token estimates to reference the real char-to-token ratios when available and not stale
+
 ## v0.15.0 - 2026-10-17
 
 - Execute user input as bash when prefixed with a `!`
