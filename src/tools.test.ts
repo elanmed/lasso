@@ -36,6 +36,7 @@ import {
   mockStdoutWrites,
   makeGenerateTextResult,
   mockGenerateText,
+  mockGenerateTextResults,
   makeMcpTool,
   makeFakeMcpClient,
   setMcpClients,
@@ -1110,12 +1111,10 @@ describe("tools", () => {
     describe("runs subagents", () => {
       it("runs read-only subagents in parallel and returns structured results", async () => {
         const calls: Record<string, unknown>[] = [];
-        mockGenerateText((options: Record<string, unknown>) => {
-          calls.push(options);
-          return makeGenerateTextResult({
-            text: `result-${String(calls.length)}`,
-          });
-        });
+        mockGenerateTextResults(
+          [{ text: "result-1" }, { text: "result-2" }],
+          (options) => calls.push(options),
+        );
 
         const result = await createSubagentTool({
           tasks: [

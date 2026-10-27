@@ -467,6 +467,17 @@ export function mockGenerateTextResults(
   );
 }
 
+export function mockReadlineQuestionResults(results: (string | Error)[]) {
+  let resultIdx = 0;
+  return mock.method(getTestRl(), "question", () => {
+    const result = results[resultIdx];
+    resultIdx = resultIdx + 1;
+    assert(result !== undefined);
+    if (result instanceof Error) return Promise.reject(result);
+    return Promise.resolve(result);
+  });
+}
+
 export function getCapturedMessages(
   options: Record<string, unknown> | undefined,
 ) {

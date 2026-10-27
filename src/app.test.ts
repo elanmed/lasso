@@ -54,6 +54,7 @@ import {
   makeMockUsage,
   makeAbortError,
   mockGenerateTextResults,
+  mockReadlineQuestionResults,
   PURPLE,
   RED,
   mockSetInterval,
@@ -3601,40 +3602,35 @@ second
     describe("exiting", () => {
       it("exits on abort during exit confirmation", async () => {
         mockProcessExit();
-        const questionMock = mock.method(getTestRl(), "question", () => {
-          const err = makeAbortError("This operation was aborted");
-          return Promise.reject(err);
-        });
+        mockReadlineQuestionResults([
+          makeAbortError("This operation was aborted"),
+          makeAbortError("This operation was aborted"),
+        ]);
         await assert.rejects(
           resolveUserInput({ isFirstInput: false }),
           /process.exit called/,
         );
-        assert.strictEqual(questionMock.mock.callCount(), 2);
       });
 
       it("returns null when user declines exit confirmation", async () => {
-        const err = makeAbortError("This operation was aborted");
-        const questionMock = mock.method(getTestRl(), "question", () =>
-          Promise.resolve("n"),
-        );
-        questionMock.mock.mockImplementationOnce(() => Promise.reject(err));
+        mockReadlineQuestionResults([
+          makeAbortError("This operation was aborted"),
+          "n",
+        ]);
         const result = await resolveUserInput({ isFirstInput: false });
         assert.strictEqual(result, null);
-        assert.strictEqual(questionMock.mock.callCount(), 2);
       });
 
       it("exits when user confirms exit confirmation", async () => {
         mockProcessExit();
-        const err = makeAbortError("This operation was aborted");
-        const questionMock = mock.method(getTestRl(), "question", () =>
-          Promise.resolve("yes"),
-        );
-        questionMock.mock.mockImplementationOnce(() => Promise.reject(err));
+        mockReadlineQuestionResults([
+          makeAbortError("This operation was aborted"),
+          "yes",
+        ]);
         await assert.rejects(
           resolveUserInput({ isFirstInput: false }),
           /process.exit called/,
         );
-        assert.strictEqual(questionMock.mock.callCount(), 2);
       });
 
       it("prints session start date when exiting", async () => {
@@ -3648,11 +3644,10 @@ second
         assert.notStrictEqual(getState().terminal.loadingStateTimeout, null);
         actions.terminal.setRl(makeFakeRl());
         actions.terminal.resetStdout();
-        const err = makeAbortError("This operation was aborted");
-        const questionMock = mock.method(getTestRl(), "question", () =>
-          Promise.resolve("yes"),
-        );
-        questionMock.mock.mockImplementationOnce(() => Promise.reject(err));
+        mockReadlineQuestionResults([
+          makeAbortError("This operation was aborted"),
+          "yes",
+        ]);
         await assert.rejects(
           resolveUserInput({ isFirstInput: false }),
           /process.exit called/,
@@ -3674,21 +3669,16 @@ second
         mockProcessExit();
         actions.terminal.setRl(makeFakeRl());
         actions.terminal.resetStdout();
-        const questionMock = mock.method(getTestRl(), "question", () =>
-          Promise.reject(
-            makeErrnoError("ERR_USE_AFTER_CLOSE", "readline was closed"),
-          ),
-        );
-        questionMock.mock.mockImplementationOnce(() =>
-          Promise.reject(makeAbortError("Aborted with Ctrl+D")),
-        );
+        mockReadlineQuestionResults([
+          makeAbortError("Aborted with Ctrl+D"),
+          makeErrnoError("ERR_USE_AFTER_CLOSE", "readline was closed"),
+        ]);
 
         await assert.rejects(
           resolveUserInput({ isFirstInput: false }),
           /process.exit called/,
         );
 
-        assert.strictEqual(questionMock.mock.callCount(), 2);
         assert.deepStrictEqual(getWrites(), [
           "\n",
           `${YELLOW}━━ ${BOLD}Input${BOLD_RESET} ━━${RESET}\n`,
@@ -3704,18 +3694,15 @@ second
         mockProcessExit();
         actions.terminal.setRl(makeFakeRl());
         actions.terminal.resetStdout();
-        const questionMock = mock.method(getTestRl(), "question", () =>
-          Promise.reject(
-            makeErrnoError("ERR_USE_AFTER_CLOSE", "readline was closed"),
-          ),
-        );
+        mockReadlineQuestionResults([
+          makeErrnoError("ERR_USE_AFTER_CLOSE", "readline was closed"),
+        ]);
 
         await assert.rejects(
           resolveUserInput({ isFirstInput: false }),
           /process.exit called/,
         );
 
-        assert.strictEqual(questionMock.mock.callCount(), 1);
         assert.deepStrictEqual(getWrites(), [
           "\n",
           `${YELLOW}━━ ${BOLD}Input${BOLD_RESET} ━━${RESET}\n`,
