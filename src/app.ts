@@ -34,7 +34,7 @@ import {
   getConversationSummaryPrompt,
   getMergeSummariesPrompt,
 } from "./prompts.ts";
-import { type ModelSummary } from "./schemas.ts";
+import { type ModelMessage, type ModelSummary } from "./schemas.ts";
 import {
   getUnicodeChar,
   print,
@@ -686,20 +686,12 @@ export async function getMergedSummaries() {
   return nextSummaries;
 }
 
-export async function getConversationSummary() {
+export async function getConversationSummary(messageChunk: string[]) {
   // messages[0..summaries.length) are re-appended summaries, one per entry,
   // so everything from summaries.length on is not yet summarized
   const compactPrompt = getConversationSummaryPrompt({
     targetCharLen: maxCharCountPerSummary,
-    conversation: markdownFence(
-      "json",
-      JSON.stringify(
-        getState().conversation.messages.slice(
-          getState().conversation.summaries.length,
-        ),
-        removeMediaReplacer,
-      ),
-    ),
+    conversation: markdownFence("json", JSON.stringify(messageChunk)),
   });
 
   // messages[0..summaries.length) are re-appended summaries, one per entry,
@@ -787,19 +779,10 @@ export async function maybeCompact(userInput: string) {
 
   print.doing("Compacting" + getUnicodeChar("…"));
 
-  actions.abortControllers.setApiStream(new AbortController());
-  // If summarizing the message params failed, don't reset the message params
-  const conversationSummary = await getConversationSummary();
-  if (conversationSummary === null) {
-    actions.abortControllers.setApiStream(null);
-    return;
+  const chunks = splitMessagesToCompact();
+  for (const chunk of chunks) {
+    await compactMessages(chunk);
   }
-
-  // If merging the existing summaries failed, use existing summaries
-  const mergedSummaries = await getMergedSummaries();
-  actions.abortControllers.setApiStream(null);
-
-  await applyCompactedConversation([...mergedSummaries, conversationSummary]);
 
   const summaryTokens = getState()
     .conversation.summaries.map(({ tokens }) => tokens)
@@ -816,6 +799,54 @@ export async function maybeCompact(userInput: string) {
     summaryCharLengths + getRequestInputOverheadStr().length,
   );
   actions.usage.setRequestInputTokensStale(false);
+}
+
+export function splitMessagesToCompact() {
+  const emptyCompactPrompt = getConversationSummaryPrompt({
+    targetCharLen: maxCharCountPerSummary,
+    conversation: markdownFence("json", ""),
+  });
+  const { model, contextWindowPerModel } = getState().config;
+  const { messages, summaries } = getState().conversation;
+  const availableTokensToCompact =
+    (contextWindowPerModel[model] ?? defaultContextWindow) -
+    strToApproxTokens(emptyCompactPrompt);
+
+  const chunks: string[][] = [];
+  let chunkIdx = 0;
+  let tokenCount = 0;
+  for (const message of messages.slice(summaries.length)) {
+    const messageStr = JSON.stringify(message, removeMediaReplacer);
+    const messageTokens = strToApproxTokens(messageStr);
+    if (tokenCount + messageTokens <= availableTokensToCompact) {
+      let chunk = chunks[chunkIdx];
+      if (!Array.isArray(chunks[chunkIdx])) {
+        chunk = [] as string[];
+      }
+      assertAtBuildtime(chunk !== undefined);
+      chunk.push(messageStr);
+    } else {
+      chunkIdx++;
+      tokenCount = 0;
+    }
+  }
+  return chunks;
+}
+
+export async function compactMessages(messageChunk: string[]) {
+  actions.abortControllers.setApiStream(new AbortController());
+  const conversationSummary = await getConversationSummary(messageChunk);
+  if (conversationSummary === null) {
+    // If summarizing the message params failed, don't reset the message params
+    actions.abortControllers.setApiStream(null);
+    return;
+  }
+
+  // If merging the existing summaries failed, use existing summaries
+  const mergedSummaries = await getMergedSummaries();
+  actions.abortControllers.setApiStream(null);
+
+  await applyCompactedConversation([...mergedSummaries, conversationSummary]);
 }
 
 export async function resolveInterruptWithEditor() {

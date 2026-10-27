@@ -157,10 +157,6 @@ const sharedLis = `- Summarize into exactly two sections: "## Key facts" and "##
 - When the maximum length is tight, cut from "## Everything else" and never from "## Key facts."
 - Output a plain-text prose summary, not JSON or a code fence.`;
 
-const mergeLis = `- Build "## Key facts" from the union of the key facts in both summaries.
-- Keep every existing key fact: you may deduplicate or reword only when needed, but never change their meaning and never delete one.
-- If a key fact is superseded by a later one, delete the outdated one.`;
-
 const getMaxLenLi = (targetCharLen: number) =>
   `- Output a maximum of ${String(targetCharLen)} characters.`;
 
@@ -190,7 +186,9 @@ export const getMergeSummariesPrompt = ({
   return `## [lasso] Compact summaries
 
 - Merge the following two summaries into one.
-${mergeLis}
+- Build "## Key facts" from the union of the key facts in both summaries.
+- Keep every existing key fact: you may deduplicate or reword only when needed, but never change their meaning and never delete one.
+- If a key fact is superseded by a later one, delete the outdated one.
 ${sharedLis}
 ${getMaxLenLi(targetCharLen)}
 
