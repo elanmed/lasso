@@ -34,7 +34,7 @@ import {
   getConversationSummaryPrompt,
   getMergeSummariesPrompt,
 } from "./prompts.ts";
-import { type ModelMessage, type ModelSummary } from "./schemas.ts";
+import { type ModelSummary } from "./schemas.ts";
 import {
   getUnicodeChar,
   print,
@@ -581,12 +581,11 @@ export async function resolveApiCall(userInput: string) {
   return text;
 }
 
-export async function getMergedSummaries() {
-  const { summaries } = getState().conversation;
+export async function getMergedSummaries(summaries: ModelSummary[]) {
   const maxNumberSummaries = getMaxNumberSummaries();
 
   if (summaries.length < maxNumberSummaries) {
-    return getState().conversation.summaries;
+    return summaries;
   }
 
   let smallestSecondSummaryIdx = -1;
@@ -660,11 +659,11 @@ export async function getMergedSummaries() {
       if (getState().terminal.editorInputValue !== null) {
         await resolveInterruptWithEditor();
       }
-      return getState().conversation.summaries;
+      return summaries;
     }
 
     print.error(getMessageFromError(generateTextResult.error));
-    return getState().conversation.summaries;
+    return summaries;
   }
 
   const { usage, output, text } = generateTextResult.value;
@@ -691,7 +690,7 @@ export async function getConversationSummary(messageChunk: string[]) {
   // so everything from summaries.length on is not yet summarized
   const compactPrompt = getConversationSummaryPrompt({
     targetCharLen: maxCharCountPerSummary,
-    conversation: markdownFence("json", JSON.stringify(messageChunk)),
+    conversation: markdownFence("json", messageChunk.join("\n")),
   });
 
   // messages[0..summaries.length) are re-appended summaries, one per entry,
@@ -780,25 +779,36 @@ export async function maybeCompact(userInput: string) {
   print.doing("Compacting" + getUnicodeChar("…"));
 
   const chunks = splitMessagesToCompact();
-  for (const chunk of chunks) {
-    await compactMessages(chunk);
+  if (chunks.length === 0) return;
+
+  actions.abortControllers.setApiStream(new AbortController());
+  try {
+    let mergedSummaries = getState().conversation.summaries;
+    for (const chunk of chunks) {
+      const summary = await compactMessages(chunk);
+      if (summary === null) return;
+      mergedSummaries = await getMergedSummaries([...mergedSummaries, summary]);
+    }
+    await applyCompactedConversation(mergedSummaries);
+
+    const summaryTokens = getState()
+      .conversation.summaries.map(({ tokens }) => tokens)
+      .reduce((accum, curr) => accum + curr, 0);
+
+    const summaryCharLengths = getState()
+      .conversation.summaries.map(({ compacted }) => compacted)
+      .reduce((accum, curr) => accum + curr.length, 0);
+
+    actions.usage.setRequestInputTokens(
+      summaryTokens + requestInputOverheadTokensApprox,
+    );
+    actions.usage.setRequestInputTokensCharLength(
+      summaryCharLengths + getRequestInputOverheadStr().length,
+    );
+    actions.usage.setRequestInputTokensStale(false);
+  } finally {
+    actions.abortControllers.setApiStream(null);
   }
-
-  const summaryTokens = getState()
-    .conversation.summaries.map(({ tokens }) => tokens)
-    .reduce((accum, curr) => accum + curr, 0);
-
-  const summaryCharLengths = getState()
-    .conversation.summaries.map(({ compacted }) => compacted)
-    .reduce((accum, curr) => accum + curr.length, 0);
-
-  actions.usage.setRequestInputTokens(
-    summaryTokens + requestInputOverheadTokensApprox,
-  );
-  actions.usage.setRequestInputTokensCharLength(
-    summaryCharLengths + getRequestInputOverheadStr().length,
-  );
-  actions.usage.setRequestInputTokensStale(false);
 }
 
 export function splitMessagesToCompact() {
@@ -820,9 +830,10 @@ export function splitMessagesToCompact() {
     const messageStr = JSON.stringify(message, removeMediaReplacer);
     const messageTokens = strToApproxTokens(messageStr);
 
-    if (tokenCount + messageTokens > availableTokensToCompact) {
-      // unlikely edge case: currChunk could be empty if the message itself
-      // is larger than `availableTokensToCompact`
+    if (
+      tokenCount + messageTokens > availableTokensToCompact &&
+      currChunk.length > 0
+    ) {
       chunks.push(currChunk);
       currChunk = [];
       tokenCount = 0;
@@ -840,19 +851,7 @@ export function splitMessagesToCompact() {
 }
 
 export async function compactMessages(messageChunk: string[]) {
-  actions.abortControllers.setApiStream(new AbortController());
-  const conversationSummary = await getConversationSummary(messageChunk);
-  if (conversationSummary === null) {
-    // If summarizing the message params failed, don't reset the message params
-    actions.abortControllers.setApiStream(null);
-    return;
-  }
-
-  // If merging the existing summaries failed, use existing summaries
-  const mergedSummaries = await getMergedSummaries();
-  actions.abortControllers.setApiStream(null);
-
-  await applyCompactedConversation([...mergedSummaries, conversationSummary]);
+  return getConversationSummary(messageChunk);
 }
 
 export async function resolveInterruptWithEditor() {

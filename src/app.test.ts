@@ -10,11 +10,13 @@ import {
 import { startLoadingState } from "./printing.ts";
 import { initSigInt } from "./commands.ts";
 import { actions, getState, type MCPToolSet } from "./state.ts";
-import { safeStringify, parseFrontMatter } from "./utils.ts";
+import { markdownFence, safeStringify, parseFrontMatter } from "./utils.ts";
 import { defaultConfig } from "./schemas.ts";
+import { getMergeSummariesPrompt } from "./prompts.ts";
 import { getGlobalContextDir, getGlobalConfigPath } from "./paths.ts";
 import {
   maybeCompact,
+  splitMessagesToCompact,
   getConversationSummary,
   getMergedSummaries,
   resolveApiCall,
@@ -904,6 +906,67 @@ describe("api", () => {
     });
 
     describe("compacts the conversation", () => {
+      it("summarizes and merges all chunks before replacing the conversation", async () => {
+        actions.config.setContextWindowPerModel({
+          "claude-sonnet-4-20250514": 40_000,
+        });
+        const messages = [
+          { role: "user", content: "first: " + "a".repeat(60_000) },
+          { role: "assistant", content: "second: " + "b".repeat(60_000) },
+        ];
+        actions.conversation.setMessages(messages);
+        actions.usage.setRequestInputTokens(39_000);
+        actions.usage.setRequestInputTokensStale(false);
+        const calls: Record<string, unknown>[] = [];
+        mockGenerateTextResults(
+          [
+            {
+              output: { compacted: "chunk summary one" },
+              usage: makeMockUsage({ outputTokens: 11 }),
+            },
+            {
+              output: { compacted: "chunk summary two" },
+              usage: makeMockUsage({ outputTokens: 12 }),
+            },
+            {
+              output: { compacted: "merged chunk summary" },
+              usage: makeMockUsage({ outputTokens: 13 }),
+            },
+          ],
+          (opts) => {
+            calls.push(opts);
+            assert.deepStrictEqual(getState().conversation.messages, messages);
+          },
+        );
+
+        await maybeCompact("");
+
+        assert.deepStrictEqual(getState().conversation.summaries, [
+          {
+            compacted: "merged chunk summary",
+            compactedAt: 0,
+            tokens: 13,
+          },
+        ]);
+        assert.deepStrictEqual(getState().conversation.messages, [
+          { role: "assistant", content: "merged chunk summary" },
+        ]);
+        const mergeCall = calls[2];
+        assert(mergeCall !== undefined);
+        assert.deepStrictEqual(getCapturedMessages(mergeCall), [
+          {
+            role: "user",
+            content: getMergeSummariesPrompt({
+              targetCharLen: 15_000,
+              summaries: markdownFence(
+                "json",
+                '["chunk summary one","chunk summary two"]',
+              ),
+            }),
+          },
+        ]);
+      });
+
       it("includes mcp tools in the tokens after compaction", async () => {
         actions.mcp.setClientsAndTools({}, { mcp_tool: makeMcpTool() });
         actions.conversation.setMessages([{ role: "user", content: "hi" }]);
@@ -937,37 +1000,22 @@ describe("api", () => {
       });
 
       it("compacts after an API response pushes tokens over the threshold", async () => {
-        const calls: Record<string, unknown>[] = [];
-        let callCount = 0;
-        mock.method(aiDeps, "generateText", (opts: Record<string, unknown>) => {
-          calls.push(opts);
-          const result = (() => {
-            if (callCount === 0) {
-              return makeGenerateTextResult({
-                text: "answer text",
-                usage: makeMockUsage({
-                  inputTokens: 96_000,
-                  outputTokens: 1_000,
-                }),
-                responseMessages: [
-                  { role: "assistant", content: "answer text" },
-                ],
-              });
-            }
-            return makeGenerateTextResult({
-              output: { compacted: "compacted summary" },
-              usage: makeMockUsage(),
-            });
-          })();
-          callCount = callCount + 1;
-          return Promise.resolve(result);
-        });
+        mockGenerateTextResults([
+          {
+            text: "answer text",
+            usage: makeMockUsage({ inputTokens: 96_000, outputTokens: 1_000 }),
+            responseMessages: [{ role: "assistant", content: "answer text" }],
+          },
+          {
+            output: { compacted: "compacted summary" },
+            usage: makeMockUsage(),
+          },
+        ]);
 
         const result = await resolveApiCall("hi");
         assert.strictEqual(result, "answer text");
         await maybeCompact("");
 
-        assert.strictEqual(calls.length, 2);
         assert.deepStrictEqual(getState().conversation.summaries, [
           { compacted: "compacted summary", compactedAt: 0, tokens: 25_000 },
         ]);
@@ -1008,7 +1056,7 @@ describe("api", () => {
 - Output a maximum of 15000 characters.
 
 \`\`\`json
-[{"role":"user","content":"hi"}]
+{"role":"user","content":"hi"}
 \`\`\``,
         );
         assert.deepStrictEqual(getState().conversation.summaries, [
@@ -1095,29 +1143,20 @@ describe("api", () => {
         actions.usage.setRequestInputTokens(96_000);
         actions.usage.setRequestInputTokensStale(false);
         const calls: ModelMessage[][] = [];
-        let callCount = 0;
-        mock.method(
-          aiDeps,
-          "generateText",
-          async (opts: Record<string, unknown>) => {
+        mockGenerateTextResults(
+          [
+            {
+              output: { compacted: "compacted summary" },
+              usage: makeMockUsage({ outputTokens: 25 }),
+            },
+            {
+              text: "answer text",
+              usage: makeMockUsage({ outputTokens: 25 }),
+              responseMessages: [{ role: "assistant", content: "answer text" }],
+            },
+          ],
+          (opts) => {
             calls.push(opts["messages"] as ModelMessage[]);
-            const overrides = (() => {
-              if (callCount === 0) {
-                return {
-                  output: { compacted: "compacted summary" },
-                  usage: makeMockUsage({ outputTokens: 25 }),
-                };
-              }
-              return {
-                text: "answer text",
-                usage: makeMockUsage({ outputTokens: 25 }),
-                responseMessages: [
-                  { role: "assistant", content: "answer text" },
-                ],
-              };
-            })();
-            callCount = callCount + 1;
-            return Promise.resolve(makeGenerateTextResult(overrides));
           },
         );
         await maybeCompact("new input");
@@ -1151,11 +1190,10 @@ describe("api", () => {
 - Output a maximum of 15000 characters.
 
 \`\`\`json
-[{"role":"user","content":"old"}]
+{"role":"user","content":"old"}
 \`\`\``,
           },
         ]);
-        assert.strictEqual(calls.length, 2);
         const apiCall = calls[1];
         assert(apiCall !== undefined);
         assert.deepStrictEqual(apiCall, [
@@ -1166,6 +1204,35 @@ describe("api", () => {
     });
 
     describe("keeps messages on failure", () => {
+      it("keeps all messages when a chunk summary fails", async () => {
+        actions.config.setContextWindowPerModel({
+          "claude-sonnet-4-20250514": 40_000,
+        });
+        const messages = [
+          { role: "user", content: "a".repeat(60_000) },
+          { role: "user", content: "b".repeat(60_000) },
+          { role: "user", content: "c".repeat(60_000) },
+        ];
+        actions.conversation.setMessages(messages);
+        actions.usage.setRequestInputTokens(39_000);
+        actions.usage.setRequestInputTokensStale(false);
+        mockGenerateTextResults([
+          {
+            output: { compacted: "first summary" },
+            usage: makeMockUsage(),
+          },
+          new Error("network error"),
+        ]);
+        await maybeCompact("");
+        assert.deepStrictEqual(getState().conversation.summaries, []);
+        assert.deepStrictEqual(getState().conversation.messages, messages);
+        assert.deepStrictEqual(getState().usage.requestInputTokens, {
+          value: 39_000,
+          stale: false,
+          charLength: 0,
+        });
+      });
+
       it("keeps messages when generateText fails", async () => {
         actions.conversation.setMessages([{ role: "user", content: "hi" }]);
         actions.usage.setRequestInputTokens(96_000);
@@ -1233,8 +1300,15 @@ describe("api", () => {
             ...getState().conversation.summaries,
             { compacted: `summary ${String(i)}`, compactedAt: i, tokens: 100 },
           ]);
+          actions.conversation.setMessages([
+            ...getState().conversation.messages,
+            { role: "assistant", content: `summary ${String(i)}` },
+          ]);
         }
-        actions.conversation.setMessages([{ role: "user", content: "hi" }]);
+        actions.conversation.setMessages([
+          ...getState().conversation.messages,
+          { role: "user", content: "hi" },
+        ]);
         actions.usage.setRequestInputTokens(96_000);
         actions.usage.setRequestInputTokensStale(false);
         const calls: boolean[] = [];
@@ -1291,7 +1365,7 @@ describe("api", () => {
         ]);
         actions.usage.setRequestInputTokens(96_000);
         actions.usage.setRequestInputTokensStale(false);
-        const generate = mockGenerateTextResults([
+        mockGenerateTextResults([
           {
             output: { compacted: "compacted summary" },
             usage: makeMockUsage({ outputTokens: 20 }),
@@ -1302,7 +1376,6 @@ describe("api", () => {
           },
         ]);
         await maybeCompact("hi");
-        assert.strictEqual(generate.callCount(), 2);
         assert.deepStrictEqual(getState().conversation.summaries, [
           { compacted: "merged summary", compactedAt: 0, tokens: 15 },
           { compacted: "summary 3", compactedAt: 3, tokens: 100 },
@@ -1351,7 +1424,7 @@ describe("api", () => {
         ]);
         actions.usage.setRequestInputTokens(96_000);
         actions.usage.setRequestInputTokensStale(false);
-        const generate = mockGenerateTextResults([
+        mockGenerateTextResults([
           {
             output: { compacted: "compacted summary" },
             usage: makeMockUsage({ outputTokens: 20 }),
@@ -1359,7 +1432,6 @@ describe("api", () => {
           new Error("network error"),
         ]);
         await maybeCompact("hi");
-        assert.strictEqual(generate.callCount(), 2);
         assert.deepStrictEqual(getState().conversation.summaries, [
           { compacted: "summary 1", compactedAt: 1, tokens: 100 },
           { compacted: "summary 2", compactedAt: 2, tokens: 100 },
@@ -1395,6 +1467,68 @@ describe("api", () => {
     });
   });
 
+  describe("splitMessagesToCompact", () => {
+    beforeEach(() => {
+      actions.config.setContextWindowPerModel({
+        "claude-sonnet-4-20250514": 40_000,
+      });
+    });
+
+    it("excludes prior summaries and groups messages that fit together", () => {
+      const priorSummary = { role: "assistant", content: "prior summary" };
+      const messages = [
+        { role: "user", content: "first message" },
+        { role: "assistant", content: "second message" },
+      ];
+      actions.conversation.setSummaries([
+        { compacted: "prior summary", compactedAt: 1, tokens: 10 },
+      ]);
+      actions.conversation.setMessages([priorSummary, ...messages]);
+
+      assert.deepStrictEqual(splitMessagesToCompact(), [
+        [
+          '{"role":"user","content":"first message"}',
+          '{"role":"assistant","content":"second message"}',
+        ],
+      ]);
+    });
+
+    it("splits at the token budget without dropping or reordering messages", () => {
+      const priorSummary = { role: "assistant", content: "prior summary" };
+      const messages = [
+        { role: "user", content: "first: " + "a".repeat(60_000) },
+        { role: "assistant", content: "second: " + "b".repeat(60_000) },
+        { role: "user", content: "third: " + "c".repeat(60_000) },
+      ];
+      actions.conversation.setSummaries([
+        { compacted: "prior summary", compactedAt: 1, tokens: 10 },
+      ]);
+      actions.conversation.setMessages([priorSummary, ...messages]);
+
+      const chunks = splitMessagesToCompact();
+      assert.deepStrictEqual(
+        chunks.map((chunk) => chunk.length),
+        [1, 1, 1],
+      );
+      assert.deepStrictEqual(
+        chunks.flat(),
+        messages.map((message) => JSON.stringify(message)),
+      );
+    });
+
+    it("keeps an oversized first message in one nonempty chunk", () => {
+      actions.conversation.setMessages([
+        { role: "user", content: "a".repeat(300_000) },
+      ]);
+
+      const chunks = splitMessagesToCompact();
+      assert.deepStrictEqual(
+        chunks.map((chunk) => chunk.length),
+        [1],
+      );
+    });
+  });
+
   describe("getConversationSummary", () => {
     beforeEach(() => {
       actions.abortControllers.setApiStream(new AbortController());
@@ -1405,6 +1539,10 @@ describe("api", () => {
     });
 
     const usage = makeMockUsage();
+    const messageChunk = [
+      '{"role":"user","content":"not yet summarized"}',
+      '{"role":"assistant","content":"another message"}',
+    ];
 
     const seedConversation = () => {
       actions.conversation.setSummaries([
@@ -1461,7 +1599,9 @@ describe("api", () => {
             }),
           );
         });
-        await getConversationSummary();
+        const imageMessageChunk = splitMessagesToCompact()[0];
+        assert(imageMessageChunk !== undefined);
+        await getConversationSummary(imageMessageChunk);
         const capturedMessage = getCapturedMessages(capturedOpts)[0];
         assert(capturedMessage !== undefined);
         assert.doesNotMatch(JSON.stringify(capturedMessage), /IMAGEBYTES/);
@@ -1480,7 +1620,7 @@ describe("api", () => {
           );
         });
         const getMessages = () => getCapturedMessages(capturedOpts);
-        await getConversationSummary();
+        await getConversationSummary(messageChunk);
         assert.strictEqual(getMessages().length, 1);
         assert.deepStrictEqual(capturedOpts?.["timeout"], {
           tools: {
@@ -1508,7 +1648,8 @@ describe("api", () => {
 - Output a maximum of 15000 characters.
 
 \`\`\`json
-[{"role":"user","content":"not yet summarized"}]
+{"role":"user","content":"not yet summarized"}
+{"role":"assistant","content":"another message"}
 \`\`\``,
         );
       });
@@ -1523,7 +1664,7 @@ describe("api", () => {
             }),
           ),
         );
-        const result = await getConversationSummary();
+        const result = await getConversationSummary(messageChunk);
         assert.deepStrictEqual(result, {
           compacted: "compacted summary",
           compactedAt: 42,
@@ -1554,7 +1695,7 @@ describe("api", () => {
             }),
           );
         });
-        await getConversationSummary();
+        await getConversationSummary(messageChunk);
         assert(capturedOpts !== undefined);
         assert.strictEqual("output" in capturedOpts, true);
       });
@@ -1569,7 +1710,7 @@ describe("api", () => {
             makeGenerateTextResult({ text: "plain summary", usage }),
           );
         });
-        const result = await getConversationSummary();
+        const result = await getConversationSummary(messageChunk);
         assert(capturedOpts !== undefined);
         assert.strictEqual("output" in capturedOpts, false);
         assert.deepStrictEqual(result, {
@@ -1589,7 +1730,7 @@ describe("api", () => {
             }),
           ),
         );
-        const result = await getConversationSummary();
+        const result = await getConversationSummary(messageChunk);
         assert.deepStrictEqual(result, {
           compacted: "four chars ≈ one token",
           compactedAt: 42,
@@ -1604,7 +1745,7 @@ describe("api", () => {
         mock.method(aiDeps, "generateText", () =>
           Promise.reject(new Error("network error")),
         );
-        const result = await getConversationSummary();
+        const result = await getConversationSummary(messageChunk);
         assert.strictEqual(result, null);
         assert.deepStrictEqual(getState().conversation.summaries, [
           { compacted: "prior summary", compactedAt: 1, tokens: 10 },
@@ -1625,7 +1766,7 @@ describe("api", () => {
         seedConversation();
         const err = makeAbortError();
         mock.method(aiDeps, "generateText", () => Promise.reject(err));
-        const result = await getConversationSummary();
+        const result = await getConversationSummary(messageChunk);
         assert.strictEqual(result, null);
         assert.notStrictEqual(getState().abortControllers.apiStream, null);
         assert.deepStrictEqual(getState().conversation.summaries, [
@@ -1650,7 +1791,7 @@ describe("api", () => {
         const getWrites = mockStdoutWrites();
         const err = makeAbortError();
         mock.method(aiDeps, "generateText", () => Promise.reject(err));
-        const result = await getConversationSummary();
+        const result = await getConversationSummary(messageChunk);
         assert.strictEqual(result, null);
         assert.strictEqual(
           getState().terminal.editorInputValue,
@@ -1700,7 +1841,9 @@ describe("api", () => {
           called = true;
           return Promise.resolve(makeGenerateTextResult());
         });
-        const result = await getMergedSummaries();
+        const result = await getMergedSummaries(
+          getState().conversation.summaries,
+        );
         assert.strictEqual(called, false);
         assert.deepStrictEqual(result, [
           { compacted: "summary", compactedAt: 1, tokens: 100 },
@@ -1720,7 +1863,9 @@ describe("api", () => {
           );
         });
         const getMessages = () => getCapturedMessages(capturedOpts);
-        const result = await getMergedSummaries();
+        const result = await getMergedSummaries(
+          getState().conversation.summaries,
+        );
         const capturedMessage = getMessages()[0];
         assert(capturedMessage !== undefined);
         assert.strictEqual(
@@ -1794,7 +1939,9 @@ describe("api", () => {
             }),
           ),
         );
-        const result = await getMergedSummaries();
+        const result = await getMergedSummaries(
+          getState().conversation.summaries,
+        );
         assert.deepStrictEqual(result, [
           { compacted: "merged summary", compactedAt: 42, tokens: 25_000 },
         ]);
@@ -1810,7 +1957,7 @@ describe("api", () => {
             }),
           ),
         );
-        await getMergedSummaries();
+        await getMergedSummaries(getState().conversation.summaries);
         assert.deepStrictEqual(getState().conversation.summaries, [
           { compacted: "summary 1", compactedAt: 1, tokens: 100 },
           { compacted: "summary 2", compactedAt: 2, tokens: 100 },
@@ -1839,7 +1986,7 @@ describe("api", () => {
             }),
           );
         });
-        await getMergedSummaries();
+        await getMergedSummaries(getState().conversation.summaries);
         assert(capturedOpts !== undefined);
         assert.strictEqual("output" in capturedOpts, true);
       });
@@ -1854,7 +2001,9 @@ describe("api", () => {
             makeGenerateTextResult({ text: "plain merged summary", usage }),
           );
         });
-        const result = await getMergedSummaries();
+        const result = await getMergedSummaries(
+          getState().conversation.summaries,
+        );
         assert(capturedOpts !== undefined);
         assert.strictEqual("output" in capturedOpts, false);
         assert.deepStrictEqual(result, [
@@ -1884,7 +2033,9 @@ describe("api", () => {
             }),
           ),
         );
-        const result = await getMergedSummaries();
+        const result = await getMergedSummaries(
+          getState().conversation.summaries,
+        );
         const mergedSummary = result[0];
         assert(mergedSummary !== undefined);
         assert.strictEqual(
@@ -1900,7 +2051,9 @@ describe("api", () => {
         mock.method(aiDeps, "generateText", () =>
           Promise.reject(new Error("network error")),
         );
-        const result = await getMergedSummaries();
+        const result = await getMergedSummaries(
+          getState().conversation.summaries,
+        );
         assert.strictEqual(result, getState().conversation.summaries);
         assert.deepStrictEqual(getState().conversation.summaries, [
           { compacted: "summary 1", compactedAt: 1, tokens: 100 },
@@ -1920,7 +2073,9 @@ describe("api", () => {
         seedSummaries();
         const err = makeAbortError();
         mock.method(aiDeps, "generateText", () => Promise.reject(err));
-        const result = await getMergedSummaries();
+        const result = await getMergedSummaries(
+          getState().conversation.summaries,
+        );
         assert.notStrictEqual(getState().abortControllers.apiStream, null);
         assert.deepStrictEqual(result, [
           { compacted: "summary 1", compactedAt: 1, tokens: 100 },

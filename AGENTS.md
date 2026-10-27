@@ -39,6 +39,7 @@ The README states approximate source and test line counts. Run `./agent-pnpm-run
 - When moving a function between files, always move its tests to the new file's test file too
 - Minimize diffs — only change what's necessary
 - All changes must have test coverage
+- For sequential generateText mocks, use mockGenerateTextResults([...]) instead of manually tracking callCount; avoid call-count assertions unless call count itself is behavior under test
 - Prefer `assert.deepStrictEqual` over multiple individual field assertions — check the whole object in one call
 - Never write `as unknown as ...` casts inline in tests — when a fake value must satisfy a broad interface type, add a helper in `test-helpers.ts` that performs the cast once and use that helper in the test
 - Never use `content: result.content` in deepStrictEqual assertions — it's a tautology. Inline the actual expected value

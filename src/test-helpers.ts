@@ -449,20 +449,22 @@ export function makeFakeFetch(
   };
 }
 
-export function mockGenerateTextResults(results: unknown[]) {
-  let callCount = 0;
-  const m = mock.method(aiDeps, "generateText", () => {
-    const result = results[callCount];
-    callCount = callCount + 1;
-    if (result instanceof Error) return Promise.reject(result);
-    return Promise.resolve(makeGenerateTextResult(result as never));
-  });
-  return {
-    callCount() {
-      return callCount;
+export function mockGenerateTextResults(
+  results: unknown[],
+  onCall?: (opts: Record<string, unknown>) => void,
+) {
+  let resultIdx = 0;
+  return mock.method(
+    aiDeps,
+    "generateText",
+    (opts: Record<string, unknown>) => {
+      onCall?.(opts);
+      const result = results[resultIdx];
+      resultIdx = resultIdx + 1;
+      if (result instanceof Error) return Promise.reject(result);
+      return Promise.resolve(makeGenerateTextResult(result as never));
     },
-    mock: m,
-  };
+  );
 }
 
 export function getCapturedMessages(
