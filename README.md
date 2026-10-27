@@ -576,7 +576,8 @@ vim.g.clipboard = {
 
 ## TODO (now)
 
-## TODO (soon)
+- Suppress warnings when `git ls-files` fails in a non-git repo
+  - Prefer `git ls-files`, fallback to glob
 
 ## TODO (later)
 
