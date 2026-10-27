@@ -75,10 +75,13 @@ export const maxCharCountPerSummary = approxTokensToCharLen(
   maxTokenCountPerSummary,
 );
 
+export function getDefaultedContextWindow() {
+  const { model, contextWindowPerModel } = getState().config;
+  return contextWindowPerModel[model] ?? defaultContextWindow;
+}
+
 export function getMaxNumberSummaries() {
-  const { model } = getState().config;
-  const contextWindow =
-    getState().config.contextWindowPerModel[model] ?? defaultContextWindow;
+  const contextWindow = getDefaultedContextWindow();
   const allSummariesTokenCount = dedicatedSummaryRatio * contextWindow;
   return Math.floor(allSummariesTokenCount / maxTokenCountPerSummary);
 }
@@ -92,9 +95,7 @@ export function getRequestInputOverheadStr() {
 }
 
 export function printLargeContextOverheadWarning() {
-  const { model } = getState().config;
-  const contextWindow =
-    getState().config.contextWindowPerModel[model] ?? defaultContextWindow;
+  const contextWindow = getDefaultedContextWindow();
 
   const requestInputOverheadTokensApprox =
     getRequestInputOverheadTokensApprox();
@@ -169,9 +170,7 @@ export function getTokensByArea(): TokensByArea {
 }
 
 export function getPrettyContextWindowUsage() {
-  const { model } = getState().config;
-  const contextWindow =
-    getState().config.contextWindowPerModel[model] ?? defaultContextWindow;
+  const contextWindow = getDefaultedContextWindow();
 
   const inputTokens = resolveRequestInputTokens();
 

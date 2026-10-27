@@ -7,6 +7,7 @@ import {
   getApproxRequestInputTokens,
   resolveRequestInputTokens,
   getMaxNumberSummaries,
+  getDefaultedContextWindow,
   getPrettyTokensByArea,
   getRequestInputOverheadTokensApprox,
   getRequestInputOverheadStr,
@@ -315,6 +316,23 @@ describe("printLargeContextOverheadWarning", () => {
     assert.deepStrictEqual(getWrites(), [
       `${YELLOW}The current set of context, skills, and tools is 71.96% of the 100,000 token context window!\n\nLasso reserves 25% of the context window for compacted summaries with the assumption that at most 70% of the context window will be used for input overhead. As is, the input overhead is large enough to break this assumption and, along with any user messages, may breach the llm's context window and cause API calls to be rejected. Consider converting some of your context to skills and minimizing MCP servers.${RESET}\n`,
     ]);
+  });
+});
+
+describe("getDefaultedContextWindow", () => {
+  beforeEach(() => {
+    setupTestContext({ model: null });
+  });
+
+  it("uses the default context window when the model has no configured window", () => {
+    assert.strictEqual(getDefaultedContextWindow(), 128_000);
+  });
+
+  it("uses the configured context window for the current model", () => {
+    actions.config.setModel("test-model");
+    actions.config.setContextWindowPerModel({ "test-model": 40_000 });
+
+    assert.strictEqual(getDefaultedContextWindow(), 40_000);
   });
 });
 

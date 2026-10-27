@@ -79,6 +79,16 @@ export async function syncSessionFile({
   summaries?: ModelSummary[];
   transcript?: TranscriptEntry[];
 } = {}) {
+  const next: SessionFile = {
+    messages,
+    summaries,
+    transcript,
+  };
+
+  actions.conversation.setMessages(messages);
+  actions.conversation.setSummaries(summaries);
+  actions.conversation.setTranscript(transcript);
+
   const sessionFilePath = getState().session.sessionFilePath;
   const sessionDir = getSessionDir();
   const sessionDirExistsResult = tryCatch(() => fsDeps.existsSync(sessionDir));
@@ -97,16 +107,6 @@ export async function syncSessionFile({
       return;
     }
   }
-
-  const next: SessionFile = {
-    messages,
-    summaries,
-    transcript,
-  };
-
-  actions.conversation.setMessages(messages);
-  actions.conversation.setSummaries(summaries);
-  actions.conversation.setTranscript(transcript);
 
   const stringifyResult = tryCatch(() => JSON.stringify(next));
   if (!stringifyResult.ok) {

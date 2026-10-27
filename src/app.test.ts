@@ -789,7 +789,7 @@ describe("api", () => {
         assert.deepStrictEqual(getState().usage.requestInputTokens, {
           value: 26_961,
           stale: false,
-          charLength: 5900,
+          charLength: 5902,
         });
       });
 
@@ -907,7 +907,7 @@ describe("api", () => {
     });
 
     describe("compacts the conversation", () => {
-      it("summarizes and merges all chunks before replacing the conversation", async () => {
+      it("persists each chunk before summarizing the next", async () => {
         actions.config.setContextWindowPerModel({
           "claude-sonnet-4-20250514": 40_000,
         });
@@ -916,6 +916,15 @@ describe("api", () => {
           { role: "assistant", content: "second: " + "b".repeat(60_000) },
         ];
         actions.conversation.setMessages(messages);
+        const messagesAfterFirstChunk = [
+          { role: "assistant", content: "chunk summary one" },
+          ...messages.slice(1),
+        ];
+        const messagesDuringCalls = [
+          messages,
+          messagesAfterFirstChunk,
+          messagesAfterFirstChunk,
+        ];
         actions.usage.setRequestInputTokens(39_000);
         actions.usage.setRequestInputTokensStale(false);
         const calls: Record<string, unknown>[] = [];
@@ -934,9 +943,14 @@ describe("api", () => {
               usage: makeMockUsage({ outputTokens: 13 }),
             },
           ],
-          (opts) => {
+          (opts, resultIdx) => {
             calls.push(opts);
-            assert.deepStrictEqual(getState().conversation.messages, messages);
+            const expectedMessages = messagesDuringCalls[resultIdx];
+            assert(expectedMessages !== undefined);
+            assert.deepStrictEqual(
+              getState().conversation.messages,
+              expectedMessages,
+            );
           },
         );
 
@@ -995,7 +1009,7 @@ describe("api", () => {
         assert.deepStrictEqual(getState().usage.requestInputTokens, {
           value: 26_987,
           stale: false,
-          charLength: 5980,
+          charLength: 5982,
         });
         assert.strictEqual(withMcpTools > withoutMcpTools, true);
       });
@@ -1069,7 +1083,7 @@ describe("api", () => {
         assert.deepStrictEqual(getState().usage.requestInputTokens, {
           value: 26_961,
           stale: false,
-          charLength: 5900,
+          charLength: 5902,
         });
         assert.deepStrictEqual(getState().usage.modelUsageForSession, {
           "claude-sonnet-4-20250514": [
@@ -1113,7 +1127,7 @@ describe("api", () => {
         assert.deepStrictEqual(getState().usage.requestInputTokens, {
           value: 26_961,
           stale: false,
-          charLength: 5900,
+          charLength: 5902,
         });
       });
 
@@ -1205,7 +1219,7 @@ describe("api", () => {
     });
 
     describe("keeps messages on failure", () => {
-      it("keeps all messages when a chunk summary fails", async () => {
+      it("keeps unsummarized messages when a later chunk summary fails", async () => {
         actions.config.setContextWindowPerModel({
           "claude-sonnet-4-20250514": 40_000,
         });
@@ -1220,18 +1234,18 @@ describe("api", () => {
         mockGenerateTextResults([
           {
             output: { compacted: "first summary" },
-            usage: makeMockUsage(),
+            usage: makeMockUsage({ outputTokens: 11 }),
           },
           new Error("network error"),
         ]);
         await maybeCompact("");
-        assert.deepStrictEqual(getState().conversation.summaries, []);
-        assert.deepStrictEqual(getState().conversation.messages, messages);
-        assert.deepStrictEqual(getState().usage.requestInputTokens, {
-          value: 39_000,
-          stale: false,
-          charLength: 0,
-        });
+        assert.deepStrictEqual(getState().conversation.summaries, [
+          { compacted: "first summary", compactedAt: 0, tokens: 11 },
+        ]);
+        assert.deepStrictEqual(getState().conversation.messages, [
+          { role: "assistant", content: "first summary" },
+          ...messages.slice(1),
+        ]);
       });
 
       it("keeps messages when generateText fails", async () => {
@@ -1404,7 +1418,7 @@ describe("api", () => {
         assert.deepStrictEqual(getState().usage.requestInputTokens, {
           value: 2_796,
           stale: false,
-          charLength: 5987,
+          charLength: 5989,
         });
       });
 
@@ -1462,7 +1476,7 @@ describe("api", () => {
         assert.deepStrictEqual(getState().usage.requestInputTokens, {
           value: 2_981,
           stale: false,
-          charLength: 5991,
+          charLength: 5993,
         });
       });
     });
@@ -1492,6 +1506,24 @@ describe("api", () => {
           '{"role":"assistant","content":"second message"}',
         ],
       ]);
+    });
+
+    it("reserves the maximum summary output when calculating the chunk budget", () => {
+      const messages = [
+        { role: "user", content: "a".repeat(54_000) },
+        { role: "assistant", content: "b".repeat(54_000) },
+      ];
+      actions.conversation.setMessages(messages);
+
+      const chunks = splitMessagesToCompact();
+      assert.deepStrictEqual(
+        chunks.map((chunk) => chunk.length),
+        [1, 1],
+      );
+      assert.deepStrictEqual(
+        chunks.flat(),
+        messages.map((message) => JSON.stringify(message)),
+      );
     });
 
     it("splits at the token budget without dropping or reordering messages", () => {

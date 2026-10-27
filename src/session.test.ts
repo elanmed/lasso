@@ -361,9 +361,13 @@ describe("log", () => {
       mock.method(fsDeps, "existsSync", () => {
         throw makeErrnoError("EACCES");
       });
+      const messages = [{ role: "assistant", content: "compacted" }];
+      const summaries = [
+        { compacted: "compacted", compactedAt: 1_234_567_890_000, tokens: 3 },
+      ];
       const writes = mockStdoutWrites();
 
-      await syncSessionFile();
+      await syncSessionFile({ messages, summaries });
 
       assert.deepStrictEqual(writes(), [
         `${RED}Failed to check if /fake-home/.local/state/lasso/sessions exists. Error: EACCES${RESET}\n`,
@@ -374,6 +378,29 @@ describe("log", () => {
         ),
         false,
       );
+      assert.deepStrictEqual(getState().conversation.messages, messages);
+      assert.deepStrictEqual(getState().conversation.summaries, summaries);
+    });
+
+    it("updates state but does not write when creating the session directory fails", async () => {
+      mock.method(fsDeps, "mkdir", () =>
+        Promise.reject(new Error("Permission denied")),
+      );
+      const messages = [{ role: "assistant", content: "compacted" }];
+      const summaries = [
+        { compacted: "compacted", compactedAt: 1_234_567_890_000, tokens: 3 },
+      ];
+
+      await syncSessionFile({ messages, summaries });
+
+      assert.strictEqual(
+        testFs._files.has(
+          "/fake-home/.local/state/lasso/sessions/session-1234567890000.json",
+        ),
+        false,
+      );
+      assert.deepStrictEqual(getState().conversation.messages, messages);
+      assert.deepStrictEqual(getState().conversation.summaries, summaries);
     });
 
     it("creates the directory when it does not exist", async () => {

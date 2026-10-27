@@ -451,14 +451,14 @@ export function makeFakeFetch(
 
 export function mockGenerateTextResults(
   results: unknown[],
-  onCall?: (opts: Record<string, unknown>) => void,
+  onCall?: (opts: Record<string, unknown>, resultIdx: number) => void,
 ) {
   let resultIdx = 0;
   return mock.method(
     aiDeps,
     "generateText",
     (opts: Record<string, unknown>) => {
-      onCall?.(opts);
+      onCall?.(opts, resultIdx);
       const result = results[resultIdx];
       resultIdx = resultIdx + 1;
       if (result instanceof Error) return Promise.reject(result);
