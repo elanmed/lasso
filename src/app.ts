@@ -819,13 +819,14 @@ export function splitMessagesToCompact() {
   for (const message of messages.slice(summaries.length)) {
     const messageStr = JSON.stringify(message, removeMediaReplacer);
     const messageTokens = strToApproxTokens(messageStr);
-    if (tokenCount + messageTokens <= availableTokensToCompact) {
-      currChunk.push(messageStr);
-    } else {
+
+    if (tokenCount + messageTokens > availableTokensToCompact) {
       chunks.push(currChunk);
       currChunk = [];
       tokenCount = 0;
     }
+
+    currChunk.push(messageStr);
     tokenCount += messageTokens;
   }
 
