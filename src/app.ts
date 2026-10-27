@@ -813,23 +813,26 @@ export function splitMessagesToCompact() {
     strToApproxTokens(emptyCompactPrompt);
 
   const chunks: string[][] = [];
-  let chunkIdx = 0;
+  let currChunk: string[] = [];
   let tokenCount = 0;
+
   for (const message of messages.slice(summaries.length)) {
     const messageStr = JSON.stringify(message, removeMediaReplacer);
     const messageTokens = strToApproxTokens(messageStr);
     if (tokenCount + messageTokens <= availableTokensToCompact) {
-      let chunk = chunks[chunkIdx];
-      if (!Array.isArray(chunks[chunkIdx])) {
-        chunk = [] as string[];
-      }
-      assertAtBuildtime(chunk !== undefined);
-      chunk.push(messageStr);
+      currChunk.push(messageStr);
     } else {
-      chunkIdx++;
+      chunks.push(currChunk);
+      currChunk = [];
       tokenCount = 0;
     }
+    tokenCount += messageTokens;
   }
+
+  if (currChunk.length > 0) {
+    chunks.push(currChunk);
+  }
+
   return chunks;
 }
 
