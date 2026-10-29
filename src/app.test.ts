@@ -3440,7 +3440,7 @@ describe("input", () => {
       assert(controller !== null);
 
       assert.deepStrictEqual(spawned, ["/bin/zsh"]);
-      assert.deepStrictEqual(spawnArgs, [["-i", "-c", " echo hello"]]);
+      assert.deepStrictEqual(spawnArgs, [["-i", "+m", "-c", " echo hello"]]);
       assert.deepStrictEqual(spawnOptions, [
         {
           stdio: "inherit",
@@ -3453,6 +3453,20 @@ describe("input", () => {
       await execution;
 
       assert.strictEqual(getState().abortControllers.executeUserInput, null);
+    });
+
+    it("pauses readline while the shell runs and resumes it afterward", async () => {
+      const calls: string[] = [];
+      actions.terminal.setRl(
+        makeFakeRl({
+          pause: () => calls.push("pause"),
+          resume: () => calls.push("resume"),
+        }),
+      );
+
+      await executeUserInput("! echo hello");
+
+      assert.deepStrictEqual(calls, ["pause", "resume"]);
     });
 
     it("falls back to /bin/sh when SHELL is unset", async () => {
@@ -3474,7 +3488,7 @@ describe("input", () => {
       await executeUserInput("! echo hello");
 
       assert.deepStrictEqual(spawned, ["/bin/zsh"]);
-      assert.deepStrictEqual(spawnArgs, [["-i", "-c", " echo hello"]]);
+      assert.deepStrictEqual(spawnArgs, [["-i", "+m", "-c", " echo hello"]]);
       assert.deepStrictEqual(getWrites(), [
         `${BLUE}$  echo hello${RESET}\n`,
         `${RED}Error while executing the user input. Error: spawn failed${RESET}\n`,
@@ -3500,7 +3514,7 @@ describe("input", () => {
       sigint();
 
       assert.strictEqual(controller.signal.aborted, true);
-      assert.deepStrictEqual(spawnArgs, [["-i", "-c", " sleep 10"]]);
+      assert.deepStrictEqual(spawnArgs, [["-i", "+m", "-c", " sleep 10"]]);
       assert.deepStrictEqual(spawnOptions, [
         {
           stdio: "inherit",

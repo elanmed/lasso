@@ -252,6 +252,8 @@ export function makeFakeRl(overrides: object = {}) {
   return {
     write: () => null,
     prompt: () => null,
+    pause: () => null,
+    resume: () => null,
     line: "",
     close: () => null,
     question: () => Promise.resolve(""),

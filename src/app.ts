@@ -1109,16 +1109,24 @@ export async function executeUserInput(rawInput: string) {
 }
 
 async function runUserInput(userInput: string, signal: AbortSignal) {
-  const userShell = processDeps.env.get("SHELL") ?? "/bin/sh";
-  const userProcess = childProcessDeps.spawn(
-    userShell,
-    ["-i", "-c", userInput],
-    {
+  const { rl } = getState().terminal;
+  // Pause readline so it cannot compete with the inherited shell for terminal input.
+  if (rl !== null) rl.pause();
+
+  try {
+    const userShell = processDeps.env.get("SHELL") ?? "/bin/sh";
+    // Disable zsh job control; otherwise it can background the parent, which suspends on its next terminal read.
+    const userShellArgs = userShell.endsWith("zsh")
+      ? ["-i", "+m", "-c", userInput]
+      : ["-i", "-c", userInput];
+    const userProcess = childProcessDeps.spawn(userShell, userShellArgs, {
       stdio: "inherit",
       signal,
-    },
-  );
-  await once(userProcess, "exit");
+    });
+    await once(userProcess, "exit");
+  } finally {
+    if (rl !== null) rl.resume();
+  }
 }
 
 export function shouldExecuteUserInput(rawInput: string | null): boolean {
