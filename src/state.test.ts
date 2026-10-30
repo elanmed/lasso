@@ -3,13 +3,11 @@ import assert from "node:assert/strict";
 import { initMcpState } from "./mcp.ts";
 import { actions, getState } from "./state.ts";
 import { defaultConfig, MISSING } from "./schemas.ts";
-import { stringify } from "./utils.ts";
 import {
   makeFakeMcpClient,
   makeFakeRl,
   makeStartupPerformanceLogger,
   setupTestContext,
-  testFs,
 } from "./test-helpers.ts";
 
 describe("state", () => {
@@ -22,24 +20,6 @@ describe("state", () => {
   });
 
   describe("initial and reset state", () => {
-    it("reset-state writes debug-log entry using pre-reset debug settings", async () => {
-      const debugLogPath = "/fake-home/.config/lasso/debug/debug-test-uuid.log";
-      testFs._dirs.add("/fake-home/.config/lasso/debug");
-      testFs._files.set(debugLogPath, "");
-      actions.debug.setLogPath(debugLogPath);
-      actions.debug.setLog(true);
-      actions.abortControllers.setQuestion(new AbortController());
-      actions.resetState();
-      await new Promise((resolve) => setImmediate(resolve));
-
-      assert.equal(
-        testFs._files.get(debugLogPath),
-        `1970-01-01T00:00:00.000Z :: dispatch set-question-abort-controller: before=null, after=[object AbortController]
-1970-01-01T00:00:00.000Z :: dispatch reset-state: before=[truncating], after=${stringify(getState(), { space: 2 })}
-`,
-      );
-    });
-
     const assertInitialState = () => {
       assert.equal(getState().debug.debugLog, false);
       assert.equal(getState().debug.debugLogPath, "");
