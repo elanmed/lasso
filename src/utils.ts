@@ -34,8 +34,22 @@ function isMediaPart(value: unknown) {
   );
 }
 
+function isReasoningPart(value: unknown) {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "type" in value &&
+    (value.type === "reasoning" || value.type === "reasoning-file")
+  );
+}
+
 export function removeMediaReplacer(_key: string, value: unknown) {
-  return isMediaPart(value) ? "[media omitted]" : value;
+  if (isReasoningPart(value)) {
+    return "[reasoning omitted]";
+  } else if (isMediaPart(value)) {
+    return "[media omitted]";
+  }
+  return value;
 }
 
 export function isAbortError(error: unknown): boolean {

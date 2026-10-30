@@ -161,6 +161,21 @@ describe("stringifyMessages", () => {
       '[{"role":"user","content":"hello"}]',
     );
   });
+
+  it("omits reasoning content", () => {
+    assert.strictEqual(
+      stringifyMessages([
+        {
+          role: "assistant",
+          content: [
+            { type: "text", text: "Answer" },
+            { type: "reasoning", text: "Private reasoning" },
+          ],
+        },
+      ]),
+      '[{"role":"assistant","content":[{"type":"text","text":"Answer"},"[reasoning omitted]"]}]',
+    );
+  });
 });
 
 describe("getRequestInputCharLength", () => {

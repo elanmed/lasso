@@ -518,6 +518,33 @@ second line`,
       ]);
     });
 
+    it("replaces reasoning and reasoning-file parts", () => {
+      const messages = [
+        {
+          role: "assistant",
+          content: [
+            { type: "text", text: "Answer" },
+            { type: "reasoning", text: "Private reasoning" },
+            {
+              type: "reasoning-file",
+              data: "PRIVATEFILE",
+              mediaType: "application/octet-stream",
+            },
+          ],
+        },
+      ];
+      assert.deepStrictEqual(stringifyWithoutMedia(messages), [
+        {
+          role: "assistant",
+          content: [
+            { type: "text", text: "Answer" },
+            "[reasoning omitted]",
+            "[reasoning omitted]",
+          ],
+        },
+      ]);
+    });
+
     it("replaces deprecated image-data and file-data values", () => {
       const messages = [
         {
