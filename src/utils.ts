@@ -77,6 +77,15 @@ function maybeForceSingleLine(str: string, forceSingleLine: boolean) {
   return str;
 }
 
+interface StringifyOptions {
+  replacer?: (key: string, value: unknown) => unknown;
+  space: number;
+}
+
+function tryStringify(val: unknown, options: StringifyOptions) {
+  return tryCatch(() => JSON.stringify(val, options.replacer, options.space));
+}
+
 export function getMessageFromError(
   error: unknown,
   { forceSingleLine = true }: { forceSingleLine?: boolean } = {},
@@ -87,8 +96,12 @@ export function getMessageFromError(
   if (error instanceof Error) {
     return maybeForceSingleLine(error.message, forceSingleLine);
   }
-  const json = JSON.stringify(error) as string | undefined;
-  return maybeForceSingleLine(json ?? String(error), forceSingleLine);
+  const stringifyResult = tryStringify(error, { space: 0 });
+  if (stringifyResult.ok) {
+    const stringified = stringifyResult.value as string | undefined;
+    return maybeForceSingleLine(stringified ?? String(error), forceSingleLine);
+  }
+  return maybeForceSingleLine(String(error), forceSingleLine);
 }
 
 export async function writeDebugLog(
@@ -165,8 +178,16 @@ export function isShellSafePath(str: string) {
   return /^[\w./-]+$/.test(str);
 }
 
-export function stringify(val: unknown) {
-  return JSON.stringify(val, null, 2);
+export function stringify(
+  val: unknown,
+  options: StringifyOptions = { space: 0 },
+) {
+  const stringifyResult = tryStringify(val, options);
+  if (stringifyResult.ok) {
+    const stringified = stringifyResult.value as string | undefined;
+    return stringified ?? "";
+  }
+  return getMessageFromError(stringifyResult.error);
 }
 
 export function isExisty<T>(val: T): val is NonNullable<T> {
@@ -175,17 +196,6 @@ export function isExisty<T>(val: T): val is NonNullable<T> {
 
 export function isNullish(val: unknown): val is null | undefined {
   return val === undefined || val === null;
-}
-
-export function safeStringify(val: unknown) {
-  if (val === undefined) return "";
-  const stringifyResult = tryCatch(() => JSON.stringify(val));
-  if (stringifyResult.ok) {
-    const stringified = stringifyResult.value as unknown as string | undefined;
-    if (stringified === undefined) return "";
-    return stringified;
-  }
-  return getMessageFromError(stringifyResult.error);
 }
 
 export function createQueue() {

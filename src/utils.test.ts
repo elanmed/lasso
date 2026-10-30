@@ -5,7 +5,7 @@ import {
   isNullish,
   isReadlineClosedError,
   tryCatch,
-  safeStringify,
+  stringify,
   tryCatchAsync,
   normalizeNewline,
   getMessageFromError,
@@ -142,32 +142,47 @@ describe("utils", () => {
     });
   });
 
-  describe("safeStringify", () => {
+  describe("stringify", () => {
     it("returns an empty string for undefined", () => {
-      assert.equal(safeStringify(undefined), "");
+      assert.equal(stringify(undefined), "");
     });
 
     it("returns an empty string for function and symbol top-level values", () => {
       assert.equal(
-        safeStringify(() => undefined),
+        stringify(() => undefined),
         "",
       );
-      assert.equal(safeStringify(Symbol("x")), "");
+      assert.equal(stringify(Symbol("x")), "");
     });
 
     it("returns the error message for bigint top-level values", () => {
-      assert.match(safeStringify(1n), /Do not know how to serialize a BigInt/);
+      assert.match(stringify(1n), /Do not know how to serialize a BigInt/);
     });
 
     it("returns stringify of regular values", () => {
-      assert.equal(safeStringify({ a: 1 }), '{"a":1}');
+      assert.equal(stringify({ a: 1 }), '{"a":1}');
+    });
+
+    it("supports a replacer and indentation", () => {
+      assert.equal(
+        stringify(
+          { keep: "value", omit: "private" },
+          {
+            replacer: (key, value) => (key === "omit" ? undefined : value),
+            space: 2,
+          },
+        ),
+        `{
+  "keep": "value"
+}`,
+      );
     });
 
     it("returns the error message for circular structures", () => {
       const circular: Record<string, unknown> = {};
       circular["self"] = circular;
       assert.match(
-        safeStringify(circular),
+        stringify(circular),
         /Converting circular structure to JSON/,
       );
     });
@@ -493,7 +508,9 @@ second line`,
 
   describe("removeMediaReplacer", () => {
     const stringifyWithoutMedia = (messages: unknown[]): unknown =>
-      JSON.parse(JSON.stringify(messages, removeMediaReplacer));
+      JSON.parse(
+        stringify(messages, { replacer: removeMediaReplacer, space: 0 }),
+      );
 
     it("replaces top-level image and file parts", () => {
       const messages = [

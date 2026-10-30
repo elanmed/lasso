@@ -22,7 +22,7 @@ import { print, toolPrint } from "./printing.ts";
 import { actions, getState } from "./state.ts";
 import { getWebpagesDir } from "./paths.ts";
 import { getSubagentPrompt } from "./prompts.ts";
-import { safeStringify, stringify } from "./utils.ts";
+import { stringify } from "./utils.ts";
 import { childProcessDeps, fsDeps, processDeps } from "./deps.ts";
 import {
   BLUE,
@@ -115,17 +115,20 @@ describe("mcp resource tools", () => {
 
       assert.deepStrictEqual(result, {
         isError: false,
-        content: stringify({
-          resources: [
-            {
-              uri: "file:///a.txt",
-              name: "a",
-              description: "File a",
-              mimeType: "text/plain",
-            },
-          ],
-          nextCursor: "cursor-2",
-        }),
+        content: stringify(
+          {
+            resources: [
+              {
+                uri: "file:///a.txt",
+                name: "a",
+                description: "File a",
+                mimeType: "text/plain",
+              },
+            ],
+            nextCursor: "cursor-2",
+          },
+          { space: 2 },
+        ),
       });
     });
 
@@ -149,10 +152,13 @@ describe("mcp resource tools", () => {
       assert.strictEqual(capturedCursor, "cursor-1");
       assert.deepStrictEqual(result, {
         isError: false,
-        content: stringify({
-          resources: [{ uri: "file:///a.txt" }],
-          nextCursor: null,
-        }),
+        content: stringify(
+          {
+            resources: [{ uri: "file:///a.txt" }],
+            nextCursor: null,
+          },
+          { space: 2 },
+        ),
       });
     });
 
@@ -203,14 +209,17 @@ describe("mcp resource tools", () => {
 
       assert.deepStrictEqual(result, {
         isError: false,
-        content: stringify([
-          {
-            uri: "file:///a.txt",
-            mimeType: "text/plain",
-            text: "resource text",
-            blob: null,
-          },
-        ]),
+        content: stringify(
+          [
+            {
+              uri: "file:///a.txt",
+              mimeType: "text/plain",
+              text: "resource text",
+              blob: null,
+            },
+          ],
+          { space: 2 },
+        ),
       });
     });
 
@@ -233,14 +242,17 @@ describe("mcp resource tools", () => {
 
       assert.deepStrictEqual(result, {
         isError: false,
-        content: stringify([
-          {
-            uri: "file:///a.png",
-            mimeType: null,
-            text: null,
-            blob: "aGVsbG8=",
-          },
-        ]),
+        content: stringify(
+          [
+            {
+              uri: "file:///a.png",
+              mimeType: null,
+              text: null,
+              blob: "aGVsbG8=",
+            },
+          ],
+          { space: 2 },
+        ),
       });
     });
 
@@ -963,7 +975,7 @@ describe("tools", () => {
 
       assert.strictEqual(
         stringifyTools(),
-        safeStringify({ ...harnessTools, mcp_tool: makeMcpTool() }),
+        stringify({ ...harnessTools, mcp_tool: makeMcpTool() }, { space: 0 }),
       );
     });
   });

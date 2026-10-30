@@ -271,8 +271,8 @@ export const actions = {
         state.conversation.messages.slice(summaries.length);
       logStateChange(
         "set-conversation-summaries",
-        stringify(before),
-        stringify(summaries),
+        stringify(before, { space: 2 }),
+        stringify(summaries, { space: 2 }),
       );
     },
     setMessages(messages: ModelMessage[]) {
@@ -619,8 +619,8 @@ export const actions = {
       state.config.subagentModels = subagentModels;
       logStateChange(
         "set-subagent-models",
-        stringify(before),
-        stringify(subagentModels),
+        stringify(before, { space: 2 }),
+        stringify(subagentModels, { space: 2 }),
       );
     },
     setTranscriptionSdkProvider(provider: "google" | "openai") {
@@ -662,8 +662,8 @@ export const actions = {
       state.config.pricingPerModel = pricing;
       logStateChange(
         "set-pricing-per-model",
-        stringify(before),
-        stringify(pricing),
+        stringify(before, { space: 2 }),
+        stringify(pricing, { space: 2 }),
       );
     },
     setContextWindowPerModel(contextWindowPerModel: Record<string, number>) {
@@ -671,14 +671,18 @@ export const actions = {
       state.config.contextWindowPerModel = contextWindowPerModel;
       logStateChange(
         "set-context-window-per-model",
-        stringify(before),
-        stringify(contextWindowPerModel),
+        stringify(before, { space: 2 }),
+        stringify(contextWindowPerModel, { space: 2 }),
       );
     },
     setKeymaps(keymaps: DefaultedConfig["keymaps"]) {
       const before = structuredClone(state.config.keymaps);
       state.config.keymaps = keymaps;
-      logStateChange("set-keymaps", stringify(before), stringify(keymaps));
+      logStateChange(
+        "set-keymaps",
+        stringify(before, { space: 2 }),
+        stringify(keymaps, { space: 2 }),
+      );
     },
     setCustomSlashCommandDirs(dirs: string[]) {
       const before = state.config.customSlashCommandDirs;
@@ -699,8 +703,8 @@ export const actions = {
       state.config.loadingStateFrames = loadingStateFrames;
       logStateChange(
         "set-loading-state-frames",
-        stringify(before),
-        stringify(loadingStateFrames),
+        stringify(before, { space: 2 }),
+        stringify(loadingStateFrames, { space: 2 }),
       );
     },
     setLoadingStateFrameDuration(loadingStateFrameDuration: number) {
@@ -775,15 +779,19 @@ export const actions = {
     setMcps(mcps: Record<string, Mcp>) {
       const before = state.config.mcps;
       state.config.mcps = mcps;
-      logStateChange("set-mcps", stringify(before), stringify(mcps));
+      logStateChange(
+        "set-mcps",
+        stringify(before, { space: 2 }),
+        stringify(mcps, { space: 2 }),
+      );
     },
     setUsageLimit(usageLimit: UsageLimit | undefined) {
       const before = state.config.usageLimit;
       state.config.usageLimit = usageLimit;
       logStateChange(
         "set-usage-limit",
-        stringify(before),
-        stringify(usageLimit),
+        stringify(before, { space: 2 }),
+        stringify(usageLimit, { space: 2 }),
       );
     },
   },
@@ -865,7 +873,7 @@ export const actions = {
     logStateChange(
       "reset-state",
       "[truncating]",
-      stringify(createInitialState()),
+      stringify(createInitialState(), { space: 2 }),
     );
     state = createInitialState();
   },

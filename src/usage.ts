@@ -9,6 +9,7 @@ import {
   createLockUtils,
   getLockQueue,
   getPrettyMoney,
+  stringify,
 } from "./utils.ts";
 import { actions, getState } from "./state.ts";
 import { fsDeps } from "./deps.ts";
@@ -174,7 +175,7 @@ export async function syncInitialModelUsageForLimitWindow() {
       return;
     }
     if (!pathExistsResult.value) {
-      await tryCatchAsync(fsDeps.writeFile(path, JSON.stringify({})));
+      await tryCatchAsync(fsDeps.writeFile(path, stringify({}, { space: 0 })));
       await lockUtils.deleteLock();
       return;
     }
@@ -184,7 +185,7 @@ export async function syncInitialModelUsageForLimitWindow() {
       print.error(
         `Failed to read the usage log at ${path}. Error: ${getMessageFromError(readResult.error)}`,
       );
-      await tryCatchAsync(fsDeps.writeFile(path, JSON.stringify({})));
+      await tryCatchAsync(fsDeps.writeFile(path, stringify({}, { space: 0 })));
       await lockUtils.deleteLock();
       return;
     }
@@ -196,13 +197,15 @@ export async function syncInitialModelUsageForLimitWindow() {
       print.error(
         `Failed to parse the usage log at ${path}. Error: ${getMessageFromError(parseResult.error)}`,
       );
-      await tryCatchAsync(fsDeps.writeFile(path, JSON.stringify({})));
+      await tryCatchAsync(fsDeps.writeFile(path, stringify({}, { space: 0 })));
       await lockUtils.deleteLock();
       return;
     }
     const filtered = filterExpiredModelUsage(parseResult.value, expiredTime);
 
-    await tryCatchAsync(fsDeps.writeFile(path, JSON.stringify(filtered)));
+    await tryCatchAsync(
+      fsDeps.writeFile(path, stringify(filtered, { space: 0 })),
+    );
 
     await lockUtils.deleteLock();
     actions.usage.setModelUsageForLimitWindow(filtered);
@@ -275,7 +278,9 @@ export async function syncNewModelUsageForLimitWindow(
 
     const filtered = filterExpiredModelUsage(loggedModelUsage, expiredTime);
 
-    await tryCatchAsync(fsDeps.writeFile(path, JSON.stringify(filtered)));
+    await tryCatchAsync(
+      fsDeps.writeFile(path, stringify(filtered, { space: 0 })),
+    );
     await lockUtils.deleteLock();
 
     actions.usage.setModelUsageForLimitWindow(filtered);

@@ -9,9 +9,9 @@ import {
   isAbortError,
   tryCatchAsync,
   getMessageFromError,
-  safeStringify,
   markdownFence,
   removeMediaReplacer,
+  stringify,
   assertAtRuntime,
   tryCatch,
   normalizeNewline,
@@ -485,7 +485,7 @@ export async function resolveApiCall(userInput: string) {
           default:
             toolPrint(
               `[mcp] ${toolCall.toolName}`,
-              safeStringify(toolCall.input),
+              stringify(toolCall.input, { space: 0 }),
             );
         }
       },
@@ -622,8 +622,9 @@ export async function getMergedSummaries(summaries: ModelSummary[]) {
     targetCharLen: maxCharCountPerSummary,
     summaries: markdownFence(
       "json",
-      JSON.stringify(
+      stringify(
         [firstSummary, secondSummary].map(({ compacted }) => compacted),
+        { space: 0 },
       ),
     ),
   });
@@ -785,10 +786,10 @@ export async function maybeCompact(userInput: string) {
       const remainingMessages = unsummarizedMessages.slice(
         summarizedMessageCount,
       );
-      const remainingMessagesStr = JSON.stringify(
-        remainingMessages,
-        removeMediaReplacer,
-      );
+      const remainingMessagesStr = stringify(remainingMessages, {
+        replacer: removeMediaReplacer,
+        space: 0,
+      });
       const remainingMessagesTokens = strToApproxTokens(remainingMessagesStr);
 
       await syncSessionFile({
@@ -845,7 +846,10 @@ export function splitMessagesToCompact() {
   let tokenCount = 0;
 
   for (const message of unsummarizedMessages) {
-    const messageStr = JSON.stringify(message, removeMediaReplacer);
+    const messageStr = stringify(message, {
+      replacer: removeMediaReplacer,
+      space: 0,
+    });
     const messageTokens = strToApproxTokens(messageStr);
 
     if (
@@ -879,7 +883,7 @@ export async function resolveInterruptWithEditor() {
   print.warning("You have queued messages!");
   const continueResult = await tryCatchAsync(
     rl.question(
-      `Edit (${safeStringify(getState().config.keymaps.edit)}), c(lear), or <CR> to continue: `,
+      `Edit (${stringify(getState().config.keymaps.edit, { space: 0 })}), c(lear), or <CR> to continue: `,
       {
         signal: abortController.signal,
       },

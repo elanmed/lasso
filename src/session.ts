@@ -1,5 +1,10 @@
 import { join, basename, extname } from "node:path";
-import { tryCatchAsync, getMessageFromError, tryCatch } from "./utils.ts";
+import {
+  tryCatchAsync,
+  getMessageFromError,
+  tryCatch,
+  stringify,
+} from "./utils.ts";
 import { actions, getState } from "./state.ts";
 import { fsDeps } from "./deps.ts";
 import { getSessionDir, getWebpagesDir } from "./paths.ts";
@@ -108,14 +113,17 @@ export async function syncSessionFile({
     }
   }
 
-  const stringifyResult = tryCatch(() => JSON.stringify(next));
-  if (!stringifyResult.ok) {
+  const sessionFileStr = stringify(next, { space: 0 });
+  const parseResult = tryCatch(() => {
+    JSON.parse(sessionFileStr);
+  });
+  if (!parseResult.ok) {
     print.error("Failed to stringify the session file");
     return;
   }
 
   const writeResult = await tryCatchAsync(
-    fsDeps.writeFile(sessionFilePath, stringifyResult.value),
+    fsDeps.writeFile(sessionFilePath, sessionFileStr),
   );
   if (!writeResult.ok) {
     print.error(`Failed to write the session file to ${sessionFilePath}`);

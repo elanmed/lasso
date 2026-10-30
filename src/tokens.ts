@@ -1,4 +1,4 @@
-import { removeMediaReplacer, decimalToPercent } from "./utils.ts";
+import { removeMediaReplacer, decimalToPercent, stringify } from "./utils.ts";
 import { getState } from "./state.ts";
 import { getBaseAgentPrompt } from "./prompts.ts";
 import {
@@ -49,7 +49,7 @@ export function getApproxTokensFromMessages(messages: ModelMessage[]) {
 }
 
 export function stringifyMessages(messages: ModelMessage[]) {
-  return JSON.stringify(messages, removeMediaReplacer);
+  return stringify(messages, { replacer: removeMediaReplacer, space: 0 });
 }
 
 export function getSystemContent() {

@@ -30,7 +30,7 @@ import {
   type SdkProvider,
   type SessionFile,
 } from "./schemas.ts";
-import { shellQuote } from "./utils.ts";
+import { shellQuote, stringify } from "./utils.ts";
 
 export const testConfig = {
   model: "claude-sonnet-4-6",
@@ -220,7 +220,7 @@ const testCwd = makeFakeCwd();
 export function addSessionFile(timestampMs: number, session: SessionFile) {
   testFs._dirs.add("/fake-home/.local/state/lasso/sessions");
   const path = `/fake-home/.local/state/lasso/sessions/session-${timestampMs.toString()}.json`;
-  testFs._files.set(path, JSON.stringify(session));
+  testFs._files.set(path, stringify(session, { space: 0 }));
   return path;
 }
 

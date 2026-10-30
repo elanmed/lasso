@@ -10,7 +10,7 @@ import {
 import { startLoadingState } from "./printing.ts";
 import { initSigInt } from "./commands.ts";
 import { actions, getState, type MCPToolSet } from "./state.ts";
-import { markdownFence, safeStringify, parseFrontMatter } from "./utils.ts";
+import { markdownFence, stringify, parseFrontMatter } from "./utils.ts";
 import { defaultConfig } from "./schemas.ts";
 import { getMergeSummariesPrompt } from "./prompts.ts";
 import { getGlobalContextDir, getGlobalConfigPath } from "./paths.ts";
@@ -870,7 +870,7 @@ describe("api", () => {
         });
         await maybeCompact("hi");
         const toolsTokensApprox = strToApproxTokens(
-          safeStringify(harnessTools),
+          stringify(harnessTools, { space: 0 }),
         );
         assert.strictEqual(strToApproxTokens(longUserContent) < 95_000, true);
         assert.strictEqual(
@@ -997,9 +997,11 @@ describe("api", () => {
         );
         await maybeCompact("hi");
         const withMcpTools = strToApproxTokens(
-          safeStringify({ ...harnessTools, ...getState().mcp.tools }),
+          stringify({ ...harnessTools, ...getState().mcp.tools }, { space: 0 }),
         );
-        const withoutMcpTools = strToApproxTokens(safeStringify(harnessTools));
+        const withoutMcpTools = strToApproxTokens(
+          stringify(harnessTools, { space: 0 }),
+        );
         assert.deepStrictEqual(getState().conversation.summaries, [
           { compacted: "compacted summary", compactedAt: 0, tokens: 25_000 },
         ]);

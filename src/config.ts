@@ -287,7 +287,7 @@ export function initStateFromConfig({
     for (const [commandB, keymapB] of keyedCommands.slice(i + 1)) {
       if (!isSameKey(keymapA, keymapB)) continue;
       actions.content.appendConfigErrorMessage(
-        `\`keymaps\` must be unique: \`${commandA}\` and \`${commandB}\` are both bound to \`${stringify(keymapA)}\``,
+        `\`keymaps\` must be unique: \`${commandA}\` and \`${commandB}\` are both bound to \`${stringify(keymapA, { space: 2 })}\``,
       );
     }
   }
@@ -410,7 +410,7 @@ export function getAllPrettyConfig() {
 
   return `# Applied config
 
-${markdownFence("json", stringify(getState().config))}
+${markdownFence("json", stringify(getState().config, { space: 2 }))}
 
 # ${globalConfigTitle}
 

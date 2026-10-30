@@ -35,7 +35,7 @@ describe("state", () => {
       assert.equal(
         testFs._files.get(debugLogPath),
         `1970-01-01T00:00:00.000Z :: dispatch set-question-abort-controller: before=null, after=[object AbortController]
-1970-01-01T00:00:00.000Z :: dispatch reset-state: before=[truncating], after=${stringify(getState())}
+1970-01-01T00:00:00.000Z :: dispatch reset-state: before=[truncating], after=${stringify(getState(), { space: 2 })}
 `,
       );
     });

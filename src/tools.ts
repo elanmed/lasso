@@ -12,7 +12,6 @@ import {
   isAbortError,
   tryCatchAsync,
   stringify,
-  safeStringify,
   normalizeNewline,
 } from "./utils.ts";
 import { getSubagentPrompt } from "./prompts.ts";
@@ -112,10 +111,13 @@ export async function executeBashTool(
     };
   }
   return {
-    content: JSON.stringify({
-      stdout: bashResult.value.stdout,
-      stderr: bashResult.value.stderr,
-    }),
+    content: stringify(
+      {
+        stdout: bashResult.value.stdout,
+        stderr: bashResult.value.stderr,
+      },
+      { space: 0 },
+    ),
     isError: false,
   };
 }
@@ -337,7 +339,7 @@ export async function executeWebFetchJsonTool(
   }
   const json = jsonResult.value;
   return {
-    content: stringify(json),
+    content: stringify(json, { space: 2 }),
     isError: false,
   };
 }
@@ -360,7 +362,7 @@ export function loadSkillTool({ name }: LoadSkillTool): ToolResult {
   }
 
   return {
-    content: stringify(foundSkill),
+    content: stringify(foundSkill, { space: 2 }),
     isError: false,
   };
 }
@@ -411,10 +413,13 @@ export async function executeMcpListResourcesTool({
   }
   return {
     isError: false,
-    content: stringify({
-      resources: listResult.value.resources,
-      nextCursor: listResult.value.nextCursor ?? null,
-    }),
+    content: stringify(
+      {
+        resources: listResult.value.resources,
+        nextCursor: listResult.value.nextCursor ?? null,
+      },
+      { space: 2 },
+    ),
   };
 }
 
@@ -454,6 +459,7 @@ export async function executeMcpReadResourceTool({
         text: entry.text ?? null,
         blob: entry.blob ?? null,
       })),
+      { space: 2 },
     ),
   };
 }
@@ -843,6 +849,7 @@ export async function createSubagentTool(
         }
         return result.value;
       }),
+      { space: 2 },
     ),
   };
 }
@@ -872,5 +879,5 @@ export function getBaseAgentTools() {
 }
 
 export function stringifyTools() {
-  return safeStringify(getBaseAgentTools());
+  return stringify(getBaseAgentTools(), { space: 0 });
 }

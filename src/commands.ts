@@ -11,7 +11,6 @@ import {
   isAbortError,
   tryCatchAsync,
   getMessageFromError,
-  safeStringify,
   markdownFence,
   normalizeNewline,
   shellQuote,
@@ -491,7 +490,7 @@ export function printKeymaps() {
   successWithSpacing(() => {
     print.doing("Keymaps:");
     for (const [command, keymap] of Object.entries(getState().config.keymaps)) {
-      print.plain(`- ${command}: ${JSON.stringify(keymap)}`);
+      print.plain(`- ${command}: ${stringify(keymap, { space: 0 })}`);
     }
   });
 }
@@ -729,7 +728,7 @@ export async function pageTools() {
 
     const prefix = context.type === "harness" ? "lasso" : `${context.name} mcp`;
 
-    return `- **[${prefix}] ${name}** ${formatTokenCountAside(safeStringify(tool))}: ${description}`;
+    return `- **[${prefix}] ${name}** ${formatTokenCountAside(stringify(tool, { space: 0 }))}: ${description}`;
   }
 
   const formattedHarnessTools = Object.entries(harnessTools).map((entry) =>
@@ -1063,7 +1062,7 @@ const getReloadTempFileDiffTitle = (): Record<
 const getReloadTempFileStr = (): Record<ReloadTempFilePrefixes, string> => ({
   global: markdownFence("yaml", getState().content.globalConfigStr),
   local: markdownFence("yaml", getState().content.localConfigStr),
-  applied: markdownFence("json", stringify(getState().config)),
+  applied: markdownFence("json", stringify(getState().config, { space: 2 })),
   context: getState().content.contextStr,
   commands: getCustomSlashCommandsStr(),
   skills: getState().content.skillsStr,
