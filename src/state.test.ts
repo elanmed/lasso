@@ -56,6 +56,7 @@ describe("state", () => {
         getState().terminal.isNonBlockingProcessOngoing,
         false,
       );
+      assert.strictEqual(getState().terminal.isExecutingUserInput, false);
       assert.strictEqual(getState().terminal.isRecording, false);
       assert.strictEqual(getState().terminal.isSteering, false);
       assert.strictEqual(
@@ -327,6 +328,14 @@ describe("state", () => {
       assert.equal(getState().terminal.isInitializing, true);
       actions.terminal.setIsInitializing(false);
       assert.equal(getState().terminal.isInitializing, false);
+    });
+
+    it("set-is-executing-user-input", () => {
+      assert.equal(getState().terminal.isExecutingUserInput, false);
+      actions.terminal.setIsExecutingUserInput(true);
+      assert.equal(getState().terminal.isExecutingUserInput, true);
+      actions.terminal.setIsExecutingUserInput(false);
+      assert.equal(getState().terminal.isExecutingUserInput, false);
     });
 
     it("set-is-non-blocking-process-ongoing", () => {

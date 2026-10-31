@@ -3440,6 +3440,7 @@ describe("input", () => {
       const execution = executeUserInput("! echo hello");
       const controller = getState().abortControllers.executeUserInput;
       assert(controller !== null);
+      assert.strictEqual(getState().terminal.isExecutingUserInput, true);
 
       assert.deepStrictEqual(spawned, ["/bin/zsh"]);
       assert.deepStrictEqual(spawnArgs, [["-i", "+m", "-c", " echo hello"]]);
@@ -3455,6 +3456,7 @@ describe("input", () => {
       await execution;
 
       assert.strictEqual(getState().abortControllers.executeUserInput, null);
+      assert.strictEqual(getState().terminal.isExecutingUserInput, false);
     });
 
     it("pauses readline while the shell runs and resumes it afterward", async () => {
@@ -3496,6 +3498,7 @@ describe("input", () => {
         `${RED}Error while executing the user input. Error: spawn failed${RESET}\n`,
       ]);
       assert.strictEqual(getState().abortControllers.executeUserInput, null);
+      assert.strictEqual(getState().terminal.isExecutingUserInput, false);
     });
 
     it("aborts the running command on SIGINT", async () => {
@@ -3529,6 +3532,7 @@ describe("input", () => {
       await execution;
 
       assert.strictEqual(getState().abortControllers.executeUserInput, null);
+      assert.strictEqual(getState().terminal.isExecutingUserInput, false);
     });
   });
 

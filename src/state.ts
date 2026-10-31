@@ -88,6 +88,7 @@ interface TerminalState {
   loadingStateTimeout: NodeJS.Timeout | null;
   loadingStateFrameIdx: number;
   isNonBlockingProcessOngoing: boolean;
+  isExecutingUserInput: boolean;
   isInitializing: boolean;
   isRecording: boolean;
   isSteering: boolean;
@@ -172,6 +173,7 @@ const createInitialState = (): State => ({
     bufferedStdoutWhileEditorOpen: "",
     editorInputValue: null,
     isNonBlockingProcessOngoing: false,
+    isExecutingUserInput: false,
     isInitializing: false,
     isRecording: false,
     isSteering: false,
@@ -353,6 +355,9 @@ export const actions = {
     },
     setIsNonBlockingProcessOngoing(isNonBlockingProcessOngoing: boolean) {
       state.terminal.isNonBlockingProcessOngoing = isNonBlockingProcessOngoing;
+    },
+    setIsExecutingUserInput(isExecutingUserInput: boolean) {
+      state.terminal.isExecutingUserInput = isExecutingUserInput;
     },
     setIsInitializing(isInitializing: boolean) {
       state.terminal.isInitializing = isInitializing;

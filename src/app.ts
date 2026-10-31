@@ -1090,6 +1090,7 @@ export async function resolveUserInput({
 }
 
 export async function executeUserInput(rawInput: string) {
+  actions.terminal.setIsExecutingUserInput(true);
   const abortController = new AbortController();
   actions.abortControllers.setExecuteUserInput(abortController);
 
@@ -1109,6 +1110,7 @@ export async function executeUserInput(rawInput: string) {
     }
   } finally {
     actions.abortControllers.setExecuteUserInput(null);
+    actions.terminal.setIsExecutingUserInput(false);
   }
 }
 
