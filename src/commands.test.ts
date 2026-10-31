@@ -2715,6 +2715,17 @@ editor input
         assert.deepStrictEqual(harness.writes, []);
       });
 
+      it("ignores keymaps while executing user input", async () => {
+        actions.config.setKeymaps({
+          ...defaultConfig.keymaps,
+          clear: { name: "k", ctrl: true },
+        });
+        actions.terminal.setIsExecutingUserInput(true);
+        harness.emitKey({ name: "k", ctrl: true });
+        await harness.flush();
+        assert.deepStrictEqual(harness.writes, []);
+      });
+
       it("runs the record keymap and toggles isRecording around it", async () => {
         let recordingDuringQuestion: boolean | undefined;
         actions.abortControllers.setQuestion(null);

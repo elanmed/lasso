@@ -1727,6 +1727,7 @@ function initKeypress(
 
       if (getState().terminal.isNonBlockingProcessOngoing) return;
       if (getState().terminal.isRecording) return;
+      if (getState().terminal.isExecutingUserInput) return;
 
       const keymaps = getState().config.keymaps;
 
