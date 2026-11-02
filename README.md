@@ -578,6 +578,7 @@ vim.g.clipboard = {
 
 - Suppress warnings when `git ls-files` fails in a non-git repo
   - Prefer `git ls-files`, fallback to glob
+- Ensure no lasso function can throw, should return an option
 
 ## TODO (later)
 
