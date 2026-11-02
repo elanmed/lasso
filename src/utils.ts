@@ -2,7 +2,7 @@ import assert from "node:assert";
 import crypto from "node:crypto";
 import { dirname } from "node:path";
 import * as YAML from "yaml";
-import { processDeps, fsDeps } from "./deps.ts";
+import { processDeps, fsDeps, childProcessDeps } from "./deps.ts";
 
 export function assertAtBuildtime(value: boolean): asserts value {
   assert(value);
@@ -413,4 +413,17 @@ export function getPrettyMoney(money: number) {
     minimumFractionDigits: 3,
     maximumFractionDigits: 3,
   });
+}
+
+export async function smartGlob(regex: string) {
+  const gitResult = await tryCatchAsync(
+    childProcessDeps.exec("git rev-parse --is-inside-work-tree"),
+  );
+  if (!gitResult.ok) {
+    return await fsDeps.glob(regex);
+  }
+  if (gitResult.value.stdout !== "true") {
+    return await fsDeps.glob(regex);
+  }
+  return await fsDeps.gitLsFiles(regex);
 }
