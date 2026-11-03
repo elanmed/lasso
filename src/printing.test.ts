@@ -791,7 +791,10 @@ describe("execGitDiff", () => {
         tempFileBeforePath: "a",
         tempFileAfterPath: "b",
       });
-      assert.deepStrictEqual(result, { stdout: "diff output", stderr: "" });
+      assert.deepStrictEqual(result, {
+        ok: true,
+        value: { stdout: "diff output", stderr: "" },
+      });
       assert.deepStrictEqual(commands, [
         "delta --version",
         "git diff --no-index --color=always -U3 a b | delta --paging=never --line-numbers --hunk-header-style=omit --file-style=omit",
@@ -823,7 +826,10 @@ describe("execGitDiff", () => {
         tempFileBeforePath: "a",
         tempFileAfterPath: "b",
       });
-      assert.deepStrictEqual(result, { stdout: "", stderr: "" });
+      assert.deepStrictEqual(result, {
+        ok: true,
+        value: { stdout: "", stderr: "" },
+      });
     });
 
     it("returns the diff from the error output when delta exits with code 1", async () => {
@@ -838,8 +844,8 @@ describe("execGitDiff", () => {
         tempFileAfterPath: "b",
       });
       assert.deepStrictEqual(result, {
-        stdout: "delta diff output",
-        stderr: "delta warning",
+        ok: true,
+        value: { stdout: "delta diff output", stderr: "delta warning" },
       });
     });
   });
@@ -854,7 +860,10 @@ describe("execGitDiff", () => {
         tempFileBeforePath: "a",
         tempFileAfterPath: "b",
       });
-      assert.deepStrictEqual(result, { stdout: "plain diff", stderr: "" });
+      assert.deepStrictEqual(result, {
+        ok: true,
+        value: { stdout: "plain diff", stderr: "" },
+      });
     });
 
     it("resolves when plain git diff exits with code 1 (differences found)", async () => {
@@ -868,7 +877,10 @@ describe("execGitDiff", () => {
         tempFileBeforePath: "a",
         tempFileAfterPath: "b",
       });
-      assert.deepStrictEqual(result, { stdout: "", stderr: "" });
+      assert.deepStrictEqual(result, {
+        ok: true,
+        value: { stdout: "", stderr: "" },
+      });
     });
 
     it("returns the diff from the error output when plain git diff exits with code 1", async () => {
@@ -886,8 +898,8 @@ describe("execGitDiff", () => {
         tempFileAfterPath: "b",
       });
       assert.deepStrictEqual(result, {
-        stdout: "plain diff output",
-        stderr: "",
+        ok: true,
+        value: { stdout: "plain diff output", stderr: "" },
       });
     });
 
@@ -904,25 +916,29 @@ describe("execGitDiff", () => {
         tempFileBeforePath: "a",
         tempFileAfterPath: "b",
       });
-      assert.deepStrictEqual(result, { stdout: "", stderr: "" });
+      assert.deepStrictEqual(result, {
+        ok: true,
+        value: { stdout: "", stderr: "" },
+      });
     });
   });
 
-  describe("rejects on errors", () => {
-    it("rejects when plain git diff exits with code 2 (usage error)", async () => {
+  describe("returns errors", () => {
+    it("returns an option error when plain git diff exits with code 2", async () => {
       const err = new Error("usage error") as Error & { code: number };
       err.code = 2;
       mockExecCalls([
         { stdout: "", error: new Error("not found") },
         { stdout: "", error: err },
       ]);
-      await assert.rejects(
-        execGitDiff({ tempFileBeforePath: "a", tempFileAfterPath: "b" }),
-        /usage error/,
-      );
+      const result = await execGitDiff({
+        tempFileBeforePath: "a",
+        tempFileAfterPath: "b",
+      });
+      assert.deepStrictEqual(result, { ok: false, error: err });
     });
 
-    it("rejects when git is not installed (plain git diff exit code 127)", async () => {
+    it("returns an option error when git is not installed", async () => {
       const err = new Error("git: command not found") as Error & {
         code: number;
       };
@@ -931,36 +947,39 @@ describe("execGitDiff", () => {
         { stdout: "", error: new Error("not found") },
         { stdout: "", error: err },
       ]);
-      await assert.rejects(
-        execGitDiff({ tempFileBeforePath: "a", tempFileAfterPath: "b" }),
-        /command not found/,
-      );
+      const result = await execGitDiff({
+        tempFileBeforePath: "a",
+        tempFileAfterPath: "b",
+      });
+      assert.deepStrictEqual(result, { ok: false, error: err });
     });
 
-    it("rejects when plain git diff is killed by a signal (141)", async () => {
+    it("returns an option error when plain git diff is killed", async () => {
       const err = new Error("killed") as Error & { code: number };
       err.code = 141;
       mockExecCalls([
         { stdout: "", error: new Error("not found") },
         { stdout: "", error: err },
       ]);
-      await assert.rejects(
-        execGitDiff({ tempFileBeforePath: "a", tempFileAfterPath: "b" }),
-        /killed/,
-      );
+      const result = await execGitDiff({
+        tempFileBeforePath: "a",
+        tempFileAfterPath: "b",
+      });
+      assert.deepStrictEqual(result, { ok: false, error: err });
     });
 
-    it("rejects on fatal plain git diff error", async () => {
+    it("returns an option error on fatal plain git diff error", async () => {
       const err = new Error("fatal") as Error & { code: number };
       err.code = 128;
       mockExecCalls([
         { stdout: "", error: new Error("not found") },
         { stdout: "", error: err },
       ]);
-      await assert.rejects(
-        execGitDiff({ tempFileBeforePath: "a", tempFileAfterPath: "b" }),
-        /fatal/,
-      );
+      const result = await execGitDiff({
+        tempFileBeforePath: "a",
+        tempFileAfterPath: "b",
+      });
+      assert.deepStrictEqual(result, { ok: false, error: err });
     });
   });
 });

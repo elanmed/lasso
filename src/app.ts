@@ -20,6 +20,7 @@ import {
   parseFrontMatter,
   isReadlineClosedError,
   sleep,
+  smartGlob,
   writeDebugLog,
 } from "./utils.ts";
 import { actions, getState, type ContextEntry, type Skill } from "./state.ts";
@@ -202,7 +203,7 @@ export async function getSkills() {
 
   for (const skillGrandparentDir of skillGrandparentDirs) {
     const glob = join(skillGrandparentDir, "**/SKILL.md");
-    const globResult = await tryCatchAsync(fsDeps.glob(glob));
+    const globResult = await smartGlob(glob);
     if (!globResult.ok) {
       actions.content.appendConfigWarningMessage(
         `Failed to list the skill files in \`${skillGrandparentDir}\`, ignoring. Error: ${getMessageFromError(globResult.error, { forceSingleLine: true })}`,
@@ -221,12 +222,10 @@ export async function getSkills() {
     skills.push(skill);
   }
 
-  const agentFileGlobResult = await tryCatchAsync(
-    fsDeps.gitLsFiles("**/AGENTS.md"),
-  );
+  const agentFileGlobResult = await smartGlob("**/AGENTS.md");
   if (!agentFileGlobResult.ok) {
     actions.content.appendConfigWarningMessage(
-      `Failed to list the agent files with git, ignoring. Error: ${getMessageFromError(agentFileGlobResult.error, { forceSingleLine: true })}`,
+      `Failed to list the agent files, ignoring. Error: ${getMessageFromError(agentFileGlobResult.error, { forceSingleLine: true })}`,
     );
     return skills;
   }

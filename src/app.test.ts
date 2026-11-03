@@ -2739,7 +2739,7 @@ would benefit from specialized instructions.
         assert.deepStrictEqual(result, []);
         assert.deepStrictEqual(writes(), []);
         assert.deepStrictEqual(getState().content.configWarningMessages, [
-          "Failed to list the agent files with git, ignoring. Error: git failed",
+          "Failed to list the agent files, ignoring. Error: git failed",
         ]);
       });
 

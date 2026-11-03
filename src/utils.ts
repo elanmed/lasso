@@ -1,6 +1,6 @@
 import assert from "node:assert";
 import crypto from "node:crypto";
-import { dirname } from "node:path";
+import { dirname, isAbsolute } from "node:path";
 import * as YAML from "yaml";
 import { processDeps, fsDeps, childProcessDeps } from "./deps.ts";
 
@@ -416,14 +416,13 @@ export function getPrettyMoney(money: number) {
 }
 
 export async function smartGlob(regex: string) {
+  if (isAbsolute(regex)) return await tryCatchAsync(fsDeps.glob(regex));
+
   const gitResult = await tryCatchAsync(
     childProcessDeps.exec("git rev-parse --is-inside-work-tree"),
   );
-  if (!gitResult.ok) {
-    return await fsDeps.glob(regex);
+  if (!gitResult.ok || gitResult.value.stdout.trim() !== "true") {
+    return await tryCatchAsync(fsDeps.glob(regex));
   }
-  if (gitResult.value.stdout !== "true") {
-    return await fsDeps.glob(regex);
-  }
-  return await fsDeps.gitLsFiles(regex);
+  return await tryCatchAsync(fsDeps.gitLsFiles(regex));
 }

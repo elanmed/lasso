@@ -652,12 +652,10 @@ export function createToolCallDiffer() {
         return;
       }
 
-      const diffResult = await tryCatchAsync(
-        execGitDiff({
-          tempFileBeforePath,
-          tempFileAfterPath,
-        }),
-      );
+      const diffResult = await execGitDiff({
+        tempFileBeforePath,
+        tempFileAfterPath,
+      });
 
       if (!diffResult.ok) {
         print.error(

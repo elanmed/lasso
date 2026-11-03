@@ -20,6 +20,7 @@ import {
   isShellSafePath,
   removeMediaReplacer,
   writeDebugLog,
+  smartGlob,
 } from "./utils.ts";
 import {
   testProcessEnv,
@@ -30,6 +31,7 @@ import {
   mockKillWithDeadPid,
   mockSetTimeout,
   drainTimerCallbacks,
+  mockExecCalls,
 } from "./test-helpers.ts";
 import { processDeps, fsDeps } from "./deps.ts";
 
@@ -884,5 +886,69 @@ describe("createLockUtils", () => {
         assert.doesNotThrow(() => lockUtils.deleteLock());
       });
     });
+  });
+});
+
+describe("smartGlob", () => {
+  afterEach(() => {
+    mock.restoreAll();
+  });
+
+  beforeEach(() => {
+    setupTestContext();
+  });
+
+  it("uses glob for absolute patterns", async () => {
+    testFs._globResults.set("/custom/**/*.md", ["/custom/file.md"]);
+
+    const result = await smartGlob("/custom/**/*.md");
+
+    assert.deepStrictEqual(result, { ok: true, value: ["/custom/file.md"] });
+  });
+
+  it("uses git ls-files for relative patterns in a git repository", async () => {
+    mockExecCalls([{ stdout: "true\n" }]);
+    testFs._gitLsFilesResults.set("**/*.md", ["file.md"]);
+
+    const result = await smartGlob("**/*.md");
+
+    assert.deepStrictEqual(result, { ok: true, value: ["file.md"] });
+  });
+
+  it("falls back to glob outside a git repository", async () => {
+    mockExecCalls([{ stdout: "false\n" }]);
+    testFs._globResults.set("**/*.md", ["file.md"]);
+
+    const result = await smartGlob("**/*.md");
+
+    assert.deepStrictEqual(result, { ok: true, value: ["file.md"] });
+  });
+
+  it("falls back to glob when checking the git repository fails", async () => {
+    mockExecCalls([{ stdout: "", error: new Error("git unavailable") }]);
+    testFs._globResults.set("**/*.md", ["file.md"]);
+
+    const result = await smartGlob("**/*.md");
+
+    assert.deepStrictEqual(result, { ok: true, value: ["file.md"] });
+  });
+
+  it("returns an error when glob fails", async () => {
+    const error = new Error("glob failed");
+    mock.method(fsDeps, "glob", () => Promise.reject(error));
+
+    const result = await smartGlob("/custom/**/*.md");
+
+    assert.deepStrictEqual(result, { ok: false, error });
+  });
+
+  it("returns an error when listing files fails", async () => {
+    mockExecCalls([{ stdout: "true\n" }]);
+    const error = new Error("git ls-files failed");
+    mock.method(fsDeps, "gitLsFiles", () => Promise.reject(error));
+
+    const result = await smartGlob("**/*.md");
+
+    assert.deepStrictEqual(result, { ok: false, error });
   });
 });
