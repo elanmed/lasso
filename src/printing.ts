@@ -16,7 +16,6 @@ import {
   getDurationColor,
   getPrettyDuration,
   type Color,
-  type Option,
   bold,
   wrapInColor,
 } from "./utils.ts";
@@ -538,61 +537,58 @@ export async function execGitDiff(opts: {
   tempFileBeforePath: string;
   tempFileAfterPath: string;
   includeFilename?: boolean;
-}): Promise<Option<{ stdout: string; stderr: string }>> {
-  try {
-    const deltaResult = await tryCatchAsync(
-      childProcessDeps.exec("delta --version"),
-    );
-    const isDeltaAvailable = deltaResult.ok;
+}): Promise<{ stdout: string; stderr: string }> {
+  const deltaResult = await tryCatchAsync(
+    childProcessDeps.exec("delta --version"),
+  );
+  const isDeltaAvailable = deltaResult.ok;
 
-    const colorFlag = shouldDisableColor() ? "--color=never" : "--color=always";
-    const base = `git diff --no-index ${colorFlag} -U3 ${opts.tempFileBeforePath} ${opts.tempFileAfterPath}`;
-    const fileStyle = opts.includeFilename === true ? "normal" : "omit";
-    const command = isDeltaAvailable
-      ? `${base} | delta --paging=never --line-numbers --hunk-header-style=omit --file-style=${fileStyle}`
-      : base;
-    const result = await tryCatchAsync(
-      childProcessDeps.exec(command, { cwd: os.tmpdir() }),
-    );
+  const colorFlag = shouldDisableColor() ? "--color=never" : "--color=always";
+  const base = `git diff --no-index ${colorFlag} -U3 ${opts.tempFileBeforePath} ${opts.tempFileAfterPath}`;
+  const fileStyle = opts.includeFilename === true ? "normal" : "omit";
+  const command = isDeltaAvailable
+    ? `${base} | delta --paging=never --line-numbers --hunk-header-style=omit --file-style=${fileStyle}`
+    : base;
+  const result = await tryCatchAsync(
+    childProcessDeps.exec(command, { cwd: os.tmpdir() }),
+  );
+  // exit code 1 for files that differ
+  // exec treats exit code 1 as an error
 
-    if (!result.ok) {
-      const code = (result.error as { code?: number }).code;
-      const isError = (() => {
-        if (code === undefined) return true;
-        if (isDeltaAvailable) return code > 1;
-        return [2, 127, 128].includes(code) || code > 128;
-      })();
+  if (!result.ok) {
+    const code = (result.error as { code?: number }).code;
+    const isError = (() => {
+      if (code === undefined) return true;
+      if (isDeltaAvailable) return code > 1;
+      return [2, 127, 128].includes(code) || code > 128;
+    })();
 
-      if (isError) return result;
+    if (isError) {
+      throw result.error;
     }
-
-    if (result.ok) return { ok: true, value: result.value };
-
-    const obj: { stdout: string; stderr: string } = {
-      stderr: "",
-      stdout: "",
-    };
-    if (
-      typeof result.error === "object" &&
-      result.error !== null &&
-      "stdout" in result.error &&
-      typeof result.error.stdout === "string"
-    ) {
-      obj.stdout = result.error.stdout;
-    }
-
-    if (
-      typeof result.error === "object" &&
-      result.error !== null &&
-      "stderr" in result.error &&
-      typeof result.error.stderr === "string"
-    ) {
-      obj.stderr = result.error.stderr;
-    }
-    return { ok: true, value: obj };
-  } catch (error) {
-    return { ok: false, error };
   }
+
+  if (result.ok) return result.value;
+
+  const obj: { stdout: string; stderr: string } = { stderr: "", stdout: "" };
+  if (
+    typeof result.error === "object" &&
+    result.error !== null &&
+    "stdout" in result.error &&
+    typeof result.error.stdout === "string"
+  ) {
+    obj.stdout = result.error.stdout;
+  }
+
+  if (
+    typeof result.error === "object" &&
+    result.error !== null &&
+    "stderr" in result.error &&
+    typeof result.error.stderr === "string"
+  ) {
+    obj.stderr = result.error.stderr;
+  }
+  return obj;
 }
 
 export function spawnBat(input: string) {

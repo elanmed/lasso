@@ -1370,10 +1370,12 @@ async function reload(reloadState: () => Promise<void>) {
       continue;
     }
 
-    const diffResult = await execGitDiff({
-      tempFileBeforePath: beforeFile,
-      tempFileAfterPath: afterFile,
-    });
+    const diffResult = await tryCatchAsync(
+      execGitDiff({
+        tempFileBeforePath: beforeFile,
+        tempFileAfterPath: afterFile,
+      }),
+    );
 
     if (!diffResult.ok) {
       for (const path of beforeFiles
