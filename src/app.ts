@@ -399,6 +399,15 @@ function getApiStreamAbortSignal() {
   return controller.signal;
 }
 
+export function getProviderOptions() {
+  if (getState().config.gateway === "opencode") {
+    return {
+      openai: { store: false },
+    };
+  }
+  return {};
+}
+
 export async function resolveApiCall(userInput: string) {
   const toolCallDiffer = createToolCallDiffer();
 
@@ -509,6 +518,7 @@ export async function resolveApiCall(userInput: string) {
       onStepEnd: (stepResult) => {
         completedStepMessages.push(...stepResult.response.messages);
       },
+      providerOptions: getProviderOptions(),
     }),
   );
   stopLoadingState();
@@ -649,6 +659,7 @@ export async function getMergedSummaries(summaries: ModelSummary[]) {
       stopWhen: aiDeps.isLoopFinished(),
       abortSignal: getApiStreamAbortSignal(),
       timeout: timeoutSettings,
+      providerOptions: getProviderOptions(),
       ...structuredOutputOpts,
     }),
   );
@@ -717,6 +728,7 @@ export async function getConversationSummary(messageChunk: string[]) {
       stopWhen: aiDeps.isLoopFinished(),
       abortSignal: getApiStreamAbortSignal(),
       timeout: timeoutSettings,
+      providerOptions: getProviderOptions(),
       ...structuredOutputOpts,
     }),
   );
