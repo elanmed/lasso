@@ -26,6 +26,7 @@ import {
   getSkills,
   getSkillJSON,
   getPrettyApiDuration,
+  getProviderOptions,
   initState,
   initStateRepeatable,
   resolveInterruptWithEditor,
@@ -148,6 +149,33 @@ describe("api", () => {
         actions.config.setReasoning("high");
         await resolveApiCall("hello");
         assert.strictEqual(captured[1]?.["reasoning"], "high");
+      });
+
+      it("passes no provider options when the gateway is not opencode", async () => {
+        let capturedOptions: Record<string, unknown> | undefined;
+        mockGenerateText(async (options: Record<string, unknown>) => {
+          capturedOptions = options;
+          return Promise.resolve(makeGenerateTextResult());
+        });
+
+        await resolveApiCall("hello");
+
+        assert.deepStrictEqual(capturedOptions?.["providerOptions"], {});
+      });
+
+      it("passes opencode provider options to generateText", async () => {
+        let capturedOptions: Record<string, unknown> | undefined;
+        mockGenerateText(async (options: Record<string, unknown>) => {
+          capturedOptions = options;
+          return Promise.resolve(makeGenerateTextResult());
+        });
+        actions.config.setGateway("opencode");
+
+        await resolveApiCall("hello");
+
+        assert.deepStrictEqual(capturedOptions?.["providerOptions"], {
+          openai: { store: false },
+        });
       });
 
       it("passes system content to the api call", async () => {
@@ -1598,6 +1626,27 @@ describe("api", () => {
     };
 
     describe("summarizes the conversation", () => {
+      it("passes opencode provider options to generateText", async () => {
+        seedConversation();
+        let capturedOpts: Record<string, unknown> | undefined;
+        mock.method(aiDeps, "generateText", (opts: Record<string, unknown>) => {
+          capturedOpts = opts;
+          return Promise.resolve(
+            makeGenerateTextResult({
+              output: { compacted: "a new summary" },
+              usage,
+            }),
+          );
+        });
+        actions.config.setGateway("opencode");
+
+        await getConversationSummary(messageChunk);
+
+        assert.deepStrictEqual(capturedOpts?.["providerOptions"], {
+          openai: { store: false },
+        });
+      });
+
       it("strips image data from tool results in the compact prompt", async () => {
         actions.conversation.setSummaries([]);
         actions.conversation.setMessages([
@@ -2104,6 +2153,27 @@ describe("api", () => {
         ]);
       });
 
+      it("passes opencode provider options to generateText", async () => {
+        seedSummaries();
+        let capturedOpts: Record<string, unknown> | undefined;
+        mock.method(aiDeps, "generateText", (opts: Record<string, unknown>) => {
+          capturedOpts = opts;
+          return Promise.resolve(
+            makeGenerateTextResult({
+              output: { compacted: "merged summary" },
+              usage,
+            }),
+          );
+        });
+        actions.config.setGateway("opencode");
+
+        await getMergedSummaries(getState().conversation.summaries);
+
+        assert.deepStrictEqual(capturedOpts?.["providerOptions"], {
+          openai: { store: false },
+        });
+      });
+
       it("returns the existing summaries and leaves the abort controller set on abort error", async () => {
         seedSummaries();
         const err = makeAbortError();
@@ -2126,6 +2196,27 @@ describe("api", () => {
         ]);
       });
     });
+  });
+});
+
+describe("getProviderOptions", () => {
+  afterEach(() => {
+    mock.restoreAll();
+  });
+
+  beforeEach(() => {
+    setupTestContext();
+  });
+
+  it("returns openai store false when the gateway is opencode", () => {
+    actions.config.setGateway("opencode");
+    assert.deepStrictEqual(getProviderOptions(), {
+      openai: { store: false },
+    });
+  });
+
+  it("returns no provider options when the gateway is not opencode", () => {
+    assert.deepStrictEqual(getProviderOptions(), {});
   });
 });
 
