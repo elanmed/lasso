@@ -815,7 +815,7 @@ export function makeFakeMcpClient({
   instructions,
 }: {
   tools?: () => Promise<unknown>;
-  close?: () => void;
+  close?: () => Promise<void> | void;
   listResources?: (options?: {
     params?: { cursor: string };
   }) => Promise<unknown>;
@@ -825,7 +825,7 @@ export function makeFakeMcpClient({
 } = {}) {
   return {
     tools: tools ?? (() => Promise.resolve({})),
-    close: close ?? (() => undefined),
+    close: close ?? (() => Promise.resolve()),
     listResources: listResources ?? (() => Promise.resolve({})),
     readResource: readResource ?? (() => Promise.resolve({})),
     serverInfo: serverInfo ?? { name: "fake-server", version: "0.0.0" },

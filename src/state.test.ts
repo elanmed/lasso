@@ -420,6 +420,28 @@ describe("state", () => {
       });
     });
 
+    it("returns the errors of clients whose close() call fails", async () => {
+      const firstError = new Error("first boom");
+      const secondError = new Error("second boom");
+      const firstClient = makeFakeMcpClient({
+        close: () => Promise.reject(firstError),
+      });
+      const secondClient = makeFakeMcpClient({
+        close: () => Promise.reject(secondError),
+      });
+      actions.mcp.setClientsAndTools(
+        { first: firstClient, second: secondClient },
+        {},
+      );
+
+      const result = await getState().mcp.close();
+
+      assert.deepStrictEqual(result, [
+        { clientName: "first", error: firstError },
+        { clientName: "second", error: secondError },
+      ]);
+    });
+
     it("mcp state closes all clients when initialized", async () => {
       const closeFirst = mock.fn(() => undefined);
       const closeSecond = mock.fn(() => undefined);

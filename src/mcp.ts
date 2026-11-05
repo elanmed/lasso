@@ -84,7 +84,12 @@ export async function initMcpState({
 }) {
   const state = getState();
 
-  await state.mcp.close();
+  const previousCloseErrors = await state.mcp.close();
+  for (const { clientName, error } of previousCloseErrors) {
+    actions.content.appendConfigWarningMessage(
+      `Failed to close the \`${clientName}\` mcp server while reloading, ignoring. Error: ${getMessageFromError(error, { forceSingleLine: true })}`,
+    );
+  }
   const clients = await getMcpClients({
     performanceLogger,
   });

@@ -73,6 +73,23 @@ describe("mcp", () => {
       assert.deepStrictEqual(getState().mcp.tools, {});
     });
 
+    it("records a config warning when a client close() call fails while reloading", async () => {
+      const closeError = new Error("close boom");
+      const firstClient = makeFakeMcpClient({
+        close: () => Promise.reject(closeError),
+      });
+      mockMcpClients(firstClient);
+      setMcps("first");
+      actions.mcp.setClientsAndTools({ first: firstClient }, {});
+
+      const performanceLogger = makeStartupPerformanceLogger();
+      await initMcpState({ performanceLogger });
+
+      assert.deepStrictEqual(getState().content.configWarningMessages, [
+        `Failed to close the \`first\` mcp server while reloading, ignoring. Error: close boom`,
+      ]);
+    });
+
     it("keeps all clients when one client's tools() call fails", async () => {
       const closeFirst = mock.fn(() => undefined);
       const closeSecond = mock.fn(() => undefined);

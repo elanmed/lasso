@@ -73,7 +73,12 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     print.error(getMessageFromError(error));
     stopLoadingState();
     printSessionStartDate();
-    await getState().mcp.close();
+    const closeErrors = await getState().mcp.close();
+    for (const { clientName, error } of closeErrors) {
+      print.error(
+        `Failed to close the \`${clientName}\` mcp server while exiting. Error: ${getMessageFromError(error, { forceSingleLine: true })}`,
+      );
+    }
     process.exit(1);
   });
 }

@@ -7,15 +7,20 @@ import {
   type Mcp,
   type ModelMessage,
   type ModelPricing,
-  type ModelUsage,
   type ModelSummary,
+  type ModelUsage,
   type Reasoning,
   type SdkProvider,
   type ToolEditDiff,
   type TranscriptEntry,
   type UsageLimit,
 } from "./schemas.ts";
-import { assertAtRuntime, getShortId } from "./utils.ts";
+import {
+  assertAtRuntime,
+  getShortId,
+  isExisty,
+  tryCatchAsync,
+} from "./utils.ts";
 
 export interface ContextEntry {
   filePath: string;
@@ -42,7 +47,12 @@ export type MCPClients = Record<string, MCPClient>;
 export interface McpState {
   clients: MCPClients;
   tools: MCPToolSet;
-  close: () => Promise<void>;
+  close: () => Promise<McpCloseError[]>;
+}
+
+export interface McpCloseError {
+  clientName: string;
+  error: unknown;
 }
 
 interface DebugState {
@@ -214,7 +224,7 @@ const createInitialState = (): State => ({
   mcp: {
     clients: {},
     tools: {},
-    close: () => Promise.resolve(),
+    close: () => Promise.resolve([]),
   },
   abortControllers: {
     question: null,
@@ -478,9 +488,14 @@ export const actions = {
       state.mcp.clients = clients;
       state.mcp.tools = tools;
       state.mcp.close = async () => {
-        await Promise.all(
-          Object.values(clients).map((client) => client.close()),
+        const closeResults = await Promise.all(
+          Object.entries(clients).map(async ([clientName, client]) => {
+            const clientCloseResult = await tryCatchAsync(client.close());
+            if (clientCloseResult.ok) return null;
+            return { clientName, error: clientCloseResult.error };
+          }),
         );
+        return closeResults.filter(isExisty);
       };
     },
   },
