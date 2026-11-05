@@ -738,10 +738,20 @@ export async function pageTools() {
 
   const clientToolSets = await Promise.all(
     Object.entries(getState().mcp.clients).map(
-      async ([clientName, mcpClient]) => ({
-        clientName,
-        mcpToolSet: await mcpClient.tools(),
-      }),
+      async ([clientName, mcpClient]) => {
+        const toolsResult = await tryCatchAsync(mcpClient.tools());
+        if (!toolsResult.ok) {
+          errorWithSpacing(() =>
+            print.error(
+              `Failed to list the tools of the \`${clientName}\` mcp server, ignoring. Error: ${getMessageFromError(toolsResult.error, { forceSingleLine: true })}`,
+            ),
+          );
+        }
+        return {
+          clientName,
+          mcpToolSet: toolsResult.ok ? toolsResult.value : {},
+        };
+      },
     ),
   );
 

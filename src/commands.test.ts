@@ -2288,6 +2288,46 @@ editor input
 `,
       );
     });
+
+    it("skips the tools of mcp clients whose tools() call fails", async () => {
+      const getWrites = mockStdoutWrites();
+      mockPagerSpawn();
+      testProcessEnv._set("LASSO_PAGER", "nano __FILE__");
+      actions.mcp.setClientsAndTools(
+        {
+          first: makeFakeMcpClient({
+            tools: () => Promise.reject(new Error("tools failed")),
+          }),
+          second: makeFakeMcpClient({
+            tools: () => Promise.resolve({ mcp_tool: makeMcpTool() }),
+          }),
+        },
+        {},
+      );
+
+      await pageTools();
+
+      assert.deepStrictEqual(getWrites(), [
+        `${RED}Failed to list the tools of the \`first\` mcp server, ignoring. Error: tools failed${RESET}\n`,
+        "\n",
+      ]);
+      assert.strictEqual(
+        testFs._files.get("/tmp/lasso-test-uuid.txt"),
+        `# [lasso] Available tools:
+
+- **[lasso] web_fetch_html** _(75 tokens)_: Fetch a web page by URL and return its readable content, parsed to extract the main article.
+- **[lasso] web_fetch_json** _(67 tokens)_: Fetch a JSON API endpoint by URL and return the parsed JSON response.
+- **[lasso] load_skill** _(59 tokens)_: Load a skill to get specialized instructions
+- **[lasso] bash** _(241 tokens)_: Execute a bash command and return its output.
+- **[lasso] read_image** _(62 tokens)_: Read an image file from disk so you can look at it
+- **[lasso] mcp_list_resources** _(93 tokens)_: List the resources of an mcp server
+- **[lasso] mcp_read_resource** _(72 tokens)_: Read a resource from an mcp server
+- **[lasso] create_subagent** _(391 tokens)_: Launch parallel subagents for independent investigation or implementation. Prefer read-only subagents for parallel work to avoid conflicts. Read-only subagents can fetch web content, inspect files, and load skills; read-write subagents can modify files or execute commands.
+- **[second mcp] mcp_tool** _(22 tokens)_: [no description available]
+
+`,
+      );
+    });
   });
 
   describe("pageContext", () => {
