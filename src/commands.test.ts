@@ -1446,7 +1446,7 @@ older content
       assert.strictEqual(spawned[0], "nano /tmp/lasso-test-uuid.txt");
       assert.strictEqual(
         testFs._files.get("/tmp/lasso-test-uuid.txt"),
-        `# [lasso] Last response
+        `# [lasso] Last response _(4 tokens)_
 
 first
 second
@@ -1507,7 +1507,7 @@ second
       assert.strictEqual(spawned[0], "nano /tmp/lasso-test-uuid.txt");
       assert.strictEqual(
         testFs._files.get("/tmp/lasso-test-uuid.txt"),
-        `# [lasso] Last message
+        `# [lasso] Last message _(5 tokens)_
 
 latest question
 
@@ -1529,7 +1529,7 @@ latest question
 
       assert.strictEqual(
         testFs._files.get("/tmp/lasso-test-uuid.txt"),
-        `# [lasso] Last message\n\nlatest question\n\n`,
+        `# [lasso] Last message _(5 tokens)_\n\nlatest question\n\n`,
       );
     });
   });
@@ -1875,7 +1875,7 @@ older content
       assert.strictEqual(spawned[0], "nano /tmp/lasso-test-uuid.txt");
       assert.strictEqual(
         testFs._files.get("/tmp/lasso-test-uuid.txt"),
-        `# [lasso] Last response
+        `# [lasso] Last response _(4 tokens)_
 
 first
 second
@@ -1936,7 +1936,7 @@ second
       assert.strictEqual(spawned[0], "nano /tmp/lasso-test-uuid.txt");
       assert.strictEqual(
         testFs._files.get("/tmp/lasso-test-uuid.txt"),
-        `# [lasso] Last message
+        `# [lasso] Last message _(5 tokens)_
 
 latest question
 

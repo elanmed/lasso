@@ -621,7 +621,7 @@ export async function pageLastResponse({ isTyped = false }: SpacingOpts = {}) {
 
   const formattedContentStr = await formatMarkdown(contentStr);
 
-  const initialContentStr = `# [lasso] Last response
+  const initialContentStr = `# [lasso] Last response ${formatTokenCountAside(contentStr)}
 
 ${formattedContentStr}`;
 
@@ -655,7 +655,7 @@ export async function pageLastMessage({ isTyped = false }: SpacingOpts = {}) {
     return;
   }
 
-  const initialContentStr = `# [lasso] Last message
+  const initialContentStr = `# [lasso] Last message ${formatTokenCountAside(contentStr)}
 
 ${contentStr}`;
 
