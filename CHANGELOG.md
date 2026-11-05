@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.17.0 - 2026-11-05
+
+- Show token counts in the `/lastresponse` and `/lastmessage` pagers
+- Use `git ls-files` for globbing in git repositories, falling back to glob
+- Skip mcp tools whose `tools()` call fails instead of breaking the `/tools` pager
+- Report errors from failed mcp client closings instead of crashing exit
+- Preserve terminal input when running `!` shell commands
+- Set `store: false` provider options for OpenAI transcription
+- Use `maxOutputTokens` for summaries, remove `compactWithStructuredOutput`
+- Ignore keymaps while executing user input
+- Omit reasoning parts when saving messages
+
 ## v0.16.0 - 2026-03-22
 
 - Chunk conversation compaction to fit the token budget, updating state after each chunk
