@@ -2,7 +2,7 @@ import { join, dirname } from "node:path";
 import readline from "node:readline/promises";
 import { once } from "node:events";
 import { stdin, stdout } from "node:process";
-import { Output, type ModelMessage as AiModelMessage } from "ai";
+import { type ModelMessage as AiModelMessage } from "ai";
 import { z } from "zod";
 import {
   assertAtBuildtime,
@@ -638,19 +638,6 @@ export async function getMergedSummaries(summaries: ModelSummary[]) {
     ),
   });
 
-  const structuredOutputOpts = (() => {
-    if (getState().config.compactWithStructuredOutput) {
-      return {
-        output: Output.object({
-          schema: z.object({
-            compacted: z.string().max(maxCharCountPerSummary),
-          }),
-        }),
-      };
-    }
-    return {};
-  })();
-
   startLoadingState();
   const generateTextResult = await tryCatchAsync(
     aiDeps.generateText({
@@ -660,7 +647,7 @@ export async function getMergedSummaries(summaries: ModelSummary[]) {
       abortSignal: getApiStreamAbortSignal(),
       timeout: timeoutSettings,
       providerOptions: getProviderOptions(),
-      ...structuredOutputOpts,
+      maxOutputTokens: maxTokenCountPerSummary,
     }),
   );
   stopLoadingState();
@@ -677,16 +664,13 @@ export async function getMergedSummaries(summaries: ModelSummary[]) {
     return summaries;
   }
 
-  const { usage, output, text } = generateTextResult.value;
-  const summaryText = getState().config.compactWithStructuredOutput
-    ? output.compacted
-    : text;
+  const { usage, text } = generateTextResult.value;
   await appendModelUsage(usage);
 
   const mergedSummary: ModelSummary = {
-    compacted: summaryText,
+    compacted: text,
     compactedAt: Date.now(),
-    tokens: orApproxTokens(usage.outputTokens, summaryText),
+    tokens: orApproxTokens(usage.outputTokens, text),
   };
 
   const nextSummaries = summaries
@@ -707,19 +691,6 @@ export async function getConversationSummary(messageChunk: string[]) {
   // messages[0..summaries.length) are re-appended summaries, one per entry,
   // so everything from summaries.length on is not yet summarized
 
-  const structuredOutputOpts = (() => {
-    if (getState().config.compactWithStructuredOutput) {
-      return {
-        output: Output.object({
-          schema: z.object({
-            compacted: z.string().max(maxCharCountPerSummary),
-          }),
-        }),
-      };
-    }
-    return {};
-  })();
-
   startLoadingState();
   const generateTextResult = await tryCatchAsync(
     aiDeps.generateText({
@@ -729,7 +700,7 @@ export async function getConversationSummary(messageChunk: string[]) {
       abortSignal: getApiStreamAbortSignal(),
       timeout: timeoutSettings,
       providerOptions: getProviderOptions(),
-      ...structuredOutputOpts,
+      maxOutputTokens: maxTokenCountPerSummary,
     }),
   );
   stopLoadingState();
@@ -746,14 +717,11 @@ export async function getConversationSummary(messageChunk: string[]) {
     return null;
   }
 
-  const { usage, output, text } = generateTextResult.value;
-  const summaryText = getState().config.compactWithStructuredOutput
-    ? output.compacted
-    : text;
+  const { usage, text } = generateTextResult.value;
   const summary: ModelSummary = {
-    compacted: summaryText,
+    compacted: text,
     compactedAt: Date.now(),
-    tokens: orApproxTokens(usage.outputTokens, summaryText),
+    tokens: orApproxTokens(usage.outputTokens, text),
   };
   await appendModelUsage(usage);
 

@@ -92,7 +92,6 @@ describe("state", () => {
         asciiOnly: defaultConfig.asciiOnly,
         suppressStartupDurations: defaultConfig.suppressStartupDurations,
         suppressToolEditDiffs: defaultConfig.suppressToolEditDiffs,
-        compactWithStructuredOutput: defaultConfig.compactWithStructuredOutput,
         messageQueueDelimiter: defaultConfig.messageQueueDelimiter,
         reasoning: defaultConfig.reasoning,
         mcps: structuredClone(defaultConfig.mcps),
@@ -855,12 +854,6 @@ hello`,
       assert.strictEqual(getState().config.asciiOnly, false);
       actions.config.setAsciiOnly(true);
       assert.strictEqual(getState().config.asciiOnly, true);
-    });
-
-    it("set-compact-with-structured-output", () => {
-      assert.strictEqual(getState().config.compactWithStructuredOutput, true);
-      actions.config.setCompactWithStructuredOutput(false);
-      assert.strictEqual(getState().config.compactWithStructuredOutput, false);
     });
 
     it("set-reasoning", () => {

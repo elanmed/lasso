@@ -206,7 +206,6 @@ const createInitialState = (): State => ({
     asciiOnly: defaultConfig.asciiOnly,
     suppressStartupDurations: defaultConfig.suppressStartupDurations,
     suppressToolEditDiffs: defaultConfig.suppressToolEditDiffs,
-    compactWithStructuredOutput: defaultConfig.compactWithStructuredOutput,
     messageQueueDelimiter: defaultConfig.messageQueueDelimiter,
     reasoning: defaultConfig.reasoning,
     mcps: structuredClone(defaultConfig.mcps),
@@ -463,9 +462,6 @@ export const actions = {
     },
     setSuppressToolEditDiffs(suppressToolEditDiffs: boolean) {
       state.config.suppressToolEditDiffs = suppressToolEditDiffs;
-    },
-    setCompactWithStructuredOutput(compactWithStructuredOutput: boolean) {
-      state.config.compactWithStructuredOutput = compactWithStructuredOutput;
     },
     setReasoning(reasoning: Reasoning) {
       state.config.reasoning = reasoning;

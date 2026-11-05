@@ -800,7 +800,7 @@ describe("api", () => {
           capturedOpts = opts;
           return Promise.resolve(
             makeGenerateTextResult({
-              output: { compacted: "compacted summary" },
+              text: "compacted summary",
               usage: makeMockUsage(),
             }),
           );
@@ -959,15 +959,15 @@ describe("api", () => {
         mockGenerateTextResults(
           [
             {
-              output: { compacted: "chunk summary one" },
+              text: "chunk summary one",
               usage: makeMockUsage({ outputTokens: 11 }),
             },
             {
-              output: { compacted: "chunk summary two" },
+              text: "chunk summary two",
               usage: makeMockUsage({ outputTokens: 12 }),
             },
             {
-              output: { compacted: "merged chunk summary" },
+              text: "merged chunk summary",
               usage: makeMockUsage({ outputTokens: 13 }),
             },
           ],
@@ -1018,7 +1018,7 @@ describe("api", () => {
         mock.method(aiDeps, "generateText", () =>
           Promise.resolve(
             makeGenerateTextResult({
-              output: { compacted: "compacted summary" },
+              text: "compacted summary",
               usage: makeMockUsage(),
             }),
           ),
@@ -1052,7 +1052,7 @@ describe("api", () => {
             responseMessages: [{ role: "assistant", content: "answer text" }],
           },
           {
-            output: { compacted: "compacted summary" },
+            text: "compacted summary",
             usage: makeMockUsage(),
           },
         ]);
@@ -1078,7 +1078,7 @@ describe("api", () => {
           capturedOpts = opts;
           return Promise.resolve(
             makeGenerateTextResult({
-              output: { compacted: "compacted summary" },
+              text: "compacted summary",
               usage: makeMockUsage(),
             }),
           );
@@ -1137,7 +1137,7 @@ describe("api", () => {
           capturedOpts = opts;
           return Promise.resolve(
             makeGenerateTextResult({
-              output: { compacted: "compacted summary" },
+              text: "compacted summary",
               usage: makeMockUsage(),
             }),
           );
@@ -1169,7 +1169,7 @@ describe("api", () => {
         mock.method(aiDeps, "generateText", () =>
           Promise.resolve(
             makeGenerateTextResult({
-              output: { compacted: "compacted summary" },
+              text: "compacted summary",
               usage: makeMockUsage(),
             }),
           ),
@@ -1191,7 +1191,7 @@ describe("api", () => {
         mockGenerateTextResults(
           [
             {
-              output: { compacted: "compacted summary" },
+              text: "compacted summary",
               usage: makeMockUsage({ outputTokens: 25 }),
             },
             {
@@ -1263,7 +1263,7 @@ describe("api", () => {
         actions.usage.setRequestInputTokensStale(false);
         mockGenerateTextResults([
           {
-            output: { compacted: "first summary" },
+            text: "first summary",
             usage: makeMockUsage({ outputTokens: 11 }),
           },
           new Error("network error"),
@@ -1365,7 +1365,7 @@ describe("api", () => {
           getState().abortControllers.apiStream?.abort();
           return Promise.resolve(
             makeGenerateTextResult({
-              output: { compacted: "compacted summary" },
+              text: "compacted summary",
               usage: makeMockUsage({ outputTokens: 20 }),
             }),
           );
@@ -1412,11 +1412,11 @@ describe("api", () => {
         actions.usage.setRequestInputTokensStale(false);
         mockGenerateTextResults([
           {
-            output: { compacted: "compacted summary" },
+            text: "compacted summary",
             usage: makeMockUsage({ outputTokens: 20 }),
           },
           {
-            output: { compacted: "merged summary" },
+            text: "merged summary",
             usage: makeMockUsage({ outputTokens: 15 }),
           },
         ]);
@@ -1471,7 +1471,7 @@ describe("api", () => {
         actions.usage.setRequestInputTokensStale(false);
         mockGenerateTextResults([
           {
-            output: { compacted: "compacted summary" },
+            text: "compacted summary",
             usage: makeMockUsage({ outputTokens: 20 }),
           },
           new Error("network error"),
@@ -1626,6 +1626,24 @@ describe("api", () => {
     };
 
     describe("summarizes the conversation", () => {
+      it("passes maxOutputTokens to generateText", async () => {
+        seedConversation();
+        let capturedOpts: Record<string, unknown> | undefined;
+        mock.method(aiDeps, "generateText", (opts: Record<string, unknown>) => {
+          capturedOpts = opts;
+          return Promise.resolve(
+            makeGenerateTextResult({
+              text: "a new summary",
+              usage,
+            }),
+          );
+        });
+
+        await getConversationSummary(messageChunk);
+
+        assert.strictEqual(capturedOpts?.["maxOutputTokens"], 5_000);
+      });
+
       it("passes opencode provider options to generateText", async () => {
         seedConversation();
         let capturedOpts: Record<string, unknown> | undefined;
@@ -1633,7 +1651,7 @@ describe("api", () => {
           capturedOpts = opts;
           return Promise.resolve(
             makeGenerateTextResult({
-              output: { compacted: "a new summary" },
+              text: "a new summary",
               usage,
             }),
           );
@@ -1678,7 +1696,7 @@ describe("api", () => {
           capturedOpts = opts;
           return Promise.resolve(
             makeGenerateTextResult({
-              output: { compacted: "compacted summary" },
+              text: "compacted summary",
               usage,
             }),
           );
@@ -1698,7 +1716,7 @@ describe("api", () => {
           capturedOpts = opts;
           return Promise.resolve(
             makeGenerateTextResult({
-              output: { compacted: "compacted summary" },
+              text: "compacted summary",
               usage,
             }),
           );
@@ -1743,7 +1761,7 @@ describe("api", () => {
         mock.method(aiDeps, "generateText", () =>
           Promise.resolve(
             makeGenerateTextResult({
-              output: { compacted: "compacted summary" },
+              text: "compacted summary",
               usage,
             }),
           ),
@@ -1767,49 +1785,12 @@ describe("api", () => {
         });
       });
 
-      it("uses a structured output schema when compactWithStructuredOutput is true", async () => {
-        seedConversation();
-        let capturedOpts: Record<string, unknown> | undefined;
-        mock.method(aiDeps, "generateText", (opts: Record<string, unknown>) => {
-          capturedOpts = opts;
-          return Promise.resolve(
-            makeGenerateTextResult({
-              output: { compacted: "compacted summary" },
-              usage,
-            }),
-          );
-        });
-        await getConversationSummary(messageChunk);
-        assert(capturedOpts !== undefined);
-        assert.strictEqual("output" in capturedOpts, true);
-      });
-
-      it("uses the plain text result when compactWithStructuredOutput is false", async () => {
-        seedConversation();
-        actions.config.setCompactWithStructuredOutput(false);
-        let capturedOpts: Record<string, unknown> | undefined;
-        mock.method(aiDeps, "generateText", (opts: Record<string, unknown>) => {
-          capturedOpts = opts;
-          return Promise.resolve(
-            makeGenerateTextResult({ text: "plain summary", usage }),
-          );
-        });
-        const result = await getConversationSummary(messageChunk);
-        assert(capturedOpts !== undefined);
-        assert.strictEqual("output" in capturedOpts, false);
-        assert.deepStrictEqual(result, {
-          compacted: "plain summary",
-          compactedAt: 42,
-          tokens: 25_000,
-        });
-      });
-
       it("falls back to approximated tokens when usage has no outputTokens", async () => {
         seedConversation();
         mock.method(aiDeps, "generateText", () =>
           Promise.resolve(
             makeGenerateTextResult({
-              output: { compacted: "four chars ≈ one token" },
+              text: "four chars ≈ one token",
               usage: makeMockUsage({ outputTokens: undefined }),
             }),
           ),
@@ -1941,7 +1922,7 @@ describe("api", () => {
           capturedOpts = opts;
           return Promise.resolve(
             makeGenerateTextResult({
-              output: { compacted: "merged summary" },
+              text: "merged summary",
               usage,
             }),
           );
@@ -2018,7 +1999,7 @@ describe("api", () => {
         mock.method(aiDeps, "generateText", () =>
           Promise.resolve(
             makeGenerateTextResult({
-              output: { compacted: "merged summary" },
+              text: "merged summary",
               usage,
             }),
           ),
@@ -2036,7 +2017,7 @@ describe("api", () => {
         mock.method(aiDeps, "generateText", () =>
           Promise.resolve(
             makeGenerateTextResult({
-              output: { compacted: "merged summary" },
+              text: "merged summary",
               usage,
             }),
           ),
@@ -2058,61 +2039,12 @@ describe("api", () => {
     });
 
     describe("chooses the output format", () => {
-      it("uses a structured output schema when compactWithStructuredOutput is true", async () => {
-        seedSummaries();
-        let capturedOpts: Record<string, unknown> | undefined;
-        mock.method(aiDeps, "generateText", (opts: Record<string, unknown>) => {
-          capturedOpts = opts;
-          return Promise.resolve(
-            makeGenerateTextResult({
-              output: { compacted: "merged summary" },
-              usage,
-            }),
-          );
-        });
-        await getMergedSummaries(getState().conversation.summaries);
-        assert(capturedOpts !== undefined);
-        assert.strictEqual("output" in capturedOpts, true);
-      });
-
-      it("uses the plain text result when compactWithStructuredOutput is false", async () => {
-        seedSummaries();
-        actions.config.setCompactWithStructuredOutput(false);
-        let capturedOpts: Record<string, unknown> | undefined;
-        mock.method(aiDeps, "generateText", (opts: Record<string, unknown>) => {
-          capturedOpts = opts;
-          return Promise.resolve(
-            makeGenerateTextResult({ text: "plain merged summary", usage }),
-          );
-        });
-        const result = await getMergedSummaries(
-          getState().conversation.summaries,
-        );
-        assert(capturedOpts !== undefined);
-        assert.strictEqual("output" in capturedOpts, false);
-        assert.deepStrictEqual(result, [
-          {
-            compacted: "plain merged summary",
-            compactedAt: 42,
-            tokens: 25_000,
-          },
-          { compacted: "summary 3", compactedAt: 3, tokens: 100 },
-          { compacted: "summary 4", compactedAt: 4, tokens: 100 },
-          { compacted: "summary 5", compactedAt: 5, tokens: 100 },
-          { compacted: "summary 6", compactedAt: 6, tokens: 100 },
-          { compacted: "summary 7", compactedAt: 7, tokens: 100 },
-          { compacted: "summary 8", compactedAt: 8, tokens: 100 },
-          { compacted: "summary 9", compactedAt: 9, tokens: 100 },
-          { compacted: "summary 10", compactedAt: 10, tokens: 100 },
-        ]);
-      });
-
       it("falls back to approximated tokens when usage has no outputTokens", async () => {
         seedSummaries();
         mock.method(aiDeps, "generateText", () =>
           Promise.resolve(
             makeGenerateTextResult({
-              output: { compacted: "twelve chars ≈ four tokens" },
+              text: "twelve chars ≈ four tokens",
               usage: makeMockUsage({ outputTokens: undefined }),
             }),
           ),
@@ -2153,6 +2085,24 @@ describe("api", () => {
         ]);
       });
 
+      it("passes maxOutputTokens to generateText", async () => {
+        seedSummaries();
+        let capturedOpts: Record<string, unknown> | undefined;
+        mock.method(aiDeps, "generateText", (opts: Record<string, unknown>) => {
+          capturedOpts = opts;
+          return Promise.resolve(
+            makeGenerateTextResult({
+              text: "merged summary",
+              usage,
+            }),
+          );
+        });
+
+        await getMergedSummaries(getState().conversation.summaries);
+
+        assert.strictEqual(capturedOpts?.["maxOutputTokens"], 5_000);
+      });
+
       it("passes opencode provider options to generateText", async () => {
         seedSummaries();
         let capturedOpts: Record<string, unknown> | undefined;
@@ -2160,7 +2110,7 @@ describe("api", () => {
           capturedOpts = opts;
           return Promise.resolve(
             makeGenerateTextResult({
-              output: { compacted: "merged summary" },
+              text: "merged summary",
               usage,
             }),
           );

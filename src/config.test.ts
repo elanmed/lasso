@@ -934,27 +934,6 @@ describe("config", () => {
         assert.strictEqual(getState().config.asciiOnly, false);
       });
 
-      it("uses its compactWithStructuredOutput over the global config, default config", async () => {
-        testFs._files.set(
-          getGlobalConfigPath(),
-          JSON.stringify({
-            ...testConfig,
-            compactWithStructuredOutput: false,
-          }),
-        );
-        testFs._files.set(
-          getLocalConfigPath(),
-          JSON.stringify({
-            ...testConfig,
-            compactWithStructuredOutput: true,
-          }),
-        );
-
-        await initState();
-
-        assert.strictEqual(getState().config.compactWithStructuredOutput, true);
-      });
-
       it("uses its reasoning over the global config, default config", async () => {
         testFs._files.set(
           getGlobalConfigPath(),
@@ -1349,27 +1328,6 @@ describe("config", () => {
         );
       });
 
-      it("rejects non-boolean compactWithStructuredOutput", async () => {
-        testFs._files.set(
-          getGlobalConfigPath(),
-          JSON.stringify({
-            ...testConfig,
-            compactWithStructuredOutput: "yes",
-          }),
-        );
-
-        await initState();
-        const invalidOptionMessages =
-          getState().content.configErrorMessages.filter((message) =>
-            message.includes("Failed to validate"),
-          );
-        assert.strictEqual(invalidOptionMessages.length, 1);
-        assert.match(
-          first(invalidOptionMessages),
-          /Invalid input: expected boolean/,
-        );
-      });
-
       it("rejects non-boolean suppressToolEditDiffs", async () => {
         testFs._files.set(
           getGlobalConfigPath(),
@@ -1714,23 +1672,6 @@ describe("config", () => {
           await initState();
 
           assert.strictEqual(getState().config.asciiOnly, true);
-        });
-
-        it("uses its compactWithStructuredOutput over the default config", async () => {
-          testFs._files.set(
-            getGlobalConfigPath(),
-            JSON.stringify({
-              ...testConfig,
-              compactWithStructuredOutput: false,
-            }),
-          );
-
-          await initState();
-
-          assert.strictEqual(
-            getState().config.compactWithStructuredOutput,
-            false,
-          );
         });
 
         it("uses its reasoning over the default config", async () => {

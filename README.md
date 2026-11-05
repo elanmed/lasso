@@ -65,33 +65,32 @@ If `model`, `baseURL`, or `LASSO_API_KEY` are missing at startup, lasso warns an
 
 ### Config Options
 
-| Option                        | Type                                                                                 | Default                  | Description                                                                | Local behavior |
-| ----------------------------- | ------------------------------------------------------------------------------------ | ------------------------ | -------------------------------------------------------------------------- | -------------- |
-| `model`                       | `string`                                                                             | —                        | Model name (required)                                                      | Overwrite      |
-| `sdkProvider`                 | `"anthropic"` \| `"openai"` \| `"google"` \| `"openai-compatible"`                   | -                        | AI SDK provider                                                            | Overwrite      |
-| `gateway`                     | `"opencode"`                                                                         | —                        | Used to append gateway-specific headers                                    | Overwrite      |
-| `baseURL`                     | `string`                                                                             | `null`                   | API base URL (required for `openai-compatible`)                            | Overwrite      |
-| `transcriptionSdkProvider`    | `"google" \| "openai"`                                                               | `google`                 | AI SDK provider for audio transcription                                    | Overwrite      |
-| `transcriptionModel`          | `string`                                                                             | —                        | Transcription model name                                                   | Overwrite      |
-| `transcriptionBaseURL`        | `string`                                                                             | `null`                   | API base URL for audio transcription                                       | Overwrite      |
-| `pricingPerModel`             | `object`                                                                             | `{}`                     | Token pricing per model per million                                        | Extend         |
-| `contextWindowPerModel`       | `object`                                                                             | `{}`                     | Context window per model (default: 128,000 tokens)                         | Extend         |
-| `keymaps`                     | `object`                                                                             | see below                | Custom keybindings                                                         | Extend         |
-| `customSlashCommandDirs`      | `string[]`                                                                           | `[]`                     | Additional directories for custom slash commands                           | Overwrite      |
-| `customSkillDirs`             | `string[]`                                                                           | `[]`                     | Additional directories for skills                                          | Overwrite      |
-| `subagentModels`              | `string[]`                                                                           | `[]`                     | Models available to subagents                                              | Overwrite      |
-| `loadingStateFrames`          | `string[]`                                                                           | `["\|", "/", "-", "\\"]` | Custom spinner frames                                                      | Overwrite      |
-| `loadingStateFrameDuration`   | `number`                                                                             | `80`                     | Spinner frame interval in ms                                               | Overwrite      |
-| `promptPrefix`                | `string`                                                                             | `"> "`                   | Prompt prefix string                                                       | Overwrite      |
-| `suppressConfigWarnings`      | `boolean`                                                                            | `false`                  | Suppress the config warning list shown at startup                          | Overwrite      |
-| `suppressStartupDurations`    | `boolean`                                                                            | `false`                  | Hide durations of startup operations from the screen                       | Overwrite      |
-| `suppressToolEditDiffs`       | `boolean`                                                                            | `false`                  | Suppress file-change diffs from tool editing files                         | Overwrite      |
-| `asciiOnly`                   | `boolean`                                                                            | `false`                  | Replace unicode characters with ASCII equivalents                          | Overwrite      |
-| `compactWithStructuredOutput` | `boolean`                                                                            | `true`                   | Compact conversations with structured output when possible                 | Overwrite      |
-| `messageQueueDelimiter`       | `string`                                                                             | `l---\\n`                | Delimiter line separating multiple messages in the editor input            | Overwrite      |
-| `reasoning`                   | `"provider-default" \| "none" \| "minimal" \| "low" \|"medium" \| "high" \| "xhigh"` | `provider-default`       | Reasoning effort (`provider-default` uses the provider's default behavior) | Overwrite      |
-| `mcps`                        | `object`                                                                             | `{}`                     | Named MCP servers                                                          | Extend         |
-| `usageLimit`                  | `object`                                                                             | `undefined`              | Dollar limit and tracking window                                           | Overwrite      |
+| Option                      | Type                                                                                 | Default                  | Description                                                                | Local behavior |
+| --------------------------- | ------------------------------------------------------------------------------------ | ------------------------ | -------------------------------------------------------------------------- | -------------- |
+| `model`                     | `string`                                                                             | —                        | Model name (required)                                                      | Overwrite      |
+| `sdkProvider`               | `"anthropic"` \| `"openai"` \| `"google"` \| `"openai-compatible"`                   | -                        | AI SDK provider                                                            | Overwrite      |
+| `gateway`                   | `"opencode"`                                                                         | —                        | Used to append gateway-specific headers                                    | Overwrite      |
+| `baseURL`                   | `string`                                                                             | `null`                   | API base URL (required for `openai-compatible`)                            | Overwrite      |
+| `transcriptionSdkProvider`  | `"google" \| "openai"`                                                               | `google`                 | AI SDK provider for audio transcription                                    | Overwrite      |
+| `transcriptionModel`        | `string`                                                                             | —                        | Transcription model name                                                   | Overwrite      |
+| `transcriptionBaseURL`      | `string`                                                                             | `null`                   | API base URL for audio transcription                                       | Overwrite      |
+| `pricingPerModel`           | `object`                                                                             | `{}`                     | Token pricing per model per million                                        | Extend         |
+| `contextWindowPerModel`     | `object`                                                                             | `{}`                     | Context window per model (default: 128,000 tokens)                         | Extend         |
+| `keymaps`                   | `object`                                                                             | see below                | Custom keybindings                                                         | Extend         |
+| `customSlashCommandDirs`    | `string[]`                                                                           | `[]`                     | Additional directories for custom slash commands                           | Overwrite      |
+| `customSkillDirs`           | `string[]`                                                                           | `[]`                     | Additional directories for skills                                          | Overwrite      |
+| `subagentModels`            | `string[]`                                                                           | `[]`                     | Models available to subagents                                              | Overwrite      |
+| `loadingStateFrames`        | `string[]`                                                                           | `["\|", "/", "-", "\\"]` | Custom spinner frames                                                      | Overwrite      |
+| `loadingStateFrameDuration` | `number`                                                                             | `80`                     | Spinner frame interval in ms                                               | Overwrite      |
+| `promptPrefix`              | `string`                                                                             | `"> "`                   | Prompt prefix string                                                       | Overwrite      |
+| `suppressConfigWarnings`    | `boolean`                                                                            | `false`                  | Suppress the config warning list shown at startup                          | Overwrite      |
+| `suppressStartupDurations`  | `boolean`                                                                            | `false`                  | Hide durations of startup operations from the screen                       | Overwrite      |
+| `suppressToolEditDiffs`     | `boolean`                                                                            | `false`                  | Suppress file-change diffs from tool editing files                         | Overwrite      |
+| `asciiOnly`                 | `boolean`                                                                            | `false`                  | Replace unicode characters with ASCII equivalents                          | Overwrite      |
+| `messageQueueDelimiter`     | `string`                                                                             | `l---\\n`                | Delimiter line separating multiple messages in the editor input            | Overwrite      |
+| `reasoning`                 | `"provider-default" \| "none" \| "minimal" \| "low" \|"medium" \| "high" \| "xhigh"` | `provider-default`       | Reasoning effort (`provider-default` uses the provider's default behavior) | Overwrite      |
+| `mcps`                      | `object`                                                                             | `{}`                     | Named MCP servers                                                          | Extend         |
+| `usageLimit`                | `object`                                                                             | `undefined`              | Dollar limit and tracking window                                           | Overwrite      |
 
 ### Local Overwrite vs Extend
 
@@ -304,7 +303,6 @@ suppressConfigWarnings: false # default
 suppressStartupDurations: false # default
 suppressToolEditDiffs: false # default
 asciiOnly: false # default
-compactWithStructuredOutput: true # default
 messageQueueDelimiter: "l---\n" # default
 reasoning: "provider-default" # default
 mcps:
@@ -484,8 +482,6 @@ contextWindowPerModel:
 ```
 
 The new conversation summary targets 5,000 tokens and Lasso reserves up to 25% for summary history. When the max number of summaries is reached, it first merges the adjacent pair which was updated (added or merged) longest ago to create room.
-
-By default, lasso uses structured output to enforce the summary's maximum length. Set `compactWithStructuredOutput: false` to use plain-text output for models that do not support structured output. In that case, the requested lengths are targets rather than enforced limits.
 
 ## Dependencies
 

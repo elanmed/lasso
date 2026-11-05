@@ -321,11 +321,6 @@ export function initStateFromConfig({
   actions.config.setAsciiOnly(
     localConfig.asciiOnly ?? globalConfig.asciiOnly ?? defaultConfig.asciiOnly,
   );
-  actions.config.setCompactWithStructuredOutput(
-    localConfig.compactWithStructuredOutput ??
-      globalConfig.compactWithStructuredOutput ??
-      defaultConfig.compactWithStructuredOutput,
-  );
   actions.config.setMessageQueueDelimiter(
     localConfig.messageQueueDelimiter ??
       globalConfig.messageQueueDelimiter ??

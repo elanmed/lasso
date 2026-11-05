@@ -126,8 +126,6 @@ const AsciiOnlySchema = z.boolean();
 
 const SuppressStartupDurationsSchema = z.boolean();
 
-const CompactWithStructuredOutputSchema = z.boolean();
-
 const MessageQueueDelimiterSchema = z.string().endsWith("\n");
 
 const ReasoningSchema = z.enum([
@@ -189,7 +187,6 @@ export const ConfigSchema = z.strictObject({
   asciiOnly: AsciiOnlySchema.optional(),
   suppressStartupDurations: SuppressStartupDurationsSchema.optional(),
   suppressToolEditDiffs: SuppressToolEditDiffsSchema.optional(),
-  compactWithStructuredOutput: CompactWithStructuredOutputSchema.optional(),
   messageQueueDelimiter: MessageQueueDelimiterSchema.optional(),
   reasoning: ReasoningSchema.optional(),
   mcps: McpsSchema.optional(),
@@ -219,7 +216,6 @@ export const DefaultedConfigSchema = z.strictObject({
   asciiOnly: AsciiOnlySchema,
   suppressStartupDurations: SuppressStartupDurationsSchema,
   suppressToolEditDiffs: SuppressToolEditDiffsSchema,
-  compactWithStructuredOutput: CompactWithStructuredOutputSchema,
   messageQueueDelimiter: MessageQueueDelimiterSchema,
   reasoning: ReasoningSchema,
   mcps: McpsSchema,
@@ -264,7 +260,6 @@ export const defaultConfig: DefaultedConfig = {
   asciiOnly: false,
   suppressStartupDurations: false,
   suppressToolEditDiffs: false,
-  compactWithStructuredOutput: true,
   messageQueueDelimiter: "l---\n",
   reasoning: "provider-default",
   mcps: {},
