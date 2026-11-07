@@ -50,6 +50,7 @@ import {
   markdownBatFlags,
   baseBatFlags,
   execGitDiff,
+  getUnicodeChar,
 } from "./printing.ts";
 import type { SpacingOpts } from "./printing.ts";
 import {
@@ -989,6 +990,7 @@ export async function recordAndTranscribeInput({
 
   const transcriptionAbortController = new AbortController();
   actions.abortControllers.setTranscription(transcriptionAbortController);
+  print.doing("Transcribing" + getUnicodeChar("…"));
   const transcribeResult = await tryCatchAsync(
     transcribeInput(readResult.value),
   );
