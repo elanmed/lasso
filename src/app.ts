@@ -748,8 +748,6 @@ export async function getConversationSummary({
   return summary;
 }
 
-// TODO: support calling between tool calls
-// avoid using global state that's populated after the entire turn
 export async function maybeCompact({
   userInput = "",
   type = "separate-process",
@@ -759,9 +757,6 @@ export async function maybeCompact({
 } = {}) {
   const contextWindow = getDefaultedContextWindow();
 
-  // maybeCompact runs before each api call turn, so we don't know the token
-  // count of userInput until after the API call. This can be problematic when the userInput
-  // would large enough to trigger compaction, so we approximate for the userInput
   const userInputTokensApprox = strToApproxTokens(userInput);
   const requestInputOverheadTokensApprox =
     getRequestInputOverheadTokensApprox();
