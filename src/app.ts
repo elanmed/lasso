@@ -771,6 +771,7 @@ export async function maybeCompact({
 
   print.doing("Compacting" + getUnicodeChar("…"));
 
+  const { unsummarizedMessages } = getState().conversation;
   let summarizedMessageCount = 0;
 
   if (type === "separate-process") {
@@ -790,10 +791,9 @@ export async function maybeCompact({
       });
 
       summarizedMessageCount += chunk.length;
-      const remainingMessages =
-        getState().conversation.unsummarizedMessages.slice(
-          summarizedMessageCount,
-        );
+      const remainingMessages = unsummarizedMessages.slice(
+        summarizedMessageCount,
+      );
       const remainingMessagesStr = stringify(remainingMessages, {
         replacer: removeMediaReplacer,
         space: 0,
