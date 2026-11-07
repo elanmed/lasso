@@ -127,16 +127,10 @@ export function getRequestInputCharLength() {
   );
 }
 
-export function resolveRequestInputTokens({
-  requestInputTokens = getState().usage.requestInputTokens,
-  conversationMessages = getState().conversation.messages,
-}: {
-  requestInputTokens?: RequestInputTokens;
-  conversationMessages?: ModelMessage[];
-} = {}) {
-  const { stale, value } = requestInputTokens;
+export function resolveRequestInputTokens() {
+  const { stale, value } = getState().usage.requestInputTokens;
   if (stale) {
-    return getApproxRequestInputTokens(conversationMessages);
+    return getApproxRequestInputTokens(getState().conversation.messages);
   }
   return value;
 }

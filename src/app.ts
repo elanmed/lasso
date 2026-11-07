@@ -23,12 +23,7 @@ import {
   smartGlob,
   writeDebugLog,
 } from "./utils.ts";
-import {
-  actions,
-  getState,
-  type ContextEntry,
-  type RequestInputTokens,
-} from "./state.ts";
+import { actions, getState, type ContextEntry, type Skill } from "./state.ts";
 import { aiDeps, childProcessDeps, fsDeps, processDeps } from "./deps.ts";
 import {
   getDebugLogDir,
@@ -40,11 +35,7 @@ import {
   getConversationSummaryPrompt,
   getMergeSummariesPrompt,
 } from "./prompts.ts";
-import {
-  maxTokenCountPerSummary,
-  type ModelMessage,
-  type ModelSummary,
-} from "./schemas.ts";
+import { maxTokenCountPerSummary, type ModelSummary } from "./schemas.ts";
 import {
   getUnicodeChar,
   print,
@@ -740,14 +731,8 @@ export async function getConversationSummary(messageChunk: string[]) {
 // avoid using global state that's populated after the entire turn
 export async function maybeCompact({
   userInput = "",
-  requestInputTokens = getState().usage.requestInputTokens,
-  conversationMessages = getState().conversation.messages,
-  unsummarizedMessages = getState().conversation.unsummarizedMessages,
 }: {
   userInput?: string;
-  requestInputTokens?: RequestInputTokens;
-  conversationMessages?: ModelMessage[];
-  unsummarizedMessages?: ModelMessage[];
 } = {}) {
   const contextWindow = getDefaultedContextWindow();
 
@@ -758,14 +743,12 @@ export async function maybeCompact({
   const requestInputOverheadTokensApprox =
     getRequestInputOverheadTokensApprox();
 
-  const nextInputTokens =
-    resolveRequestInputTokens({ requestInputTokens, conversationMessages }) +
-    userInputTokensApprox;
+  const nextInputTokens = resolveRequestInputTokens() + userInputTokensApprox;
 
   const nextInputRatio = nextInputTokens / contextWindow;
   if (nextInputRatio <= compactTriggerRatio) return;
 
-  const chunks = splitMessagesToCompact(unsummarizedMessages);
+  const chunks = splitMessagesToCompact();
   if (chunks.length === 0) return;
 
   print.doing("Compacting" + getUnicodeChar("…"));
@@ -783,9 +766,10 @@ export async function maybeCompact({
       ]);
 
       summarizedMessageCount += chunk.length;
-      const remainingMessages = unsummarizedMessages.slice(
-        summarizedMessageCount,
-      );
+      const remainingMessages =
+        getState().conversation.unsummarizedMessages.slice(
+          summarizedMessageCount,
+        );
       const remainingMessagesStr = stringify(remainingMessages, {
         replacer: removeMediaReplacer,
         space: 0,
@@ -828,7 +812,7 @@ export async function maybeCompact({
   }
 }
 
-export function splitMessagesToCompact(unsummarizedMessages: ModelMessage[]) {
+export function splitMessagesToCompact() {
   const emptyCompactPrompt = getConversationSummaryPrompt({
     targetCharLen: maxCharCountPerSummary,
     conversation: markdownFence("json", ""),
@@ -844,7 +828,7 @@ export function splitMessagesToCompact(unsummarizedMessages: ModelMessage[]) {
   let currChunk: string[] = [];
   let tokenCount = 0;
 
-  for (const message of unsummarizedMessages) {
+  for (const message of getState().conversation.unsummarizedMessages) {
     const messageStr = stringify(message, {
       replacer: removeMediaReplacer,
       space: 0,
