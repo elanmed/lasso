@@ -23,13 +23,7 @@ import {
   smartGlob,
   writeDebugLog,
 } from "./utils.ts";
-import {
-  actions,
-  getState,
-  type ContextEntry,
-  type RequestInputTokens,
-  type Skill,
-} from "./state.ts";
+import { actions, getState, type ContextEntry } from "./state.ts";
 import { aiDeps, childProcessDeps, fsDeps, processDeps } from "./deps.ts";
 import {
   getDebugLogDir,
@@ -432,8 +426,6 @@ export async function resolveApiCall(userInput: string) {
     messages: getAppendedConversationMessages(userMessage),
   });
 
-  const completedStepMessages: AiModelMessage[] = [];
-
   actions.conversation.resetToolEditDiffs();
   actions.usage.setApiStartTime();
   actions.abortControllers.setApiStream(new AbortController());
@@ -525,9 +517,47 @@ export async function resolveApiCall(userInput: string) {
           );
         }
       },
-      onStepEnd: (stepResult) => {
-        completedStepMessages.push(...stepResult.response.messages);
+      // TODO: verify that this is awaited before the next step starts so
+      // the session file doesn't get out of sync
+      onStepEnd: async ({ usage, text, response }) => {
+        await appendModelUsage(usage);
+        await syncSessionFile({
+          transcript: getAppendedTranscript({
+            message: text,
+            role: "assistant",
+            timestamp: Date.now(),
+          }),
+          messages: getAppendedConversationMessages(...response.messages),
+        });
+
+        const stepInputTokens =
+          usage.inputTokens ?? getApproxRequestInputTokens();
+        const stepOutputTokens = orApproxTokens(usage.outputTokens, text);
+
+        actions.usage.setRequestInputTokens(stepInputTokens + stepOutputTokens);
+        actions.usage.setRequestInputTokensCharLength(
+          getRequestInputCharLength() + text.length,
+        );
+        actions.usage.setRequestInputTokensStale(false);
       },
+      // NOTE: usage isn't provided on error, can't be accounted for
+      onStepError: async ({ error }) => {
+        if (!isAbortError(error)) return;
+
+        const message: AiModelMessage = {
+          role: "assistant",
+          content: interruptContent,
+        };
+        await syncSessionFile({
+          transcript: getAppendedTranscript({
+            message: interruptContent,
+            role: "assistant",
+            timestamp: Date.now(),
+          }),
+          messages: getAppendedConversationMessages(message),
+        });
+      },
+      prepareStep: async ({}) => {},
       providerOptions: getProviderOptions(),
     }),
   );
@@ -540,19 +570,6 @@ export async function resolveApiCall(userInput: string) {
     await toolCallDiffer.cleanupAllTempFiles();
 
     if (isAbortError(generateTextResult.error)) {
-      const interruptMessage: AiModelMessage = {
-        role: "assistant",
-        content: interruptContent,
-      };
-
-      // TODO (later): do I want to save the completedStepMessages to the transcript?
-      await syncSessionFile({
-        messages: getAppendedConversationMessages(
-          ...completedStepMessages,
-          interruptMessage,
-        ),
-      });
-
       if (getState().terminal.isSteering) {
         print.info("Steering" + getUnicodeChar("…"));
         actions.terminal.setIsSteering(false);
@@ -569,35 +586,7 @@ export async function resolveApiCall(userInput: string) {
     return null;
   }
 
-  const { usage, finalStep, text, responseMessages } = generateTextResult.value;
-
-  await appendModelUsage(usage);
-
-  const finalStepInputTokens =
-    finalStep.usage.inputTokens ?? getApproxRequestInputTokens();
-  const finalStepOutputTokens = orApproxTokens(
-    finalStep.usage.outputTokens,
-    text,
-  );
-
-  actions.usage.setRequestInputTokens(
-    finalStepInputTokens + finalStepOutputTokens,
-  );
-  actions.usage.setRequestInputTokensCharLength(
-    getRequestInputCharLength() + text.length,
-  );
-  actions.usage.setRequestInputTokensStale(false);
-
-  await syncSessionFile({
-    transcript: getAppendedTranscript({
-      message: text,
-      role: "assistant",
-      timestamp: Date.now(),
-    }),
-    messages: getAppendedConversationMessages(...responseMessages),
-  });
-
-  return text;
+  return generateTextResult.value.text;
 }
 
 export async function getMergedSummaries(summaries: ModelSummary[]) {
