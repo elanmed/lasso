@@ -744,6 +744,8 @@ export async function getConversationSummary({
   return summary;
 }
 
+// TODO: refactor, global state is confusing here. Swap to local vars +
+// state instead
 export async function maybeCompact({
   userInput = "",
   timing = "between-turns",
