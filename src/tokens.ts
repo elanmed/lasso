@@ -1,5 +1,5 @@
 import { removeMediaReplacer, decimalToPercent, stringify } from "./utils.ts";
-import { getState, type RequestInputTokens } from "./state.ts";
+import { getState } from "./state.ts";
 import { getBaseAgentPrompt } from "./prompts.ts";
 import {
   dedicatedSummaryRatio,

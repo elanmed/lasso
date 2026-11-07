@@ -35,7 +35,11 @@ import {
   getConversationSummaryPrompt,
   getMergeSummariesPrompt,
 } from "./prompts.ts";
-import { maxTokenCountPerSummary, type ModelSummary } from "./schemas.ts";
+import {
+  maxTokenCountPerSummary,
+  type ModelMessage,
+  type ModelSummary,
+} from "./schemas.ts";
 import {
   getUnicodeChar,
   print,
@@ -538,7 +542,7 @@ export async function resolveApiCall(userInput: string) {
 
         actions.usage.setRequestInputTokens(stepInputTokens + stepOutputTokens);
         actions.usage.setRequestInputTokensCharLength(
-          getRequestInputCharLength() + text.length,
+          getRequestInputCharLength(),
         );
         actions.usage.setRequestInputTokensStale(false);
       },
@@ -599,7 +603,7 @@ export async function getMergedSummaries({
   timing,
 }: {
   summaries: ModelSummary[];
-  timing?: "mid-turn" | "between-turns";
+  timing: CompactTiming;
 }) {
   const maxNumberSummaries = getMaxNumberSummaries();
 
@@ -695,17 +699,12 @@ export async function getConversationSummary({
   timing,
 }: {
   messageChunk: string[];
-  timing?: "mid-turn" | "between-turns";
+  timing: CompactTiming;
 }) {
-  // messages[0..summaries.length) are re-appended summaries, one per entry,
-  // so everything from summaries.length on is not yet summarized
   const compactPrompt = getConversationSummaryPrompt({
     targetCharLen: maxCharCountPerSummary,
     conversation: markdownFence("json", messageChunk.join("\n")),
   });
-
-  // messages[0..summaries.length) are re-appended summaries, one per entry,
-  // so everything from summaries.length on is not yet summarized
 
   if (timing === "between-turns") startLoadingState();
   const generateTextResult = await tryCatchAsync(
@@ -744,15 +743,27 @@ export async function getConversationSummary({
   return summary;
 }
 
+type CompactTiming = "mid-turn" | "between-turns";
+
+function getMessagesToCompact(timing: CompactTiming) {
+  const { unsummarizedMessages } = getState().conversation;
+  if (timing === "between-turns") return unsummarizedMessages;
+
+  const lastUserMessageIndex = unsummarizedMessages.findLastIndex(
+    (message) => message.role === "user",
+  );
+  return unsummarizedMessages.slice(0, Math.max(0, lastUserMessageIndex));
+}
+
 // TODO: refactor, global state is confusing here. Swap to local vars +
 // state instead
 export async function maybeCompact({
   userInput = "",
-  timing = "between-turns",
+  timing,
 }: {
   userInput?: string;
-  timing?: "mid-turn" | "between-turns";
-} = {}) {
+  timing: CompactTiming;
+}) {
   const contextWindow = getDefaultedContextWindow();
 
   const userInputTokensApprox = strToApproxTokens(userInput);
@@ -764,7 +775,7 @@ export async function maybeCompact({
   const nextInputRatio = nextInputTokens / contextWindow;
   if (nextInputRatio <= compactTriggerRatio) return;
 
-  const chunks = splitMessagesToCompact();
+  const chunks = splitMessagesToCompact(getMessagesToCompact(timing));
   if (chunks.length === 0) return;
 
   print.doing("Compacting" + getUnicodeChar("…"));
@@ -836,7 +847,7 @@ export async function maybeCompact({
   }
 }
 
-export function splitMessagesToCompact() {
+export function splitMessagesToCompact(messagesToCompact: ModelMessage[]) {
   const emptyCompactPrompt = getConversationSummaryPrompt({
     targetCharLen: maxCharCountPerSummary,
     conversation: markdownFence("json", ""),
@@ -852,7 +863,7 @@ export function splitMessagesToCompact() {
   let currChunk: string[] = [];
   let tokenCount = 0;
 
-  for (const message of getState().conversation.unsummarizedMessages) {
+  for (const message of messagesToCompact) {
     const messageStr = stringify(message, {
       replacer: removeMediaReplacer,
       space: 0,
