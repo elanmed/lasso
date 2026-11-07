@@ -57,7 +57,7 @@ async function main() {
     const text = await resolveApiCall(userInput);
     if (text === null) continue;
 
-    await maybeCompact({ userInput: "" });
+    await maybeCompact();
 
     printNewline();
     fencePrint("Output", {

@@ -23,7 +23,12 @@ import {
   smartGlob,
   writeDebugLog,
 } from "./utils.ts";
-import { actions, getState, type ContextEntry } from "./state.ts";
+import {
+  actions,
+  getState,
+  type ContextEntry,
+  type RequestInputTokens,
+} from "./state.ts";
 import { aiDeps, childProcessDeps, fsDeps, processDeps } from "./deps.ts";
 import {
   getDebugLogDir,
@@ -557,7 +562,11 @@ export async function resolveApiCall(userInput: string) {
           messages: getAppendedConversationMessages(message),
         });
       },
-      prepareStep: async ({}) => {},
+      prepareStep: async () => {
+        // TODO: can we use global state messages since they're synced in onStepEnd
+        await maybeCompact();
+        return getState().conversation.messages;
+      },
       providerOptions: getProviderOptions(),
     }),
   );
@@ -730,16 +739,16 @@ export async function getConversationSummary(messageChunk: string[]) {
 // TODO: support calling between tool calls
 // avoid using global state that's populated after the entire turn
 export async function maybeCompact({
-  userInput,
+  userInput = "",
   requestInputTokens = getState().usage.requestInputTokens,
   conversationMessages = getState().conversation.messages,
   unsummarizedMessages = getState().conversation.unsummarizedMessages,
 }: {
-  userInput: string;
+  userInput?: string;
   requestInputTokens?: RequestInputTokens;
   conversationMessages?: ModelMessage[];
   unsummarizedMessages?: ModelMessage[];
-}) {
+} = {}) {
   const contextWindow = getDefaultedContextWindow();
 
   // maybeCompact runs before each api call turn, so we don't know the token
