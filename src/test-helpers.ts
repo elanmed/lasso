@@ -451,6 +451,37 @@ export function makeFakeFetch(
   };
 }
 
+export async function completeGenerateTextStep(
+  options: Record<string, unknown>,
+  result: ReturnType<typeof makeGenerateTextResult>,
+) {
+  const onStepEnd = options["onStepEnd"] as
+    | ((stepResult: {
+        usage: Record<string, unknown>;
+        text: string;
+        response: { messages: ModelMessage[] };
+      }) => Promise<void>)
+    | undefined;
+  if (onStepEnd === undefined) return result;
+
+  await onStepEnd({
+    usage: result.finalStep.usage,
+    text: result.text,
+    response: { messages: result.responseMessages },
+  });
+  return result;
+}
+
+export async function failGenerateTextStep(
+  options: Record<string, unknown>,
+  error: unknown,
+): Promise<never> {
+  const onStepError = options["onStepError"] as
+    ((stepError: { error: unknown }) => Promise<void>) | undefined;
+  await onStepError?.({ error });
+  throw error;
+}
+
 export function mockGenerateTextResults(
   results: unknown[],
   onCall?: (opts: Record<string, unknown>, resultIdx: number) => void,
@@ -459,12 +490,15 @@ export function mockGenerateTextResults(
   return mock.method(
     aiDeps,
     "generateText",
-    (opts: Record<string, unknown>) => {
+    async (opts: Record<string, unknown>) => {
       onCall?.(opts, resultIdx);
       const result = results[resultIdx];
       resultIdx = resultIdx + 1;
       if (result instanceof Error) return Promise.reject(result);
-      return Promise.resolve(makeGenerateTextResult(result as never));
+      return completeGenerateTextStep(
+        opts,
+        makeGenerateTextResult(result as never),
+      );
     },
   );
 }

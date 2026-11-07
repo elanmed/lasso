@@ -46,6 +46,8 @@ import {
   BOLD,
   BOLD_RESET,
   makeGenerateTextResult,
+  completeGenerateTextStep,
+  failGenerateTextStep,
   mockGenerateText,
   makeMcpTool,
   makeFakeRl,
@@ -80,8 +82,8 @@ describe("api", () => {
     actions.config.setBaseURL("https://api.anthropic.com");
     actions.content.setContextStr("");
     actions.content.setSkillsStr("");
-    mock.method(aiDeps, "generateText", () =>
-      Promise.resolve(makeGenerateTextResult()),
+    mock.method(aiDeps, "generateText", (options: Record<string, unknown>) =>
+      completeGenerateTextStep(options, makeGenerateTextResult()),
     );
   });
 
@@ -92,6 +94,42 @@ describe("api", () => {
         assert.strictEqual(result, "response text");
         assert.deepStrictEqual(getState().conversation.transcript, [
           { timestamp: 0, role: "assistant", message: "response text" },
+        ]);
+      });
+
+      it("prepares compacted messages before each model step", async () => {
+        actions.config.setContextWindowPerModel({
+          "claude-sonnet-4-20250514": 100_000,
+        });
+        actions.conversation.setMessages([
+          { role: "user", content: "previous question" },
+          { role: "assistant", content: "previous answer" },
+        ]);
+        actions.usage.setRequestInputTokens(96_000);
+        actions.usage.setRequestInputTokensStale(false);
+        let preparedMessages: ModelMessage[] | undefined;
+        mock.method(
+          aiDeps,
+          "generateText",
+          async (options: Record<string, unknown>) => {
+            const prepareStep = options["prepareStep"] as
+              (() => Promise<{ messages: ModelMessage[] }>) | undefined;
+            if (prepareStep !== undefined) {
+              preparedMessages = (await prepareStep()).messages;
+              return makeGenerateTextResult();
+            }
+            return makeGenerateTextResult({
+              text: "previous turn summary",
+              usage: makeMockUsage({ outputTokens: 5 }),
+            });
+          },
+        );
+
+        await resolveApiCall("current question");
+
+        assert.deepStrictEqual(preparedMessages, [
+          { role: "assistant", content: "previous turn summary" },
+          { role: "user", content: "current question" },
         ]);
       });
 
@@ -243,7 +281,12 @@ describe("api", () => {
         actions.usage.setRequestInputTokens(50);
         actions.usage.setRequestInputTokensStale(false);
         const err = makeAbortError();
-        mock.method(aiDeps, "generateText", () => Promise.reject(err));
+        mock.method(
+          aiDeps,
+          "generateText",
+          (options: Record<string, unknown>) =>
+            failGenerateTextStep(options, err),
+        );
         const result = await resolveApiCall("hello");
         assert.strictEqual(result, null);
         assert.deepStrictEqual(getState().usage.requestInputTokens, {
@@ -254,21 +297,25 @@ describe("api", () => {
       });
 
       it("appends usage and messages on success", async () => {
-        mock.method(aiDeps, "generateText", () =>
-          Promise.resolve(
-            makeGenerateTextResult({
-              usage: makeMockUsage({
-                inputTokens: 42,
-                outputTokens: 7,
-                cacheReadTokens: 3,
-                cacheWriteTokens: 1,
+        mock.method(
+          aiDeps,
+          "generateText",
+          (options: Record<string, unknown>) =>
+            completeGenerateTextStep(
+              options,
+              makeGenerateTextResult({
+                usage: makeMockUsage({
+                  inputTokens: 42,
+                  outputTokens: 7,
+                  cacheReadTokens: 3,
+                  cacheWriteTokens: 1,
+                }),
+                responseMessages: [
+                  { role: "assistant", content: "tool call" },
+                  { role: "tool", content: "tool result" },
+                ],
               }),
-              responseMessages: [
-                { role: "assistant", content: "tool call" },
-                { role: "tool", content: "tool result" },
-              ],
-            }),
-          ),
+            ),
         );
         await resolveApiCall("hello");
         assert.deepStrictEqual(getState().usage.modelUsageForSession, {
@@ -292,7 +339,7 @@ describe("api", () => {
         assert.deepStrictEqual(getState().usage.requestInputTokens, {
           value: 49,
           stale: false,
-          charLength: 5931,
+          charLength: 6001,
         });
       });
 
@@ -300,13 +347,17 @@ describe("api", () => {
         await resolveApiCall("first");
         assert.strictEqual(getState().usage.requestInputTokens.value, 15);
 
-        mock.method(aiDeps, "generateText", () =>
-          Promise.resolve(
-            makeGenerateTextResult({
-              usage: makeMockUsage({ inputTokens: 14, outputTokens: 3 }),
-              responseMessages: [{ role: "assistant", content: "answer" }],
-            }),
-          ),
+        mock.method(
+          aiDeps,
+          "generateText",
+          (options: Record<string, unknown>) =>
+            completeGenerateTextStep(
+              options,
+              makeGenerateTextResult({
+                usage: makeMockUsage({ inputTokens: 14, outputTokens: 3 }),
+                responseMessages: [{ role: "assistant", content: "answer" }],
+              }),
+            ),
         );
         await resolveApiCall("second");
         assert.deepStrictEqual(getState().conversation.summaries, []);
@@ -318,7 +369,7 @@ describe("api", () => {
         assert.deepStrictEqual(getState().usage.requestInputTokens, {
           value: 17,
           stale: false,
-          charLength: 5966,
+          charLength: 5993,
         });
       });
 
@@ -331,13 +382,17 @@ describe("api", () => {
         ]);
         actions.usage.setRequestInputTokens(100);
         actions.usage.setRequestInputTokensStale(true);
-        mock.method(aiDeps, "generateText", () =>
-          Promise.resolve(
-            makeGenerateTextResult({
-              usage: makeMockUsage({ inputTokens: 50, outputTokens: 5 }),
-              responseMessages: [{ role: "assistant", content: "answer" }],
-            }),
-          ),
+        mock.method(
+          aiDeps,
+          "generateText",
+          (options: Record<string, unknown>) =>
+            completeGenerateTextStep(
+              options,
+              makeGenerateTextResult({
+                usage: makeMockUsage({ inputTokens: 50, outputTokens: 5 }),
+                responseMessages: [{ role: "assistant", content: "answer" }],
+              }),
+            ),
         );
         await resolveApiCall("hello");
         assert.deepStrictEqual(getState().conversation.summaries, []);
@@ -349,48 +404,56 @@ describe("api", () => {
         assert.deepStrictEqual(getState().usage.requestInputTokens, {
           value: 55,
           stale: false,
-          charLength: 5968,
+          charLength: 5995,
         });
       });
 
       it("uses final step usage for request input tokens when it differs from top-level usage", async () => {
-        mock.method(aiDeps, "generateText", () =>
-          Promise.resolve(
-            makeGenerateTextResult({
-              usage: makeMockUsage({ inputTokens: 100, outputTokens: 10 }),
-              finalStepUsage: makeMockUsage({
-                inputTokens: 14,
-                outputTokens: 3,
+        mock.method(
+          aiDeps,
+          "generateText",
+          (options: Record<string, unknown>) =>
+            completeGenerateTextStep(
+              options,
+              makeGenerateTextResult({
+                usage: makeMockUsage({ inputTokens: 100, outputTokens: 10 }),
+                finalStepUsage: makeMockUsage({
+                  inputTokens: 14,
+                  outputTokens: 3,
+                }),
+                responseMessages: [{ role: "assistant", content: "answer" }],
               }),
-              responseMessages: [{ role: "assistant", content: "answer" }],
-            }),
-          ),
+            ),
         );
         await resolveApiCall("hello");
         assert.deepStrictEqual(getState().usage.requestInputTokens, {
           value: 17,
           stale: false,
-          charLength: 5931,
+          charLength: 5958,
         });
       });
 
       it("approximates missing final step output tokens from the text", async () => {
-        mock.method(aiDeps, "generateText", () =>
-          Promise.resolve(
-            makeGenerateTextResult({
-              finalStepUsage: makeMockUsage({
-                inputTokens: 50,
-                outputTokens: undefined,
+        mock.method(
+          aiDeps,
+          "generateText",
+          (options: Record<string, unknown>) =>
+            completeGenerateTextStep(
+              options,
+              makeGenerateTextResult({
+                finalStepUsage: makeMockUsage({
+                  inputTokens: 50,
+                  outputTokens: undefined,
+                }),
+                responseMessages: [{ role: "assistant", content: "answer" }],
               }),
-              responseMessages: [{ role: "assistant", content: "answer" }],
-            }),
-          ),
+            ),
         );
         await resolveApiCall("hello");
         assert.deepStrictEqual(getState().usage.requestInputTokens, {
           value: 54,
           stale: false,
-          charLength: 5931,
+          charLength: 5958,
         });
       });
     });
@@ -674,7 +737,12 @@ describe("api", () => {
         actions.terminal.setRl(makeFakeRl());
         actions.terminal.setEditorInputValue("queued input");
         const err = makeAbortError();
-        mock.method(aiDeps, "generateText", () => Promise.reject(err));
+        mock.method(
+          aiDeps,
+          "generateText",
+          (options: Record<string, unknown>) =>
+            failGenerateTextStep(options, err),
+        );
         const getWrites = mockStdoutWrites();
         const result = await resolveApiCall("hello");
         assert.strictEqual(result, null);
@@ -689,7 +757,12 @@ describe("api", () => {
 
       it("returns null on abort error", async () => {
         const err = makeAbortError();
-        mock.method(aiDeps, "generateText", () => Promise.reject(err));
+        mock.method(
+          aiDeps,
+          "generateText",
+          (options: Record<string, unknown>) =>
+            failGenerateTextStep(options, err),
+        );
         const result = await resolveApiCall("hello");
         assert.strictEqual(result, null);
         assert.deepStrictEqual(getState().conversation.summaries, []);
@@ -698,6 +771,13 @@ describe("api", () => {
           {
             role: "assistant",
             content: "[Interrupted before a response was generated]",
+          },
+        ]);
+        assert.deepStrictEqual(getState().conversation.transcript, [
+          {
+            timestamp: 0,
+            role: "assistant",
+            message: "[Interrupted before a response was generated]",
           },
         ]);
         assert.deepStrictEqual(getState().usage.requestInputTokens, {
@@ -710,7 +790,12 @@ describe("api", () => {
       it("clears steering state and reports when the stream is steered", async () => {
         actions.terminal.setIsSteering(true);
         const err = makeAbortError();
-        mock.method(aiDeps, "generateText", () => Promise.reject(err));
+        mock.method(
+          aiDeps,
+          "generateText",
+          (options: Record<string, unknown>) =>
+            failGenerateTextStep(options, err),
+        );
         const getWrites = mockStdoutWrites();
 
         const result = await resolveApiCall("hello");
@@ -722,22 +807,31 @@ describe("api", () => {
 
       it("preserves completed step messages when interrupted", async () => {
         const err = makeAbortError();
-        mock.method(aiDeps, "generateText", (opts: Record<string, unknown>) => {
-          const onStepEnd = opts["onStepEnd"] as (stepResult: {
-            response: { messages: ModelMessage[] };
-          }) => void;
-          onStepEnd({
-            response: {
-              messages: [{ role: "assistant", content: "completed step 1" }],
-            },
-          });
-          onStepEnd({
-            response: {
-              messages: [{ role: "assistant", content: "completed step 2" }],
-            },
-          });
-          return Promise.reject(err);
-        });
+        mock.method(
+          aiDeps,
+          "generateText",
+          async (options: Record<string, unknown>) => {
+            await completeGenerateTextStep(
+              options,
+              makeGenerateTextResult({
+                text: "completed step 1",
+                responseMessages: [
+                  { role: "assistant", content: "completed step 1" },
+                ],
+              }),
+            );
+            await completeGenerateTextStep(
+              options,
+              makeGenerateTextResult({
+                text: "completed step 2",
+                responseMessages: [
+                  { role: "assistant", content: "completed step 2" },
+                ],
+              }),
+            );
+            return failGenerateTextStep(options, err);
+          },
+        );
 
         const result = await resolveApiCall("hello");
 
@@ -749,6 +843,15 @@ describe("api", () => {
           {
             role: "assistant",
             content: "[Interrupted before a response was generated]",
+          },
+        ]);
+        assert.deepStrictEqual(getState().conversation.transcript, [
+          { timestamp: 0, role: "assistant", message: "completed step 1" },
+          { timestamp: 0, role: "assistant", message: "completed step 2" },
+          {
+            timestamp: 0,
+            role: "assistant",
+            message: "[Interrupted before a response was generated]",
           },
         ]);
       });
@@ -772,7 +875,7 @@ describe("api", () => {
           called = true;
           return Promise.resolve(makeGenerateTextResult());
         });
-        await maybeCompact("hi");
+        await maybeCompact({ userInput: "hi", timing: "between-turns" });
         assert.strictEqual(called, false);
         assert.deepStrictEqual(getState().conversation.summaries, []);
         assert.deepStrictEqual(getState().conversation.messages, [
@@ -806,7 +909,7 @@ describe("api", () => {
           );
         });
         const getMessages = () => getCapturedMessages(capturedOpts);
-        await maybeCompact("hi");
+        await maybeCompact({ userInput: "hi", timing: "between-turns" });
         assert.strictEqual(getMessages().length, 1);
         assert.deepStrictEqual(getState().conversation.summaries, [
           { compacted: "compacted summary", compactedAt: 0, tokens: 25_000 },
@@ -836,7 +939,7 @@ describe("api", () => {
           called = true;
           return Promise.resolve(makeGenerateTextResult());
         });
-        await maybeCompact("hi");
+        await maybeCompact({ userInput: "hi", timing: "between-turns" });
         assert.strictEqual(called, false);
         assert.deepStrictEqual(getState().conversation.summaries, []);
         assert.deepStrictEqual(getState().conversation.messages, [
@@ -868,7 +971,7 @@ describe("api", () => {
             makeGenerateTextResult({ output: { compacted: "" } }),
           );
         });
-        await maybeCompact("hi");
+        await maybeCompact({ userInput: "hi", timing: "between-turns" });
         const systemContentTokensApprox = strToApproxTokens(systemContent);
         assert.strictEqual(strToApproxTokens(longUserContent) < 95_000, true);
         assert.strictEqual(
@@ -896,7 +999,7 @@ describe("api", () => {
             makeGenerateTextResult({ output: { compacted: "" } }),
           );
         });
-        await maybeCompact("hi");
+        await maybeCompact({ userInput: "hi", timing: "between-turns" });
         const toolsTokensApprox = strToApproxTokens(
           stringify(harnessTools, { space: 0 }),
         );
@@ -929,7 +1032,7 @@ describe("api", () => {
           called = true;
           return Promise.resolve(makeGenerateTextResult());
         });
-        await maybeCompact("hi");
+        await maybeCompact({ userInput: "hi", timing: "between-turns" });
         assert.strictEqual(called, false);
       });
     });
@@ -982,7 +1085,7 @@ describe("api", () => {
           },
         );
 
-        await maybeCompact("");
+        await maybeCompact({ userInput: "", timing: "between-turns" });
 
         assert.deepStrictEqual(getState().conversation.summaries, [
           {
@@ -1023,7 +1126,7 @@ describe("api", () => {
             }),
           ),
         );
-        await maybeCompact("hi");
+        await maybeCompact({ userInput: "hi", timing: "between-turns" });
         const withMcpTools = strToApproxTokens(
           stringify({ ...harnessTools, ...getState().mcp.tools }, { space: 0 }),
         );
@@ -1044,6 +1147,61 @@ describe("api", () => {
         assert.strictEqual(withMcpTools > withoutMcpTools, true);
       });
 
+      it("does not compact the current user turn during a model step", async () => {
+        const messages = [
+          { role: "user", content: "previous question" },
+          { role: "assistant", content: "previous answer" },
+          { role: "user", content: "current question" },
+        ];
+        actions.conversation.setMessages(messages);
+        actions.abortControllers.setApiStream(new AbortController());
+        actions.usage.setRequestInputTokens(96_000);
+        actions.usage.setRequestInputTokensStale(false);
+        const intervalCallbacks = mockSetInterval();
+        mockClearInterval(intervalCallbacks);
+        let capturedOptions: Record<string, unknown> | undefined;
+        mock.method(
+          aiDeps,
+          "generateText",
+          (options: Record<string, unknown>) => {
+            capturedOptions = options;
+            return Promise.resolve(
+              makeGenerateTextResult({
+                text: "previous turn summary",
+                usage: makeMockUsage({ outputTokens: 5 }),
+              }),
+            );
+          },
+        );
+
+        await maybeCompact({ timing: "mid-turn" });
+
+        assert.strictEqual(intervalCallbacks.length, 0);
+        assert.deepStrictEqual(getState().conversation.messages, [
+          { role: "assistant", content: "previous turn summary" },
+          { role: "user", content: "current question" },
+        ]);
+        const compactMessage = getCapturedMessages(capturedOptions)[0];
+        assert(compactMessage !== undefined);
+        assert.strictEqual(
+          compactMessage.content,
+          `## [lasso] Compact conversation
+          
+- Compact the following conversation.
+  - Summarize into exactly two sections: "## Key facts" and "## Everything else".
+  - Key facts are details that must survive all future compactions, such as decisions, file paths, task state, and user preferences.
+- Write "## Key facts" as a flat bullet list of short, self-contained facts.
+- When the maximum length is tight, cut from "## Everything else" and never from "## Key facts."
+- Output a plain-text prose summary, not JSON or a code fence.
+- Output a maximum of 15000 characters.
+  
+\`\`\`json
+{"role":"user","content":"previous question"}
+{"role":"assistant","content":"previous answer"}
+\`\`\``,
+        );
+      });
+
       it("compacts after an API response pushes tokens over the threshold", async () => {
         mockGenerateTextResults([
           {
@@ -1059,7 +1217,7 @@ describe("api", () => {
 
         const result = await resolveApiCall("hi");
         assert.strictEqual(result, "answer text");
-        await maybeCompact("");
+        await maybeCompact({ userInput: "", timing: "between-turns" });
 
         assert.deepStrictEqual(getState().conversation.summaries, [
           { compacted: "compacted summary", compactedAt: 0, tokens: 25_000 },
@@ -1084,7 +1242,7 @@ describe("api", () => {
           );
         });
         const getMessages = () => getCapturedMessages(capturedOpts);
-        await maybeCompact("hi");
+        await maybeCompact({ userInput: "hi", timing: "between-turns" });
         assert.strictEqual(getMessages().length, 1);
         const capturedMessage = getMessages()[0];
         assert(capturedMessage !== undefined);
@@ -1145,7 +1303,10 @@ describe("api", () => {
 
         // 300 chars ≈ 100 tokens, pushing 95_000 over the 0.95 trigger (95_000 tokens).
         const getMessages = () => getCapturedMessages(capturedOpts);
-        await maybeCompact("x".repeat(300));
+        await maybeCompact({
+          userInput: "x".repeat(300),
+          timing: "between-turns",
+        });
 
         assert.strictEqual(getMessages().length, 1);
         assert.deepStrictEqual(getState().conversation.summaries, [
@@ -1174,7 +1335,7 @@ describe("api", () => {
             }),
           ),
         );
-        await maybeCompact("hi");
+        await maybeCompact({ userInput: "hi", timing: "between-turns" });
         assert.deepStrictEqual(getState().conversation.summaries, [
           { compacted: "compacted summary", compactedAt: 0, tokens: 25_000 },
         ]);
@@ -1204,7 +1365,7 @@ describe("api", () => {
             calls.push(opts["messages"] as ModelMessage[]);
           },
         );
-        await maybeCompact("new input");
+        await maybeCompact({ userInput: "new input", timing: "between-turns" });
         await resolveApiCall("new input");
         assert.deepStrictEqual(getState().conversation.summaries, [
           { compacted: "compacted summary", compactedAt: 0, tokens: 25 },
@@ -1217,7 +1378,7 @@ describe("api", () => {
         assert.deepStrictEqual(getState().usage.requestInputTokens, {
           value: 25,
           stale: false,
-          charLength: 5984,
+          charLength: 6018,
         });
         const compactionCall = calls[0];
         assert(compactionCall !== undefined);
@@ -1268,7 +1429,7 @@ describe("api", () => {
           },
           new Error("network error"),
         ]);
-        await maybeCompact("");
+        await maybeCompact({ userInput: "", timing: "between-turns" });
         assert.deepStrictEqual(getState().conversation.summaries, [
           { compacted: "first summary", compactedAt: 0, tokens: 11 },
         ]);
@@ -1285,7 +1446,7 @@ describe("api", () => {
         mock.method(aiDeps, "generateText", () =>
           Promise.reject(new Error("network error")),
         );
-        await maybeCompact("hi");
+        await maybeCompact({ userInput: "hi", timing: "between-turns" });
         assert.deepStrictEqual(getState().conversation.summaries, []);
         assert.deepStrictEqual(getState().conversation.messages, [
           { role: "user", content: "hi" },
@@ -1305,8 +1466,13 @@ describe("api", () => {
         actions.terminal.setRl(makeFakeRl());
         actions.terminal.setEditorInputValue("queued input");
         const err = makeAbortError();
-        mock.method(aiDeps, "generateText", () => Promise.reject(err));
-        await maybeCompact("hi");
+        mock.method(
+          aiDeps,
+          "generateText",
+          (options: Record<string, unknown>) =>
+            failGenerateTextStep(options, err),
+        );
+        await maybeCompact({ userInput: "hi", timing: "between-turns" });
         assert.strictEqual(getState().abortControllers.apiStream, null);
         assert.strictEqual(
           getState().terminal.editorInputValue,
@@ -1324,8 +1490,13 @@ describe("api", () => {
         actions.usage.setRequestInputTokens(96_000);
         actions.usage.setRequestInputTokensStale(false);
         const err = makeAbortError();
-        mock.method(aiDeps, "generateText", () => Promise.reject(err));
-        await maybeCompact("hi");
+        mock.method(
+          aiDeps,
+          "generateText",
+          (options: Record<string, unknown>) =>
+            failGenerateTextStep(options, err),
+        );
+        await maybeCompact({ userInput: "hi", timing: "between-turns" });
         assert.strictEqual(getState().abortControllers.apiStream, null);
         assert.deepStrictEqual(getState().conversation.summaries, []);
         assert.deepStrictEqual(getState().conversation.messages, [
@@ -1370,7 +1541,7 @@ describe("api", () => {
             }),
           );
         });
-        await maybeCompact("hi");
+        await maybeCompact({ userInput: "hi", timing: "between-turns" });
         assert.strictEqual(getState().abortControllers.apiStream, null);
         assert.deepStrictEqual(calls, [false, true]);
         assert.deepStrictEqual(
@@ -1420,7 +1591,7 @@ describe("api", () => {
             usage: makeMockUsage({ outputTokens: 15 }),
           },
         ]);
-        await maybeCompact("hi");
+        await maybeCompact({ userInput: "hi", timing: "between-turns" });
         assert.deepStrictEqual(getState().conversation.summaries, [
           { compacted: "merged summary", compactedAt: 0, tokens: 15 },
           { compacted: "summary 3", compactedAt: 3, tokens: 100 },
@@ -1476,7 +1647,7 @@ describe("api", () => {
           },
           new Error("network error"),
         ]);
-        await maybeCompact("hi");
+        await maybeCompact({ userInput: "hi", timing: "between-turns" });
         assert.deepStrictEqual(getState().conversation.summaries, [
           { compacted: "summary 1", compactedAt: 1, tokens: 100 },
           { compacted: "summary 2", compactedAt: 2, tokens: 100 },
@@ -1530,12 +1701,15 @@ describe("api", () => {
       ]);
       actions.conversation.setMessages([priorSummary, ...messages]);
 
-      assert.deepStrictEqual(splitMessagesToCompact(), [
+      assert.deepStrictEqual(
+        splitMessagesToCompact(getState().conversation.unsummarizedMessages),
         [
-          '{"role":"user","content":"first message"}',
-          '{"role":"assistant","content":"second message"}',
+          [
+            '{"role":"user","content":"first message"}',
+            '{"role":"assistant","content":"second message"}',
+          ],
         ],
-      ]);
+      );
     });
 
     it("reserves the maximum summary output when calculating the chunk budget", () => {
@@ -1545,7 +1719,9 @@ describe("api", () => {
       ];
       actions.conversation.setMessages(messages);
 
-      const chunks = splitMessagesToCompact();
+      const chunks = splitMessagesToCompact(
+        getState().conversation.unsummarizedMessages,
+      );
       assert.deepStrictEqual(
         chunks.map((chunk) => chunk.length),
         [1, 1],
@@ -1568,7 +1744,9 @@ describe("api", () => {
       ]);
       actions.conversation.setMessages([priorSummary, ...messages]);
 
-      const chunks = splitMessagesToCompact();
+      const chunks = splitMessagesToCompact(
+        getState().conversation.unsummarizedMessages,
+      );
       assert.deepStrictEqual(
         chunks.map((chunk) => chunk.length),
         [1, 1, 1],
@@ -1584,7 +1762,9 @@ describe("api", () => {
         { role: "user", content: "a".repeat(300_000) },
       ]);
 
-      const chunks = splitMessagesToCompact();
+      const chunks = splitMessagesToCompact(
+        getState().conversation.unsummarizedMessages,
+      );
       assert.deepStrictEqual(
         chunks.map((chunk) => chunk.length),
         [1],
@@ -1626,6 +1806,13 @@ describe("api", () => {
     };
 
     describe("summarizes the conversation", () => {
+      it("does not start the loading state while summarizing mid-turn", async () => {
+        const intervalCallbacks = mockSetInterval();
+        mockClearInterval(intervalCallbacks);
+        await getConversationSummary({ messageChunk, timing: "mid-turn" });
+        assert.deepStrictEqual(intervalCallbacks, []);
+      });
+
       it("passes maxOutputTokens to generateText", async () => {
         seedConversation();
         let capturedOpts: Record<string, unknown> | undefined;
@@ -1639,7 +1826,7 @@ describe("api", () => {
           );
         });
 
-        await getConversationSummary(messageChunk);
+        await getConversationSummary({ messageChunk, timing: "between-turns" });
 
         assert.strictEqual(capturedOpts?.["maxOutputTokens"], 5_000);
       });
@@ -1658,7 +1845,7 @@ describe("api", () => {
         });
         actions.config.setGateway("opencode");
 
-        await getConversationSummary(messageChunk);
+        await getConversationSummary({ messageChunk, timing: "between-turns" });
 
         assert.deepStrictEqual(capturedOpts?.["providerOptions"], {
           openai: { store: false },
@@ -1701,9 +1888,14 @@ describe("api", () => {
             }),
           );
         });
-        const imageMessageChunk = splitMessagesToCompact()[0];
+        const imageMessageChunk = splitMessagesToCompact(
+          getState().conversation.unsummarizedMessages,
+        )[0];
         assert(imageMessageChunk !== undefined);
-        await getConversationSummary(imageMessageChunk);
+        await getConversationSummary({
+          messageChunk: imageMessageChunk,
+          timing: "between-turns",
+        });
         const capturedMessage = getCapturedMessages(capturedOpts)[0];
         assert(capturedMessage !== undefined);
         assert.doesNotMatch(JSON.stringify(capturedMessage), /IMAGEBYTES/);
@@ -1722,7 +1914,7 @@ describe("api", () => {
           );
         });
         const getMessages = () => getCapturedMessages(capturedOpts);
-        await getConversationSummary(messageChunk);
+        await getConversationSummary({ messageChunk, timing: "between-turns" });
         assert.strictEqual(getMessages().length, 1);
         assert.deepStrictEqual(capturedOpts?.["timeout"], {
           tools: {
@@ -1766,7 +1958,10 @@ describe("api", () => {
             }),
           ),
         );
-        const result = await getConversationSummary(messageChunk);
+        const result = await getConversationSummary({
+          messageChunk,
+          timing: "between-turns",
+        });
         assert.deepStrictEqual(result, {
           compacted: "compacted summary",
           compactedAt: 42,
@@ -1795,7 +1990,10 @@ describe("api", () => {
             }),
           ),
         );
-        const result = await getConversationSummary(messageChunk);
+        const result = await getConversationSummary({
+          messageChunk,
+          timing: "between-turns",
+        });
         assert.deepStrictEqual(result, {
           compacted: "four chars ≈ one token",
           compactedAt: 42,
@@ -1810,7 +2008,10 @@ describe("api", () => {
         mock.method(aiDeps, "generateText", () =>
           Promise.reject(new Error("network error")),
         );
-        const result = await getConversationSummary(messageChunk);
+        const result = await getConversationSummary({
+          messageChunk,
+          timing: "between-turns",
+        });
         assert.strictEqual(result, null);
         assert.deepStrictEqual(getState().conversation.summaries, [
           { compacted: "prior summary", compactedAt: 1, tokens: 10 },
@@ -1830,8 +2031,16 @@ describe("api", () => {
         const getWrites = mockStdoutWrites();
         seedConversation();
         const err = makeAbortError();
-        mock.method(aiDeps, "generateText", () => Promise.reject(err));
-        const result = await getConversationSummary(messageChunk);
+        mock.method(
+          aiDeps,
+          "generateText",
+          (options: Record<string, unknown>) =>
+            failGenerateTextStep(options, err),
+        );
+        const result = await getConversationSummary({
+          messageChunk,
+          timing: "between-turns",
+        });
         assert.strictEqual(result, null);
         assert.notStrictEqual(getState().abortControllers.apiStream, null);
         assert.deepStrictEqual(getState().conversation.summaries, [
@@ -1855,8 +2064,16 @@ describe("api", () => {
         actions.terminal.setEditorInputValue("queued input");
         const getWrites = mockStdoutWrites();
         const err = makeAbortError();
-        mock.method(aiDeps, "generateText", () => Promise.reject(err));
-        const result = await getConversationSummary(messageChunk);
+        mock.method(
+          aiDeps,
+          "generateText",
+          (options: Record<string, unknown>) =>
+            failGenerateTextStep(options, err),
+        );
+        const result = await getConversationSummary({
+          messageChunk,
+          timing: "between-turns",
+        });
         assert.strictEqual(result, null);
         assert.strictEqual(
           getState().terminal.editorInputValue,
@@ -1897,6 +2114,27 @@ describe("api", () => {
     };
 
     describe("merges summaries", () => {
+      it("does not start the loading state while merging mid-turn", async () => {
+        seedSummaries();
+        const intervalCallbacks = mockSetInterval();
+        mockClearInterval(intervalCallbacks);
+        mock.method(aiDeps, "generateText", () =>
+          Promise.resolve(
+            makeGenerateTextResult({
+              text: "merged summary",
+              usage,
+            }),
+          ),
+        );
+
+        await getMergedSummaries({
+          summaries: getState().conversation.summaries,
+          timing: "mid-turn",
+        });
+
+        assert.deepStrictEqual(intervalCallbacks, []);
+      });
+
       it("returns the existing summaries without calling the api when below the summary max", async () => {
         actions.conversation.setSummaries([
           { compacted: "summary", compactedAt: 1, tokens: 100 },
@@ -1906,9 +2144,10 @@ describe("api", () => {
           called = true;
           return Promise.resolve(makeGenerateTextResult());
         });
-        const result = await getMergedSummaries(
-          getState().conversation.summaries,
-        );
+        const result = await getMergedSummaries({
+          summaries: getState().conversation.summaries,
+          timing: "between-turns",
+        });
         assert.strictEqual(called, false);
         assert.deepStrictEqual(result, [
           { compacted: "summary", compactedAt: 1, tokens: 100 },
@@ -1928,9 +2167,10 @@ describe("api", () => {
           );
         });
         const getMessages = () => getCapturedMessages(capturedOpts);
-        const result = await getMergedSummaries(
-          getState().conversation.summaries,
-        );
+        const result = await getMergedSummaries({
+          summaries: getState().conversation.summaries,
+          timing: "between-turns",
+        });
         const capturedMessage = getMessages()[0];
         assert(capturedMessage !== undefined);
         assert.strictEqual(
@@ -2004,9 +2244,10 @@ describe("api", () => {
             }),
           ),
         );
-        const result = await getMergedSummaries(
-          getState().conversation.summaries,
-        );
+        const result = await getMergedSummaries({
+          summaries: getState().conversation.summaries,
+          timing: "between-turns",
+        });
         assert.deepStrictEqual(result, [
           { compacted: "merged summary", compactedAt: 42, tokens: 25_000 },
         ]);
@@ -2022,7 +2263,10 @@ describe("api", () => {
             }),
           ),
         );
-        await getMergedSummaries(getState().conversation.summaries);
+        await getMergedSummaries({
+          summaries: getState().conversation.summaries,
+          timing: "between-turns",
+        });
         assert.deepStrictEqual(getState().conversation.summaries, [
           { compacted: "summary 1", compactedAt: 1, tokens: 100 },
           { compacted: "summary 2", compactedAt: 2, tokens: 100 },
@@ -2049,9 +2293,10 @@ describe("api", () => {
             }),
           ),
         );
-        const result = await getMergedSummaries(
-          getState().conversation.summaries,
-        );
+        const result = await getMergedSummaries({
+          summaries: getState().conversation.summaries,
+          timing: "between-turns",
+        });
         const mergedSummary = result[0];
         assert(mergedSummary !== undefined);
         assert.strictEqual(
@@ -2067,9 +2312,10 @@ describe("api", () => {
         mock.method(aiDeps, "generateText", () =>
           Promise.reject(new Error("network error")),
         );
-        const result = await getMergedSummaries(
-          getState().conversation.summaries,
-        );
+        const result = await getMergedSummaries({
+          summaries: getState().conversation.summaries,
+          timing: "between-turns",
+        });
         assert.strictEqual(result, getState().conversation.summaries);
         assert.deepStrictEqual(getState().conversation.summaries, [
           { compacted: "summary 1", compactedAt: 1, tokens: 100 },
@@ -2098,7 +2344,10 @@ describe("api", () => {
           );
         });
 
-        await getMergedSummaries(getState().conversation.summaries);
+        await getMergedSummaries({
+          summaries: getState().conversation.summaries,
+          timing: "between-turns",
+        });
 
         assert.strictEqual(capturedOpts?.["maxOutputTokens"], 5_000);
       });
@@ -2117,7 +2366,10 @@ describe("api", () => {
         });
         actions.config.setGateway("opencode");
 
-        await getMergedSummaries(getState().conversation.summaries);
+        await getMergedSummaries({
+          summaries: getState().conversation.summaries,
+          timing: "between-turns",
+        });
 
         assert.deepStrictEqual(capturedOpts?.["providerOptions"], {
           openai: { store: false },
@@ -2127,10 +2379,16 @@ describe("api", () => {
       it("returns the existing summaries and leaves the abort controller set on abort error", async () => {
         seedSummaries();
         const err = makeAbortError();
-        mock.method(aiDeps, "generateText", () => Promise.reject(err));
-        const result = await getMergedSummaries(
-          getState().conversation.summaries,
+        mock.method(
+          aiDeps,
+          "generateText",
+          (options: Record<string, unknown>) =>
+            failGenerateTextStep(options, err),
         );
+        const result = await getMergedSummaries({
+          summaries: getState().conversation.summaries,
+          timing: "between-turns",
+        });
         assert.notStrictEqual(getState().abortControllers.apiStream, null);
         assert.deepStrictEqual(result, [
           { compacted: "summary 1", compactedAt: 1, tokens: 100 },

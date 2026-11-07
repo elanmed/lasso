@@ -108,6 +108,19 @@ describe("print", () => {
       assert.deepStrictEqual(getWrites(), ["\r|", "\r/", "\r-", "\r \r"]);
     });
 
+    it("does not start a second loading interval while one is active", () => {
+      actions.resetState();
+      const callbacks = mockSetInterval();
+      mockClearInterval(callbacks);
+      mockStdoutWrites({ includeSpinnerFrames: true });
+
+      startLoadingState();
+      startLoadingState();
+
+      assert.strictEqual(callbacks.length, 1);
+      stopLoadingState();
+    });
+
     it("stopLoadingState gracefully handles multiple calls", () => {
       actions.resetState();
       const callbacks = mockSetInterval();

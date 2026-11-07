@@ -52,12 +52,12 @@ async function main() {
       continue;
     }
 
-    await maybeCompact({ userInput });
+    await maybeCompact({ userInput, timing: "between-turns" });
 
     const text = await resolveApiCall(userInput);
     if (text === null) continue;
 
-    await maybeCompact();
+    await maybeCompact({ timing: "between-turns" });
 
     printNewline();
     fencePrint("Output", {

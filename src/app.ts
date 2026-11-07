@@ -565,7 +565,9 @@ export async function resolveApiCall(userInput: string) {
       },
       prepareStep: async () => {
         await maybeCompact({ timing: "mid-turn" });
-        return { messages: getState().conversation.messages };
+        return {
+          messages: getState().conversation.messages as AiModelMessage[],
+        };
       },
       providerOptions: getProviderOptions(),
     }),
