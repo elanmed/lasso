@@ -35,7 +35,11 @@ import {
   getConversationSummaryPrompt,
   getMergeSummariesPrompt,
 } from "./prompts.ts";
-import { maxTokenCountPerSummary, type ModelSummary } from "./schemas.ts";
+import {
+  maxTokenCountPerSummary,
+  type ModelSummary,
+  type TranscriptEntry,
+} from "./schemas.ts";
 import {
   getUnicodeChar,
   print,
@@ -517,12 +521,18 @@ export async function resolveApiCall(userInput: string) {
       // the session file doesn't get out of sync
       onStepEnd: async ({ usage, text, response }) => {
         await appendModelUsage(usage);
+
+        const transcriptEntry =
+          text === ""
+            ? getAppendedTranscript()
+            : getAppendedTranscript({
+                message: text,
+                role: "assistant",
+                timestamp: Date.now(),
+              });
+
         await syncSessionFile({
-          transcript: getAppendedTranscript({
-            message: text,
-            role: "assistant",
-            timestamp: Date.now(),
-          }),
+          transcript: transcriptEntry,
           messages: getAppendedConversationMessages(...response.messages),
         });
 
@@ -554,7 +564,6 @@ export async function resolveApiCall(userInput: string) {
         });
       },
       prepareStep: async () => {
-        // TODO: can we use global state messages since they're synced in onStepEnd
         await maybeCompact();
         return { messages: getState().conversation.messages };
       },
