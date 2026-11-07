@@ -598,7 +598,13 @@ export async function resolveApiCall(userInput: string) {
   return generateTextResult.value.text;
 }
 
-export async function getMergedSummaries(summaries: ModelSummary[]) {
+export async function getMergedSummaries({
+  summaries,
+  type,
+}: {
+  summaries: ModelSummary[];
+  type: "in-process" | "separate-process";
+}) {
   const maxNumberSummaries = getMaxNumberSummaries();
 
   if (summaries.length < maxNumberSummaries) {
@@ -646,7 +652,7 @@ export async function getMergedSummaries(summaries: ModelSummary[]) {
     ),
   });
 
-  startLoadingState();
+  if (type === "separate-process") startLoadingState();
   const generateTextResult = await tryCatchAsync(
     aiDeps.generateText({
       model: getLanguageModel(model),
@@ -658,7 +664,7 @@ export async function getMergedSummaries(summaries: ModelSummary[]) {
       maxOutputTokens: maxTokenCountPerSummary,
     }),
   );
-  stopLoadingState();
+  if (type === "separate-process") stopLoadingState();
 
   if (!generateTextResult.ok) {
     if (isAbortError(generateTextResult.error)) {
@@ -688,7 +694,13 @@ export async function getMergedSummaries(summaries: ModelSummary[]) {
   return nextSummaries;
 }
 
-export async function getConversationSummary(messageChunk: string[]) {
+export async function getConversationSummary({
+  messageChunk,
+  type,
+}: {
+  messageChunk: string[];
+  type: "in-process" | "separate-process";
+}) {
   // messages[0..summaries.length) are re-appended summaries, one per entry,
   // so everything from summaries.length on is not yet summarized
   const compactPrompt = getConversationSummaryPrompt({
@@ -699,7 +711,7 @@ export async function getConversationSummary(messageChunk: string[]) {
   // messages[0..summaries.length) are re-appended summaries, one per entry,
   // so everything from summaries.length on is not yet summarized
 
-  startLoadingState();
+  if (type === "separate-process") startLoadingState();
   const generateTextResult = await tryCatchAsync(
     aiDeps.generateText({
       model: getLanguageModel(getState().config.model),
@@ -711,7 +723,7 @@ export async function getConversationSummary(messageChunk: string[]) {
       maxOutputTokens: maxTokenCountPerSummary,
     }),
   );
-  stopLoadingState();
+  if (type === "separate-process") stopLoadingState();
 
   if (!generateTextResult.ok) {
     if (isAbortError(generateTextResult.error)) {
@@ -740,8 +752,10 @@ export async function getConversationSummary(messageChunk: string[]) {
 // avoid using global state that's populated after the entire turn
 export async function maybeCompact({
   userInput = "",
+  type = "separate-process",
 }: {
   userInput?: string;
+  type?: "separate-process" | "in-process";
 } = {}) {
   const contextWindow = getDefaultedContextWindow();
 
@@ -764,15 +778,21 @@ export async function maybeCompact({
 
   let summarizedMessageCount = 0;
 
-  actions.abortControllers.setApiStream(new AbortController());
+  if (type === "separate-process") {
+    actions.abortControllers.setApiStream(new AbortController());
+  }
+
   try {
     for (const chunk of chunks) {
-      const summary = await getConversationSummary(chunk);
+      const summary = await getConversationSummary({
+        messageChunk: chunk,
+        type,
+      });
       if (summary === null) return;
-      const mergedSummaries = await getMergedSummaries([
-        ...getState().conversation.summaries,
-        summary,
-      ]);
+      const mergedSummaries = await getMergedSummaries({
+        type,
+        summaries: [...getState().conversation.summaries, summary],
+      });
 
       summarizedMessageCount += chunk.length;
       const remainingMessages =
@@ -817,7 +837,9 @@ export async function maybeCompact({
       actions.usage.setRequestInputTokensStale(false);
     }
   } finally {
-    actions.abortControllers.setApiStream(null);
+    if (type === "separate-process") {
+      actions.abortControllers.setApiStream(null);
+    }
   }
 }
 
