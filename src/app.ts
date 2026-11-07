@@ -23,7 +23,13 @@ import {
   smartGlob,
   writeDebugLog,
 } from "./utils.ts";
-import { actions, getState, type ContextEntry, type Skill } from "./state.ts";
+import {
+  actions,
+  getState,
+  type ContextEntry,
+  type RequestInputTokens,
+  type Skill,
+} from "./state.ts";
 import { aiDeps, childProcessDeps, fsDeps, processDeps } from "./deps.ts";
 import {
   getDebugLogDir,
@@ -35,7 +41,11 @@ import {
   getConversationSummaryPrompt,
   getMergeSummariesPrompt,
 } from "./prompts.ts";
-import { maxTokenCountPerSummary, type ModelSummary } from "./schemas.ts";
+import {
+  maxTokenCountPerSummary,
+  type ModelMessage,
+  type ModelSummary,
+} from "./schemas.ts";
 import {
   getUnicodeChar,
   print,
@@ -728,7 +738,19 @@ export async function getConversationSummary(messageChunk: string[]) {
   return summary;
 }
 
-export async function maybeCompact(userInput: string) {
+// TODO: support calling between tool calls
+// avoid using global state that's populated after the entire turn
+export async function maybeCompact({
+  userInput,
+  requestInputTokens = getState().usage.requestInputTokens,
+  conversationMessages = getState().conversation.messages,
+  unsummarizedMessages = getState().conversation.unsummarizedMessages,
+}: {
+  userInput: string;
+  requestInputTokens?: RequestInputTokens;
+  conversationMessages?: ModelMessage[];
+  unsummarizedMessages?: ModelMessage[];
+}) {
   const contextWindow = getDefaultedContextWindow();
 
   // maybeCompact runs before each api call turn, so we don't know the token
@@ -738,17 +760,18 @@ export async function maybeCompact(userInput: string) {
   const requestInputOverheadTokensApprox =
     getRequestInputOverheadTokensApprox();
 
-  const nextInputTokens = resolveRequestInputTokens() + userInputTokensApprox;
+  const nextInputTokens =
+    resolveRequestInputTokens({ requestInputTokens, conversationMessages }) +
+    userInputTokensApprox;
 
   const nextInputRatio = nextInputTokens / contextWindow;
   if (nextInputRatio <= compactTriggerRatio) return;
 
-  const chunks = splitMessagesToCompact();
+  const chunks = splitMessagesToCompact(unsummarizedMessages);
   if (chunks.length === 0) return;
 
   print.doing("Compacting" + getUnicodeChar("…"));
 
-  const { unsummarizedMessages } = getState().conversation;
   let summarizedMessageCount = 0;
 
   actions.abortControllers.setApiStream(new AbortController());
@@ -807,12 +830,11 @@ export async function maybeCompact(userInput: string) {
   }
 }
 
-export function splitMessagesToCompact() {
+export function splitMessagesToCompact(unsummarizedMessages: ModelMessage[]) {
   const emptyCompactPrompt = getConversationSummaryPrompt({
     targetCharLen: maxCharCountPerSummary,
     conversation: markdownFence("json", ""),
   });
-  const { unsummarizedMessages } = getState().conversation;
   const availableTokensToCompact = Math.max(
     0,
     getDefaultedContextWindow() -

@@ -66,12 +66,14 @@ interface SessionState {
   sessionId: string;
 }
 
+export interface RequestInputTokens {
+  value: number;
+  stale: boolean;
+  charLength: number;
+}
+
 interface UsageState {
-  requestInputTokens: {
-    value: number;
-    stale: boolean;
-    charLength: number;
-  };
+  requestInputTokens: RequestInputTokens;
   modelUsageForSession: Record<string, ModelUsage[]>;
   modelUsageForLimitWindow: Record<string, ModelUsage[]>;
   apiStartTime: bigint | null;

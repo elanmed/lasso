@@ -1,5 +1,5 @@
 import { removeMediaReplacer, decimalToPercent, stringify } from "./utils.ts";
-import { getState } from "./state.ts";
+import { getState, type RequestInputTokens } from "./state.ts";
 import { getBaseAgentPrompt } from "./prompts.ts";
 import {
   dedicatedSummaryRatio,
@@ -111,9 +111,11 @@ Lasso reserves ${decimalToPercent(dedicatedSummaryRatio)} of the context window 
   }
 }
 
-export function getApproxRequestInputTokens() {
+export function getApproxRequestInputTokens(
+  conversationMessages: ModelMessage[] = getState().conversation.messages,
+) {
   return (
-    getApproxTokensFromMessages(getState().conversation.messages) +
+    getApproxTokensFromMessages(conversationMessages) +
     getRequestInputOverheadTokensApprox()
   );
 }
@@ -125,11 +127,18 @@ export function getRequestInputCharLength() {
   );
 }
 
-export function resolveRequestInputTokens() {
-  if (getState().usage.requestInputTokens.stale) {
-    return getApproxRequestInputTokens();
+export function resolveRequestInputTokens({
+  requestInputTokens = getState().usage.requestInputTokens,
+  conversationMessages = getState().conversation.messages,
+}: {
+  requestInputTokens?: RequestInputTokens;
+  conversationMessages?: ModelMessage[];
+} = {}) {
+  const { stale, value } = requestInputTokens;
+  if (stale) {
+    return getApproxRequestInputTokens(conversationMessages);
   }
-  return getState().usage.requestInputTokens.value;
+  return value;
 }
 
 interface TokensByArea {
