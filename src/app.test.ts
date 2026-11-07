@@ -1186,15 +1186,15 @@ describe("api", () => {
         assert.strictEqual(
           compactMessage.content,
           `## [lasso] Compact conversation
-          
+
 - Compact the following conversation.
-  - Summarize into exactly two sections: "## Key facts" and "## Everything else".
-  - Key facts are details that must survive all future compactions, such as decisions, file paths, task state, and user preferences.
+- Summarize into exactly two sections: "## Key facts" and "## Everything else".
+- Key facts are details that must survive all future compactions, such as decisions, file paths, task state, and user preferences.
 - Write "## Key facts" as a flat bullet list of short, self-contained facts.
 - When the maximum length is tight, cut from "## Everything else" and never from "## Key facts."
 - Output a plain-text prose summary, not JSON or a code fence.
 - Output a maximum of 15000 characters.
-  
+
 \`\`\`json
 {"role":"user","content":"previous question"}
 {"role":"assistant","content":"previous answer"}
