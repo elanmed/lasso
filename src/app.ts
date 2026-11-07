@@ -556,7 +556,7 @@ export async function resolveApiCall(userInput: string) {
       prepareStep: async () => {
         // TODO: can we use global state messages since they're synced in onStepEnd
         await maybeCompact();
-        return getState().conversation.messages;
+        return { messages: getState().conversation.messages };
       },
       providerOptions: getProviderOptions(),
     }),
