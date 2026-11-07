@@ -35,11 +35,7 @@ import {
   getConversationSummaryPrompt,
   getMergeSummariesPrompt,
 } from "./prompts.ts";
-import {
-  maxTokenCountPerSummary,
-  type ModelSummary,
-  type TranscriptEntry,
-} from "./schemas.ts";
+import { maxTokenCountPerSummary, type ModelSummary } from "./schemas.ts";
 import {
   getUnicodeChar,
   print,
@@ -564,7 +560,7 @@ export async function resolveApiCall(userInput: string) {
         });
       },
       prepareStep: async () => {
-        await maybeCompact();
+        await maybeCompact({ timing: "mid-turn" });
         return { messages: getState().conversation.messages };
       },
       providerOptions: getProviderOptions(),
@@ -600,10 +596,10 @@ export async function resolveApiCall(userInput: string) {
 
 export async function getMergedSummaries({
   summaries,
-  type,
+  timing,
 }: {
   summaries: ModelSummary[];
-  type: "in-process" | "separate-process";
+  timing?: "mid-turn" | "between-turns";
 }) {
   const maxNumberSummaries = getMaxNumberSummaries();
 
@@ -652,7 +648,7 @@ export async function getMergedSummaries({
     ),
   });
 
-  if (type === "separate-process") startLoadingState();
+  if (timing === "between-turns") startLoadingState();
   const generateTextResult = await tryCatchAsync(
     aiDeps.generateText({
       model: getLanguageModel(model),
@@ -664,7 +660,7 @@ export async function getMergedSummaries({
       maxOutputTokens: maxTokenCountPerSummary,
     }),
   );
-  if (type === "separate-process") stopLoadingState();
+  if (timing === "between-turns") stopLoadingState();
 
   if (!generateTextResult.ok) {
     if (isAbortError(generateTextResult.error)) {
@@ -696,10 +692,10 @@ export async function getMergedSummaries({
 
 export async function getConversationSummary({
   messageChunk,
-  type,
+  timing,
 }: {
   messageChunk: string[];
-  type: "in-process" | "separate-process";
+  timing?: "mid-turn" | "between-turns";
 }) {
   // messages[0..summaries.length) are re-appended summaries, one per entry,
   // so everything from summaries.length on is not yet summarized
@@ -711,7 +707,7 @@ export async function getConversationSummary({
   // messages[0..summaries.length) are re-appended summaries, one per entry,
   // so everything from summaries.length on is not yet summarized
 
-  if (type === "separate-process") startLoadingState();
+  if (timing === "between-turns") startLoadingState();
   const generateTextResult = await tryCatchAsync(
     aiDeps.generateText({
       model: getLanguageModel(getState().config.model),
@@ -723,7 +719,7 @@ export async function getConversationSummary({
       maxOutputTokens: maxTokenCountPerSummary,
     }),
   );
-  if (type === "separate-process") stopLoadingState();
+  if (timing === "between-turns") stopLoadingState();
 
   if (!generateTextResult.ok) {
     if (isAbortError(generateTextResult.error)) {
@@ -750,10 +746,10 @@ export async function getConversationSummary({
 
 export async function maybeCompact({
   userInput = "",
-  type = "separate-process",
+  timing = "between-turns",
 }: {
   userInput?: string;
-  type?: "separate-process" | "in-process";
+  timing?: "mid-turn" | "between-turns";
 } = {}) {
   const contextWindow = getDefaultedContextWindow();
 
@@ -774,7 +770,7 @@ export async function maybeCompact({
   const { unsummarizedMessages } = getState().conversation;
   let summarizedMessageCount = 0;
 
-  if (type === "separate-process") {
+  if (timing === "between-turns") {
     actions.abortControllers.setApiStream(new AbortController());
   }
 
@@ -782,11 +778,11 @@ export async function maybeCompact({
     for (const chunk of chunks) {
       const summary = await getConversationSummary({
         messageChunk: chunk,
-        type,
+        timing,
       });
       if (summary === null) return;
       const mergedSummaries = await getMergedSummaries({
-        type,
+        timing,
         summaries: [...getState().conversation.summaries, summary],
       });
 
@@ -832,7 +828,7 @@ export async function maybeCompact({
       actions.usage.setRequestInputTokensStale(false);
     }
   } finally {
-    if (type === "separate-process") {
+    if (timing === "between-turns") {
       actions.abortControllers.setApiStream(null);
     }
   }
