@@ -205,6 +205,7 @@ export function errorWithSpacing(cb: () => void) {
 
 export function startLoadingState() {
   if (getState().terminal.isNonBlockingProcessOngoing) return;
+  if (getState().terminal.loadingStateTimeout !== null) return;
 
   writeLoadingStateFrame();
   const timeout = setInterval(() => {
