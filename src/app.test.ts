@@ -97,6 +97,95 @@ describe("api", () => {
         ]);
       });
 
+      it("does not compact an oversized active user message in prepareStep", async () => {
+        actions.config.setContextWindowPerModel({
+          "claude-sonnet-4-20250514": 100_000,
+        });
+        const userInput = "x".repeat(300_000);
+        let preparedMessages: ModelMessage[] | undefined;
+        const generateTextCalls: Record<string, unknown>[] = [];
+        mock.method(
+          aiDeps,
+          "generateText",
+          async (options: Record<string, unknown>) => {
+            generateTextCalls.push(options);
+            const prepareStep = options["prepareStep"] as
+              (() => Promise<{ messages: ModelMessage[] }>) | undefined;
+            if (prepareStep !== undefined) {
+              preparedMessages = (await prepareStep()).messages;
+            }
+            return makeGenerateTextResult();
+          },
+        );
+
+        await resolveApiCall(userInput);
+
+        assert.deepStrictEqual(preparedMessages, [
+          { role: "user", content: userInput },
+        ]);
+        assert.strictEqual(generateTextCalls.length, 1);
+      });
+
+      it("keeps current-turn tool messages when the next prepareStep checks compaction", async () => {
+        actions.config.setContextWindowPerModel({
+          "claude-sonnet-4-20250514": 100_000,
+        });
+        actions.conversation.setMessages([
+          { role: "user", content: "previous question" },
+          { role: "assistant", content: "previous answer" },
+        ]);
+        actions.usage.setRequestInputTokens(96_000);
+        actions.usage.setRequestInputTokensStale(false);
+        let compactionCalls = 0;
+        const preparedMessages: ModelMessage[][] = [];
+        mock.method(
+          aiDeps,
+          "generateText",
+          async (options: Record<string, unknown>) => {
+            const prepareStep = options["prepareStep"] as
+              (() => Promise<{ messages: ModelMessage[] }>) | undefined;
+            if (prepareStep === undefined) {
+              compactionCalls += 1;
+              return makeGenerateTextResult({
+                text: "previous turn summary",
+                usage: makeMockUsage({ outputTokens: 5 }),
+              });
+            }
+
+            preparedMessages.push((await prepareStep()).messages);
+            await completeGenerateTextStep(
+              options,
+              makeGenerateTextResult({
+                text: "",
+                usage: makeMockUsage({ inputTokens: 96_000, outputTokens: 5 }),
+                responseMessages: [
+                  { role: "assistant", content: "tool call" },
+                  { role: "tool", content: "tool result" },
+                ],
+              }),
+            );
+            preparedMessages.push((await prepareStep()).messages);
+            return makeGenerateTextResult();
+          },
+        );
+
+        await resolveApiCall("current question");
+
+        assert.strictEqual(compactionCalls, 1);
+        assert.deepStrictEqual(preparedMessages, [
+          [
+            { role: "assistant", content: "previous turn summary" },
+            { role: "user", content: "current question" },
+          ],
+          [
+            { role: "assistant", content: "previous turn summary" },
+            { role: "user", content: "current question" },
+            { role: "assistant", content: "tool call" },
+            { role: "tool", content: "tool result" },
+          ],
+        ]);
+      });
+
       it("prepares compacted messages before each model step", async () => {
         actions.config.setContextWindowPerModel({
           "claude-sonnet-4-20250514": 100_000,
@@ -340,6 +429,43 @@ describe("api", () => {
           value: 49,
           stale: false,
           charLength: 6001,
+        });
+      });
+
+      it("persists tool-only steps without adding empty transcript entries", async () => {
+        const sessionFilePath = "/tmp/session.json";
+        actions.session.setFilePath(sessionFilePath);
+        mock.method(
+          aiDeps,
+          "generateText",
+          (options: Record<string, unknown>) =>
+            completeGenerateTextStep(
+              options,
+              makeGenerateTextResult({
+                text: "",
+                usage: makeMockUsage({ inputTokens: 12, outputTokens: 2 }),
+                responseMessages: [
+                  { role: "assistant", content: "tool call" },
+                  { role: "tool", content: "tool result" },
+                ],
+              }),
+            ),
+        );
+
+        const result = await resolveApiCall("hello");
+
+        assert.strictEqual(result, "");
+        assert.deepStrictEqual(getState().conversation.transcript, []);
+        const sessionFile = testFs._files.get(sessionFilePath);
+        assert(sessionFile !== undefined);
+        assert.deepStrictEqual(JSON.parse(sessionFile), {
+          messages: [
+            { role: "user", content: "hello" },
+            { role: "assistant", content: "tool call" },
+            { role: "tool", content: "tool result" },
+          ],
+          summaries: [],
+          transcript: [],
         });
       });
 
