@@ -22,7 +22,7 @@ import {
   mcpDeps,
   processDeps,
 } from "./deps.ts";
-import { initKeypress } from "./app.ts";
+import { initKeypress, maybeCompact } from "./app.ts";
 import { actions, getState, type MCPToolSet } from "./state.ts";
 import {
   type Key,
@@ -449,6 +449,31 @@ export function makeFakeFetch(
     };
     return Promise.resolve(response as Response);
   };
+}
+
+export async function maybeCompactWithApiStream({
+  abortController = new AbortController(),
+  userInput,
+}: {
+  abortController?: AbortController;
+  userInput?: string;
+}) {
+  actions.abortControllers.setApiStream(abortController);
+  try {
+    if (userInput === undefined) {
+      await maybeCompact({});
+    } else {
+      await maybeCompact({ userInput });
+    }
+  } finally {
+    actions.abortControllers.setApiStream(null);
+  }
+}
+
+export function getPrepareStep(options: Record<string, unknown>) {
+  return options["prepareStep"] as
+    | ((step: { stepNumber: number }) => Promise<{ messages: ModelMessage[] }>)
+    | undefined;
 }
 
 export async function completeGenerateTextStep(

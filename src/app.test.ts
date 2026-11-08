@@ -15,7 +15,6 @@ import { defaultConfig } from "./schemas.ts";
 import { getMergeSummariesPrompt } from "./prompts.ts";
 import { getGlobalContextDir, getGlobalConfigPath } from "./paths.ts";
 import {
-  maybeCompact,
   splitMessagesToCompact,
   getConversationSummary,
   getMergedSummaries,
@@ -29,7 +28,7 @@ import {
   getProviderOptions,
   initState,
   initStateRepeatable,
-  resolveInterruptWithEditor,
+  resolveInterruptWithEditorContent,
   parseInputFromEditor,
   resolveUserInput,
   executeUserInput,
@@ -54,6 +53,8 @@ import {
   getTestRl,
   getCapturedTool,
   getCapturedMessages,
+  getPrepareStep,
+  maybeCompactWithApiStream,
   makeMockUsage,
   makeAbortError,
   mockGenerateTextResults,
@@ -109,10 +110,10 @@ describe("api", () => {
           "generateText",
           async (options: Record<string, unknown>) => {
             generateTextCalls.push(options);
-            const prepareStep = options["prepareStep"] as
-              (() => Promise<{ messages: ModelMessage[] }>) | undefined;
+            const prepareStep = getPrepareStep(options);
             if (prepareStep !== undefined) {
-              preparedMessages = (await prepareStep()).messages;
+              preparedMessages = (await prepareStep({ stepNumber: 0 }))
+                .messages;
             }
             return makeGenerateTextResult();
           },
@@ -124,6 +125,42 @@ describe("api", () => {
           { role: "user", content: userInput },
         ]);
         assert.strictEqual(generateTextCalls.length, 1);
+      });
+
+      it("includes new user input when deciding whether to compact in the first prepareStep", async () => {
+        actions.config.setContextWindowPerModel({
+          "claude-sonnet-4-20250514": 100_000,
+        });
+        actions.conversation.setMessages([
+          { role: "user", content: "previous question" },
+          { role: "assistant", content: "previous answer" },
+        ]);
+        actions.usage.setRequestInputTokens(94_950);
+        actions.usage.setRequestInputTokensStale(false);
+        const userInput = "x".repeat(300);
+        let preparedMessages: ModelMessage[] | undefined;
+        mock.method(
+          aiDeps,
+          "generateText",
+          async (options: Record<string, unknown>) => {
+            const prepareStep = getPrepareStep(options);
+            if (prepareStep === undefined) {
+              return makeGenerateTextResult({
+                text: "previous turn summary",
+                usage: makeMockUsage({ outputTokens: 5 }),
+              });
+            }
+            preparedMessages = (await prepareStep({ stepNumber: 0 })).messages;
+            return makeGenerateTextResult();
+          },
+        );
+
+        await resolveApiCall(userInput);
+
+        assert.deepStrictEqual(preparedMessages, [
+          { role: "assistant", content: "previous turn summary" },
+          { role: "user", content: userInput },
+        ]);
       });
 
       it("keeps current-turn tool messages when the next prepareStep checks compaction", async () => {
@@ -142,8 +179,7 @@ describe("api", () => {
           aiDeps,
           "generateText",
           async (options: Record<string, unknown>) => {
-            const prepareStep = options["prepareStep"] as
-              (() => Promise<{ messages: ModelMessage[] }>) | undefined;
+            const prepareStep = getPrepareStep(options);
             if (prepareStep === undefined) {
               compactionCalls += 1;
               return makeGenerateTextResult({
@@ -152,7 +188,9 @@ describe("api", () => {
               });
             }
 
-            preparedMessages.push((await prepareStep()).messages);
+            preparedMessages.push(
+              (await prepareStep({ stepNumber: 0 })).messages,
+            );
             await completeGenerateTextStep(
               options,
               makeGenerateTextResult({
@@ -164,7 +202,9 @@ describe("api", () => {
                 ],
               }),
             );
-            preparedMessages.push((await prepareStep()).messages);
+            preparedMessages.push(
+              (await prepareStep({ stepNumber: 1 })).messages,
+            );
             return makeGenerateTextResult();
           },
         );
@@ -201,10 +241,10 @@ describe("api", () => {
           aiDeps,
           "generateText",
           async (options: Record<string, unknown>) => {
-            const prepareStep = options["prepareStep"] as
-              (() => Promise<{ messages: ModelMessage[] }>) | undefined;
+            const prepareStep = getPrepareStep(options);
             if (prepareStep !== undefined) {
-              preparedMessages = (await prepareStep()).messages;
+              preparedMessages = (await prepareStep({ stepNumber: 0 }))
+                .messages;
               return makeGenerateTextResult();
             }
             return makeGenerateTextResult({
@@ -872,8 +912,11 @@ describe("api", () => {
         mock.method(
           aiDeps,
           "generateText",
-          (options: Record<string, unknown>) => {
-            if (options["instructions"] === undefined) {
+          async (options: Record<string, unknown>) => {
+            if (options["instructions"] !== undefined) {
+              const prepareStep = getPrepareStep(options);
+              await prepareStep?.({ stepNumber: 0 });
+            } else {
               getState().abortControllers.apiStream?.abort();
             }
             return failGenerateTextStep(options, err);
@@ -1012,11 +1055,7 @@ describe("api", () => {
           called = true;
           return Promise.resolve(makeGenerateTextResult());
         });
-        await maybeCompact({
-          abortSignal: new AbortController().signal,
-          preserveCurrentTurn: false,
-          userInput: "hi",
-        });
+        await maybeCompactWithApiStream({ userInput: "hi" });
         assert.strictEqual(called, false);
         assert.deepStrictEqual(getState().conversation.summaries, []);
         assert.deepStrictEqual(getState().conversation.messages, [
@@ -1036,6 +1075,7 @@ describe("api", () => {
             role: "user",
             content: longUserContent,
           },
+          { role: "user", content: "current question" },
         ]);
         actions.usage.setRequestInputTokens(0);
         actions.usage.setRequestInputTokensStale(true);
@@ -1050,22 +1090,19 @@ describe("api", () => {
           );
         });
         const getMessages = () => getCapturedMessages(capturedOpts);
-        await maybeCompact({
-          abortSignal: new AbortController().signal,
-          preserveCurrentTurn: false,
-          userInput: "hi",
-        });
+        await maybeCompactWithApiStream({ userInput: "hi" });
         assert.strictEqual(getMessages().length, 1);
         assert.deepStrictEqual(getState().conversation.summaries, [
           { compacted: "compacted summary", compactedAt: 0, tokens: 25_000 },
         ]);
         assert.deepStrictEqual(getState().conversation.messages, [
           { role: "assistant", content: "compacted summary" },
+          { role: "user", content: "current question" },
         ]);
         assert.deepStrictEqual(getState().usage.requestInputTokens, {
-          value: 26_961,
+          value: 26_976,
           stale: false,
-          charLength: 5902,
+          charLength: 5946,
         });
       });
 
@@ -1076,6 +1113,7 @@ describe("api", () => {
             role: "user",
             content: longUserContent,
           },
+          { role: "user", content: "current question" },
         ]);
         actions.usage.setRequestInputTokens(2_000);
         actions.usage.setRequestInputTokensStale(true);
@@ -1084,15 +1122,12 @@ describe("api", () => {
           called = true;
           return Promise.resolve(makeGenerateTextResult());
         });
-        await maybeCompact({
-          abortSignal: new AbortController().signal,
-          preserveCurrentTurn: false,
-          userInput: "hi",
-        });
+        await maybeCompactWithApiStream({ userInput: "hi" });
         assert.strictEqual(called, false);
         assert.deepStrictEqual(getState().conversation.summaries, []);
         assert.deepStrictEqual(getState().conversation.messages, [
           { role: "user", content: longUserContent },
+          { role: "user", content: "current question" },
         ]);
         assert.deepStrictEqual(getState().usage.requestInputTokens, {
           value: 2_000,
@@ -1110,6 +1145,7 @@ describe("api", () => {
             role: "user",
             content: longUserContent,
           },
+          { role: "user", content: "current question" },
         ]);
         actions.usage.setRequestInputTokens(0);
         actions.usage.setRequestInputTokensStale(true);
@@ -1120,11 +1156,7 @@ describe("api", () => {
             makeGenerateTextResult({ output: { compacted: "" } }),
           );
         });
-        await maybeCompact({
-          abortSignal: new AbortController().signal,
-          preserveCurrentTurn: false,
-          userInput: "hi",
-        });
+        await maybeCompactWithApiStream({ userInput: "hi" });
         const systemContentTokensApprox = strToApproxTokens(systemContent);
         assert.strictEqual(strToApproxTokens(longUserContent) < 95_000, true);
         assert.strictEqual(
@@ -1142,6 +1174,7 @@ describe("api", () => {
             role: "user",
             content: longUserContent,
           },
+          { role: "user", content: "current question" },
         ]);
         actions.usage.setRequestInputTokens(0);
         actions.usage.setRequestInputTokensStale(true);
@@ -1152,11 +1185,7 @@ describe("api", () => {
             makeGenerateTextResult({ output: { compacted: "" } }),
           );
         });
-        await maybeCompact({
-          abortSignal: new AbortController().signal,
-          preserveCurrentTurn: false,
-          userInput: "hi",
-        });
+        await maybeCompactWithApiStream({ userInput: "hi" });
         const toolsTokensApprox = strToApproxTokens(
           stringify(harnessTools, { space: 0 }),
         );
@@ -1189,11 +1218,7 @@ describe("api", () => {
           called = true;
           return Promise.resolve(makeGenerateTextResult());
         });
-        await maybeCompact({
-          abortSignal: new AbortController().signal,
-          preserveCurrentTurn: false,
-          userInput: "hi",
-        });
+        await maybeCompactWithApiStream({ userInput: "hi" });
         assert.strictEqual(called, false);
       });
     });
@@ -1206,6 +1231,7 @@ describe("api", () => {
         const messages = [
           { role: "user", content: "first: " + "a".repeat(60_000) },
           { role: "assistant", content: "second: " + "b".repeat(60_000) },
+          { role: "user", content: "current question" },
         ];
         actions.conversation.setMessages(messages);
         const messagesDuringCalls = [messages, messages, messages];
@@ -1238,10 +1264,7 @@ describe("api", () => {
           },
         );
 
-        await maybeCompact({
-          abortSignal: new AbortController().signal,
-          preserveCurrentTurn: false,
-        });
+        await maybeCompactWithApiStream({});
 
         assert.deepStrictEqual(getState().conversation.summaries, [
           {
@@ -1252,6 +1275,7 @@ describe("api", () => {
         ]);
         assert.deepStrictEqual(getState().conversation.messages, [
           { role: "assistant", content: "merged chunk summary" },
+          { role: "user", content: "current question" },
         ]);
         const mergeCall = calls[2];
         assert(mergeCall !== undefined);
@@ -1271,7 +1295,10 @@ describe("api", () => {
 
       it("includes mcp tools in the tokens after compaction", async () => {
         actions.mcp.setClientsAndTools({}, { mcp_tool: makeMcpTool() });
-        actions.conversation.setMessages([{ role: "user", content: "hi" }]);
+        actions.conversation.setMessages([
+          { role: "user", content: "hi" },
+          { role: "user", content: "current question" },
+        ]);
         actions.usage.setRequestInputTokens(96_000);
         actions.usage.setRequestInputTokensStale(false);
         mock.method(aiDeps, "generateText", () =>
@@ -1282,11 +1309,7 @@ describe("api", () => {
             }),
           ),
         );
-        await maybeCompact({
-          abortSignal: new AbortController().signal,
-          preserveCurrentTurn: false,
-          userInput: "hi",
-        });
+        await maybeCompactWithApiStream({ userInput: "hi" });
         const withMcpTools = strToApproxTokens(
           stringify({ ...harnessTools, ...getState().mcp.tools }, { space: 0 }),
         );
@@ -1298,11 +1321,12 @@ describe("api", () => {
         ]);
         assert.deepStrictEqual(getState().conversation.messages, [
           { role: "assistant", content: "compacted summary" },
+          { role: "user", content: "current question" },
         ]);
         assert.deepStrictEqual(getState().usage.requestInputTokens, {
-          value: 26_987,
+          value: 27_002,
           stale: false,
-          charLength: 5982,
+          charLength: 6026,
         });
         assert.strictEqual(withMcpTools > withoutMcpTools, true);
       });
@@ -1334,10 +1358,7 @@ describe("api", () => {
           },
         );
 
-        await maybeCompact({
-          abortSignal: new AbortController().signal,
-          preserveCurrentTurn: true,
-        });
+        await maybeCompactWithApiStream({});
 
         assert.strictEqual(intervalCallbacks.length, 0);
         assert.deepStrictEqual(getState().conversation.messages, [
@@ -1378,23 +1399,34 @@ describe("api", () => {
           },
         ]);
 
+        actions.conversation.setMessages([
+          { role: "user", content: "previous question" },
+          { role: "assistant", content: "previous answer" },
+        ]);
+        actions.usage.setRequestInputTokens(96_000);
+        actions.usage.setRequestInputTokensStale(false);
         const result = await resolveApiCall("hi");
         assert.strictEqual(result, "answer text");
-        await maybeCompact({
-          abortSignal: new AbortController().signal,
-          preserveCurrentTurn: false,
-        });
+        actions.conversation.setMessages([
+          ...getState().conversation.messages,
+          { role: "user", content: "current question" },
+        ]);
+        await maybeCompactWithApiStream({});
 
         assert.deepStrictEqual(getState().conversation.summaries, [
           { compacted: "compacted summary", compactedAt: 0, tokens: 25_000 },
         ]);
         assert.deepStrictEqual(getState().conversation.messages, [
           { role: "assistant", content: "compacted summary" },
+          { role: "user", content: "current question" },
         ]);
       });
 
       it("compacts the conversation when above the threshold", async () => {
-        actions.conversation.setMessages([{ role: "user", content: "hi" }]);
+        actions.conversation.setMessages([
+          { role: "user", content: "hi" },
+          { role: "user", content: "current question" },
+        ]);
         actions.usage.setRequestInputTokens(96_000);
         actions.usage.setRequestInputTokensStale(false);
         let capturedOpts: Record<string, unknown> | undefined;
@@ -1408,11 +1440,7 @@ describe("api", () => {
           );
         });
         const getMessages = () => getCapturedMessages(capturedOpts);
-        await maybeCompact({
-          abortSignal: new AbortController().signal,
-          preserveCurrentTurn: false,
-          userInput: "hi",
-        });
+        await maybeCompactWithApiStream({ userInput: "hi" });
         assert.strictEqual(getMessages().length, 1);
         const capturedMessage = getMessages()[0];
         assert(capturedMessage !== undefined);
@@ -1437,11 +1465,12 @@ describe("api", () => {
         ]);
         assert.deepStrictEqual(getState().conversation.messages, [
           { role: "assistant", content: "compacted summary" },
+          { role: "user", content: "current question" },
         ]);
         assert.deepStrictEqual(getState().usage.requestInputTokens, {
-          value: 26_961,
+          value: 26_976,
           stale: false,
-          charLength: 5902,
+          charLength: 5946,
         });
         assert.deepStrictEqual(getState().usage.modelUsageForSession, {
           "claude-sonnet-4-20250514": [
@@ -1457,7 +1486,10 @@ describe("api", () => {
       });
 
       it("compacts when the user input pushes tokens over the threshold", async () => {
-        actions.conversation.setMessages([{ role: "user", content: "hi" }]);
+        actions.conversation.setMessages([
+          { role: "user", content: "hi" },
+          { role: "user", content: "current question" },
+        ]);
         actions.usage.setRequestInputTokens(95_000);
         actions.usage.setRequestInputTokensStale(false);
         let capturedOpts: Record<string, unknown> | undefined;
@@ -1473,11 +1505,7 @@ describe("api", () => {
 
         // 300 chars ≈ 100 tokens, pushing 95_000 over the 0.95 trigger (95_000 tokens).
         const getMessages = () => getCapturedMessages(capturedOpts);
-        await maybeCompact({
-          abortSignal: new AbortController().signal,
-          preserveCurrentTurn: false,
-          userInput: "x".repeat(300),
-        });
+        await maybeCompactWithApiStream({ userInput: "x".repeat(300) });
 
         assert.strictEqual(getMessages().length, 1);
         assert.deepStrictEqual(getState().conversation.summaries, [
@@ -1485,17 +1513,21 @@ describe("api", () => {
         ]);
         assert.deepStrictEqual(getState().conversation.messages, [
           { role: "assistant", content: "compacted summary" },
+          { role: "user", content: "current question" },
         ]);
         assert.deepStrictEqual(getState().usage.requestInputTokens, {
-          value: 26_961,
+          value: 26_976,
           stale: false,
-          charLength: 5902,
+          charLength: 5946,
         });
       });
 
       it("compacts against the default context window when the model has none configured", async () => {
         actions.config.setContextWindowPerModel({});
-        actions.conversation.setMessages([{ role: "user", content: "hi" }]);
+        actions.conversation.setMessages([
+          { role: "user", content: "hi" },
+          { role: "user", content: "current question" },
+        ]);
         actions.usage.setRequestInputTokens(122_000);
         actions.usage.setRequestInputTokensStale(false);
         mock.method(aiDeps, "generateText", () =>
@@ -1506,21 +1538,21 @@ describe("api", () => {
             }),
           ),
         );
-        await maybeCompact({
-          abortSignal: new AbortController().signal,
-          preserveCurrentTurn: false,
-          userInput: "hi",
-        });
+        await maybeCompactWithApiStream({ userInput: "hi" });
         assert.deepStrictEqual(getState().conversation.summaries, [
           { compacted: "compacted summary", compactedAt: 0, tokens: 25_000 },
         ]);
         assert.deepStrictEqual(getState().conversation.messages, [
           { role: "assistant", content: "compacted summary" },
+          { role: "user", content: "current question" },
         ]);
       });
 
       it("resets messages before the api call so the summary and new user input are both sent", async () => {
-        actions.conversation.setMessages([{ role: "user", content: "old" }]);
+        actions.conversation.setMessages([
+          { role: "user", content: "old" },
+          { role: "user", content: "queued current turn" },
+        ]);
         actions.usage.setRequestInputTokens(96_000);
         actions.usage.setRequestInputTokensStale(false);
         const calls: ModelMessage[][] = [];
@@ -1540,24 +1572,21 @@ describe("api", () => {
             calls.push(opts["messages"] as ModelMessage[]);
           },
         );
-        await maybeCompact({
-          abortSignal: new AbortController().signal,
-          preserveCurrentTurn: false,
-          userInput: "new input",
-        });
+        await maybeCompactWithApiStream({ userInput: "new input" });
         await resolveApiCall("new input");
         assert.deepStrictEqual(getState().conversation.summaries, [
           { compacted: "compacted summary", compactedAt: 0, tokens: 25 },
         ]);
         assert.deepStrictEqual(getState().conversation.messages, [
           { role: "assistant", content: "compacted summary" },
+          { role: "user", content: "queued current turn" },
           { role: "user", content: "new input" },
           { role: "assistant", content: "answer text" },
         ]);
         assert.deepStrictEqual(getState().usage.requestInputTokens, {
           value: 25,
           stale: false,
-          charLength: 6018,
+          charLength: 6066,
         });
         const compactionCall = calls[0];
         assert(compactionCall !== undefined);
@@ -1583,6 +1612,7 @@ describe("api", () => {
         assert(apiCall !== undefined);
         assert.deepStrictEqual(apiCall, [
           { role: "assistant", content: "compacted summary" },
+          { role: "user", content: "queued current turn" },
           { role: "user", content: "new input" },
         ]);
       });
@@ -1608,10 +1638,7 @@ describe("api", () => {
           },
           new Error("network error"),
         ]);
-        await maybeCompact({
-          abortSignal: new AbortController().signal,
-          preserveCurrentTurn: false,
-        });
+        await maybeCompactWithApiStream({});
         assert.deepStrictEqual(getState().conversation.summaries, [
           { compacted: "first summary", compactedAt: 0, tokens: 11 },
         ]);
@@ -1622,20 +1649,20 @@ describe("api", () => {
       });
 
       it("keeps messages when generateText fails", async () => {
-        actions.conversation.setMessages([{ role: "user", content: "hi" }]);
+        actions.conversation.setMessages([
+          { role: "user", content: "hi" },
+          { role: "user", content: "current question" },
+        ]);
         actions.usage.setRequestInputTokens(96_000);
         actions.usage.setRequestInputTokensStale(false);
         mock.method(aiDeps, "generateText", () =>
           Promise.reject(new Error("network error")),
         );
-        await maybeCompact({
-          abortSignal: new AbortController().signal,
-          preserveCurrentTurn: false,
-          userInput: "hi",
-        });
+        await maybeCompactWithApiStream({ userInput: "hi" });
         assert.deepStrictEqual(getState().conversation.summaries, []);
         assert.deepStrictEqual(getState().conversation.messages, [
           { role: "user", content: "hi" },
+          { role: "user", content: "current question" },
         ]);
         assert.deepStrictEqual(getState().usage.requestInputTokens, {
           value: 96_000,
@@ -1646,7 +1673,10 @@ describe("api", () => {
 
       it("leaves queued editor input handling to its caller on abort", async () => {
         const getWrites = mockStdoutWrites();
-        actions.conversation.setMessages([{ role: "user", content: "hi" }]);
+        actions.conversation.setMessages([
+          { role: "user", content: "hi" },
+          { role: "user", content: "current question" },
+        ]);
         actions.usage.setRequestInputTokens(96_000);
         actions.usage.setRequestInputTokensStale(false);
         actions.terminal.setRl(makeFakeRl());
@@ -1661,11 +1691,7 @@ describe("api", () => {
             return failGenerateTextStep(options, err);
           },
         );
-        await maybeCompact({
-          abortSignal: abortController.signal,
-          preserveCurrentTurn: false,
-          userInput: "hi",
-        });
+        await maybeCompactWithApiStream({ abortController, userInput: "hi" });
         assert.strictEqual(getState().abortControllers.apiStream, null);
         assert.strictEqual(
           getState().terminal.editorInputValue,
@@ -1676,7 +1702,10 @@ describe("api", () => {
 
       it("keeps messages on abort error during compaction", async () => {
         const getWrites = mockStdoutWrites();
-        actions.conversation.setMessages([{ role: "user", content: "hi" }]);
+        actions.conversation.setMessages([
+          { role: "user", content: "hi" },
+          { role: "user", content: "current question" },
+        ]);
         actions.usage.setRequestInputTokens(96_000);
         actions.usage.setRequestInputTokensStale(false);
         const err = makeAbortError();
@@ -1686,15 +1715,12 @@ describe("api", () => {
           (options: Record<string, unknown>) =>
             failGenerateTextStep(options, err),
         );
-        await maybeCompact({
-          abortSignal: new AbortController().signal,
-          preserveCurrentTurn: false,
-          userInput: "hi",
-        });
+        await maybeCompactWithApiStream({ userInput: "hi" });
         assert.strictEqual(getState().abortControllers.apiStream, null);
         assert.deepStrictEqual(getState().conversation.summaries, []);
         assert.deepStrictEqual(getState().conversation.messages, [
           { role: "user", content: "hi" },
+          { role: "user", content: "current question" },
         ]);
         assert.deepStrictEqual(getState().usage.requestInputTokens, {
           value: 96_000,
@@ -1717,6 +1743,7 @@ describe("api", () => {
         }
         actions.conversation.setMessages([
           ...getState().conversation.messages,
+          { role: "assistant", content: "previous answer" },
           { role: "user", content: "hi" },
         ]);
         actions.usage.setRequestInputTokens(96_000);
@@ -1735,11 +1762,7 @@ describe("api", () => {
             }),
           );
         });
-        await maybeCompact({
-          abortSignal: abortController.signal,
-          preserveCurrentTurn: false,
-          userInput: "hi",
-        });
+        await maybeCompactWithApiStream({ abortController, userInput: "hi" });
         assert.strictEqual(getState().abortControllers.apiStream, null);
         assert.deepStrictEqual(calls, [false, true]);
         assert.deepStrictEqual(
@@ -1775,6 +1798,7 @@ describe("api", () => {
         }
         actions.conversation.setMessages([
           ...getState().conversation.messages,
+          { role: "assistant", content: "previous answer" },
           { role: "user", content: "hi" },
         ]);
         actions.usage.setRequestInputTokens(96_000);
@@ -1789,11 +1813,7 @@ describe("api", () => {
             usage: makeMockUsage({ outputTokens: 15 }),
           },
         ]);
-        await maybeCompact({
-          abortSignal: new AbortController().signal,
-          preserveCurrentTurn: false,
-          userInput: "hi",
-        });
+        await maybeCompactWithApiStream({ userInput: "hi" });
         assert.deepStrictEqual(getState().conversation.summaries, [
           { compacted: "merged summary", compactedAt: 0, tokens: 15 },
           { compacted: "summary 3", compactedAt: 3, tokens: 100 },
@@ -1817,11 +1837,12 @@ describe("api", () => {
           { role: "assistant", content: "summary 9" },
           { role: "assistant", content: "summary 10" },
           { role: "assistant", content: "compacted summary" },
+          { role: "user", content: "hi" },
         ]);
         assert.deepStrictEqual(getState().usage.requestInputTokens, {
-          value: 2_796,
+          value: 2_806,
           stale: false,
-          charLength: 5989,
+          charLength: 6019,
         });
       });
 
@@ -1838,6 +1859,7 @@ describe("api", () => {
         }
         actions.conversation.setMessages([
           ...getState().conversation.messages,
+          { role: "assistant", content: "previous answer" },
           { role: "user", content: "hi" },
         ]);
         actions.usage.setRequestInputTokens(96_000);
@@ -1849,11 +1871,7 @@ describe("api", () => {
           },
           new Error("network error"),
         ]);
-        await maybeCompact({
-          abortSignal: new AbortController().signal,
-          preserveCurrentTurn: false,
-          userInput: "hi",
-        });
+        await maybeCompactWithApiStream({ userInput: "hi" });
         assert.deepStrictEqual(getState().conversation.summaries, [
           { compacted: "summary 1", compactedAt: 1, tokens: 100 },
           { compacted: "summary 2", compactedAt: 2, tokens: 100 },
@@ -1879,11 +1897,12 @@ describe("api", () => {
           { role: "assistant", content: "summary 9" },
           { role: "assistant", content: "summary 10" },
           { role: "assistant", content: "compacted summary" },
+          { role: "user", content: "hi" },
         ]);
         assert.deepStrictEqual(getState().usage.requestInputTokens, {
-          value: 2_981,
+          value: 2_991,
           stale: false,
-          charLength: 5993,
+          charLength: 6023,
         });
       });
     });
@@ -3823,10 +3842,10 @@ async function resolveInterruptWithAnswer(answer: string) {
   actions.terminal.setRl(
     makeFakeRl({ question: () => Promise.resolve(answer) }),
   );
-  await resolveInterruptWithEditor();
+  await resolveInterruptWithEditorContent();
 }
 
-describe("resolveInterruptWithEditor", () => {
+describe("resolveInterruptWithEditorContent", () => {
   afterEach(() => {
     mock.restoreAll();
   });
@@ -3855,7 +3874,7 @@ describe("resolveInterruptWithEditor", () => {
       }),
     );
 
-    await resolveInterruptWithEditor();
+    await resolveInterruptWithEditorContent();
 
     assert(questionOptions !== undefined);
     assert.equal(questionOptions.signal.aborted, false);
@@ -3893,7 +3912,7 @@ describe("resolveInterruptWithEditor", () => {
       }),
     );
 
-    await resolveInterruptWithEditor();
+    await resolveInterruptWithEditorContent();
 
     assert.equal(getState().abortControllers.interruptWithEditorContent, null);
   });
@@ -3905,7 +3924,7 @@ describe("resolveInterruptWithEditor", () => {
       }),
     );
 
-    await resolveInterruptWithEditor();
+    await resolveInterruptWithEditorContent();
 
     assert.equal(getState().abortControllers.interruptWithEditorContent, null);
     assert.deepStrictEqual(getWrites(), [

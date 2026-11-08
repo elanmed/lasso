@@ -556,9 +556,9 @@ export async function resolveApiCall(userInput: string) {
           messages: getAppendedConversationMessages(message),
         });
       },
-      prepareStep: async () => {
+      prepareStep: async ({ stepNumber }) => {
         await maybeCompact({
-          abortSignal: abortController.signal,
+          userInput: stepNumber === 0 ? userInput : "",
         });
         return {
           messages: getState().conversation.messages as AiModelMessage[],
@@ -813,14 +813,10 @@ async function applyCompaction({ messages, summaries }: CompactionResult) {
   actions.usage.setRequestInputTokensStale(false);
 }
 
-export async function maybeCompact({
-  abortSignal,
-  userInput = "",
-}: {
-  abortSignal: AbortSignal;
-  userInput?: string;
-}) {
-  if (abortSignal.aborted) return;
+export async function maybeCompact({ userInput = "" }: { userInput?: string }) {
+  const abortController = getState().abortControllers.apiStream;
+  assertAtBuildtime(abortController !== null);
+  if (abortController.signal.aborted) return;
 
   const nextInputTokens =
     resolveRequestInputTokens() + strToApproxTokens(userInput);
@@ -831,7 +827,7 @@ export async function maybeCompact({
   const compacted = await compactConversation({
     messages: getState().conversation.messages,
     summaries: getState().conversation.summaries,
-    abortSignal,
+    abortSignal: abortController.signal,
   });
   if (compacted !== null) await applyCompaction(compacted);
 }
