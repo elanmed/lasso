@@ -421,39 +421,12 @@ export async function resolveApiCall(userInput: string) {
   actions.abortControllers.setApiStream(abortController);
 
   startLoadingState();
-  await maybeCompact({
-    abortSignal: abortController.signal,
-    preserveCurrentTurn: false,
-    userInput,
-  });
   await syncSessionFile({
     messages: getAppendedConversationMessages(userMessage),
   });
 
-  const onStepError = async ({ error }: { error: unknown }) => {
-    if (!isAbortError(error)) return;
-
-    const message: AiModelMessage = {
-      role: "assistant",
-      content: interruptContent,
-    };
-    await syncSessionFile({
-      transcript: getAppendedTranscript({
-        message: interruptContent,
-        role: "assistant",
-        timestamp: Date.now(),
-      }),
-      messages: getAppendedConversationMessages(message),
-    });
-  };
-
-  async function generateText() {
-    if (abortController.signal.aborted) {
-      await onStepError({ error: abortController.signal.reason });
-      throw abortController.signal.reason;
-    }
-
-    return aiDeps.generateText({
+  const generateTextResult = await tryCatchAsync(
+    aiDeps.generateText({
       model: getLanguageModel(getState().config.model),
       reasoning: getState().config.reasoning,
       instructions: systemContent,
@@ -567,21 +540,33 @@ export async function resolveApiCall(userInput: string) {
         actions.usage.setRequestInputTokensStale(false);
       },
       // NOTE: usage isn't provided on error, can't be accounted for
-      onStepError,
+      onStepError: async ({ error }: { error: unknown }) => {
+        if (!isAbortError(error)) return;
+
+        const message: AiModelMessage = {
+          role: "assistant",
+          content: interruptContent,
+        };
+        await syncSessionFile({
+          transcript: getAppendedTranscript({
+            message: interruptContent,
+            role: "assistant",
+            timestamp: Date.now(),
+          }),
+          messages: getAppendedConversationMessages(message),
+        });
+      },
       prepareStep: async () => {
         await maybeCompact({
           abortSignal: abortController.signal,
-          preserveCurrentTurn: true,
         });
         return {
           messages: getState().conversation.messages as AiModelMessage[],
         };
       },
       providerOptions: getProviderOptions(),
-    });
-  }
-
-  const generateTextResult = await tryCatchAsync(generateText());
+    }),
+  );
   stopLoadingState();
   actions.abortControllers.setApiStream(null);
   actions.usage.setApiEndTime();
@@ -598,7 +583,7 @@ export async function resolveApiCall(userInput: string) {
       }
 
       if (getState().terminal.editorInputValue !== null) {
-        await resolveInterruptWithEditor();
+        await resolveInterruptWithEditorContent();
       }
       return null;
     }
@@ -746,12 +731,10 @@ interface CompactionResult {
 export async function compactConversation({
   messages,
   summaries,
-  preserveCurrentTurn,
   abortSignal,
 }: {
   messages: ModelMessage[];
   summaries: ModelSummary[];
-  preserveCurrentTurn: boolean;
   abortSignal: AbortSignal;
 }): Promise<CompactionResult | null> {
   const unsummarizedMessages = messages.slice(summaries.length);
@@ -759,9 +742,10 @@ export async function compactConversation({
   const lastUserMessageIndex = unsummarizedMessages.findLastIndex(
     (message) => message.role === "user",
   );
-  const messagesToCompact = preserveCurrentTurn
-    ? unsummarizedMessages.slice(0, Math.max(0, lastUserMessageIndex))
-    : unsummarizedMessages;
+  const messagesToCompact = unsummarizedMessages.slice(
+    0,
+    Math.max(0, lastUserMessageIndex),
+  );
 
   const chunks = splitMessagesToCompact(messagesToCompact);
   if (chunks.length === 0) return null;
@@ -831,11 +815,9 @@ async function applyCompaction({ messages, summaries }: CompactionResult) {
 
 export async function maybeCompact({
   abortSignal,
-  preserveCurrentTurn,
   userInput = "",
 }: {
   abortSignal: AbortSignal;
-  preserveCurrentTurn: boolean;
   userInput?: string;
 }) {
   if (abortSignal.aborted) return;
@@ -849,7 +831,6 @@ export async function maybeCompact({
   const compacted = await compactConversation({
     messages: getState().conversation.messages,
     summaries: getState().conversation.summaries,
-    preserveCurrentTurn,
     abortSignal,
   });
   if (compacted !== null) await applyCompaction(compacted);
@@ -899,7 +880,7 @@ export function splitMessagesToCompact(messagesToCompact: ModelMessage[]) {
   return chunks;
 }
 
-export async function resolveInterruptWithEditor() {
+export async function resolveInterruptWithEditorContent() {
   const rl = getState().terminal.rl;
   assertAtBuildtime(rl !== null);
 
