@@ -18,7 +18,6 @@ import {
   fencePrint,
   initState,
   resolveApiCall,
-  maybeCompact,
   initReadline,
   pollUntilNonBlockingProcessClosed,
   resolveUserInput,
@@ -52,12 +51,8 @@ async function main() {
       continue;
     }
 
-    await maybeCompact({ userInput, timing: "between-turns" });
-
     const text = await resolveApiCall(userInput);
     if (text === null) continue;
-
-    await maybeCompact({ timing: "between-turns" });
 
     printNewline();
     fencePrint("Output", {

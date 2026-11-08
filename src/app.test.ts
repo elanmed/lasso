@@ -859,15 +859,25 @@ describe("api", () => {
     });
 
     describe("aborted calls", () => {
-      it("resolves the queued editor input when the api call is interrupted", async () => {
+      it("resolves queued editor input when compaction aborts", async () => {
         actions.terminal.setRl(makeFakeRl());
         actions.terminal.setEditorInputValue("queued input");
+        actions.config.setContextWindowPerModel({
+          "claude-sonnet-4-20250514": 100_000,
+        });
+        actions.conversation.setMessages([{ role: "user", content: "prior" }]);
+        actions.usage.setRequestInputTokens(96_000);
+        actions.usage.setRequestInputTokensStale(false);
         const err = makeAbortError();
         mock.method(
           aiDeps,
           "generateText",
-          (options: Record<string, unknown>) =>
-            failGenerateTextStep(options, err),
+          (options: Record<string, unknown>) => {
+            if (options["instructions"] === undefined) {
+              getState().abortControllers.apiStream?.abort();
+            }
+            return failGenerateTextStep(options, err);
+          },
         );
         const getWrites = mockStdoutWrites();
         const result = await resolveApiCall("hello");
@@ -877,6 +887,7 @@ describe("api", () => {
           "queued input",
         );
         assert.deepStrictEqual(getWrites(), [
+          `${BLUE}Compacting…${RESET}\n`,
           `${YELLOW}You have queued messages!${RESET}\n`,
         ]);
       });
@@ -1001,7 +1012,11 @@ describe("api", () => {
           called = true;
           return Promise.resolve(makeGenerateTextResult());
         });
-        await maybeCompact({ userInput: "hi", timing: "between-turns" });
+        await maybeCompact({
+          abortSignal: new AbortController().signal,
+          preserveCurrentTurn: false,
+          userInput: "hi",
+        });
         assert.strictEqual(called, false);
         assert.deepStrictEqual(getState().conversation.summaries, []);
         assert.deepStrictEqual(getState().conversation.messages, [
@@ -1035,7 +1050,11 @@ describe("api", () => {
           );
         });
         const getMessages = () => getCapturedMessages(capturedOpts);
-        await maybeCompact({ userInput: "hi", timing: "between-turns" });
+        await maybeCompact({
+          abortSignal: new AbortController().signal,
+          preserveCurrentTurn: false,
+          userInput: "hi",
+        });
         assert.strictEqual(getMessages().length, 1);
         assert.deepStrictEqual(getState().conversation.summaries, [
           { compacted: "compacted summary", compactedAt: 0, tokens: 25_000 },
@@ -1065,7 +1084,11 @@ describe("api", () => {
           called = true;
           return Promise.resolve(makeGenerateTextResult());
         });
-        await maybeCompact({ userInput: "hi", timing: "between-turns" });
+        await maybeCompact({
+          abortSignal: new AbortController().signal,
+          preserveCurrentTurn: false,
+          userInput: "hi",
+        });
         assert.strictEqual(called, false);
         assert.deepStrictEqual(getState().conversation.summaries, []);
         assert.deepStrictEqual(getState().conversation.messages, [
@@ -1097,7 +1120,11 @@ describe("api", () => {
             makeGenerateTextResult({ output: { compacted: "" } }),
           );
         });
-        await maybeCompact({ userInput: "hi", timing: "between-turns" });
+        await maybeCompact({
+          abortSignal: new AbortController().signal,
+          preserveCurrentTurn: false,
+          userInput: "hi",
+        });
         const systemContentTokensApprox = strToApproxTokens(systemContent);
         assert.strictEqual(strToApproxTokens(longUserContent) < 95_000, true);
         assert.strictEqual(
@@ -1125,7 +1152,11 @@ describe("api", () => {
             makeGenerateTextResult({ output: { compacted: "" } }),
           );
         });
-        await maybeCompact({ userInput: "hi", timing: "between-turns" });
+        await maybeCompact({
+          abortSignal: new AbortController().signal,
+          preserveCurrentTurn: false,
+          userInput: "hi",
+        });
         const toolsTokensApprox = strToApproxTokens(
           stringify(harnessTools, { space: 0 }),
         );
@@ -1158,13 +1189,17 @@ describe("api", () => {
           called = true;
           return Promise.resolve(makeGenerateTextResult());
         });
-        await maybeCompact({ userInput: "hi", timing: "between-turns" });
+        await maybeCompact({
+          abortSignal: new AbortController().signal,
+          preserveCurrentTurn: false,
+          userInput: "hi",
+        });
         assert.strictEqual(called, false);
       });
     });
 
     describe("compacts the conversation", () => {
-      it("persists each chunk before summarizing the next", async () => {
+      it("applies compaction after summarizing every chunk", async () => {
         actions.config.setContextWindowPerModel({
           "claude-sonnet-4-20250514": 40_000,
         });
@@ -1173,15 +1208,7 @@ describe("api", () => {
           { role: "assistant", content: "second: " + "b".repeat(60_000) },
         ];
         actions.conversation.setMessages(messages);
-        const messagesAfterFirstChunk = [
-          { role: "assistant", content: "chunk summary one" },
-          ...messages.slice(1),
-        ];
-        const messagesDuringCalls = [
-          messages,
-          messagesAfterFirstChunk,
-          messagesAfterFirstChunk,
-        ];
+        const messagesDuringCalls = [messages, messages, messages];
         actions.usage.setRequestInputTokens(39_000);
         actions.usage.setRequestInputTokensStale(false);
         const calls: Record<string, unknown>[] = [];
@@ -1211,7 +1238,10 @@ describe("api", () => {
           },
         );
 
-        await maybeCompact({ userInput: "", timing: "between-turns" });
+        await maybeCompact({
+          abortSignal: new AbortController().signal,
+          preserveCurrentTurn: false,
+        });
 
         assert.deepStrictEqual(getState().conversation.summaries, [
           {
@@ -1252,7 +1282,11 @@ describe("api", () => {
             }),
           ),
         );
-        await maybeCompact({ userInput: "hi", timing: "between-turns" });
+        await maybeCompact({
+          abortSignal: new AbortController().signal,
+          preserveCurrentTurn: false,
+          userInput: "hi",
+        });
         const withMcpTools = strToApproxTokens(
           stringify({ ...harnessTools, ...getState().mcp.tools }, { space: 0 }),
         );
@@ -1300,7 +1334,10 @@ describe("api", () => {
           },
         );
 
-        await maybeCompact({ timing: "mid-turn" });
+        await maybeCompact({
+          abortSignal: new AbortController().signal,
+          preserveCurrentTurn: true,
+        });
 
         assert.strictEqual(intervalCallbacks.length, 0);
         assert.deepStrictEqual(getState().conversation.messages, [
@@ -1343,7 +1380,10 @@ describe("api", () => {
 
         const result = await resolveApiCall("hi");
         assert.strictEqual(result, "answer text");
-        await maybeCompact({ userInput: "", timing: "between-turns" });
+        await maybeCompact({
+          abortSignal: new AbortController().signal,
+          preserveCurrentTurn: false,
+        });
 
         assert.deepStrictEqual(getState().conversation.summaries, [
           { compacted: "compacted summary", compactedAt: 0, tokens: 25_000 },
@@ -1368,7 +1408,11 @@ describe("api", () => {
           );
         });
         const getMessages = () => getCapturedMessages(capturedOpts);
-        await maybeCompact({ userInput: "hi", timing: "between-turns" });
+        await maybeCompact({
+          abortSignal: new AbortController().signal,
+          preserveCurrentTurn: false,
+          userInput: "hi",
+        });
         assert.strictEqual(getMessages().length, 1);
         const capturedMessage = getMessages()[0];
         assert(capturedMessage !== undefined);
@@ -1430,8 +1474,9 @@ describe("api", () => {
         // 300 chars ≈ 100 tokens, pushing 95_000 over the 0.95 trigger (95_000 tokens).
         const getMessages = () => getCapturedMessages(capturedOpts);
         await maybeCompact({
+          abortSignal: new AbortController().signal,
+          preserveCurrentTurn: false,
           userInput: "x".repeat(300),
-          timing: "between-turns",
         });
 
         assert.strictEqual(getMessages().length, 1);
@@ -1461,7 +1506,11 @@ describe("api", () => {
             }),
           ),
         );
-        await maybeCompact({ userInput: "hi", timing: "between-turns" });
+        await maybeCompact({
+          abortSignal: new AbortController().signal,
+          preserveCurrentTurn: false,
+          userInput: "hi",
+        });
         assert.deepStrictEqual(getState().conversation.summaries, [
           { compacted: "compacted summary", compactedAt: 0, tokens: 25_000 },
         ]);
@@ -1491,7 +1540,11 @@ describe("api", () => {
             calls.push(opts["messages"] as ModelMessage[]);
           },
         );
-        await maybeCompact({ userInput: "new input", timing: "between-turns" });
+        await maybeCompact({
+          abortSignal: new AbortController().signal,
+          preserveCurrentTurn: false,
+          userInput: "new input",
+        });
         await resolveApiCall("new input");
         assert.deepStrictEqual(getState().conversation.summaries, [
           { compacted: "compacted summary", compactedAt: 0, tokens: 25 },
@@ -1555,7 +1608,10 @@ describe("api", () => {
           },
           new Error("network error"),
         ]);
-        await maybeCompact({ userInput: "", timing: "between-turns" });
+        await maybeCompact({
+          abortSignal: new AbortController().signal,
+          preserveCurrentTurn: false,
+        });
         assert.deepStrictEqual(getState().conversation.summaries, [
           { compacted: "first summary", compactedAt: 0, tokens: 11 },
         ]);
@@ -1572,7 +1628,11 @@ describe("api", () => {
         mock.method(aiDeps, "generateText", () =>
           Promise.reject(new Error("network error")),
         );
-        await maybeCompact({ userInput: "hi", timing: "between-turns" });
+        await maybeCompact({
+          abortSignal: new AbortController().signal,
+          preserveCurrentTurn: false,
+          userInput: "hi",
+        });
         assert.deepStrictEqual(getState().conversation.summaries, []);
         assert.deepStrictEqual(getState().conversation.messages, [
           { role: "user", content: "hi" },
@@ -1584,30 +1644,34 @@ describe("api", () => {
         });
       });
 
-      it("resolves the queued editor input when compaction is aborted", async () => {
+      it("leaves queued editor input handling to its caller on abort", async () => {
         const getWrites = mockStdoutWrites();
         actions.conversation.setMessages([{ role: "user", content: "hi" }]);
         actions.usage.setRequestInputTokens(96_000);
         actions.usage.setRequestInputTokensStale(false);
         actions.terminal.setRl(makeFakeRl());
         actions.terminal.setEditorInputValue("queued input");
+        const abortController = new AbortController();
         const err = makeAbortError();
         mock.method(
           aiDeps,
           "generateText",
-          (options: Record<string, unknown>) =>
-            failGenerateTextStep(options, err),
+          (options: Record<string, unknown>) => {
+            abortController.abort();
+            return failGenerateTextStep(options, err);
+          },
         );
-        await maybeCompact({ userInput: "hi", timing: "between-turns" });
+        await maybeCompact({
+          abortSignal: abortController.signal,
+          preserveCurrentTurn: false,
+          userInput: "hi",
+        });
         assert.strictEqual(getState().abortControllers.apiStream, null);
         assert.strictEqual(
           getState().terminal.editorInputValue,
           "queued input",
         );
-        assert.deepStrictEqual(getWrites(), [
-          `${BLUE}Compacting…${RESET}\n`,
-          `${YELLOW}You have queued messages!${RESET}\n`,
-        ]);
+        assert.deepStrictEqual(getWrites(), [`${BLUE}Compacting…${RESET}\n`]);
       });
 
       it("keeps messages on abort error during compaction", async () => {
@@ -1622,7 +1686,11 @@ describe("api", () => {
           (options: Record<string, unknown>) =>
             failGenerateTextStep(options, err),
         );
-        await maybeCompact({ userInput: "hi", timing: "between-turns" });
+        await maybeCompact({
+          abortSignal: new AbortController().signal,
+          preserveCurrentTurn: false,
+          userInput: "hi",
+        });
         assert.strictEqual(getState().abortControllers.apiStream, null);
         assert.deepStrictEqual(getState().conversation.summaries, []);
         assert.deepStrictEqual(getState().conversation.messages, [
@@ -1653,13 +1721,13 @@ describe("api", () => {
         ]);
         actions.usage.setRequestInputTokens(96_000);
         actions.usage.setRequestInputTokensStale(false);
+        const abortController = new AbortController();
         const calls: boolean[] = [];
         mock.method(aiDeps, "generateText", () => {
-          const signal = getState().abortControllers.apiStream?.signal;
-          const aborted = signal?.aborted === true;
+          const aborted = abortController.signal.aborted;
           calls.push(aborted);
           if (aborted) return Promise.reject(makeAbortError());
-          getState().abortControllers.apiStream?.abort();
+          abortController.abort();
           return Promise.resolve(
             makeGenerateTextResult({
               text: "compacted summary",
@@ -1667,7 +1735,11 @@ describe("api", () => {
             }),
           );
         });
-        await maybeCompact({ userInput: "hi", timing: "between-turns" });
+        await maybeCompact({
+          abortSignal: abortController.signal,
+          preserveCurrentTurn: false,
+          userInput: "hi",
+        });
         assert.strictEqual(getState().abortControllers.apiStream, null);
         assert.deepStrictEqual(calls, [false, true]);
         assert.deepStrictEqual(
@@ -1717,7 +1789,11 @@ describe("api", () => {
             usage: makeMockUsage({ outputTokens: 15 }),
           },
         ]);
-        await maybeCompact({ userInput: "hi", timing: "between-turns" });
+        await maybeCompact({
+          abortSignal: new AbortController().signal,
+          preserveCurrentTurn: false,
+          userInput: "hi",
+        });
         assert.deepStrictEqual(getState().conversation.summaries, [
           { compacted: "merged summary", compactedAt: 0, tokens: 15 },
           { compacted: "summary 3", compactedAt: 3, tokens: 100 },
@@ -1773,7 +1849,11 @@ describe("api", () => {
           },
           new Error("network error"),
         ]);
-        await maybeCompact({ userInput: "hi", timing: "between-turns" });
+        await maybeCompact({
+          abortSignal: new AbortController().signal,
+          preserveCurrentTurn: false,
+          userInput: "hi",
+        });
         assert.deepStrictEqual(getState().conversation.summaries, [
           { compacted: "summary 1", compactedAt: 1, tokens: 100 },
           { compacted: "summary 2", compactedAt: 2, tokens: 100 },
@@ -1935,7 +2015,10 @@ describe("api", () => {
       it("does not start the loading state while summarizing mid-turn", async () => {
         const intervalCallbacks = mockSetInterval();
         mockClearInterval(intervalCallbacks);
-        await getConversationSummary({ messageChunk, timing: "mid-turn" });
+        await getConversationSummary({
+          messageChunk,
+          abortSignal: new AbortController().signal,
+        });
         assert.deepStrictEqual(intervalCallbacks, []);
       });
 
@@ -1952,7 +2035,10 @@ describe("api", () => {
           );
         });
 
-        await getConversationSummary({ messageChunk, timing: "between-turns" });
+        await getConversationSummary({
+          messageChunk,
+          abortSignal: new AbortController().signal,
+        });
 
         assert.strictEqual(capturedOpts?.["maxOutputTokens"], 5_000);
       });
@@ -1971,7 +2057,10 @@ describe("api", () => {
         });
         actions.config.setGateway("opencode");
 
-        await getConversationSummary({ messageChunk, timing: "between-turns" });
+        await getConversationSummary({
+          messageChunk,
+          abortSignal: new AbortController().signal,
+        });
 
         assert.deepStrictEqual(capturedOpts?.["providerOptions"], {
           openai: { store: false },
@@ -2020,7 +2109,7 @@ describe("api", () => {
         assert(imageMessageChunk !== undefined);
         await getConversationSummary({
           messageChunk: imageMessageChunk,
-          timing: "between-turns",
+          abortSignal: new AbortController().signal,
         });
         const capturedMessage = getCapturedMessages(capturedOpts)[0];
         assert(capturedMessage !== undefined);
@@ -2040,7 +2129,10 @@ describe("api", () => {
           );
         });
         const getMessages = () => getCapturedMessages(capturedOpts);
-        await getConversationSummary({ messageChunk, timing: "between-turns" });
+        await getConversationSummary({
+          messageChunk,
+          abortSignal: new AbortController().signal,
+        });
         assert.strictEqual(getMessages().length, 1);
         assert.deepStrictEqual(capturedOpts?.["timeout"], {
           tools: {
@@ -2086,7 +2178,7 @@ describe("api", () => {
         );
         const result = await getConversationSummary({
           messageChunk,
-          timing: "between-turns",
+          abortSignal: new AbortController().signal,
         });
         assert.deepStrictEqual(result, {
           compacted: "compacted summary",
@@ -2118,7 +2210,7 @@ describe("api", () => {
         );
         const result = await getConversationSummary({
           messageChunk,
-          timing: "between-turns",
+          abortSignal: new AbortController().signal,
         });
         assert.deepStrictEqual(result, {
           compacted: "four chars ≈ one token",
@@ -2136,7 +2228,7 @@ describe("api", () => {
         );
         const result = await getConversationSummary({
           messageChunk,
-          timing: "between-turns",
+          abortSignal: new AbortController().signal,
         });
         assert.strictEqual(result, null);
         assert.deepStrictEqual(getState().conversation.summaries, [
@@ -2165,7 +2257,7 @@ describe("api", () => {
         );
         const result = await getConversationSummary({
           messageChunk,
-          timing: "between-turns",
+          abortSignal: new AbortController().signal,
         });
         assert.strictEqual(result, null);
         assert.notStrictEqual(getState().abortControllers.apiStream, null);
@@ -2184,7 +2276,7 @@ describe("api", () => {
         assert.deepStrictEqual(getWrites(), []);
       });
 
-      it("resolves the queued editor input on abort error", async () => {
+      it("leaves queued editor input handling to the caller on abort", async () => {
         seedConversation();
         actions.terminal.setRl(makeFakeRl());
         actions.terminal.setEditorInputValue("queued input");
@@ -2198,7 +2290,7 @@ describe("api", () => {
         );
         const result = await getConversationSummary({
           messageChunk,
-          timing: "between-turns",
+          abortSignal: new AbortController().signal,
         });
         assert.strictEqual(result, null);
         assert.strictEqual(
@@ -2206,9 +2298,7 @@ describe("api", () => {
           "queued input",
         );
         assert.notStrictEqual(getState().abortControllers.apiStream, null);
-        assert.deepStrictEqual(getWrites(), [
-          `${YELLOW}You have queued messages!${RESET}\n`,
-        ]);
+        assert.deepStrictEqual(getWrites(), []);
       });
     });
   });
@@ -2255,7 +2345,7 @@ describe("api", () => {
 
         await getMergedSummaries({
           summaries: getState().conversation.summaries,
-          timing: "mid-turn",
+          abortSignal: new AbortController().signal,
         });
 
         assert.deepStrictEqual(intervalCallbacks, []);
@@ -2272,7 +2362,7 @@ describe("api", () => {
         });
         const result = await getMergedSummaries({
           summaries: getState().conversation.summaries,
-          timing: "between-turns",
+          abortSignal: new AbortController().signal,
         });
         assert.strictEqual(called, false);
         assert.deepStrictEqual(result, [
@@ -2295,7 +2385,7 @@ describe("api", () => {
         const getMessages = () => getCapturedMessages(capturedOpts);
         const result = await getMergedSummaries({
           summaries: getState().conversation.summaries,
-          timing: "between-turns",
+          abortSignal: new AbortController().signal,
         });
         const capturedMessage = getMessages()[0];
         assert(capturedMessage !== undefined);
@@ -2372,7 +2462,7 @@ describe("api", () => {
         );
         const result = await getMergedSummaries({
           summaries: getState().conversation.summaries,
-          timing: "between-turns",
+          abortSignal: new AbortController().signal,
         });
         assert.deepStrictEqual(result, [
           { compacted: "merged summary", compactedAt: 42, tokens: 25_000 },
@@ -2391,7 +2481,7 @@ describe("api", () => {
         );
         await getMergedSummaries({
           summaries: getState().conversation.summaries,
-          timing: "between-turns",
+          abortSignal: new AbortController().signal,
         });
         assert.deepStrictEqual(getState().conversation.summaries, [
           { compacted: "summary 1", compactedAt: 1, tokens: 100 },
@@ -2421,7 +2511,7 @@ describe("api", () => {
         );
         const result = await getMergedSummaries({
           summaries: getState().conversation.summaries,
-          timing: "between-turns",
+          abortSignal: new AbortController().signal,
         });
         const mergedSummary = result[0];
         assert(mergedSummary !== undefined);
@@ -2440,7 +2530,7 @@ describe("api", () => {
         );
         const result = await getMergedSummaries({
           summaries: getState().conversation.summaries,
-          timing: "between-turns",
+          abortSignal: new AbortController().signal,
         });
         assert.strictEqual(result, getState().conversation.summaries);
         assert.deepStrictEqual(getState().conversation.summaries, [
@@ -2472,7 +2562,7 @@ describe("api", () => {
 
         await getMergedSummaries({
           summaries: getState().conversation.summaries,
-          timing: "between-turns",
+          abortSignal: new AbortController().signal,
         });
 
         assert.strictEqual(capturedOpts?.["maxOutputTokens"], 5_000);
@@ -2494,7 +2584,7 @@ describe("api", () => {
 
         await getMergedSummaries({
           summaries: getState().conversation.summaries,
-          timing: "between-turns",
+          abortSignal: new AbortController().signal,
         });
 
         assert.deepStrictEqual(capturedOpts?.["providerOptions"], {
@@ -2513,7 +2603,7 @@ describe("api", () => {
         );
         const result = await getMergedSummaries({
           summaries: getState().conversation.summaries,
-          timing: "between-turns",
+          abortSignal: new AbortController().signal,
         });
         assert.notStrictEqual(getState().abortControllers.apiStream, null);
         assert.deepStrictEqual(result, [

@@ -397,12 +397,6 @@ export async function initState() {
   ]);
 }
 
-function getApiStreamAbortSignal() {
-  const controller = getState().abortControllers.apiStream;
-  assertAtBuildtime(controller !== null);
-  return controller.signal;
-}
-
 export function getProviderOptions() {
   if (getState().config.gateway === "opencode") {
     return {
@@ -414,31 +408,59 @@ export function getProviderOptions() {
 
 export async function resolveApiCall(userInput: string) {
   const toolCallDiffer = createToolCallDiffer();
-
   const userMessage: AiModelMessage = {
     role: "user",
     content: userInput,
   };
-
   const systemContent = getSystemContent();
 
+  actions.conversation.resetToolEditDiffs();
+  actions.usage.setApiStartTime();
+
+  const abortController = new AbortController();
+  actions.abortControllers.setApiStream(abortController);
+
+  startLoadingState();
+  await maybeCompact({
+    abortSignal: abortController.signal,
+    preserveCurrentTurn: false,
+    userInput,
+  });
   await syncSessionFile({
     messages: getAppendedConversationMessages(userMessage),
   });
 
-  actions.conversation.resetToolEditDiffs();
-  actions.usage.setApiStartTime();
-  actions.abortControllers.setApiStream(new AbortController());
-  startLoadingState();
-  const generateTextResult = await tryCatchAsync(
-    aiDeps.generateText({
+  const onStepError = async ({ error }: { error: unknown }) => {
+    if (!isAbortError(error)) return;
+
+    const message: AiModelMessage = {
+      role: "assistant",
+      content: interruptContent,
+    };
+    await syncSessionFile({
+      transcript: getAppendedTranscript({
+        message: interruptContent,
+        role: "assistant",
+        timestamp: Date.now(),
+      }),
+      messages: getAppendedConversationMessages(message),
+    });
+  };
+
+  async function generateText() {
+    if (abortController.signal.aborted) {
+      await onStepError({ error: abortController.signal.reason });
+      throw abortController.signal.reason;
+    }
+
+    return aiDeps.generateText({
       model: getLanguageModel(getState().config.model),
       reasoning: getState().config.reasoning,
       instructions: systemContent,
       messages: [...getState().conversation.messages] as AiModelMessage[],
       tools: getBaseAgentTools(),
       stopWhen: aiDeps.isLoopFinished(),
-      abortSignal: getApiStreamAbortSignal(),
+      abortSignal: abortController.signal,
       timeout: timeoutSettings,
       onToolExecutionStart: async ({ toolCall }) => {
         switch (toolCall.toolName) {
@@ -517,8 +539,6 @@ export async function resolveApiCall(userInput: string) {
           );
         }
       },
-      // TODO: verify that this is awaited before the next step starts so
-      // the session file doesn't get out of sync
       onStepEnd: async ({ usage, text, response }) => {
         await appendModelUsage(usage);
 
@@ -547,31 +567,21 @@ export async function resolveApiCall(userInput: string) {
         actions.usage.setRequestInputTokensStale(false);
       },
       // NOTE: usage isn't provided on error, can't be accounted for
-      onStepError: async ({ error }) => {
-        if (!isAbortError(error)) return;
-
-        const message: AiModelMessage = {
-          role: "assistant",
-          content: interruptContent,
-        };
-        await syncSessionFile({
-          transcript: getAppendedTranscript({
-            message: interruptContent,
-            role: "assistant",
-            timestamp: Date.now(),
-          }),
-          messages: getAppendedConversationMessages(message),
-        });
-      },
+      onStepError,
       prepareStep: async () => {
-        await maybeCompact({ timing: "mid-turn" });
+        await maybeCompact({
+          abortSignal: abortController.signal,
+          preserveCurrentTurn: true,
+        });
         return {
           messages: getState().conversation.messages as AiModelMessage[],
         };
       },
       providerOptions: getProviderOptions(),
-    }),
-  );
+    });
+  }
+
+  const generateTextResult = await tryCatchAsync(generateText());
   stopLoadingState();
   actions.abortControllers.setApiStream(null);
   actions.usage.setApiEndTime();
@@ -602,10 +612,10 @@ export async function resolveApiCall(userInput: string) {
 
 export async function getMergedSummaries({
   summaries,
-  timing,
+  abortSignal,
 }: {
   summaries: ModelSummary[];
-  timing: CompactTiming;
+  abortSignal: AbortSignal;
 }) {
   const maxNumberSummaries = getMaxNumberSummaries();
 
@@ -641,8 +651,6 @@ export async function getMergedSummaries({
   const secondSummary = summaries[smallestSecondSummaryIdx];
   assertAtBuildtime(secondSummary !== undefined);
 
-  const { model } = getState().config;
-
   const compactPrompt = getMergeSummariesPrompt({
     targetCharLen: maxCharCountPerSummary,
     summaries: markdownFence(
@@ -654,29 +662,22 @@ export async function getMergedSummaries({
     ),
   });
 
-  if (timing === "between-turns") startLoadingState();
   const generateTextResult = await tryCatchAsync(
     aiDeps.generateText({
-      model: getLanguageModel(model),
+      model: getLanguageModel(getState().config.model),
       messages: [{ content: compactPrompt, role: "user" }],
       stopWhen: aiDeps.isLoopFinished(),
-      abortSignal: getApiStreamAbortSignal(),
+      abortSignal,
       timeout: timeoutSettings,
       providerOptions: getProviderOptions(),
       maxOutputTokens: maxTokenCountPerSummary,
     }),
   );
-  if (timing === "between-turns") stopLoadingState();
 
   if (!generateTextResult.ok) {
-    if (isAbortError(generateTextResult.error)) {
-      if (getState().terminal.editorInputValue !== null) {
-        await resolveInterruptWithEditor();
-      }
-      return summaries;
+    if (!isAbortError(generateTextResult.error)) {
+      print.error(getMessageFromError(generateTextResult.error));
     }
-
-    print.error(getMessageFromError(generateTextResult.error));
     return summaries;
   }
 
@@ -689,166 +690,172 @@ export async function getMergedSummaries({
     tokens: orApproxTokens(usage.outputTokens, text),
   };
 
-  const nextSummaries = summaries
+  return summaries
     .slice(0, smallestFirstSummaryIdx)
     .concat(mergedSummary)
     .concat(summaries.slice(smallestSecondSummaryIdx + 1));
-  return nextSummaries;
 }
 
 export async function getConversationSummary({
   messageChunk,
-  timing,
+  abortSignal,
 }: {
   messageChunk: string[];
-  timing: CompactTiming;
+  abortSignal: AbortSignal;
 }) {
   const compactPrompt = getConversationSummaryPrompt({
     targetCharLen: maxCharCountPerSummary,
     conversation: markdownFence("json", messageChunk.join("\n")),
   });
 
-  if (timing === "between-turns") startLoadingState();
   const generateTextResult = await tryCatchAsync(
     aiDeps.generateText({
       model: getLanguageModel(getState().config.model),
       messages: [{ content: compactPrompt, role: "user" }],
       stopWhen: aiDeps.isLoopFinished(),
-      abortSignal: getApiStreamAbortSignal(),
+      abortSignal,
       timeout: timeoutSettings,
       providerOptions: getProviderOptions(),
       maxOutputTokens: maxTokenCountPerSummary,
     }),
   );
-  if (timing === "between-turns") stopLoadingState();
 
   if (!generateTextResult.ok) {
-    if (isAbortError(generateTextResult.error)) {
-      if (getState().terminal.editorInputValue !== null) {
-        await resolveInterruptWithEditor();
-      }
-      return null;
+    if (!isAbortError(generateTextResult.error)) {
+      print.error(getMessageFromError(generateTextResult.error));
     }
-
-    print.error(getMessageFromError(generateTextResult.error));
     return null;
   }
 
   const { usage, text } = generateTextResult.value;
+  await appendModelUsage(usage);
+
   const summary: ModelSummary = {
     compacted: text,
     compactedAt: Date.now(),
     tokens: orApproxTokens(usage.outputTokens, text),
   };
-  await appendModelUsage(usage);
-
   return summary;
 }
 
-type CompactTiming = "mid-turn" | "between-turns";
+interface CompactionResult {
+  messages: ModelMessage[];
+  summaries: ModelSummary[];
+}
 
-function getMessagesToCompact(timing: CompactTiming) {
-  const { unsummarizedMessages } = getState().conversation;
-  if (timing === "between-turns") return unsummarizedMessages;
+export async function compactConversation({
+  messages,
+  summaries,
+  preserveCurrentTurn,
+  abortSignal,
+}: {
+  messages: ModelMessage[];
+  summaries: ModelSummary[];
+  preserveCurrentTurn: boolean;
+  abortSignal: AbortSignal;
+}): Promise<CompactionResult | null> {
+  const unsummarizedMessages = messages.slice(summaries.length);
 
   const lastUserMessageIndex = unsummarizedMessages.findLastIndex(
     (message) => message.role === "user",
   );
-  return unsummarizedMessages.slice(0, Math.max(0, lastUserMessageIndex));
-}
+  const messagesToCompact = preserveCurrentTurn
+    ? unsummarizedMessages.slice(0, Math.max(0, lastUserMessageIndex))
+    : unsummarizedMessages;
 
-// TODO: refactor, global state is confusing here. Swap to local vars +
-// state instead
-export async function maybeCompact({
-  userInput = "",
-  timing,
-}: {
-  userInput?: string;
-  timing: CompactTiming;
-}) {
-  const contextWindow = getDefaultedContextWindow();
-
-  const userInputTokensApprox = strToApproxTokens(userInput);
-  const requestInputOverheadTokensApprox =
-    getRequestInputOverheadTokensApprox();
-
-  const nextInputTokens = resolveRequestInputTokens() + userInputTokensApprox;
-
-  const nextInputRatio = nextInputTokens / contextWindow;
-  if (nextInputRatio <= compactTriggerRatio) return;
-
-  const chunks = splitMessagesToCompact(getMessagesToCompact(timing));
-  if (chunks.length === 0) return;
+  const chunks = splitMessagesToCompact(messagesToCompact);
+  if (chunks.length === 0) return null;
 
   print.doing("Compacting" + getUnicodeChar("…"));
 
-  const { unsummarizedMessages } = getState().conversation;
+  let workingSummaries = summaries;
   let summarizedMessageCount = 0;
 
-  if (timing === "between-turns") {
-    actions.abortControllers.setApiStream(new AbortController());
+  for (const chunk of chunks) {
+    const summary = await getConversationSummary({
+      messageChunk: chunk,
+      abortSignal,
+    });
+    if (summary === null) break;
+
+    workingSummaries = await getMergedSummaries({
+      summaries: [...workingSummaries, summary],
+      abortSignal,
+    });
+    summarizedMessageCount += chunk.length;
   }
 
-  try {
-    for (const chunk of chunks) {
-      const summary = await getConversationSummary({
-        messageChunk: chunk,
-        timing,
-      });
-      if (summary === null) return;
-      const mergedSummaries = await getMergedSummaries({
-        timing,
-        summaries: [...getState().conversation.summaries, summary],
-      });
+  if (summarizedMessageCount === 0) return null;
 
-      summarizedMessageCount += chunk.length;
-      const remainingMessages = unsummarizedMessages.slice(
-        summarizedMessageCount,
-      );
-      const remainingMessagesStr = stringify(remainingMessages, {
-        replacer: removeMediaReplacer,
-        space: 0,
-      });
-      const remainingMessagesTokens = strToApproxTokens(remainingMessagesStr);
-
-      await syncSessionFile({
-        messages: [
-          ...mergedSummaries.map(({ compacted }) => ({
-            content: compacted,
-            role: "assistant",
-          })),
-          ...remainingMessages,
-        ],
-        summaries: mergedSummaries,
-      });
-
-      const summaryTokens = mergedSummaries
-        .map(({ tokens }) => tokens)
-        .reduce((accum, curr) => accum + curr, 0);
-
-      const summaryCharLengths = mergedSummaries
-        .map(({ compacted }) => compacted)
-        .reduce((accum, curr) => accum + curr.length, 0);
-
-      actions.usage.setRequestInputTokens(
-        summaryTokens +
-          remainingMessagesTokens +
-          requestInputOverheadTokensApprox,
-      );
-      actions.usage.setRequestInputTokensCharLength(
-        summaryCharLengths +
-          remainingMessagesStr.length +
-          getRequestInputOverheadStr().length,
-      );
-      actions.usage.setRequestInputTokensStale(false);
-    }
-  } finally {
-    if (timing === "between-turns") {
-      actions.abortControllers.setApiStream(null);
-    }
-  }
+  const remainingMessages = unsummarizedMessages.slice(summarizedMessageCount);
+  return {
+    summaries: workingSummaries,
+    messages: [
+      ...workingSummaries.map(({ compacted }) => ({
+        content: compacted,
+        role: "assistant",
+      })),
+      ...remainingMessages,
+    ],
+  };
 }
 
+async function applyCompaction({ messages, summaries }: CompactionResult) {
+  await syncSessionFile({ messages, summaries });
+
+  const remainingMessagesStr = stringify(messages.slice(summaries.length), {
+    replacer: removeMediaReplacer,
+    space: 0,
+  });
+  const summaryTokens = summaries.reduce(
+    (accum, { tokens }) => accum + tokens,
+    0,
+  );
+  const summaryCharLength = summaries.reduce(
+    (accum, { compacted }) => accum + compacted.length,
+    0,
+  );
+
+  actions.usage.setRequestInputTokens(
+    summaryTokens +
+      strToApproxTokens(remainingMessagesStr) +
+      getRequestInputOverheadTokensApprox(),
+  );
+  actions.usage.setRequestInputTokensCharLength(
+    summaryCharLength +
+      remainingMessagesStr.length +
+      getRequestInputOverheadStr().length,
+  );
+  actions.usage.setRequestInputTokensStale(false);
+}
+
+export async function maybeCompact({
+  abortSignal,
+  preserveCurrentTurn,
+  userInput = "",
+}: {
+  abortSignal: AbortSignal;
+  preserveCurrentTurn: boolean;
+  userInput?: string;
+}) {
+  if (abortSignal.aborted) return;
+
+  const nextInputTokens =
+    resolveRequestInputTokens() + strToApproxTokens(userInput);
+  if (nextInputTokens / getDefaultedContextWindow() <= compactTriggerRatio) {
+    return;
+  }
+
+  const compacted = await compactConversation({
+    messages: getState().conversation.messages,
+    summaries: getState().conversation.summaries,
+    preserveCurrentTurn,
+    abortSignal,
+  });
+  if (compacted !== null) await applyCompaction(compacted);
+}
+
+// TODO: avoid splitting tool calls and tool results
 export function splitMessagesToCompact(messagesToCompact: ModelMessage[]) {
   const emptyCompactPrompt = getConversationSummaryPrompt({
     targetCharLen: maxCharCountPerSummary,
