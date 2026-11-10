@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.18.0 - 2026-11-10
+
+- Compact conversation history between tool calls.
+- Improve transcription status messaging and avoid empty transcript entries.
+- Resolve skills and command globs directly instead of using `git ls-files`.
+- Improve loading-state timeout handling and preserve the active abort controller.
+
 ## v0.17.0 - 2026-11-05
 
 - Show token counts in the `/lastresponse` and `/lastmessage` pagers
