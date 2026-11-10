@@ -4349,7 +4349,7 @@ custom command content`,
       );
       assert.deepStrictEqual(getWrites(), [
         `${RED}⏺${RESET} Press enter to stop recording \n`,
-        `${BLUE}Transcribing…${RESET}\n`,
+        `${PURPLE}Transcribing…${RESET}\n`,
         `${BLUE}Transcribed: ${RESET}`,
         "hello from the mic\n",
       ]);
