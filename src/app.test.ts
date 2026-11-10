@@ -3035,6 +3035,28 @@ would benefit from specialized instructions.
     });
 
     describe("custom skill dirs", () => {
+      it("resolves relative custom skill dirs before globbing", async () => {
+        actions.config.setCustomSkillDirs(["custom/skills"]);
+        testFs._globResults.set("/test-cwd/custom/skills/**/SKILL.md", [
+          "/test-cwd/custom/skills/my-skill/SKILL.md",
+        ]);
+        testFs._files.set(
+          "/test-cwd/custom/skills/my-skill/SKILL.md",
+          `---\nname: my-skill\ndescription: From custom dir\n---\n`,
+        );
+
+        const result = await getSkills();
+
+        assert.deepStrictEqual(result, [
+          {
+            name: "my-skill",
+            description: "From custom dir",
+            content: "",
+            dir: "/test-cwd/custom/skills/my-skill",
+          },
+        ]);
+      });
+
       it("includes skills from custom skill dirs", async () => {
         actions.config.setCustomSkillDirs(["/custom/skills"]);
         testFs._globResults.set("/custom/skills/**/SKILL.md", [

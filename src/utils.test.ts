@@ -20,7 +20,7 @@ import {
   isShellSafePath,
   removeMediaReplacer,
   writeDebugLog,
-  smartGlob,
+  gitGlobWithFallback,
 } from "./utils.ts";
 import {
   testProcessEnv,
@@ -889,7 +889,7 @@ describe("createLockUtils", () => {
   });
 });
 
-describe("smartGlob", () => {
+describe("gitGlobWithFallback", () => {
   afterEach(() => {
     mock.restoreAll();
   });
@@ -901,7 +901,7 @@ describe("smartGlob", () => {
   it("uses glob for absolute patterns", async () => {
     testFs._globResults.set("/custom/**/*.md", ["/custom/file.md"]);
 
-    const result = await smartGlob("/custom/**/*.md");
+    const result = await gitGlobWithFallback("/custom/**/*.md");
 
     assert.deepStrictEqual(result, { ok: true, value: ["/custom/file.md"] });
   });
@@ -910,7 +910,7 @@ describe("smartGlob", () => {
     mockExecCalls([{ stdout: "true\n" }]);
     testFs._gitLsFilesResults.set("**/*.md", ["file.md"]);
 
-    const result = await smartGlob("**/*.md");
+    const result = await gitGlobWithFallback("**/*.md");
 
     assert.deepStrictEqual(result, { ok: true, value: ["file.md"] });
   });
@@ -919,7 +919,7 @@ describe("smartGlob", () => {
     mockExecCalls([{ stdout: "false\n" }]);
     testFs._globResults.set("**/*.md", ["file.md"]);
 
-    const result = await smartGlob("**/*.md");
+    const result = await gitGlobWithFallback("**/*.md");
 
     assert.deepStrictEqual(result, { ok: true, value: ["file.md"] });
   });
@@ -928,7 +928,7 @@ describe("smartGlob", () => {
     mockExecCalls([{ stdout: "", error: new Error("git unavailable") }]);
     testFs._globResults.set("**/*.md", ["file.md"]);
 
-    const result = await smartGlob("**/*.md");
+    const result = await gitGlobWithFallback("**/*.md");
 
     assert.deepStrictEqual(result, { ok: true, value: ["file.md"] });
   });
@@ -937,7 +937,7 @@ describe("smartGlob", () => {
     const error = new Error("glob failed");
     mock.method(fsDeps, "glob", () => Promise.reject(error));
 
-    const result = await smartGlob("/custom/**/*.md");
+    const result = await gitGlobWithFallback("/custom/**/*.md");
 
     assert.deepStrictEqual(result, { ok: false, error });
   });
@@ -947,7 +947,7 @@ describe("smartGlob", () => {
     const error = new Error("git ls-files failed");
     mock.method(fsDeps, "gitLsFiles", () => Promise.reject(error));
 
-    const result = await smartGlob("**/*.md");
+    const result = await gitGlobWithFallback("**/*.md");
 
     assert.deepStrictEqual(result, { ok: false, error });
   });

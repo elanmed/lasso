@@ -109,6 +109,24 @@ describe("getAvailableSlashCommands", () => {
   });
 
   describe("returns commands", () => {
+    it("resolves relative custom slash command dirs before globbing", async () => {
+      actions.config.setCustomSlashCommandDirs(["custom-commands"]);
+      testFs._globResults.set("/test-cwd/custom-commands/**/*.md", [
+        "/test-cwd/custom-commands/foo.md",
+      ]);
+      testFs._files.set("/test-cwd/custom-commands/foo.md", "custom content");
+
+      const result = await getAvailableSlashCommands();
+
+      assert.deepStrictEqual(result, [
+        {
+          name: "foo",
+          filePath: "/test-cwd/custom-commands/foo.md",
+          content: "custom content",
+        },
+      ]);
+    });
+
     it("includes custom slash command dirs", async () => {
       actions.config.setCustomSlashCommandDirs(["/custom-commands"]);
       testFs._globResults.set("/custom-commands/**/*.md", [

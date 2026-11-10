@@ -1,4 +1,4 @@
-import { join, dirname } from "node:path";
+import { join, dirname, resolve } from "node:path";
 import readline from "node:readline/promises";
 import { once } from "node:events";
 import { stdin, stdout } from "node:process";
@@ -20,7 +20,7 @@ import {
   parseFrontMatter,
   isReadlineClosedError,
   sleep,
-  smartGlob,
+  gitGlobWithFallback,
   writeDebugLog,
 } from "./utils.ts";
 import { actions, getState, type ContextEntry, type Skill } from "./state.ts";
@@ -206,8 +206,8 @@ export async function getSkills() {
   const skillPaths: string[] = [];
 
   for (const skillGrandparentDir of skillGrandparentDirs) {
-    const glob = join(skillGrandparentDir, "**/SKILL.md");
-    const globResult = await smartGlob(glob);
+    const glob = resolve(processDeps.cwd(), skillGrandparentDir, "**/SKILL.md");
+    const globResult = await tryCatchAsync(fsDeps.glob(glob));
     if (!globResult.ok) {
       actions.content.appendConfigWarningMessage(
         `Failed to list the skill files in \`${skillGrandparentDir}\`, ignoring. Error: ${getMessageFromError(globResult.error, { forceSingleLine: true })}`,
@@ -226,7 +226,7 @@ export async function getSkills() {
     skills.push(skill);
   }
 
-  const agentFileGlobResult = await smartGlob("**/AGENTS.md");
+  const agentFileGlobResult = await gitGlobWithFallback("**/AGENTS.md");
   if (!agentFileGlobResult.ok) {
     actions.content.appendConfigWarningMessage(
       `Failed to list the agent files, ignoring. Error: ${getMessageFromError(agentFileGlobResult.error, { forceSingleLine: true })}`,

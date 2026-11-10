@@ -1,5 +1,5 @@
 import os from "node:os";
-import { basename, extname, join } from "node:path";
+import { basename, extname, join, resolve } from "node:path";
 import readline from "node:readline/promises";
 import { once } from "node:events";
 import { emitKeypressEvents } from "node:readline";
@@ -20,7 +20,6 @@ import {
   getPrettyMoney,
   isNullish,
   getPrettyDate,
-  smartGlob,
 } from "./utils.ts";
 import { actions, getState, type SlashCommand } from "./state.ts";
 import { aiDeps, childProcessDeps, fsDeps, processDeps } from "./deps.ts";
@@ -1094,8 +1093,8 @@ export async function getAvailableSlashCommands() {
   ];
 
   for (const dir of slashCommandDirs) {
-    const glob = join(dir, "**/*.md");
-    const globResult = await smartGlob(glob);
+    const glob = resolve(processDeps.cwd(), dir, "**/*.md");
+    const globResult = await tryCatchAsync(fsDeps.glob(glob));
     if (!globResult.ok) {
       actions.content.appendConfigWarningMessage(
         `Failed to list the slash command files in \`${dir}\`, ignoring. Error: ${getMessageFromError(globResult.error, { forceSingleLine: true })}`,

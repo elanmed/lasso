@@ -415,7 +415,7 @@ export function getPrettyMoney(money: number) {
   });
 }
 
-export async function smartGlob(regex: string) {
+export async function gitGlobWithFallback(regex: string) {
   if (isAbsolute(regex)) return await tryCatchAsync(fsDeps.glob(regex));
 
   const gitResult = await tryCatchAsync(
