@@ -573,6 +573,8 @@ vim.g.clipboard = {
 ## TODO (now)
 
 - Ensure no lasso function can throw, should return an option
+- Support executing a skill with a slash
+- Expose available subagents in the base prompt
 
 ## TODO (later)
 

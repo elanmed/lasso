@@ -989,7 +989,9 @@ export async function recordAndTranscribeInput({
 
   const transcriptionAbortController = new AbortController();
   actions.abortControllers.setTranscription(transcriptionAbortController);
-  print.info("Transcribing" + getUnicodeChar("…"));
+  print.info("Transcribing" + getUnicodeChar("…"), {
+    whileBuffering: !isTyped,
+  });
   const transcribeResult = await tryCatchAsync(
     transcribeInput(readResult.value),
   );
