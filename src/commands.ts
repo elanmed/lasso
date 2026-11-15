@@ -21,7 +21,7 @@ import {
   isNullish,
   getPrettyDate,
 } from "./utils.ts";
-import { actions, getState, type SlashCommand } from "./state.ts";
+import { actions, getState, type Skill, type SlashCommand } from "./state.ts";
 import { aiDeps, childProcessDeps, fsDeps, processDeps } from "./deps.ts";
 import {
   getGlobalConfigPath,
@@ -129,6 +129,20 @@ export function getAvailableCommandsStr({
     (command) => `- /${command}`,
   );
   return builtinCommandsFormatted.concat(customCommandsFormatted).join("\n");
+}
+
+export function getAvailableSkillsStr() {
+  return getState()
+    .content.skills.filter(
+      (skill) => !skill.name.startsWith(contextFileSkillNamePrefix),
+    )
+    .map(
+      (
+        skill,
+      ) => `- **${skill.name}** ${formatTokenRangeAside(skill.description, skill.content)}: ${skill.description}
+  ${skill.dir}`,
+    )
+    .join("\n");
 }
 
 export function getCustomSlashCommandsStr() {
@@ -358,7 +372,11 @@ async function pageForInvalidCommand(rawInput: string) {
 
 ## Available commands
 
-${getAvailableCommandsStr({ includeTokenCount: true })}`;
+${getAvailableCommandsStr({ includeTokenCount: true })}
+
+## Available skills
+
+${getCustomSlashCommandsStr()}`;
 
   await openWithPager({
     initialContentStr,
@@ -385,21 +403,9 @@ export async function pageSkills({ isTyped = false }: SpacingOpts = {}) {
     return;
   }
 
-  const skillsList = getState()
-    .content.skills.filter(
-      (skill) => !skill.name.startsWith(contextFileSkillNamePrefix),
-    )
-    .map(
-      (
-        skill,
-      ) => `- **${skill.name}** ${formatTokenRangeAside(skill.description, skill.content)}: ${skill.description}
-  ${skill.dir}`,
-    )
-    .join("\n");
-
   const initialContentStr = `# [lasso] Available skills:
 
-${skillsList}`;
+${getAvailableSkillsStr()}`;
 
   await openWithPager({ contentType: "markdown", initialContentStr });
 }
@@ -1136,12 +1142,22 @@ export function shouldResolveSlashCommand(
 
   const spaceIdx = trimmed.search(/\s+/);
   if (forceKnownCommand) {
-    const command =
-      spaceIdx === -1 ? trimmed.slice(1) : trimmed.slice(1, spaceIdx);
+    const command = (() => {
+      if (spaceIdx === -1) return trimmed.slice(1);
+      return trimmed.slice(1, spaceIdx);
+    })();
+
     const customSlashCommands = getState().content.slashCommands.map(
-      (c) => c.name,
+      ({ name }) => name,
     );
-    return [...builtinSlashCommands, ...customSlashCommands].includes(command);
+
+    const skillNames = getState().content.skills.map(({ name }) => name);
+
+    return [
+      ...builtinSlashCommands,
+      ...customSlashCommands,
+      ...skillNames,
+    ].includes(command);
   }
 
   return true;
@@ -1180,31 +1196,80 @@ function resolveCustomSlashCommand(commandStr: string): SlashCommandOutcome {
     return commandStr.slice(spaceIdx).trimStart();
   })();
 
-  const slashCommands = getState().content.slashCommands;
-  const matchedCommand = slashCommands.find((c) => c.name === command);
-
-  if (matchedCommand === undefined) {
-    return { handled: false, inputFromCommand: null };
-  }
-
-  print.infoSubtle(`Executing custom slash command: ${command}`);
-
-  if (commandContext === null || commandContext === "") {
+  const matchedCommand = getState().content.slashCommands.find(
+    ({ name }) => name === command,
+  );
+  if (matchedCommand !== undefined) {
+    print.infoSubtle(`Executing custom slash command: ${command}`);
     return {
       handled: true,
-      inputFromCommand: normalizeNewline(matchedCommand.content, { count: 0 }),
+      inputFromCommand: getCustomSlashCommandInput({
+        matchedCommand,
+        commandContext,
+      }),
     };
   }
 
-  const contentWithCommandContext = `# [lasso] Follow the instructions below along with the provided context:
+  const matchedSkill = getState().content.skills.find(
+    ({ name }) => name === command,
+  );
+  if (matchedSkill !== undefined) {
+    print.infoSubtle(`Executing custom slash command: ${command}`);
+    return {
+      handled: true,
+      inputFromCommand: getSkillInput({
+        matchedSkill,
+        commandContext,
+      }),
+    };
+  }
+
+  return { handled: false, inputFromCommand: null };
+}
+
+export function getCustomSlashCommandInput({
+  matchedCommand,
+  commandContext,
+}: {
+  matchedCommand: SlashCommand;
+  commandContext: string | null;
+}) {
+  if (commandContext === null || commandContext === "") {
+    return normalizeNewline(matchedCommand.content, { count: 0 });
+  }
+
+  return `# [lasso] Follow the instructions below along with the provided context:
 
 ## [lasso] Context
 ${normalizeNewline(commandContext, { count: 0 })}
 
 ## [lasso] Instructions
 ${normalizeNewline(matchedCommand.content, { count: 0 })}`;
+}
 
-  return { handled: true, inputFromCommand: contentWithCommandContext };
+export function getSkillInput({
+  matchedSkill,
+  commandContext,
+}: {
+  matchedSkill: Skill;
+  commandContext: string | null;
+}) {
+  if (commandContext === null || commandContext === "") {
+    return normalizeNewline(matchedSkill.content, { count: 0 });
+  }
+
+  return `# [lasso] Follow the skill below along with the provided context:
+
+## [lasso] Skill metadata
+- **name**: ${matchedSkill.name}
+- **dir**: ${matchedSkill.dir}
+- **description**: ${matchedSkill.description}
+
+## [lasso] Context
+${normalizeNewline(commandContext, { count: 0 })}
+
+## [lasso] Skill
+${normalizeNewline(matchedSkill.content, { count: 0 })}`;
 }
 
 // https://stackoverflow.com/a/33500118
