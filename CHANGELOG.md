@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.19.0 - 2026-11-15
+
+- Show transcription status while output is buffered during recording.
+- List available subagent models in the prompt, defaulting empty `subagentModels` to the main model.
+- Execute skills when prefixed with a slash.
+
 ## v0.18.0 - 2026-11-10
 
 - Compact conversation history between tool calls.
