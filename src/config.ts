@@ -277,6 +277,10 @@ export function initStateFromConfig({
       globalConfig.subagentModels ??
       defaultConfig.subagentModels,
   );
+  if (getState().config.subagentModels.length === 0) {
+    actions.config.setSubagentModels([getState().config.model]);
+  }
+
   const defaultedKeymaps = {
     ...defaultConfig.keymaps,
     ...globalConfig.keymaps,

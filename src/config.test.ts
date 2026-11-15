@@ -175,6 +175,23 @@ describe("config", () => {
         assert.equal(getState().config.model, "claude-haiku-4-5");
       });
 
+      it("uses the configured main model when subagentModels are empty", async () => {
+        testFs._files.set(
+          getLocalConfigPath(),
+          JSON.stringify({
+            ...testConfig,
+            model: "main-model",
+            subagentModels: [],
+          }),
+        );
+
+        await initState();
+
+        assert.deepStrictEqual(getState().config.subagentModels, [
+          "main-model",
+        ]);
+      });
+
       it("uses its subagentModels over the global config, default config", async () => {
         testFs._files.set(
           getGlobalConfigPath(),

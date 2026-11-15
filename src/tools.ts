@@ -580,13 +580,7 @@ export const createSubagentTaskSchema = z.object({
     .min(1)
     .describe("The model the subagent runs on")
     .superRefine((value, ctx) => {
-      const configuredModels = getState().config.subagentModels;
-      const allowedModels = (() => {
-        if (configuredModels.length > 0) return configuredModels;
-        return [getState().config.model];
-      })();
-
-      if (!allowedModels.includes(value)) {
+      if (!getState().config.subagentModels.includes(value)) {
         ctx.addIssue({
           code: "custom",
           message: `Invalid model: ${value}`,

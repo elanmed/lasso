@@ -9,7 +9,10 @@ import {
 import { makeFakeMcpClient } from "./test-helpers.ts";
 
 describe("prompts", () => {
-  const baseAgentPromptExpectation = (mcpServersLis: string) =>
+  const baseAgentPromptExpectation = (
+    mcpServersLis: string,
+    subagentModelsLis = "",
+  ) =>
     [
       "# [lasso] Base system prompt",
       "",
@@ -32,6 +35,10 @@ describe("prompts", () => {
       "## [lasso] MCP Servers",
       "",
       mcpServersLis,
+      "",
+      "## [lasso] Available subagent models",
+      "",
+      subagentModelsLis,
       "",
       "## Filesystem actions via bash",
       "",
@@ -183,8 +190,21 @@ describe("prompts", () => {
   describe("system prompts", () => {
     it("formats the base agent prompt exactly", () => {
       assert.strictEqual(
-        getBaseAgentPrompt({}),
+        getBaseAgentPrompt({ mcpClients: {}, subagentModels: [] }),
         baseAgentPromptExpectation("No available MCP servers"),
+      );
+    });
+
+    it("lists available subagent models in the base agent prompt", () => {
+      assert.strictEqual(
+        getBaseAgentPrompt({
+          mcpClients: {},
+          subagentModels: ["fast-model", "strong-model"],
+        }),
+        baseAgentPromptExpectation(
+          "No available MCP servers",
+          "- fast-model\n- strong-model",
+        ),
       );
     });
 
@@ -192,8 +212,11 @@ describe("prompts", () => {
       it("formats the base agent prompt with mcp server bullets", () => {
         assert.strictEqual(
           getBaseAgentPrompt({
-            alpha: makeFakeMcpClient(),
-            beta: makeFakeMcpClient(),
+            mcpClients: {
+              alpha: makeFakeMcpClient(),
+              beta: makeFakeMcpClient(),
+            },
+            subagentModels: [],
           }),
           baseAgentPromptExpectation("- alpha\n- beta"),
         );
@@ -202,9 +225,12 @@ describe("prompts", () => {
       it("lists server instructions in the base agent prompt", () => {
         assert.strictEqual(
           getBaseAgentPrompt({
-            alpha: makeFakeMcpClient({
-              instructions: "Call the alpha tool for edits.",
-            }),
+            mcpClients: {
+              alpha: makeFakeMcpClient({
+                instructions: "Call the alpha tool for edits.",
+              }),
+            },
+            subagentModels: [],
           }),
           baseAgentPromptExpectation(
             "- alpha\n  Instructions: Call the alpha tool for edits.",
@@ -254,7 +280,7 @@ describe("prompts", () => {
 
       it("uses No available MCP servers as the list when there are none", () => {
         assert.strictEqual(
-          getBaseAgentPrompt({}),
+          getBaseAgentPrompt({ mcpClients: {}, subagentModels: [] }),
           baseAgentPromptExpectation("No available MCP servers"),
         );
       });

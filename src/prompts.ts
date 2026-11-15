@@ -74,6 +74,11 @@ const getMcpLis = (mcpClients: MCPClients) => {
     .join("\n");
 };
 
+const subagentModelsHeadingTwo = `## [lasso] Available subagent models`;
+
+const getSubagentModelsLis = (subagentModels: string[]) =>
+  subagentModels.map((model) => `- ${model}`).join("\n");
+
 const webSearchHeadingTwo = `## [lasso] Web search`;
 
 const webSearchLis = `- When using the \`web_fetch_html\` or \`web_fetch_json\` tools for web search, note that Google, Bing, and most other search engines block automated requests.
@@ -82,7 +87,13 @@ const webSearchLis = `- When using the \`web_fetch_html\` or \`web_fetch_json\` 
   - \`https://search.marginalia.nu/search?query=<url-encoded query>\` (use with \`web_fetch_html\`)
   - \`https://en.wikipedia.org/w/index.php?search=<url-encoded query>\` (use with \`web_fetch_html\`)`;
 
-export const getBaseAgentPrompt = (mcpClients: MCPClients) => `${headingOne}
+export const getBaseAgentPrompt = ({
+  mcpClients,
+  subagentModels,
+}: {
+  mcpClients: MCPClients;
+  subagentModels: string[];
+}) => `${headingOne}
 
 ${corePrinciplesHeading}
 
@@ -99,6 +110,10 @@ ${webSearchLis}
 ${mcpHeadingTwo}
 
 ${getMcpLis(mcpClients)}
+
+${subagentModelsHeadingTwo}
+
+${getSubagentModelsLis(subagentModels)}
 
 ${bashIntroHeadingTwo}
 

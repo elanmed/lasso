@@ -1045,8 +1045,9 @@ describe("tools", () => {
   });
 
   describe("createSubagentTaskSchema", () => {
-    it("accepts the current model", () => {
+    it("accepts a configured subagent model", () => {
       actions.config.setModel("model-a");
+      actions.config.setSubagentModels(["model-a"]);
       assert.strictEqual(
         createSubagentTaskSchema.safeParse({
           prompt: "inspect",
@@ -1059,6 +1060,7 @@ describe("tools", () => {
 
     it("requires and validates the model", () => {
       actions.config.setModel("model-a");
+      actions.config.setSubagentModels(["model-a"]);
       assert.strictEqual(
         createSubagentTaskSchema.safeParse({
           prompt: "inspect",
@@ -1105,7 +1107,7 @@ describe("tools", () => {
       );
     });
 
-    it("uses the current model when configured subagent models are empty", () => {
+    it("rejects models when configured subagent models are empty", () => {
       actions.config.setModel("main-model");
       actions.config.setSubagentModels([]);
       assert.strictEqual(
@@ -1114,7 +1116,7 @@ describe("tools", () => {
           access: "read-only",
           model: "main-model",
         }).success,
-        true,
+        false,
       );
     });
   });

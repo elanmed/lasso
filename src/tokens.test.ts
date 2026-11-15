@@ -118,7 +118,7 @@ describe("state", () => {
       actions.content.setSkillsStr("skills body");
       assert.strictEqual(
         getSystemContent(),
-        `${getBaseAgentPrompt({})}
+        `${getBaseAgentPrompt({ mcpClients: {}, subagentModels: [] })}
 
 ctx body
 
@@ -139,11 +139,11 @@ describe("getRequestInputOverheadTokensApprox", () => {
   });
 
   it("sums the approx of system content and tools", () => {
-    assert.strictEqual(getRequestInputOverheadTokensApprox(), 1962);
+    assert.strictEqual(getRequestInputOverheadTokensApprox(), 1975);
   });
 
   it("takes tools into account when computing the input overhead approx", () => {
-    assert.strictEqual(getApproxRequestInputTokens(), 1962);
+    assert.strictEqual(getApproxRequestInputTokens(), 1975);
   });
 
   it("combines system content and tools for input overhead", () => {
@@ -186,7 +186,7 @@ describe("getRequestInputCharLength", () => {
   });
 
   it("counts serialized messages and input overhead characters", () => {
-    assert.strictEqual(getRequestInputCharLength(), 5921);
+    assert.strictEqual(getRequestInputCharLength(), 5961);
   });
 });
 
@@ -198,7 +198,7 @@ describe("getApproxRequestInputTokens", () => {
 
   it("sums messages approx with the system instructions approx", () => {
     actions.conversation.setMessages([{ role: "user", content: "hello" }]);
-    assert.strictEqual(getApproxRequestInputTokens(), 1973);
+    assert.strictEqual(getApproxRequestInputTokens(), 1986);
   });
 });
 
@@ -221,7 +221,7 @@ describe("resolveRequestInputTokens", () => {
   it("returns the approx request input tokens when stale", () => {
     actions.usage.setRequestInputTokens(50);
     actions.usage.setRequestInputTokensStale(true);
-    assert.strictEqual(resolveRequestInputTokens(), 1962);
+    assert.strictEqual(resolveRequestInputTokens(), 1975);
   });
 });
 
@@ -239,7 +239,7 @@ describe("getTokensByArea", () => {
       messages: 11,
       context: 3,
       tools: 1106,
-      basePrompt: 853,
+      basePrompt: 866,
       skills: 1,
     });
   });
@@ -250,7 +250,7 @@ describe("getTokensByArea", () => {
       messages: 11,
       context: 3,
       tools: 1106,
-      basePrompt: 853,
+      basePrompt: 866,
       skills: 1,
     });
   });
@@ -262,8 +262,8 @@ describe("getTokensByArea", () => {
     assert.deepStrictEqual(getTokensByArea(), {
       messages: 8,
       context: 2,
-      tools: 839,
-      basePrompt: 647,
+      tools: 834,
+      basePrompt: 652,
       skills: 1,
     });
   });
@@ -284,7 +284,7 @@ describe("getPrettyTokensByArea", () => {
       `- Chat messages: 11
 - Context files: 3
 - Harness and MCP tools: 1,106
-- Base system prompt: 853
+- Base system prompt: 866
 - Skill descriptions: 1`,
     );
   });
@@ -297,8 +297,8 @@ describe("getPrettyTokensByArea", () => {
       getPrettyTokensByArea(),
       `- Chat messages: 8
 - Context files: 2
-- Harness and MCP tools: 839
-- Base system prompt: 647
+- Harness and MCP tools: 834
+- Base system prompt: 652
 - Skill descriptions: 1`,
     );
   });
@@ -329,7 +329,7 @@ describe("printLargeContextOverheadWarning", () => {
     const getWrites = mockStdoutWrites();
     printLargeContextOverheadWarning();
     assert.deepStrictEqual(getWrites(), [
-      `${YELLOW}The current set of context, skills, and tools is 71.96% of the 100,000 token context window!\n\nLasso reserves 25% of the context window for compacted summaries with the assumption that at most 70% of the context window will be used for input overhead. As is, the input overhead is large enough to break this assumption and, along with any user messages, may breach the llm's context window and cause API calls to be rejected. Consider converting some of your context to skills and minimizing MCP servers.${RESET}\n`,
+      `${YELLOW}The current set of context, skills, and tools is 71.97% of the 100,000 token context window!\n\nLasso reserves 25% of the context window for compacted summaries with the assumption that at most 70% of the context window will be used for input overhead. As is, the input overhead is large enough to break this assumption and, along with any user messages, may breach the llm's context window and cause API calls to be rejected. Consider converting some of your context to skills and minimizing MCP servers.${RESET}\n`,
     ]);
   });
 });
@@ -432,7 +432,7 @@ describe("getPrettyContextWindowUsage", () => {
       actions.config.setModel("test-model");
       actions.config.setContextWindowPerModel({ "test-model": 10_000 });
       const result = getPrettyContextWindowUsage();
-      assert.strictEqual(result, "19.61% of context window");
+      assert.strictEqual(result, "19.74% of context window");
     });
 
     it("returns the percent of the context window used", () => {
@@ -474,7 +474,7 @@ describe("getPrettyContextWindowUsage", () => {
       actions.usage.setRequestInputTokens(5_000);
       actions.usage.setRequestInputTokensStale(true);
       const result = getPrettyContextWindowUsage();
-      assert.strictEqual(result, "19.73% of context window");
+      assert.strictEqual(result, "19.86% of context window");
     });
 
     it("uses the stored token count when tokens are not stale", () => {
@@ -493,6 +493,6 @@ describe("getPrettyContextWindowUsage", () => {
     actions.config.setModel("test-model");
     actions.config.setContextWindowPerModel({ "test-model": 10_000 });
     const result = getPrettyContextWindowUsage();
-    assert.strictEqual(result, "19.61% of context window");
+    assert.strictEqual(result, "19.74% of context window");
   });
 });

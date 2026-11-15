@@ -54,7 +54,10 @@ export function stringifyMessages(messages: ModelMessage[]) {
 
 export function getSystemContent() {
   return [
-    getBaseAgentPrompt(getState().mcp.clients),
+    getBaseAgentPrompt({
+      mcpClients: getState().mcp.clients,
+      subagentModels: getState().config.subagentModels,
+    }),
     getState().content.contextStr,
     getState().content.skillsStr,
   ].join("\n\n");
@@ -167,7 +170,12 @@ export function getTokensByArea(): TokensByArea {
     messages: getApproxTokensFromMessages(getState().conversation.messages),
     context: strToApproxTokens(getState().content.contextStr),
     tools: strToApproxTokens(stringifyTools()),
-    basePrompt: strToApproxTokens(getBaseAgentPrompt(getState().mcp.clients)),
+    basePrompt: strToApproxTokens(
+      getBaseAgentPrompt({
+        mcpClients: getState().mcp.clients,
+        subagentModels: getState().config.subagentModels,
+      }),
+    ),
     skills: strToApproxTokens(getState().content.skillsStr),
   };
 }

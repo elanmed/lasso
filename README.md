@@ -6,7 +6,7 @@ _A minimal agent harness to rein in your llm_
 
 ## Features
 
-- **Minimal**: ~7,600 lines of source code, ~18,100 lines of tests
+- **Minimal**: ~7,600 lines of source code, ~18,200 lines of tests
 - **Simple architecture**:
   - Responses are piped through `bat` to render markdown
   - Multi-line input is supported by spawning a non-blocking editor of your choice
@@ -574,7 +574,6 @@ vim.g.clipboard = {
 
 - Ensure no lasso function can throw, should return an option
 - Support executing a skill with a slash
-- Expose available subagents in the base prompt
 
 ## TODO (later)
 

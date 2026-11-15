@@ -468,7 +468,7 @@ describe("api", () => {
         assert.deepStrictEqual(getState().usage.requestInputTokens, {
           value: 49,
           stale: false,
-          charLength: 6001,
+          charLength: 6041,
         });
       });
 
@@ -535,7 +535,7 @@ describe("api", () => {
         assert.deepStrictEqual(getState().usage.requestInputTokens, {
           value: 17,
           stale: false,
-          charLength: 5993,
+          charLength: 6033,
         });
       });
 
@@ -570,7 +570,7 @@ describe("api", () => {
         assert.deepStrictEqual(getState().usage.requestInputTokens, {
           value: 55,
           stale: false,
-          charLength: 5995,
+          charLength: 6035,
         });
       });
 
@@ -595,7 +595,7 @@ describe("api", () => {
         assert.deepStrictEqual(getState().usage.requestInputTokens, {
           value: 17,
           stale: false,
-          charLength: 5958,
+          charLength: 5998,
         });
       });
 
@@ -619,7 +619,7 @@ describe("api", () => {
         assert.deepStrictEqual(getState().usage.requestInputTokens, {
           value: 54,
           stale: false,
-          charLength: 5958,
+          charLength: 5998,
         });
       });
     });
@@ -698,6 +698,7 @@ describe("api", () => {
       });
 
       it("prints one indented line per subagent task on tool call start", async () => {
+        actions.config.setSubagentModels(["claude-sonnet-4-20250514"]);
         const getWrites = mockStdoutWrites();
         mockGenerateText(async (options: Record<string, unknown>) => {
           const onStart = options["onToolExecutionStart"] as (
@@ -1100,9 +1101,9 @@ describe("api", () => {
           { role: "user", content: "current question" },
         ]);
         assert.deepStrictEqual(getState().usage.requestInputTokens, {
-          value: 26_976,
+          value: 26_989,
           stale: false,
-          charLength: 5946,
+          charLength: 5986,
         });
       });
 
@@ -1324,9 +1325,9 @@ describe("api", () => {
           { role: "user", content: "current question" },
         ]);
         assert.deepStrictEqual(getState().usage.requestInputTokens, {
-          value: 27_002,
+          value: 27_016,
           stale: false,
-          charLength: 6026,
+          charLength: 6066,
         });
         assert.strictEqual(withMcpTools > withoutMcpTools, true);
       });
@@ -1468,9 +1469,9 @@ describe("api", () => {
           { role: "user", content: "current question" },
         ]);
         assert.deepStrictEqual(getState().usage.requestInputTokens, {
-          value: 26_976,
+          value: 26_989,
           stale: false,
-          charLength: 5946,
+          charLength: 5986,
         });
         assert.deepStrictEqual(getState().usage.modelUsageForSession, {
           "claude-sonnet-4-20250514": [
@@ -1516,9 +1517,9 @@ describe("api", () => {
           { role: "user", content: "current question" },
         ]);
         assert.deepStrictEqual(getState().usage.requestInputTokens, {
-          value: 26_976,
+          value: 26_989,
           stale: false,
-          charLength: 5946,
+          charLength: 5986,
         });
       });
 
@@ -1586,7 +1587,7 @@ describe("api", () => {
         assert.deepStrictEqual(getState().usage.requestInputTokens, {
           value: 25,
           stale: false,
-          charLength: 6066,
+          charLength: 6106,
         });
         const compactionCall = calls[0];
         assert(compactionCall !== undefined);
@@ -1840,9 +1841,9 @@ describe("api", () => {
           { role: "user", content: "hi" },
         ]);
         assert.deepStrictEqual(getState().usage.requestInputTokens, {
-          value: 2_806,
+          value: 2_819,
           stale: false,
-          charLength: 6019,
+          charLength: 6059,
         });
       });
 
@@ -1900,9 +1901,9 @@ describe("api", () => {
           { role: "user", content: "hi" },
         ]);
         assert.deepStrictEqual(getState().usage.requestInputTokens, {
-          value: 2_991,
+          value: 3_004,
           stale: false,
-          charLength: 6023,
+          charLength: 6063,
         });
       });
     });
