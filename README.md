@@ -572,8 +572,7 @@ vim.g.clipboard = {
 
 ## TODO (now)
 
-- Ensure no lasso function can throw, should return an option
-
 ## TODO (later)
 
+- [ ] Print to the alternative buffer, repaint on resize
 - [ ] Support codemode
