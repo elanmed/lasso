@@ -20,6 +20,7 @@ import {
   getPrettyMoney,
   isNullish,
   getPrettyDate,
+  type Option,
 } from "./utils.ts";
 import { actions, getState, type Skill, type SlashCommand } from "./state.ts";
 import { aiDeps, childProcessDeps, fsDeps, processDeps } from "./deps.ts";
@@ -890,7 +891,7 @@ export function recordInput(tempFile: string) {
   };
 }
 
-export async function transcribeInput(buffer: Buffer): Promise<string> {
+export async function transcribeInput(buffer: Buffer): Promise<Option<string>> {
   const transcriptionAbortController =
     getState().abortControllers.transcription;
   assertAtBuildtime(transcriptionAbortController !== null);
@@ -898,13 +899,15 @@ export async function transcribeInput(buffer: Buffer): Promise<string> {
   const { transcriptionModel } = getState().config;
   assertAtBuildtime(transcriptionModel !== undefined);
 
-  const { text } = await aiDeps.transcribe({
-    model: getTranscriptionProvider().transcription(transcriptionModel),
-    audio: buffer,
-    abortSignal: transcriptionAbortController.signal,
-  });
-
-  return text;
+  const transcribeResult = await tryCatchAsync(
+    aiDeps.transcribe({
+      model: getTranscriptionProvider().transcription(transcriptionModel),
+      audio: buffer,
+      abortSignal: transcriptionAbortController.signal,
+    }),
+  );
+  if (!transcribeResult.ok) return transcribeResult;
+  return { ok: true, value: transcribeResult.value.text };
 }
 
 export async function recordAndTranscribeInput({
@@ -1000,9 +1003,7 @@ export async function recordAndTranscribeInput({
   print.info("Transcribing" + getUnicodeChar("…"), {
     whileBuffering: !isTyped,
   });
-  const transcribeResult = await tryCatchAsync(
-    transcribeInput(readResult.value),
-  );
+  const transcribeResult = await transcribeInput(readResult.value);
   actions.abortControllers.setTranscription(null);
 
   if (!transcribeResult.ok) {

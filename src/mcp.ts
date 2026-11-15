@@ -1,5 +1,6 @@
+import { type MCPClient } from "@ai-sdk/mcp";
 import { Experimental_StdioMCPTransport as StdioClientTransport } from "@ai-sdk/mcp/mcp-stdio";
-import { tryCatchAsync, getMessageFromError } from "./utils.ts";
+import { tryCatchAsync, getMessageFromError, type Option } from "./utils.ts";
 import {
   actions,
   getState,
@@ -11,7 +12,7 @@ import { type Mcp } from "./schemas.ts";
 import { print, successWithSpacing } from "./printing.ts";
 import type { ParallelPerformanceLogger, LogIdToLabel } from "./printing.ts";
 
-async function createMcpClient(config: Mcp) {
+async function createMcpClient(config: Mcp): Promise<Option<MCPClient>> {
   switch (config.type) {
     case "http":
     case "sse": {
@@ -20,15 +21,17 @@ async function createMcpClient(config: Mcp) {
         return { headers: config.headers };
       })();
 
-      return mcpDeps.createMCPClient({
-        transport: {
-          type: config.type,
-          url: config.url,
-          ...headers,
-          protocolVersion: config.protocolVersion,
-          redirect: "error",
-        },
-      });
+      return tryCatchAsync(
+        mcpDeps.createMCPClient({
+          transport: {
+            type: config.type,
+            url: config.url,
+            ...headers,
+            protocolVersion: config.protocolVersion,
+            redirect: "error",
+          },
+        }),
+      );
     }
     case "stdio": {
       const args = (() => {
@@ -36,13 +39,15 @@ async function createMcpClient(config: Mcp) {
         return { args: config.args };
       })();
 
-      return mcpDeps.createMCPClient({
-        transport: new StdioClientTransport({
-          command: config.command,
-          ...args,
-          stderr: "pipe",
+      return tryCatchAsync(
+        mcpDeps.createMCPClient({
+          transport: new StdioClientTransport({
+            command: config.command,
+            ...args,
+            stderr: "pipe",
+          }),
         }),
-      });
+      );
     }
     default: {
       config satisfies never;
@@ -62,7 +67,7 @@ async function getMcpClients({
   await Promise.all(
     serverEntries.map(async ([name, config]) => {
       performanceLogger.start(name);
-      const createMcpResult = await tryCatchAsync(createMcpClient(config));
+      const createMcpResult = await createMcpClient(config);
       performanceLogger.end(name);
       if (createMcpResult.ok) {
         mcpClients[name] = createMcpResult.value;

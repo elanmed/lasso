@@ -73,6 +73,22 @@ describe("mcp", () => {
       assert.deepStrictEqual(getState().mcp.tools, {});
     });
 
+    it("ignores stdio MCP clients that fail during initialization", async () => {
+      mockMcpClients(new Error("connection refused"));
+      actions.config.setMcps({
+        first: { type: "stdio", command: "mcp-server" },
+      });
+
+      const performanceLogger = makeStartupPerformanceLogger();
+      await initMcpState({ performanceLogger });
+
+      assert.deepStrictEqual(getState().mcp.clients, {});
+      assert.deepStrictEqual(getState().mcp.tools, {});
+      assert.deepStrictEqual(getState().content.configWarningMessages, [
+        "Failed to start the first mcp server, ignoring. Error: connection refused",
+      ]);
+    });
+
     it("records a config warning when a client close() call fails while reloading", async () => {
       const closeError = new Error("close boom");
       const firstClient = makeFakeMcpClient({
