@@ -131,11 +131,13 @@ export function getAvailableCommandsStr({
   return builtinCommandsFormatted.concat(customCommandsFormatted).join("\n");
 }
 
+const getAvailableSkills = () =>
+  getState().content.skills.filter(
+    (skill) => !skill.name.startsWith(contextFileSkillNamePrefix),
+  );
+
 export function getAvailableSkillsStr() {
-  return getState()
-    .content.skills.filter(
-      (skill) => !skill.name.startsWith(contextFileSkillNamePrefix),
-    )
+  return getAvailableSkills()
     .map(
       (
         skill,
@@ -1151,7 +1153,7 @@ export function shouldResolveSlashCommand(
       ({ name }) => name,
     );
 
-    const skillNames = getState().content.skills.map(({ name }) => name);
+    const skillNames = getAvailableSkills().map(({ name }) => name);
 
     return [
       ...builtinSlashCommands,
@@ -1210,11 +1212,11 @@ function resolveCustomSlashCommand(commandStr: string): SlashCommandOutcome {
     };
   }
 
-  const matchedSkill = getState().content.skills.find(
+  const matchedSkill = getAvailableSkills().find(
     ({ name }) => name === command,
   );
   if (matchedSkill !== undefined) {
-    print.infoSubtle(`Executing custom slash command: ${command}`);
+    print.infoSubtle(`Executing skill: ${command}`);
     return {
       handled: true,
       inputFromCommand: getSkillInput({
