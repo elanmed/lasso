@@ -1044,6 +1044,55 @@ describe("input commands", () => {
         );
       });
 
+      it("returns true for a registered skill when forceKnownCommand is set", () => {
+        actions.content.setSkills([
+          {
+            name: "analyze",
+            description: "Analyze a task",
+            dir: "/skills/analyze",
+            content: "Analyze carefully.",
+          },
+        ]);
+        assert.strictEqual(
+          shouldResolveSlashCommand("/analyze", { forceKnownCommand: true }),
+          true,
+        );
+      });
+
+      it("returns true for a registered skill with args when forceKnownCommand is set", () => {
+        actions.content.setSkills([
+          {
+            name: "analyze",
+            description: "Analyze a task",
+            dir: "/skills/analyze",
+            content: "Analyze carefully.",
+          },
+        ]);
+        assert.strictEqual(
+          shouldResolveSlashCommand("/analyze some task", {
+            forceKnownCommand: true,
+          }),
+          true,
+        );
+      });
+
+      it("returns false for context file skills when forceKnownCommand is set", () => {
+        actions.content.setSkills([
+          {
+            name: "__lasso-context-for-project",
+            description: "Context relevant for project",
+            dir: "/project",
+            content: "Project context",
+          },
+        ]);
+        assert.strictEqual(
+          shouldResolveSlashCommand("/__lasso-context-for-project", {
+            forceKnownCommand: true,
+          }),
+          false,
+        );
+      });
+
       it("returns false for an unknown slash command when forceKnownCommand is set", () => {
         assert.strictEqual(
           shouldResolveSlashCommand("/unknowncmd", { forceKnownCommand: true }),
@@ -4224,6 +4273,29 @@ hello
         ]);
       });
 
+      it("prefers a custom slash command over a same-named skill", async () => {
+        actions.content.setSlashCommands([
+          {
+            name: "analyze",
+            filePath: "/test-cwd/.lasso/commands/analyze.md",
+            content: "custom command content",
+          },
+        ]);
+        actions.content.setSkills([
+          {
+            name: "analyze",
+            description: "Analyze a task",
+            dir: "/skills/analyze",
+            content: "Analyze carefully.",
+          },
+        ]);
+        const result = await resolveSlashCommand("/analyze");
+        assert.strictEqual(result, "custom command content");
+        assert.deepStrictEqual(getWrites(), [
+          `${GREY}Executing custom slash command: analyze${RESET}\n`,
+        ]);
+      });
+
       it("appends context after custom slash command content", async () => {
         actions.content.setSlashCommands([
           {
@@ -4276,6 +4348,68 @@ custom command content`,
         ]);
         const result = await resolveSlashCommand("/custom   ");
         assert.strictEqual(result, "custom command content");
+      });
+
+      it("executes a skill slash command with a skill-specific status", async () => {
+        actions.content.setSkills([
+          {
+            name: "analyze",
+            description: "Analyze a task",
+            dir: "/skills/analyze",
+            content: "Analyze carefully.",
+          },
+        ]);
+        const result = await resolveSlashCommand("/analyze");
+        assert.strictEqual(result, "Analyze carefully.");
+        assert.deepStrictEqual(getWrites(), [
+          `${GREY}Executing skill: analyze${RESET}\n`,
+        ]);
+      });
+
+      it("appends command context after skill metadata", async () => {
+        actions.content.setSkills([
+          {
+            name: "analyze",
+            description: "Analyze a task",
+            dir: "/skills/analyze",
+            content: "Analyze carefully.",
+          },
+        ]);
+        const result = await resolveSlashCommand("/analyze  some   task");
+        assert.strictEqual(
+          result,
+          `# [lasso] Follow the skill below along with the provided context:
+
+## [lasso] Skill metadata
+- **name**: analyze
+- **dir**: /skills/analyze
+- **description**: Analyze a task
+
+## [lasso] Context
+some   task
+
+## [lasso] Skill
+Analyze carefully.`,
+        );
+      });
+
+      it("does not execute context file skills as slash commands", async () => {
+        const { spawned } = mockPagerSpawn();
+        testProcessEnv._set("LASSO_PAGER", "nano __FILE__");
+        actions.content.setSkills([
+          {
+            name: "__lasso-context-for-project",
+            description: "Context relevant for project",
+            dir: "/project",
+            content: "Project context",
+          },
+        ]);
+        const result = await resolveSlashCommand(
+          "/__lasso-context-for-project",
+        );
+        assert.strictEqual(result, null);
+        assert.deepStrictEqual(getWrites(), []);
+        assert.strictEqual(spawned[0], "nano /tmp/lasso-test-uuid.txt");
       });
 
       it("handles unknown slash command", async () => {
