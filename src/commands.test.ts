@@ -4422,6 +4422,14 @@ Analyze carefully.`,
             content: "known content",
           },
         ]);
+        actions.content.setSkills([
+          {
+            name: "test-skill",
+            description: "A test skill",
+            dir: "/skills/test-skill",
+            content: "skill content",
+          },
+        ]);
         actions.terminal.resetStdout();
         const result = await resolveSlashCommand("/unknown");
         assert.strictEqual(result, null);
@@ -4458,6 +4466,11 @@ Analyze carefully.`,
 - /mcps
 - /steer
 - /test-cwd/.lasso/commands/known.md _(4 tokens)_
+
+## Available skills
+
+- **test-skill** _(4-4 tokens)_: A test skill
+/skills/test-skill
 
 `,
         );

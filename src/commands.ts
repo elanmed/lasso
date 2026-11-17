@@ -379,7 +379,7 @@ ${getAvailableCommandsStr({ includeTokenCount: true })}
 
 ## Available skills
 
-${getCustomSlashCommandsStr()}`;
+${getAvailableSkillsStr()}`;
 
   await openWithPager({
     initialContentStr,
