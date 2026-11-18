@@ -385,7 +385,7 @@ describe("tools", () => {
       const getWrites = mockStdoutWrites();
       toolPrint("bash", "one\ntwo\nthree\nfour\nfive\nsix");
       assert.deepStrictEqual(getWrites(), [
-        `${BLUE}⚙ ${BOLD}bash${BOLD_RESET}: ${GREY}one\ntwo\nthree\nfour\nfive${RESET}${RESET}\n`,
+        `${BLUE}⚙ ${BOLD}bash${BOLD_RESET}: ${GREY}one\ntwo\nthree\nfour\nfive…${RESET}${RESET}\n`,
       ]);
     });
 
@@ -393,23 +393,23 @@ describe("tools", () => {
       const getWrites = mockStdoutWrites();
       toolPrint("bash", "one\ntwo\nthree", { maxLines: 2 });
       assert.deepStrictEqual(getWrites(), [
-        `${BLUE}⚙ ${BOLD}bash${BOLD_RESET}: ${GREY}one\ntwo${RESET}${RESET}\n`,
+        `${BLUE}⚙ ${BOLD}bash${BOLD_RESET}: ${GREY}one\ntwo…${RESET}${RESET}\n`,
       ]);
     });
 
-    it("truncates the detail at 500 chars when the line cap is not reached", () => {
+    it("truncates the detail at the char cap when the line cap is not reached", () => {
       const getWrites = mockStdoutWrites();
       toolPrint("bash", `${"a".repeat(500)}b`);
       assert.deepStrictEqual(getWrites(), [
-        `${BLUE}⚙ ${BOLD}bash${BOLD_RESET}: ${GREY}${"a".repeat(500)}${RESET}${RESET}\n`,
+        `${BLUE}⚙ ${BOLD}bash${BOLD_RESET}: ${GREY}${"a".repeat(491)}…${RESET}${RESET}\n`,
       ]);
     });
 
-    it("truncates the detail at 500 chars when the line cap is reached later", () => {
+    it("truncates the detail at the char cap when the line cap is reached later", () => {
       const getWrites = mockStdoutWrites();
       toolPrint("bash", `${"a".repeat(499)}\nb`);
       assert.deepStrictEqual(getWrites(), [
-        `${BLUE}⚙ ${BOLD}bash${BOLD_RESET}: ${GREY}${"a".repeat(499)}\n${RESET}${RESET}\n`,
+        `${BLUE}⚙ ${BOLD}bash${BOLD_RESET}: ${GREY}${"a".repeat(491)}…${RESET}${RESET}\n`,
       ]);
     });
 
@@ -417,7 +417,24 @@ describe("tools", () => {
       const getWrites = mockStdoutWrites();
       toolPrint("bash", "a".repeat(250), { maxLines: 2 });
       assert.deepStrictEqual(getWrites(), [
-        `${BLUE}⚙ ${BOLD}bash${BOLD_RESET}: ${GREY}${"a".repeat(200)}${RESET}${RESET}\n`,
+        `${BLUE}⚙ ${BOLD}bash${BOLD_RESET}: ${GREY}${"a".repeat(191)}…${RESET}${RESET}\n`,
+      ]);
+    });
+
+    it("does not add an ellipsis when the detail fits exactly", () => {
+      const getWrites = mockStdoutWrites();
+      toolPrint("bash", "a".repeat(492));
+      assert.deepStrictEqual(getWrites(), [
+        `${BLUE}⚙ ${BOLD}bash${BOLD_RESET}: ${GREY}${"a".repeat(492)}${RESET}${RESET}\n`,
+      ]);
+    });
+
+    it("uses the ascii ellipsis when asciiOnly is on", () => {
+      actions.config.setAsciiOnly(true);
+      const getWrites = mockStdoutWrites();
+      toolPrint("bash", "one\ntwo\nthree", { maxLines: 2 });
+      assert.deepStrictEqual(getWrites(), [
+        `${BLUE}⚙ ${BOLD}bash${BOLD_RESET}: ${GREY}one\ntwo~${RESET}${RESET}\n`,
       ]);
     });
   });

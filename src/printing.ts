@@ -427,19 +427,36 @@ export async function executeBat(content: string) {
   print.plain(batResult.value.stdout);
 }
 
+export function truncateLines(
+  str: string,
+  { maxLines, maxChars }: { maxLines: number; maxChars: number },
+) {
+  const lines = str.split("\n").filter((line) => line.length !== 0);
+  const joined = lines.slice(0, maxLines).join("\n");
+  const ellipsis = getUnicodeChar("…");
+
+  if (joined.length > maxChars) {
+    return joined.substring(0, maxChars - 1).concat(ellipsis);
+  }
+
+  if (lines.length > maxLines) {
+    return joined.concat(ellipsis);
+  }
+
+  return joined;
+}
+
 export function toolPrint(
   label: string,
   detail: string,
   { maxLines = 5 }: { maxLines?: number } = {},
 ) {
-  const truncatedDetail = detail
-    .split("\n")
-    .filter((line) => line.length !== 0)
-    .slice(0, maxLines)
-    .join("\n")
-    .substring(0, 100 * maxLines);
+  const prefixWidth = `⚙ ${label}: `.length;
+  const maxChars = Math.max(1, maxLines * 100 - prefixWidth);
 
-  print.doing(`⚙ ${bold(label)}: ${wrapInColor(truncatedDetail, "grey")}`);
+  print.doing(
+    `⚙ ${bold(label)}: ${wrapInColor(truncateLines(detail, { maxLines, maxChars }), "grey")}`,
+  );
 }
 
 export type ToolPrint = typeof toolPrint;
