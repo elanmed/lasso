@@ -349,156 +349,68 @@ describe("tools", () => {
   });
 
   describe("toolPrint", () => {
-    describe("prints the detail", () => {
-      it("prints the detail with a labeled prefix on the first line", () => {
-        mock.method(processDeps.stdout, "getColumns", () => 30);
-        const getWrites = mockStdoutWrites();
-        toolPrint("bash", "hello");
-        assert.deepStrictEqual(getWrites(), [
-          `${BLUE}${BOLD}bash${BOLD_RESET}: hello${RESET}
-`,
-        ]);
-      });
-
-      it("ignores empty detail lines", () => {
-        mock.method(processDeps.stdout, "getColumns", () => 30);
-        const getWrites = mockStdoutWrites();
-        toolPrint("bash", "one\n\ntwo");
-        assert.deepStrictEqual(getWrites(), [
-          `${BLUE}${BOLD}bash${BOLD_RESET}: one
-       ┊two${RESET}
-`,
-        ]);
-      });
-
-      it("does not wrap a detail that fits within the cap", () => {
-        mock.method(processDeps.stdout, "getColumns", () => 30);
-        const getWrites = mockStdoutWrites();
-        toolPrint("bash", "abcd");
-        assert.deepStrictEqual(getWrites(), [
-          `${BLUE}${BOLD}bash${BOLD_RESET}: abcd${RESET}
-`,
-        ]);
-      });
-
-      it("prints nothing but the label prefix when detail is only whitespace lines", () => {
-        mock.method(processDeps.stdout, "getColumns", () => 30);
-        const getWrites = mockStdoutWrites();
-        toolPrint("bash", "\n\n\n");
-        assert.deepStrictEqual(getWrites(), [`${BLUE}${RESET}\n`]);
-      });
+    it("prints the label and detail", () => {
+      const getWrites = mockStdoutWrites();
+      toolPrint("bash", "hello");
+      assert.deepStrictEqual(getWrites(), [
+        `${BLUE}╎ ${BOLD}bash${BOLD_RESET}: ${GREY}hello${RESET}${RESET}\n`,
+      ]);
     });
 
-    describe("wraps the detail", () => {
-      it("wraps a detail that does not fit within maxLen", () => {
-        mock.method(processDeps.stdout, "getColumns", () => 30);
-        const getWrites = mockStdoutWrites();
-        toolPrint("bash", "abcdefghijklmnopqrstuvwxyz");
-        assert.deepStrictEqual(getWrites(), [
-          `${BLUE}${BOLD}bash${BOLD_RESET}: abcdefghijklmnopqrstuvwx
-       ┊yz${RESET}
-`,
-        ]);
-      });
-
-      it("wraps without regard to whitespace inside the detail", () => {
-        mock.method(processDeps.stdout, "getColumns", () => 30);
-        const getWrites = mockStdoutWrites();
-        toolPrint("bash", "abc defghijklmnop");
-        assert.deepStrictEqual(getWrites(), [
-          `${BLUE}${BOLD}bash${BOLD_RESET}: abc defghijklmnop${RESET}
-`,
-        ]);
-      });
-
-      it("wraps multiple original lines and combines them under the same cap", () => {
-        mock.method(processDeps.stdout, "getColumns", () => 30);
-        const getWrites = mockStdoutWrites();
-        toolPrint("bash", "abcdefghij\nkl");
-        assert.deepStrictEqual(getWrites(), [
-          `${BLUE}${BOLD}bash${BOLD_RESET}: abcdefghij
-       ┊kl${RESET}
-`,
-        ]);
-      });
-
-      it("uses label length plus padding for the maxLen when it exceeds the indent", () => {
-        mock.method(processDeps.stdout, "getColumns", () => 40);
-        const getWrites = mockStdoutWrites();
-        toolPrint("abcdefghijklmnopqrst", "abcdefghijklmnopqrstuvwx");
-        assert.deepStrictEqual(getWrites(), [
-          `${BLUE}${BOLD}abcdefghijklmnopqrst${BOLD_RESET}: abcdefghijklmnopqr
-       ┊stuvwx${RESET}
-`,
-        ]);
-      });
-
-      it("falls back to one char per line when the terminal is narrower than the label", () => {
-        mock.method(processDeps.stdout, "getColumns", () => 5);
-        const getWrites = mockStdoutWrites();
-        toolPrint("bash", "abcdefghijklmnopqrstuvwxyz");
-        assert.deepStrictEqual(getWrites(), [
-          `${BLUE}${BOLD}bash${BOLD_RESET}: a
-       ┊b
-       ┊c
-       ┊d
-       ┊…${RESET}
-`,
-        ]);
-      });
+    it("filters out empty lines in the detail", () => {
+      const getWrites = mockStdoutWrites();
+      toolPrint("bash", "one\n\ntwo");
+      assert.deepStrictEqual(getWrites(), [
+        `${BLUE}╎ ${BOLD}bash${BOLD_RESET}: ${GREY}one\ntwo${RESET}${RESET}\n`,
+      ]);
     });
 
-    describe("caps at five lines", () => {
-      it("supports a custom line cap", () => {
-        mock.method(processDeps.stdout, "getColumns", () => 30);
-        const getWrites = mockStdoutWrites();
-        toolPrint("bash", "a\nb\nc", { maxLines: 2 });
-        assert.deepStrictEqual(getWrites(), [
-          `${BLUE}${BOLD}bash${BOLD_RESET}: a\n       ┊b…${RESET}\n`,
-        ]);
-      });
+    it("does not count empty lines against the line cap", () => {
+      const getWrites = mockStdoutWrites();
+      toolPrint("bash", "a\n\n\n\nb\nc", { maxLines: 3 });
+      assert.deepStrictEqual(getWrites(), [
+        `${BLUE}╎ ${BOLD}bash${BOLD_RESET}: ${GREY}a\nb\nc${RESET}${RESET}\n`,
+      ]);
+    });
 
-      it("caps the total output at five lines", () => {
-        mock.method(processDeps.stdout, "getColumns", () => 30);
-        const getWrites = mockStdoutWrites();
-        toolPrint("bash", "a\nb\nc\nd\ne\nf");
-        assert.deepStrictEqual(getWrites(), [
-          `${BLUE}${BOLD}bash${BOLD_RESET}: a
-       ┊b
-       ┊c
-       ┊d
-       ┊e…${RESET}
-`,
-        ]);
-      });
+    it("truncates the detail after five lines by default", () => {
+      const getWrites = mockStdoutWrites();
+      toolPrint("bash", "one\ntwo\nthree\nfour\nfive\nsix");
+      assert.deepStrictEqual(getWrites(), [
+        `${BLUE}╎ ${BOLD}bash${BOLD_RESET}: ${GREY}one\ntwo\nthree\nfour\nfive${RESET}${RESET}\n`,
+      ]);
+    });
 
-      it("stops mid-wrap once the five line cap is reached, ending with an ellipsis", () => {
-        mock.method(processDeps.stdout, "getColumns", () => 30);
-        const getWrites = mockStdoutWrites();
-        toolPrint("bash", "abcdefghij\nkl\nm\nn\no\np");
-        assert.deepStrictEqual(getWrites(), [
-          `${BLUE}${BOLD}bash${BOLD_RESET}: abcdefghij
-       ┊kl
-       ┊m
-       ┊n
-       ┊o…${RESET}
-`,
-        ]);
-      });
+    it("truncates the detail after maxLines lines", () => {
+      const getWrites = mockStdoutWrites();
+      toolPrint("bash", "one\ntwo\nthree", { maxLines: 2 });
+      assert.deepStrictEqual(getWrites(), [
+        `${BLUE}╎ ${BOLD}bash${BOLD_RESET}: ${GREY}one\ntwo${RESET}${RESET}\n`,
+      ]);
+    });
 
-      it("replaces the last char of a full fifth line with an ellipsis", () => {
-        mock.method(processDeps.stdout, "getColumns", () => 30);
-        const getWrites = mockStdoutWrites();
-        toolPrint("bash", "a".repeat(113));
-        assert.deepStrictEqual(getWrites(), [
-          `${BLUE}${BOLD}bash${BOLD_RESET}: ${"a".repeat(24)}
-       ┊${"a".repeat(22)}
-       ┊${"a".repeat(22)}
-       ┊${"a".repeat(22)}
-       ┊${"a".repeat(21)}…${RESET}
-`,
-        ]);
-      });
+    it("truncates the detail at 500 chars when the line cap is not reached", () => {
+      const getWrites = mockStdoutWrites();
+      toolPrint("bash", `${"a".repeat(500)}b`);
+      assert.deepStrictEqual(getWrites(), [
+        `${BLUE}╎ ${BOLD}bash${BOLD_RESET}: ${GREY}${"a".repeat(500)}${RESET}${RESET}\n`,
+      ]);
+    });
+
+    it("truncates the detail at 500 chars when the line cap is reached later", () => {
+      const getWrites = mockStdoutWrites();
+      toolPrint("bash", `${"a".repeat(499)}\nb`);
+      assert.deepStrictEqual(getWrites(), [
+        `${BLUE}╎ ${BOLD}bash${BOLD_RESET}: ${GREY}${"a".repeat(499)}\n${RESET}${RESET}\n`,
+      ]);
+    });
+
+    it("scales the char cap with maxLines", () => {
+      const getWrites = mockStdoutWrites();
+      toolPrint("bash", "a".repeat(250), { maxLines: 2 });
+      assert.deepStrictEqual(getWrites(), [
+        `${BLUE}╎ ${BOLD}bash${BOLD_RESET}: ${GREY}${"a".repeat(200)}${RESET}${RESET}\n`,
+      ]);
     });
   });
 
@@ -662,7 +574,7 @@ describe("tools", () => {
       assert.strictEqual(testFs._dirs.has(getWebpagesDir()), true);
       assert.strictEqual(testFs._files.get(filePath)?.length, 30_004);
       assert.deepStrictEqual(getWrites(), [
-        `${BLUE}${BOLD}web_fetch_html${BOLD_RESET}: Webpage markdown written to ${filePath} because it exceeded 10,000 tokens${RESET}\n`,
+        `${BLUE}╎ ${BOLD}web_fetch_html${BOLD_RESET}: ${GREY}Webpage markdown written to ${filePath} because it exceeded 10,000 tokens${RESET}${RESET}\n`,
       ]);
     });
 
@@ -722,7 +634,7 @@ describe("tools", () => {
           "HTTP 500: Internal Server Error when fetching https://example.com/broken",
       });
       assert.deepStrictEqual(getWrites(), [
-        `${BLUE}${BOLD}HTTP 500${BOLD_RESET}: https://example.com/broken${RESET}\n`,
+        `${BLUE}╎ ${BOLD}HTTP 500${BOLD_RESET}: ${GREY}https://example.com/broken${RESET}${RESET}\n`,
       ]);
     });
 
@@ -821,7 +733,7 @@ describe("tools", () => {
           "HTTP 404: Not Found when fetching https://api.example.com/missing",
       });
       assert.deepStrictEqual(getWrites(), [
-        `${BLUE}${BOLD}HTTP 404${BOLD_RESET}: https://api.example.com/missing${RESET}\n`,
+        `${BLUE}╎ ${BOLD}HTTP 404${BOLD_RESET}: ${GREY}https://api.example.com/missing${RESET}${RESET}\n`,
       ]);
     });
 

@@ -643,7 +643,7 @@ describe("api", () => {
         });
         await resolveApiCall("hello");
         assert.deepStrictEqual(getWrites(), [
-          `${BLUE}${BOLD}[mcp] mcp_tool${BOLD_RESET}: {"a":1}${RESET}\n`,
+          `${BLUE}╎ ${BOLD}[mcp] mcp_tool${BOLD_RESET}: ${GREY}{"a":1}${RESET}${RESET}\n`,
         ]);
       });
 
@@ -664,7 +664,7 @@ describe("api", () => {
         });
         await resolveApiCall("hello");
         assert.deepStrictEqual(getWrites(), [
-          `${BLUE}${BOLD}load_skill${BOLD_RESET}: demo${RESET}\n`,
+          `${BLUE}╎ ${BOLD}load_skill${BOLD_RESET}: ${GREY}demo${RESET}${RESET}\n`,
         ]);
       });
 
@@ -692,8 +692,8 @@ describe("api", () => {
         });
         await resolveApiCall("hello");
         assert.deepStrictEqual(getWrites(), [
-          `${BLUE}${BOLD}web_fetch_html${BOLD_RESET}: https://example.com${RESET}\n`,
-          `${BLUE}${BOLD}web_fetch_json${BOLD_RESET}: https://example.com/api${RESET}\n`,
+          `${BLUE}╎ ${BOLD}web_fetch_html${BOLD_RESET}: ${GREY}https://example.com${RESET}${RESET}\n`,
+          `${BLUE}╎ ${BOLD}web_fetch_json${BOLD_RESET}: ${GREY}https://example.com/api${RESET}${RESET}\n`,
         ]);
       });
 
@@ -728,8 +728,8 @@ describe("api", () => {
         });
         await resolveApiCall("hello");
         assert.deepStrictEqual(getWrites(), [
-          `${BLUE}${BOLD}create_subagent${BOLD_RESET}: [claude-sonnet-4-20250514] investigate tests${RESET}\n`,
-          `${BLUE}${BOLD}create_subagent${BOLD_RESET}: [claude-sonnet-4-20250514] write code${RESET}\n`,
+          `${BLUE}╎ ${BOLD}create_subagent${BOLD_RESET}: ${GREY}[claude-sonnet-4-20250514] investigate tests${RESET}${RESET}\n`,
+          `${BLUE}╎ ${BOLD}create_subagent${BOLD_RESET}: ${GREY}[claude-sonnet-4-20250514] write code${RESET}${RESET}\n`,
         ]);
       });
     });
@@ -842,7 +842,7 @@ describe("api", () => {
         mockExec({ stdout: "+added line" });
         await resolveApiCall("edit file");
         assert.deepStrictEqual(getWrites(), [
-          `${BLUE}${BOLD}bash${BOLD_RESET}: write${RESET}\n`,
+          `${BLUE}╎ ${BOLD}bash${BOLD_RESET}: ${GREY}write${RESET}${RESET}\n`,
           "\n",
           `${GREY}━━ ${BOLD}File change: /test/file.txt${BOLD_RESET} ━━${RESET}\n`,
           `+added line\n\n`,

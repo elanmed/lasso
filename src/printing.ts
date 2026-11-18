@@ -432,59 +432,14 @@ export function toolPrint(
   detail: string,
   { maxLines = 5 }: { maxLines?: number } = {},
 ) {
-  const detailArr = detail.split("\n").filter((str) => str.length > 0);
-  const colonSpaceLen = 2;
-  const labelLen = label.length + colonSpaceLen;
-  const indent = " ".repeat(7).concat(getUnicodeChar("┊"));
-  const lines = [];
+  const truncatedDetail = detail
+    .split("\n")
+    .filter((line) => line.length !== 0)
+    .slice(0, maxLines)
+    .join("\n")
+    .substring(0, 100 * maxLines);
 
-  let detailIdx = 0;
-  let strIdx = 0;
-  while (lines.length < maxLines && detailIdx < detailArr.length) {
-    const detailLine = detailArr[detailIdx];
-    assertAtBuildtime(detailLine !== undefined);
-
-    let maxLen = (() => {
-      if (lines.length === 0) return getMaxColLength() - labelLen;
-      return getMaxColLength() - indent.length;
-    })();
-    maxLen = Math.max(1, maxLen);
-
-    const splitStr = detailLine.slice(strIdx, strIdx + maxLen);
-    strIdx += splitStr.length;
-    if (strIdx >= detailLine.length) {
-      detailIdx++;
-      strIdx = 0;
-    }
-
-    const prefix = (() => {
-      if (lines.length === 0) return `${bold(label)}: `;
-      return indent;
-    })();
-
-    lines.push(prefix.concat(splitStr));
-  }
-
-  const overflow = lines.length === maxLines && detailIdx < detailArr.length;
-
-  if (overflow) {
-    const lastLine = lines.pop();
-    assertAtBuildtime(lastLine !== undefined);
-
-    const ellipsis = getUnicodeChar("…");
-    const newLastLine = (() => {
-      if (lastLine.length >= getMaxColLength()) {
-        return lastLine.slice(0, -1).concat(ellipsis);
-      } else {
-        return lastLine.concat(ellipsis);
-      }
-    })();
-    lines.push(newLastLine);
-  }
-
-  const linesStr = lines.join("\n");
-
-  print.doing(linesStr);
+  print.doing(`╎ ${bold(label)}: ${wrapInColor(truncatedDetail, "grey")}`);
 }
 
 export type ToolPrint = typeof toolPrint;
