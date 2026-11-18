@@ -23,6 +23,7 @@ describe("prompts", () => {
       "- For debugging: give 1 command at a time, never multiple",
       "- All responses are piped through bat as markdown — always emit valid markdown",
       "- After a successful file-modifying tool (bash with fileSystemAccessType create-update-delete): the CLI auto-outputs a diff. Do NOT repeat the code, file contents, or a diff of the change in your response — summarize in prose only. Verification via a targeted read (e.g. sed -n) is fine, but don't re-echo what the diff already showed",
+      "- Bash: multi-line commands must use real newlines, not `;` separators — the command is printed to the user",
       "",
       "## [lasso] Web search",
       "",
