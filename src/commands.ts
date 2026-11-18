@@ -21,6 +21,7 @@ import {
   isNullish,
   getPrettyDate,
   type Option,
+  bold,
 } from "./utils.ts";
 import { actions, getState, type Skill, type SlashCommand } from "./state.ts";
 import { aiDeps, childProcessDeps, fsDeps, processDeps } from "./deps.ts";
@@ -1203,7 +1204,9 @@ function resolveCustomSlashCommand(commandStr: string): SlashCommandOutcome {
     ({ name }) => name === command,
   );
   if (matchedCommand !== undefined) {
-    print.infoSubtle(`Executing custom slash command: ${command}`);
+    print.info(
+      `${bold("Executing slash command")}: ${wrapInColor(command, "grey")}`,
+    );
     return {
       handled: true,
       inputFromCommand: getCustomSlashCommandInput({
@@ -1217,7 +1220,7 @@ function resolveCustomSlashCommand(commandStr: string): SlashCommandOutcome {
     ({ name }) => name === command,
   );
   if (matchedSkill !== undefined) {
-    print.infoSubtle(`Executing skill: ${command}`);
+    print.info(`${bold("Executing skill")}: ${wrapInColor(command, "grey")}`);
     return {
       handled: true,
       inputFromCommand: getSkillInput({

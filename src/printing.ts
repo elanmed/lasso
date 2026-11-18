@@ -439,7 +439,7 @@ export function toolPrint(
     .join("\n")
     .substring(0, 100 * maxLines);
 
-  print.doing(`╎ ${bold(label)}: ${wrapInColor(truncatedDetail, "grey")}`);
+  print.doing(`⚙ ${bold(label)}: ${wrapInColor(truncatedDetail, "grey")}`);
 }
 
 export type ToolPrint = typeof toolPrint;
