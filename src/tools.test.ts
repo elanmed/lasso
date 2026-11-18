@@ -303,6 +303,14 @@ describe("tools", () => {
       assert.strictEqual(jsonSchema.type, "object");
     });
 
+    it("tells the model to use newlines in the printed command", () => {
+      const jsonSchema = z.toJSONSchema(bashToolInputSchema);
+      assert.strictEqual(
+        jsonSchema.description,
+        "Run a bash command. The bash command is printed to the user; you must include newlines so that it is readable. Commands writing only to temporary files count as read; otherwise specify the target file path and use create-update-delete.",
+      );
+    });
+
     it("accepts read commands without a file path", () => {
       const result = bashToolInputSchema.parse({
         fileSystemAccessType: "read",
@@ -353,7 +361,7 @@ describe("tools", () => {
       const getWrites = mockStdoutWrites();
       toolPrint("bash", "hello");
       assert.deepStrictEqual(getWrites(), [
-        `${BLUE}╎ ${BOLD}bash${BOLD_RESET}: ${GREY}hello${RESET}${RESET}\n`,
+        `${BLUE}⚙ ${BOLD}bash${BOLD_RESET}: ${GREY}hello${RESET}${RESET}\n`,
       ]);
     });
 
@@ -361,7 +369,7 @@ describe("tools", () => {
       const getWrites = mockStdoutWrites();
       toolPrint("bash", "one\n\ntwo");
       assert.deepStrictEqual(getWrites(), [
-        `${BLUE}╎ ${BOLD}bash${BOLD_RESET}: ${GREY}one\ntwo${RESET}${RESET}\n`,
+        `${BLUE}⚙ ${BOLD}bash${BOLD_RESET}: ${GREY}one\ntwo${RESET}${RESET}\n`,
       ]);
     });
 
@@ -369,7 +377,7 @@ describe("tools", () => {
       const getWrites = mockStdoutWrites();
       toolPrint("bash", "a\n\n\n\nb\nc", { maxLines: 3 });
       assert.deepStrictEqual(getWrites(), [
-        `${BLUE}╎ ${BOLD}bash${BOLD_RESET}: ${GREY}a\nb\nc${RESET}${RESET}\n`,
+        `${BLUE}⚙ ${BOLD}bash${BOLD_RESET}: ${GREY}a\nb\nc${RESET}${RESET}\n`,
       ]);
     });
 
@@ -377,7 +385,7 @@ describe("tools", () => {
       const getWrites = mockStdoutWrites();
       toolPrint("bash", "one\ntwo\nthree\nfour\nfive\nsix");
       assert.deepStrictEqual(getWrites(), [
-        `${BLUE}╎ ${BOLD}bash${BOLD_RESET}: ${GREY}one\ntwo\nthree\nfour\nfive${RESET}${RESET}\n`,
+        `${BLUE}⚙ ${BOLD}bash${BOLD_RESET}: ${GREY}one\ntwo\nthree\nfour\nfive${RESET}${RESET}\n`,
       ]);
     });
 
@@ -385,7 +393,7 @@ describe("tools", () => {
       const getWrites = mockStdoutWrites();
       toolPrint("bash", "one\ntwo\nthree", { maxLines: 2 });
       assert.deepStrictEqual(getWrites(), [
-        `${BLUE}╎ ${BOLD}bash${BOLD_RESET}: ${GREY}one\ntwo${RESET}${RESET}\n`,
+        `${BLUE}⚙ ${BOLD}bash${BOLD_RESET}: ${GREY}one\ntwo${RESET}${RESET}\n`,
       ]);
     });
 
@@ -393,7 +401,7 @@ describe("tools", () => {
       const getWrites = mockStdoutWrites();
       toolPrint("bash", `${"a".repeat(500)}b`);
       assert.deepStrictEqual(getWrites(), [
-        `${BLUE}╎ ${BOLD}bash${BOLD_RESET}: ${GREY}${"a".repeat(500)}${RESET}${RESET}\n`,
+        `${BLUE}⚙ ${BOLD}bash${BOLD_RESET}: ${GREY}${"a".repeat(500)}${RESET}${RESET}\n`,
       ]);
     });
 
@@ -401,7 +409,7 @@ describe("tools", () => {
       const getWrites = mockStdoutWrites();
       toolPrint("bash", `${"a".repeat(499)}\nb`);
       assert.deepStrictEqual(getWrites(), [
-        `${BLUE}╎ ${BOLD}bash${BOLD_RESET}: ${GREY}${"a".repeat(499)}\n${RESET}${RESET}\n`,
+        `${BLUE}⚙ ${BOLD}bash${BOLD_RESET}: ${GREY}${"a".repeat(499)}\n${RESET}${RESET}\n`,
       ]);
     });
 
@@ -409,7 +417,7 @@ describe("tools", () => {
       const getWrites = mockStdoutWrites();
       toolPrint("bash", "a".repeat(250), { maxLines: 2 });
       assert.deepStrictEqual(getWrites(), [
-        `${BLUE}╎ ${BOLD}bash${BOLD_RESET}: ${GREY}${"a".repeat(200)}${RESET}${RESET}\n`,
+        `${BLUE}⚙ ${BOLD}bash${BOLD_RESET}: ${GREY}${"a".repeat(200)}${RESET}${RESET}\n`,
       ]);
     });
   });
@@ -574,7 +582,7 @@ describe("tools", () => {
       assert.strictEqual(testFs._dirs.has(getWebpagesDir()), true);
       assert.strictEqual(testFs._files.get(filePath)?.length, 30_004);
       assert.deepStrictEqual(getWrites(), [
-        `${BLUE}╎ ${BOLD}web_fetch_html${BOLD_RESET}: ${GREY}Webpage markdown written to ${filePath} because it exceeded 10,000 tokens${RESET}${RESET}\n`,
+        `${BLUE}⚙ ${BOLD}web_fetch_html${BOLD_RESET}: ${GREY}Webpage markdown written to ${filePath} because it exceeded 10,000 tokens${RESET}${RESET}\n`,
       ]);
     });
 
@@ -634,7 +642,7 @@ describe("tools", () => {
           "HTTP 500: Internal Server Error when fetching https://example.com/broken",
       });
       assert.deepStrictEqual(getWrites(), [
-        `${BLUE}╎ ${BOLD}HTTP 500${BOLD_RESET}: ${GREY}https://example.com/broken${RESET}${RESET}\n`,
+        `${BLUE}⚙ ${BOLD}HTTP 500${BOLD_RESET}: ${GREY}https://example.com/broken${RESET}${RESET}\n`,
       ]);
     });
 
@@ -733,7 +741,7 @@ describe("tools", () => {
           "HTTP 404: Not Found when fetching https://api.example.com/missing",
       });
       assert.deepStrictEqual(getWrites(), [
-        `${BLUE}╎ ${BOLD}HTTP 404${BOLD_RESET}: ${GREY}https://api.example.com/missing${RESET}${RESET}\n`,
+        `${BLUE}⚙ ${BOLD}HTTP 404${BOLD_RESET}: ${GREY}https://api.example.com/missing${RESET}${RESET}\n`,
       ]);
     });
 

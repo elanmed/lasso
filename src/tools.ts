@@ -69,7 +69,7 @@ export const bashToolInputSchema = z
     command: z.string().describe("The bash command to run"),
   })
   .describe(
-    "Run a bash command. Commands writing only to temporary files count as read; otherwise specify the target file path and use create-update-delete.",
+    "Run a bash command. The bash command is printed to the user; you must include newlines so that it is readable. Commands writing only to temporary files count as read; otherwise specify the target file path and use create-update-delete.",
   )
   .refine(
     (input): input is BashToolInput => {
