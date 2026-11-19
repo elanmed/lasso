@@ -381,11 +381,19 @@ describe("tools", () => {
       ]);
     });
 
-    it("truncates the detail after five lines by default", () => {
+    it("truncates the detail after four lines by default", () => {
       const getWrites = mockStdoutWrites();
       toolPrint("bash", "one\ntwo\nthree\nfour\nfive\nsix");
       assert.deepStrictEqual(getWrites(), [
-        `${BLUE}⚙ ${BOLD}bash${BOLD_RESET}: ${GREY}one\ntwo\nthree\nfour\nfive…${RESET}${RESET}\n`,
+        `${BLUE}⚙ ${BOLD}bash${BOLD_RESET}: ${GREY}one\ntwo\nthree\nfour…${RESET}${RESET}\n`,
+      ]);
+    });
+
+    it("trims whitespace from the start and end of the detail", () => {
+      const getWrites = mockStdoutWrites();
+      toolPrint("bash", "  one\ntwo  ");
+      assert.deepStrictEqual(getWrites(), [
+        `${BLUE}⚙ ${BOLD}bash${BOLD_RESET}: ${GREY}one\ntwo${RESET}${RESET}\n`,
       ]);
     });
 
@@ -401,7 +409,7 @@ describe("tools", () => {
       const getWrites = mockStdoutWrites();
       toolPrint("bash", `${"a".repeat(500)}b`);
       assert.deepStrictEqual(getWrites(), [
-        `${BLUE}⚙ ${BOLD}bash${BOLD_RESET}: ${GREY}${"a".repeat(491)}…${RESET}${RESET}\n`,
+        `${BLUE}⚙ ${BOLD}bash${BOLD_RESET}: ${GREY}${"a".repeat(391)}…${RESET}${RESET}\n`,
       ]);
     });
 
@@ -409,7 +417,7 @@ describe("tools", () => {
       const getWrites = mockStdoutWrites();
       toolPrint("bash", `${"a".repeat(499)}\nb`);
       assert.deepStrictEqual(getWrites(), [
-        `${BLUE}⚙ ${BOLD}bash${BOLD_RESET}: ${GREY}${"a".repeat(491)}…${RESET}${RESET}\n`,
+        `${BLUE}⚙ ${BOLD}bash${BOLD_RESET}: ${GREY}${"a".repeat(391)}…${RESET}${RESET}\n`,
       ]);
     });
 
@@ -423,9 +431,17 @@ describe("tools", () => {
 
     it("does not add an ellipsis when the detail fits exactly", () => {
       const getWrites = mockStdoutWrites();
-      toolPrint("bash", "a".repeat(492));
+      toolPrint("bash", "a".repeat(392));
       assert.deepStrictEqual(getWrites(), [
-        `${BLUE}⚙ ${BOLD}bash${BOLD_RESET}: ${GREY}${"a".repeat(492)}${RESET}${RESET}\n`,
+        `${BLUE}⚙ ${BOLD}bash${BOLD_RESET}: ${GREY}${"a".repeat(392)}${RESET}${RESET}\n`,
+      ]);
+    });
+
+    it("trims whitespace before applying the char cap", () => {
+      const getWrites = mockStdoutWrites();
+      toolPrint("bash", `${"a".repeat(392)}  `);
+      assert.deepStrictEqual(getWrites(), [
+        `${BLUE}⚙ ${BOLD}bash${BOLD_RESET}: ${GREY}${"a".repeat(392)}${RESET}${RESET}\n`,
       ]);
     });
 

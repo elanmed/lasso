@@ -432,7 +432,7 @@ export function truncateLines(
   { maxLines, maxChars }: { maxLines: number; maxChars: number },
 ) {
   const lines = str.split("\n").filter((line) => line.length !== 0);
-  const joined = lines.slice(0, maxLines).join("\n");
+  const joined = lines.slice(0, maxLines).join("\n").trim();
   const ellipsis = getUnicodeChar("…");
 
   if (joined.length > maxChars) {
@@ -449,7 +449,7 @@ export function truncateLines(
 export function toolPrint(
   label: string,
   detail: string,
-  { maxLines = 5 }: { maxLines?: number } = {},
+  { maxLines = 4 }: { maxLines?: number } = {},
 ) {
   const prefixWidth = `⚙ ${label}: `.length;
   const maxChars = Math.max(1, maxLines * 100 - prefixWidth);
