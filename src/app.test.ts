@@ -468,7 +468,7 @@ describe("api", () => {
         assert.deepStrictEqual(getState().usage.requestInputTokens, {
           value: 49,
           stale: false,
-          charLength: 6149,
+          charLength: 6234,
         });
       });
 
@@ -535,7 +535,7 @@ describe("api", () => {
         assert.deepStrictEqual(getState().usage.requestInputTokens, {
           value: 17,
           stale: false,
-          charLength: 6141,
+          charLength: 6226,
         });
       });
 
@@ -570,7 +570,7 @@ describe("api", () => {
         assert.deepStrictEqual(getState().usage.requestInputTokens, {
           value: 55,
           stale: false,
-          charLength: 6143,
+          charLength: 6228,
         });
       });
 
@@ -595,7 +595,7 @@ describe("api", () => {
         assert.deepStrictEqual(getState().usage.requestInputTokens, {
           value: 17,
           stale: false,
-          charLength: 6106,
+          charLength: 6191,
         });
       });
 
@@ -619,7 +619,7 @@ describe("api", () => {
         assert.deepStrictEqual(getState().usage.requestInputTokens, {
           value: 54,
           stale: false,
-          charLength: 6106,
+          charLength: 6191,
         });
       });
     });
@@ -1101,9 +1101,9 @@ describe("api", () => {
           { role: "user", content: "current question" },
         ]);
         assert.deepStrictEqual(getState().usage.requestInputTokens, {
-          value: 27_025,
+          value: 27_053,
           stale: false,
-          charLength: 6094,
+          charLength: 6179,
         });
       });
 
@@ -1325,9 +1325,9 @@ describe("api", () => {
           { role: "user", content: "current question" },
         ]);
         assert.deepStrictEqual(getState().usage.requestInputTokens, {
-          value: 27_052,
+          value: 27_080,
           stale: false,
-          charLength: 6174,
+          charLength: 6259,
         });
         assert.strictEqual(withMcpTools > withoutMcpTools, true);
       });
@@ -1469,9 +1469,9 @@ describe("api", () => {
           { role: "user", content: "current question" },
         ]);
         assert.deepStrictEqual(getState().usage.requestInputTokens, {
-          value: 27_025,
+          value: 27_053,
           stale: false,
-          charLength: 6094,
+          charLength: 6179,
         });
         assert.deepStrictEqual(getState().usage.modelUsageForSession, {
           "claude-sonnet-4-20250514": [
@@ -1517,9 +1517,9 @@ describe("api", () => {
           { role: "user", content: "current question" },
         ]);
         assert.deepStrictEqual(getState().usage.requestInputTokens, {
-          value: 27_025,
+          value: 27_053,
           stale: false,
-          charLength: 6094,
+          charLength: 6179,
         });
       });
 
@@ -1587,7 +1587,7 @@ describe("api", () => {
         assert.deepStrictEqual(getState().usage.requestInputTokens, {
           value: 25,
           stale: false,
-          charLength: 6214,
+          charLength: 6299,
         });
         const compactionCall = calls[0];
         assert(compactionCall !== undefined);
@@ -1841,9 +1841,9 @@ describe("api", () => {
           { role: "user", content: "hi" },
         ]);
         assert.deepStrictEqual(getState().usage.requestInputTokens, {
-          value: 2_855,
+          value: 2_883,
           stale: false,
-          charLength: 6167,
+          charLength: 6252,
         });
       });
 
@@ -1901,9 +1901,9 @@ describe("api", () => {
           { role: "user", content: "hi" },
         ]);
         assert.deepStrictEqual(getState().usage.requestInputTokens, {
-          value: 3_040,
+          value: 3_068,
           stale: false,
-          charLength: 6171,
+          charLength: 6256,
         });
       });
     });

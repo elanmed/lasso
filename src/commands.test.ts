@@ -1126,9 +1126,9 @@ describe("input commands", () => {
       assert.deepStrictEqual(getState().conversation.summaries, []);
       assert.deepStrictEqual(getState().conversation.messages, []);
       assert.deepStrictEqual(getState().usage.requestInputTokens, {
-        value: 2011,
+        value: 2039,
         stale: true,
-        charLength: 6036,
+        charLength: 6121,
       });
       assert.deepStrictEqual(getWrites(), [
         `${GREY}Context cleared (0 tokens in session)${RESET}\n`,
@@ -1150,11 +1150,11 @@ describe("input commands", () => {
       printTokens();
       assert.deepStrictEqual(getWrites(), [
         "\n",
-        `${BLUE}Token count: 2,023 (1.582% of context window)${RESET}\n`,
+        `${BLUE}Token count: 2,051 (1.605% of context window)${RESET}\n`,
         `- Chat messages: 11
 - Context files: 3
 - Harness and MCP tools: 1,106
-- Base system prompt: 902
+- Base system prompt: 930
 - Skill descriptions: 1
 `,
         "\n",
@@ -1173,8 +1173,8 @@ describe("input commands", () => {
         `${BLUE}Token count: 1,496 (1.172% of context window)${RESET}\n`,
         `- Chat messages: 8
 - Context files: 2
-- Harness and MCP tools: 819
-- Base system prompt: 667
+- Harness and MCP tools: 807
+- Base system prompt: 679
 - Skill descriptions: 0
 `,
         "\n",
@@ -1187,11 +1187,11 @@ describe("input commands", () => {
       printTokens();
       assert.deepStrictEqual(getWrites(), [
         "\n",
-        `${BLUE}Token count: 2,023 (20.25% of context window)${RESET}\n`,
+        `${BLUE}Token count: 2,051 (20.54% of context window)${RESET}\n`,
         `- Chat messages: 11
 - Context files: 3
 - Harness and MCP tools: 1,106
-- Base system prompt: 902
+- Base system prompt: 930
 - Skill descriptions: 1
 `,
         "\n",
