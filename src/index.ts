@@ -58,7 +58,7 @@ async function main() {
     fencePrint("Output", {
       showSessionInfo: true,
     });
-    await executeBat(text);
+    executeBat(text);
     printNewline();
   }
 }

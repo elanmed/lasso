@@ -26,9 +26,6 @@ importers:
       ai:
         specifier: ^7.0.154
         version: 7.0.154(zod@4.6.7)
-      prettier:
-        specifier: ^3.9.10
-        version: 3.9.10
       turndown:
         specifier: ^7.2.4
         version: 7.2.4
@@ -60,6 +57,9 @@ importers:
       eslint-plugin-import-x:
         specifier: ^4.17.1
         version: 4.17.1(@typescript-eslint/utils@8.72.1(eslint@10.13.0)(typescript@6.0.3))(eslint@10.13.0)
+      prettier:
+        specifier: ^3.9.10
+        version: 3.9.10
       typescript:
         specifier: ^6.0.3
         version: 6.0.3

@@ -485,7 +485,7 @@ The new conversation summary targets 5,000 tokens and Lasso reserves up to 25% f
 
 ## Dependencies
 
-Runtime dependencies (10 total):
+Runtime dependencies (9 total):
 
 | Package                     | Purpose                           |
 | --------------------------- | --------------------------------- |
@@ -497,12 +497,12 @@ Runtime dependencies (10 total):
 | `@ai-sdk/mcp`               | MCP client and stdio transport    |
 | `zod`                       | Schema validation                 |
 | `turndown`                  | Convert fetched HTML to Markdown  |
-| `prettier`                  | Format Markdown output            |
 | `yaml`                      | Parse settings and skill metadata |
 
 - This project uses **pnpm v11** for package management, which helps [mitigate the risk of supply chain attacks](https://pnpm.io/supply-chain-security)
 - All tests are written with the Node.js native test runner and mocks i.e. no Jest
 - TypeScript is executed directly via `node` (no build step), keeping the toolchain minimal
+- `eslint` and `prettier` are dev-only; Markdown output is passed to `bat` unformatted
 
 ## Running in a container
 

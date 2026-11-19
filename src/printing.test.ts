@@ -15,7 +15,6 @@ import {
   getUnicodeChar,
   getTempFileName,
   executeBat,
-  formatMarkdown,
   execGitDiff,
   createFencePrint,
 } from "./printing.ts";
@@ -43,7 +42,6 @@ import {
   BOLD,
   BOLD_RESET,
   mockExecCalls,
-  makeInvalidString,
   mockSpawnSync,
 } from "./test-helpers.ts";
 import { processDeps, fsDeps } from "./deps.ts";
@@ -1036,32 +1034,6 @@ describe("terminal formatting", () => {
     setupTestContext();
   });
 
-  describe("formatMarkdown", () => {
-    it("formats markdown tables with aligned columns", async () => {
-      const unaligned = `|a|b|
-|-|-|
-|x|y|`;
-      const result = await formatMarkdown(unaligned);
-      assert.strictEqual(
-        result,
-        `| a   | b   |
-| --- | --- |
-| x   | y   |
-`,
-      );
-    });
-
-    it("returns original content and warns when formatting fails", async () => {
-      const getWrites = mockStdoutWrites();
-      const invalid = makeInvalidString();
-      const result = await formatMarkdown(invalid);
-      assert.equal(result, invalid);
-      assert.deepStrictEqual(getWrites(), [
-        `${RED}Outputting raw content, markdown formatting failed: Cannot read properties of null (reading 'length')${RESET}\n`,
-      ]);
-    });
-  });
-
   describe("executeBat", () => {
     beforeEach(() => {
       mock.restoreAll();
@@ -1070,18 +1042,18 @@ describe("terminal formatting", () => {
     });
 
     describe("uses the bat output", () => {
-      it("formats markdown and outputs the content through bat when available", async () => {
+      it("outputs the content through bat when available", () => {
         actions.content.setBatAvailable(true);
         mockSpawnSync({ echoInput: true });
 
         const getWrites = mockStdoutWrites();
 
-        await executeBat("# Hello\n");
+        executeBat("# Hello\n");
 
         assert.deepStrictEqual(getWrites(), ["# Hello\n\n"]);
       });
 
-      it("prints bat stdout when status is null", async () => {
+      it("prints bat stdout when status is null", () => {
         actions.content.setBatAvailable(true);
         mockSpawnSync({
           result: { status: null, stdout: "bat-rendered\n", stderr: "" },
@@ -1089,12 +1061,12 @@ describe("terminal formatting", () => {
 
         const getWrites = mockStdoutWrites();
 
-        await executeBat("test content\n");
+        executeBat("test content\n");
 
         assert.deepStrictEqual(getWrites(), ["bat-rendered\n\n"]);
       });
 
-      it("prints bat stdout when stderr is empty", async () => {
+      it("prints bat stdout when stderr is empty", () => {
         actions.content.setBatAvailable(true);
         mockSpawnSync({
           result: { status: 0, stdout: "bat-rendered\n", stderr: "" },
@@ -1102,30 +1074,30 @@ describe("terminal formatting", () => {
 
         const getWrites = mockStdoutWrites();
 
-        await executeBat("test content\n");
+        executeBat("test content\n");
 
         assert.deepStrictEqual(getWrites(), ["bat-rendered\n\n"]);
       });
     });
 
     describe("falls back to plain text", () => {
-      it("falls back to plain text when bat is not available", async () => {
+      it("falls back to plain text when bat is not available", () => {
         actions.content.setBatAvailable(false);
 
         const getWrites = mockStdoutWrites();
 
-        await executeBat("test content\n");
+        executeBat("test content\n");
 
         assert.deepStrictEqual(getWrites(), ["test content\n\n"]);
       });
 
-      it("falls back to plain text when bat spawn fails", async () => {
+      it("falls back to plain text when bat spawn fails", () => {
         actions.content.setBatAvailable(true);
         mockSpawnSync({ error: new Error("spawn failed") });
 
         const getWrites = mockStdoutWrites();
 
-        await executeBat("test content\n");
+        executeBat("test content\n");
 
         assert.deepStrictEqual(getWrites(), [
           `${RED}Falling back to plain text rendering, an error occurred when spawning \`bat\`: spawn failed${RESET}\n`,
@@ -1133,7 +1105,7 @@ describe("terminal formatting", () => {
         ]);
       });
 
-      it("falls back to plain text when bat exits with non-zero status", async () => {
+      it("falls back to plain text when bat exits with non-zero status", () => {
         actions.content.setBatAvailable(true);
         mockSpawnSync({
           result: { status: 1, stdout: "bat-rendered\n", stderr: "bat error" },
@@ -1141,7 +1113,7 @@ describe("terminal formatting", () => {
 
         const getWrites = mockStdoutWrites();
 
-        await executeBat("test content\n");
+        executeBat("test content\n");
 
         assert.deepStrictEqual(getWrites(), [
           `${RED}Falling back to plain text rendering, an error occurred when spawning \`bat\`: \`bat\` returned code 1${RESET}\n`,
@@ -1149,7 +1121,7 @@ describe("terminal formatting", () => {
         ]);
       });
 
-      it("falls back to plain text when bat writes stderr", async () => {
+      it("falls back to plain text when bat writes stderr", () => {
         actions.content.setBatAvailable(true);
         mockSpawnSync({
           result: {
@@ -1161,7 +1133,7 @@ describe("terminal formatting", () => {
 
         const getWrites = mockStdoutWrites();
 
-        await executeBat("test content\n");
+        executeBat("test content\n");
 
         assert.deepStrictEqual(getWrites(), [
           `${RED}Falling back to plain text rendering, an error occurred when spawning \`bat\`: bat warning${RESET}\n`,

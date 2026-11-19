@@ -1,7 +1,6 @@
 import os from "node:os";
 import { join } from "node:path";
 import { stdin } from "node:process";
-import { format } from "prettier";
 import {
   assertAtBuildtime,
   tryCatchAsync,
@@ -384,19 +383,7 @@ export async function getTempFileName(args?: GetTempFileNameArgs) {
   return tempFile;
 }
 
-export async function formatMarkdown(content: string): Promise<string> {
-  const formatResult = await tryCatchAsync(
-    format(content, { parser: "markdown" }),
-  );
-  if (formatResult.ok) return formatResult.value;
-  print.error(
-    `Outputting raw content, markdown formatting failed: ${getMessageFromError(formatResult.error)}`,
-  );
-  return content;
-}
-
-export async function executeBat(content: string) {
-  content = await formatMarkdown(content);
+export function executeBat(content: string) {
   content = normalizeNewline(content);
   if (!getState().content.batAvailable) {
     return print.plain(content);

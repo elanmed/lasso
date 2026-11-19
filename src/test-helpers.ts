@@ -909,10 +909,6 @@ export function makeFakeMcpToolSet(tools: Record<string, unknown>) {
   return tools as unknown as MCPToolSet;
 }
 
-export function makeInvalidString(): string {
-  return null as unknown as string;
-}
-
 export function mockGitLsFilesRejection() {
   mock.method(
     fsDeps,

@@ -47,7 +47,6 @@ import {
   streamingSupportedWithSpacing,
   wrapToOpenNonBlockingProcess,
   getTempFileName,
-  formatMarkdown,
   markdownBatFlags,
   baseBatFlags,
   execGitDiff,
@@ -629,11 +628,9 @@ export async function pageLastResponse({ isTyped = false }: SpacingOpts = {}) {
     return;
   }
 
-  const formattedContentStr = await formatMarkdown(contentStr);
-
   const initialContentStr = `# [lasso] Last response ${formatTokenCountAside(contentStr)}
 
-${formattedContentStr}`;
+${contentStr}`;
 
   await openWithPager({
     initialContentStr,
