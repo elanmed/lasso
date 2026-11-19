@@ -436,7 +436,10 @@ export function truncateLines(
   const ellipsis = getUnicodeChar("…");
 
   if (joined.length > maxChars) {
-    return joined.substring(0, maxChars - 1).concat(ellipsis);
+    return joined
+      .substring(0, maxChars - 1)
+      .trimEnd()
+      .concat(ellipsis);
   }
 
   if (lines.length > maxLines) {

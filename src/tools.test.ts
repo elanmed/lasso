@@ -445,6 +445,14 @@ describe("tools", () => {
       ]);
     });
 
+    it("trims whitespace left over from the char cut before the ellipsis", () => {
+      const getWrites = mockStdoutWrites();
+      toolPrint("bash", `${"a".repeat(390)}    b`);
+      assert.deepStrictEqual(getWrites(), [
+        `${BLUE}⚙ ${BOLD}bash${BOLD_RESET}: ${GREY}${"a".repeat(390)}…${RESET}${RESET}\n`,
+      ]);
+    });
+
     it("uses the ascii ellipsis when asciiOnly is on", () => {
       actions.config.setAsciiOnly(true);
       const getWrites = mockStdoutWrites();

@@ -11,6 +11,7 @@ import {
   successWithSpacing,
   errorWithSpacing,
   truncate,
+  truncateLines,
   getUnicodeChar,
   getTempFileName,
   executeBat,
@@ -469,6 +470,54 @@ describe("text", () => {
         assert.equal(truncate("a".repeat(MAX_LEN + 10)), `${"a".repeat(99)}~`);
         assert.equal(truncate("short\nsecond line"), "short~");
       });
+    });
+  });
+
+  describe("truncateLines", () => {
+    const LIMITS = { maxLines: 4, maxChars: 100 };
+
+    it("returns the trimmed lines unchanged when within both caps", () => {
+      assert.equal(truncateLines("  one\ntwo  ", LIMITS), "one\ntwo");
+    });
+
+    it("filters out empty lines before joining", () => {
+      assert.equal(truncateLines("one\n\n\ntwo", LIMITS), "one\ntwo");
+    });
+
+    it("appends an ellipsis when the line cap is exceeded", () => {
+      assert.equal(
+        truncateLines("one\ntwo\nthree", { maxLines: 2, maxChars: 100 }),
+        "one\ntwo…",
+      );
+    });
+
+    it("truncates at the char cap and appends an ellipsis", () => {
+      assert.equal(
+        truncateLines("a".repeat(10), { maxLines: 1, maxChars: 5 }),
+        "aaaa…",
+      );
+    });
+
+    it("trims whitespace left over from the char cut before the ellipsis", () => {
+      assert.equal(
+        truncateLines("ab  cd", { maxLines: 1, maxChars: 4 }),
+        "ab…",
+      );
+    });
+
+    it("prefers the char cap when both caps are exceeded", () => {
+      assert.equal(
+        truncateLines(`one two\nthree\nfour`, { maxLines: 1, maxChars: 5 }),
+        "one…",
+      );
+    });
+
+    it("uses the ascii ellipsis when asciiOnly is on", () => {
+      actions.config.setAsciiOnly(true);
+      assert.equal(
+        truncateLines("a".repeat(10), { maxLines: 1, maxChars: 5 }),
+        "aaaa~",
+      );
     });
   });
 
