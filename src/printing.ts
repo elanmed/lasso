@@ -33,7 +33,7 @@ export function getUnicodeChar(char: string) {
   return char;
 }
 
-export function truncate(str: string, padding = 0) {
+export function truncateExactLine(str: string, padding = 0) {
   const maxLen = Math.max(1, getMaxColLength() - padding);
   const trimmedStr = str.trim();
   const newlineIdx = trimmedStr.indexOf("\n");
@@ -267,7 +267,7 @@ export function getFenceSessionLine(
   let accumulatedCol = fenceCharsLen;
   let sessionInfo = "";
 
-  const fittedHeader = truncate(text, fenceCharsLen);
+  const fittedHeader = truncateExactLine(text, fenceCharsLen);
 
   sessionInfo += bold(fittedHeader);
   accumulatedCol += fittedHeader.length;
@@ -295,7 +295,7 @@ export function createFencePrint({
     const line = (() => {
       const fenceCharsLen = 6;
       if (!showSessionInfo) {
-        return wrapInFence(bold(truncate(text, fenceCharsLen)));
+        return wrapInFence(bold(truncateExactLine(text, fenceCharsLen)));
       }
       return wrapInFence(getFenceSessionLine(text, sessionInfoSegments));
     })();

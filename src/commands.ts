@@ -38,7 +38,7 @@ import {
   getPrettyTokenUsage,
 } from "./usage.ts";
 import {
-  truncate,
+  truncateExactLine,
   print,
   printNewline,
   successWithSpacing,
@@ -1338,7 +1338,7 @@ function abortRlQuestionForEditorIfActive(editorContent: string) {
     const rl = clearRlLine();
     assertAtBuildtime(rl !== null);
 
-    const truncatedFirstLine = truncate(
+    const truncatedFirstLine = truncateExactLine(
       editorContent,
       getState().config.promptPrefix.length,
     );

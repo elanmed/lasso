@@ -10,7 +10,7 @@ import {
   printNewline,
   successWithSpacing,
   errorWithSpacing,
-  truncate,
+  truncateExactLine,
   truncateLines,
   getUnicodeChar,
   getTempFileName,
@@ -427,7 +427,7 @@ describe("text", () => {
     setupTestContext();
   });
 
-  describe("truncate", () => {
+  describe("truncateExactLine", () => {
     const MAX_LEN = 100;
 
     beforeEach(() => {
@@ -436,42 +436,48 @@ describe("text", () => {
 
     describe("returns unchanged", () => {
       it("returns empty string unchanged", () => {
-        assert.equal(truncate(""), "");
+        assert.equal(truncateExactLine(""), "");
       });
 
       it("returns strings within the max length unchanged", () => {
-        assert.equal(truncate("a".repeat(MAX_LEN)), "a".repeat(MAX_LEN));
+        assert.equal(
+          truncateExactLine("a".repeat(MAX_LEN)),
+          "a".repeat(MAX_LEN),
+        );
       });
 
       it("trims whitespace before deciding whether truncation is needed", () => {
-        assert.equal(truncate("abc  ", 96), "abc");
-        assert.equal(truncate("abc\n"), "abc");
+        assert.equal(truncateExactLine("abc  ", 96), "abc");
+        assert.equal(truncateExactLine("abc\n"), "abc");
       });
     });
 
     describe("truncates with an ellipsis", () => {
       it("truncates longer strings to the max length with an ellipsis", () => {
         assert.equal(
-          truncate("a".repeat(MAX_LEN + 10)),
+          truncateExactLine("a".repeat(MAX_LEN + 10)),
           `${"a".repeat(MAX_LEN - 1)}…`,
         );
       });
 
       it("returns the first line with an ellipsis for multiline input", () => {
-        assert.equal(truncate("short\nsecond line"), "short…");
+        assert.equal(truncateExactLine("short\nsecond line"), "short…");
       });
 
       it("truncates a long first line to the max length with an ellipsis", () => {
         assert.equal(
-          truncate(`${"a".repeat(MAX_LEN + 10)}\nrest`),
+          truncateExactLine(`${"a".repeat(MAX_LEN + 10)}\nrest`),
           `${"a".repeat(MAX_LEN - 1)}…`,
         );
       });
 
       it("truncates with a three-char ellipsis when asciiOnly is set", () => {
         actions.config.setAsciiOnly(true);
-        assert.equal(truncate("a".repeat(MAX_LEN + 10)), `${"a".repeat(99)}~`);
-        assert.equal(truncate("short\nsecond line"), "short~");
+        assert.equal(
+          truncateExactLine("a".repeat(MAX_LEN + 10)),
+          `${"a".repeat(99)}~`,
+        );
+        assert.equal(truncateExactLine("short\nsecond line"), "short~");
       });
     });
   });
@@ -526,7 +532,7 @@ describe("text", () => {
 
   it("falls back to 80 columns when stdout columns are undefined", () => {
     mock.method(processDeps.stdout, "getColumns", () => undefined);
-    assert.equal(truncate("a".repeat(100)), `${"a".repeat(79)}…`);
+    assert.equal(truncateExactLine("a".repeat(100)), `${"a".repeat(79)}…`);
   });
 
   describe("getUnicodeChar", () => {
