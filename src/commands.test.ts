@@ -880,6 +880,25 @@ describe("input commands", () => {
         assert.strictEqual(result, "  hello world modified\n");
       });
 
+      it("preserves clipboard newlines in the initial editor content", async () => {
+        mockClipboardPaste("first\n\nsecond\n\n");
+        let initialEditorContent = "";
+        mockEditorSpawn(() => {
+          initialEditorContent =
+            testFs._files.get("/tmp/lasso-test-uuid.txt") ?? "";
+          testFs.writeFile("/tmp/lasso-test-uuid.txt", "edited");
+        });
+        await spawnAndReadEditorContent({ includeClipboardSuffix: true });
+        assert.equal(
+          initialEditorContent,
+          `first
+
+second
+
+`,
+        );
+      });
+
       it("returns content when includeClipboardSuffix is true and editor saves unchanged content", async () => {
         actions.terminal.setRl(makeFakeRl({ line: "query" }));
         mockClipboardPaste("clip");

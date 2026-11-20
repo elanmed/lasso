@@ -242,7 +242,7 @@ async function getEditorInitialContent(opts: {
 
     const pasteResult = await tryCatchAsync(childProcessDeps.exec(pasteCmd));
     if (pasteResult.ok) {
-      clipboardContent = normalizeNewline(pasteResult.value.stdout);
+      clipboardContent = pasteResult.value.stdout;
     } else {
       clipboardContent = `[Error executing ${pasteCmd}: ${getMessageFromError(pasteResult.error)}]`;
     }
