@@ -4471,8 +4471,7 @@ Analyze carefully.`,
 
 ## Available skills
 
-- **test-skill** _(4-4 tokens)_: A test skill
-/skills/test-skill
+- test-skill _(4-4 tokens)_
 
 `,
         );

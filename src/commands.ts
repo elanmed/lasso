@@ -137,17 +137,6 @@ const getAvailableSkills = () =>
     (skill) => !skill.name.startsWith(contextFileSkillNamePrefix),
   );
 
-export function getAvailableSkillsStr() {
-  return getAvailableSkills()
-    .map(
-      (
-        skill,
-      ) => `- **${skill.name}** ${formatTokenRangeAside(skill.description, skill.content)}: ${skill.description}
-  ${skill.dir}`,
-    )
-    .join("\n");
-}
-
 export function getCustomSlashCommandsStr() {
   const contents = getState()
     .content.slashCommands.map(
@@ -379,7 +368,12 @@ ${getAvailableCommandsStr({ includeTokenCount: true })}
 
 ## Available skills
 
-${getAvailableSkillsStr()}`;
+${getAvailableSkills()
+  .map(
+    (skill) =>
+      `- ${skill.name} ${formatTokenRangeAside(skill.description, skill.content)}`,
+  )
+  .join("\n")}`;
 
   await openWithPager({
     initialContentStr,
@@ -408,7 +402,14 @@ export async function pageSkills({ isTyped = false }: SpacingOpts = {}) {
 
   const initialContentStr = `# [lasso] Available skills:
 
-${getAvailableSkillsStr()}`;
+${getAvailableSkills()
+  .map(
+    (
+      skill,
+    ) => `- **${skill.name}** ${formatTokenRangeAside(skill.description, skill.content)}: ${skill.description}
+  ${skill.dir}`,
+  )
+  .join("\n")}`;
 
   await openWithPager({ contentType: "markdown", initialContentStr });
 }
