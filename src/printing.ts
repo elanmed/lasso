@@ -35,23 +35,30 @@ export function getUnicodeChar(char: string) {
 
 export function truncate(str: string, padding = 0) {
   const maxLen = Math.max(1, getMaxColLength() - padding);
-  const newlineIdx = str.indexOf("\n");
+  const trimmedStr = str.trim();
+  const newlineIdx = trimmedStr.indexOf("\n");
   const ellipsis = getUnicodeChar("…");
 
   const firstLine = (() => {
-    if (newlineIdx === -1) return str;
-    return str.substring(0, newlineIdx);
+    if (newlineIdx === -1) return trimmedStr;
+    return trimmedStr.substring(0, newlineIdx).trim();
   })();
 
   if (newlineIdx !== -1) {
-    return firstLine.substring(0, maxLen - 1).concat(ellipsis);
+    return firstLine
+      .substring(0, maxLen - 1)
+      .trimEnd()
+      .concat(ellipsis);
   }
 
-  if (str.length <= maxLen) {
+  if (firstLine.length <= maxLen) {
     return firstLine;
   }
 
-  return firstLine.substring(0, maxLen - 1).concat(ellipsis);
+  return firstLine
+    .substring(0, maxLen - 1)
+    .trimEnd()
+    .concat(ellipsis);
 }
 
 interface AppendNewlineOpts {

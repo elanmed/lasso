@@ -2926,6 +2926,11 @@ editor input
         );
         await harness.flush();
         assert.deepStrictEqual(prompts, []);
+        assert.deepStrictEqual(harness.writes, [
+          { chunk: null, key: { ctrl: true, name: "e" } },
+          { chunk: null, key: { ctrl: true, name: "u" } },
+          { chunk: "edited", key: undefined },
+        ]);
         assert.strictEqual(getState().terminal.editorInputValue, "  edited  ");
         assert.strictEqual(
           getState().terminal.isNonBlockingProcessOngoing,

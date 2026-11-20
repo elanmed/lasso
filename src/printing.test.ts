@@ -442,6 +442,11 @@ describe("text", () => {
       it("returns strings within the max length unchanged", () => {
         assert.equal(truncate("a".repeat(MAX_LEN)), "a".repeat(MAX_LEN));
       });
+
+      it("trims whitespace before deciding whether truncation is needed", () => {
+        assert.equal(truncate("abc  ", 96), "abc");
+        assert.equal(truncate("abc\n"), "abc");
+      });
     });
 
     describe("truncates with an ellipsis", () => {
