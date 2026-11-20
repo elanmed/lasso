@@ -81,13 +81,13 @@ describe("print", () => {
       assert.deepStrictEqual(getWrites(), [`${BLUE}ready${RESET}\n`]);
     });
 
-    it("uses the warning symbol for errors and warnings", () => {
+    it("uses distinct symbols for errors and warnings", () => {
       const getWrites = mockStdoutWrites();
       print.warning("caution");
       print.error("failure");
       assert.deepStrictEqual(getWrites(), [
-        `${YELLOW}⚠ caution${RESET}\n`,
-        `${RED}⚠ failure${RESET}\n`,
+        `${YELLOW}▲ caution${RESET}\n`,
+        `${RED}‼ failure${RESET}\n`,
       ]);
     });
     it("uses single-character warning and error markers in ASCII mode", () => {
@@ -583,7 +583,8 @@ describe("text", () => {
     it("returns the char unchanged by default", () => {
       assert.equal(getUnicodeChar("…"), "…");
       assert.equal(getUnicodeChar("┊"), "┊");
-      assert.equal(getUnicodeChar("⚠"), "⚠");
+      assert.equal(getUnicodeChar("▲"), "▲");
+      assert.equal(getUnicodeChar("‼"), "‼");
       assert.equal(getUnicodeChar("⚗"), "⚗");
     });
 
@@ -592,7 +593,8 @@ describe("text", () => {
       assert.equal(getUnicodeChar("…"), "~");
       assert.equal(getUnicodeChar("┊"), "|");
       assert.equal(getUnicodeChar("━"), "=");
-      assert.equal(getUnicodeChar("⚠"), "!");
+      assert.equal(getUnicodeChar("▲"), "!");
+      assert.equal(getUnicodeChar("‼"), "!");
       assert.equal(getUnicodeChar("⚗"), "*");
     });
 
@@ -710,7 +712,7 @@ describe("temp-file", () => {
       });
       assert.equal(result, null);
       assert.deepStrictEqual(writes(), [
-        `${RED}⚠ Failed to create a temp file with content from path /source/file.txt. Error: EACCES${RESET}\n`,
+        `${RED}‼ Failed to create a temp file with content from path /source/file.txt. Error: EACCES${RESET}\n`,
       ]);
     });
 
@@ -723,7 +725,7 @@ describe("temp-file", () => {
       });
       assert.equal(result, null);
       assert.deepStrictEqual(writes(), [
-        `${RED}⚠ Failed to read the content from path /source/file.txt to prepopulate a temp file. Error: EIO${RESET}\n`,
+        `${RED}‼ Failed to read the content from path /source/file.txt to prepopulate a temp file. Error: EIO${RESET}\n`,
       ]);
     });
 
@@ -738,7 +740,7 @@ describe("temp-file", () => {
       });
       assert.equal(result, null);
       assert.deepStrictEqual(writes(), [
-        `${RED}⚠ Failed to write a temp file with the content from path /source/file.txt: ENOSPC${RESET}\n`,
+        `${RED}‼ Failed to write a temp file with the content from path /source/file.txt: ENOSPC${RESET}\n`,
       ]);
     });
 
@@ -748,7 +750,7 @@ describe("temp-file", () => {
       const result = await getTempFileName({ initialContentStr: "content" });
       assert.equal(result, null);
       assert.deepStrictEqual(writes(), [
-        `${RED}⚠ Failed to write to a temp file. Error: EIO${RESET}\n`,
+        `${RED}‼ Failed to write to a temp file. Error: EIO${RESET}\n`,
       ]);
     });
 
@@ -760,7 +762,7 @@ describe("temp-file", () => {
       });
       assert.equal(result, null);
       assert.deepStrictEqual(writes(), [
-        `${RED}⚠ Failed to write an empty temp file. Error: EIO${RESET}\n`,
+        `${RED}‼ Failed to write an empty temp file. Error: EIO${RESET}\n`,
       ]);
     });
 
@@ -770,7 +772,7 @@ describe("temp-file", () => {
       const result = await getTempFileName();
       assert.equal(result, null);
       assert.deepStrictEqual(writes(), [
-        `${RED}⚠ Failed to create an empty temp file. Error: EIO${RESET}\n`,
+        `${RED}‼ Failed to create an empty temp file. Error: EIO${RESET}\n`,
       ]);
     });
   });
@@ -1159,7 +1161,7 @@ describe("terminal formatting", () => {
         executeBat("test content\n");
 
         assert.deepStrictEqual(getWrites(), [
-          `${RED}⚠ Falling back to plain text rendering, an error occurred when spawning \`bat\`: spawn failed${RESET}\n`,
+          `${RED}‼ Falling back to plain text rendering, an error occurred when spawning \`bat\`: spawn failed${RESET}\n`,
           "test content\n\n",
         ]);
       });
@@ -1175,7 +1177,7 @@ describe("terminal formatting", () => {
         executeBat("test content\n");
 
         assert.deepStrictEqual(getWrites(), [
-          `${RED}⚠ Falling back to plain text rendering, an error occurred when spawning \`bat\`: \`bat\` returned code 1${RESET}\n`,
+          `${RED}‼ Falling back to plain text rendering, an error occurred when spawning \`bat\`: \`bat\` returned code 1${RESET}\n`,
           "test content\n\n",
         ]);
       });
@@ -1195,7 +1197,7 @@ describe("terminal formatting", () => {
         executeBat("test content\n");
 
         assert.deepStrictEqual(getWrites(), [
-          `${RED}⚠ Falling back to plain text rendering, an error occurred when spawning \`bat\`: bat warning${RESET}\n`,
+          `${RED}‼ Falling back to plain text rendering, an error occurred when spawning \`bat\`: bat warning${RESET}\n`,
           "test content\n\n",
         ]);
       });

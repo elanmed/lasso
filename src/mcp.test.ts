@@ -321,7 +321,7 @@ describe("printMcps", () => {
       printMcps();
       assert.deepStrictEqual(getWrites(), [
         "\n",
-        `${YELLOW}⚠ No available MCP servers${RESET}\n`,
+        `${YELLOW}▲ No available MCP servers${RESET}\n`,
         "\n",
       ]);
       assert.strictEqual(testFs._files.has("/tmp/lasso-test-uuid.txt"), false);
@@ -331,7 +331,7 @@ describe("printMcps", () => {
       printMcps();
       assert.deepStrictEqual(getWrites(), [
         "\n",
-        `${YELLOW}⚠ No available MCP servers${RESET}\n`,
+        `${YELLOW}▲ No available MCP servers${RESET}\n`,
         "\n",
       ]);
     });
@@ -341,7 +341,7 @@ describe("printMcps", () => {
       printMcps();
       assert.deepStrictEqual(getWrites(), [
         "\n",
-        `${YELLOW}⚠ No available MCP servers${RESET}\n`,
+        `${YELLOW}▲ No available MCP servers${RESET}\n`,
         "\n",
       ]);
     });

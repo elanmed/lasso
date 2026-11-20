@@ -26,7 +26,8 @@ export function getUnicodeChar(char: string) {
     ["┊"]: "|",
     ["…"]: "~",
     ["━"]: "=",
-    ["⚠"]: "!",
+    ["▲"]: "!",
+    ["‼"]: "!",
     ["⚗"]: "*",
   };
   assertAtRuntime(char in map);
@@ -72,7 +73,7 @@ export const print = {
   doing: (text: string, opts: AppendNewlineOpts = {}) =>
     colorPrint(`${getUnicodeChar("⚗")} ${text}`, "purple", opts),
   error: (text: string, opts: AppendNewlineOpts = {}) =>
-    colorPrint(`${getUnicodeChar("⚠")} ${text}`, "red", opts),
+    colorPrint(`${getUnicodeChar("‼")} ${text}`, "red", opts),
   info: (text: string, opts: AppendNewlineOpts = {}) =>
     colorPrint(text, "blue", opts),
   tool: (text: string, opts: AppendNewlineOpts = {}) =>
@@ -80,7 +81,7 @@ export const print = {
   infoSubtle: (text: string, opts: AppendNewlineOpts = {}) =>
     colorPrint(text, "grey", opts),
   warning: (text: string, opts: AppendNewlineOpts = {}) =>
-    colorPrint(`${getUnicodeChar("⚠")} ${text}`, "yellow", opts),
+    colorPrint(`${getUnicodeChar("▲")} ${text}`, "yellow", opts),
   plain: (text: string, opts: AppendNewlineOpts = {}) =>
     colorPrint(text, "none", opts),
 };

@@ -329,7 +329,7 @@ describe("printLargeContextOverheadWarning", () => {
     const getWrites = mockStdoutWrites();
     printLargeContextOverheadWarning();
     assert.deepStrictEqual(getWrites(), [
-      `${YELLOW}⚠ The current set of context, skills, and tools is 72.04% of the 100,000 token context window!\n\nLasso reserves 25% of the context window for compacted summaries with the assumption that at most 70% of the context window will be used for input overhead. As is, the input overhead is large enough to break this assumption and, along with any user messages, may breach the llm's context window and cause API calls to be rejected. Consider converting some of your context to skills and minimizing MCP servers.${RESET}\n`,
+      `${YELLOW}▲ The current set of context, skills, and tools is 72.04% of the 100,000 token context window!\n\nLasso reserves 25% of the context window for compacted summaries with the assumption that at most 70% of the context window will be used for input overhead. As is, the input overhead is large enough to break this assumption and, along with any user messages, may breach the llm's context window and cause API calls to be rejected. Consider converting some of your context to skills and minimizing MCP servers.${RESET}\n`,
     ]);
   });
 });

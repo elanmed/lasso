@@ -1460,7 +1460,7 @@ describe("createToolCallDiffer", () => {
       await differ.diffAndCleanup("call-1", ["/test/file.txt"]);
 
       assert.deepStrictEqual(writes(), [
-        `${RED}⚠ Failed to write a temp file with the content from path /test/file.txt: write failed${RESET}\n`,
+        `${RED}‼ Failed to write a temp file with the content from path /test/file.txt: write failed${RESET}\n`,
       ]);
       assert.deepStrictEqual(getState().conversation.toolEditDiffs, []);
     });
@@ -1716,7 +1716,7 @@ describe("diffAndCleanup error and empty output", () => {
       await differ.setTempFiles("call-1", ["/test/file.txt"]);
       await differ.diffAndCleanup("call-1", ["/test/file.txt"]);
       assert.deepStrictEqual(getWrites(), [
-        `${RED}⚠ An error occurred when getting the diff for /test/file.txt: fatal${RESET}\n`,
+        `${RED}‼ An error occurred when getting the diff for /test/file.txt: fatal${RESET}\n`,
       ]);
       assert.deepStrictEqual(getState().conversation.toolEditDiffs, []);
       assert.strictEqual(testFs._files.has("/tmp/lasso-test-uuid.txt"), false);
@@ -1735,7 +1735,7 @@ describe("diffAndCleanup error and empty output", () => {
       await differ.diffAndCleanup("call-1", ["/test/file.txt"]);
 
       assert.deepStrictEqual(writes(), [
-        `${RED}⚠ Failed to write a temp file with the content from path /test/file.txt: write failed${RESET}\n`,
+        `${RED}‼ Failed to write a temp file with the content from path /test/file.txt: write failed${RESET}\n`,
       ]);
       assert.deepStrictEqual(getState().conversation.toolEditDiffs, []);
     });
