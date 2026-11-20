@@ -4295,7 +4295,7 @@ hello
         const result = await resolveSlashCommand("/custom");
         assert.strictEqual(result, "custom command content");
         assert.deepStrictEqual(getWrites(), [
-          `${PURPLE}${BOLD}Executing slash command${BOLD_RESET}: ${GREY}custom${RESET}${RESET}\n`,
+          `${PURPLE}${BOLD}Executing command${BOLD_RESET}: /${GREY}custom${RESET}${RESET}\n`,
         ]);
       });
 
@@ -4318,7 +4318,7 @@ hello
         const result = await resolveSlashCommand("/analyze");
         assert.strictEqual(result, "custom command content");
         assert.deepStrictEqual(getWrites(), [
-          `${PURPLE}${BOLD}Executing slash command${BOLD_RESET}: ${GREY}analyze${RESET}${RESET}\n`,
+          `${PURPLE}${BOLD}Executing command${BOLD_RESET}: /${GREY}analyze${RESET}${RESET}\n`,
         ]);
       });
 
@@ -4388,7 +4388,7 @@ custom command content`,
         const result = await resolveSlashCommand("/analyze");
         assert.strictEqual(result, "Analyze carefully.");
         assert.deepStrictEqual(getWrites(), [
-          `${PURPLE}${BOLD}Executing skill${BOLD_RESET}: ${GREY}analyze${RESET}${RESET}\n`,
+          `${PURPLE}${BOLD}Executing skill${BOLD_RESET}: /${GREY}analyze${RESET}${RESET}\n`,
         ]);
       });
 

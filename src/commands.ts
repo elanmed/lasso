@@ -1203,7 +1203,7 @@ function resolveCustomSlashCommand(commandStr: string): SlashCommandOutcome {
   );
   if (matchedCommand !== undefined) {
     print.info(
-      `${bold("Executing slash command")}: ${wrapInColor(command, "grey")}`,
+      `${bold("Executing command")}: /${wrapInColor(command, "grey")}`,
     );
     return {
       handled: true,
@@ -1218,7 +1218,7 @@ function resolveCustomSlashCommand(commandStr: string): SlashCommandOutcome {
     ({ name }) => name === command,
   );
   if (matchedSkill !== undefined) {
-    print.info(`${bold("Executing skill")}: ${wrapInColor(command, "grey")}`);
+    print.info(`${bold("Executing skill")}: /${wrapInColor(command, "grey")}`);
     return {
       handled: true,
       inputFromCommand: getSkillInput({
