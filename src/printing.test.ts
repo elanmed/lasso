@@ -75,10 +75,10 @@ describe("print", () => {
       assert.deepStrictEqual(getWrites(), [`${PURPLE}⚗ working${RESET}\n`]);
     });
 
-    it("prints info in blue", () => {
+    it("prints info in blue without a prefix", () => {
       const getWrites = mockStdoutWrites();
       print.info("ready");
-      assert.deepStrictEqual(getWrites(), [`${BLUE}ⓘ ready${RESET}\n`]);
+      assert.deepStrictEqual(getWrites(), [`${BLUE}ready${RESET}\n`]);
     });
 
     it("uses the warning symbol for errors and warnings", () => {
@@ -99,7 +99,7 @@ describe("print", () => {
       print.error("failure");
       assert.deepStrictEqual(getWrites(), [
         `${PURPLE}* working${RESET}\n`,
-        `${BLUE}i ready${RESET}\n`,
+        `${BLUE}ready${RESET}\n`,
         `${YELLOW}! caution${RESET}\n`,
         `${RED}! failure${RESET}\n`,
       ]);
@@ -206,14 +206,14 @@ describe("print", () => {
       const getWrites = mockStdoutWrites();
       logger.start("Reading context files: ");
       assert.deepStrictEqual(getWrites(), [
-        `${BLUE}ⓘ Reading context files: ${RESET}`,
+        `${BLUE}Reading context files: ${RESET}`,
       ]);
       mock.method(process.hrtime, "bigint", () => BigInt(1_234_567_890));
 
       logger.end();
 
       assert.deepStrictEqual(getWrites(), [
-        `${BLUE}ⓘ Reading context files: ${RESET}`,
+        `${BLUE}Reading context files: ${RESET}`,
         `${GREEN}234.567ms${RESET}\n`,
       ]);
     });
@@ -235,9 +235,9 @@ describe("print", () => {
       logger.end();
 
       assert.deepStrictEqual(getWrites(), [
-        `${BLUE}ⓘ a: ${RESET}`,
+        `${BLUE}a: ${RESET}`,
         `${GREEN}0.0ms${RESET}\n`,
-        `${BLUE}ⓘ a: ${RESET}`,
+        `${BLUE}a: ${RESET}`,
         `${RED}1s 0.0ms${RESET}\n`,
       ]);
     });
@@ -277,8 +277,8 @@ describe("print", () => {
       logger.printAllLabels();
 
       assert.deepStrictEqual(getWrites(), [
-        `${BLUE}ⓘ Starting a: ${RESET}\n`,
-        `${BLUE}ⓘ Starting b: ${RESET}\n`,
+        `${BLUE}Starting a: ${RESET}\n`,
+        `${BLUE}Starting b: ${RESET}\n`,
       ]);
     });
 
@@ -302,14 +302,14 @@ describe("print", () => {
       logger.end("b");
 
       assert.deepStrictEqual(getWrites(), [
-        `${BLUE}ⓘ Starting a: ${RESET}\n`,
-        `${BLUE}ⓘ Starting b: ${RESET}\n`,
+        `${BLUE}Starting a: ${RESET}\n`,
+        `${BLUE}Starting b: ${RESET}\n`,
         `${UP_2}${CLEAR_LINE}${CR}`,
-        `${BLUE}ⓘ Starting a: ${RESET}`,
+        `${BLUE}Starting a: ${RESET}`,
         `${GREEN}234.567ms${RESET}`,
         `${DOWN_2}${CR}`,
         `${UP_1}${CLEAR_LINE}${CR}`,
-        `${BLUE}ⓘ Starting b: ${RESET}`,
+        `${BLUE}Starting b: ${RESET}`,
         `${RED}1s 0.0ms${RESET}`,
         `${DOWN_1}${CR}`,
       ]);
@@ -456,7 +456,7 @@ describe("print", () => {
       const getWrites = mockStdoutWrites();
       printSessionStartDate();
       assert.deepStrictEqual(getWrites(), [
-        `${BLUE}ⓘ Resume this session with /resume 42000${RESET}\n`,
+        `${BLUE}Resume this session with /resume 42000${RESET}\n`,
       ]);
     });
   });
@@ -585,7 +585,6 @@ describe("text", () => {
       assert.equal(getUnicodeChar("┊"), "┊");
       assert.equal(getUnicodeChar("⚠"), "⚠");
       assert.equal(getUnicodeChar("⚗"), "⚗");
-      assert.equal(getUnicodeChar("ⓘ"), "ⓘ");
     });
 
     it("returns the ascii replacement when asciiOnly is on", () => {
@@ -595,7 +594,6 @@ describe("text", () => {
       assert.equal(getUnicodeChar("━"), "=");
       assert.equal(getUnicodeChar("⚠"), "!");
       assert.equal(getUnicodeChar("⚗"), "*");
-      assert.equal(getUnicodeChar("ⓘ"), "i");
     });
 
     it("throws for a char outside the map", () => {

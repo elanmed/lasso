@@ -1169,7 +1169,7 @@ second
       printTokens();
       assert.deepStrictEqual(getWrites(), [
         "\n",
-        `${BLUE}ⓘ Token count: 2,051 (1.605% of context window)${RESET}\n`,
+        `${BLUE}Token count: 2,051 (1.605% of context window)${RESET}\n`,
         `- Chat messages: 11
 - Context files: 3
 - Harness and MCP tools: 1,106
@@ -1189,7 +1189,7 @@ second
       printTokens();
       assert.deepStrictEqual(getWrites(), [
         "\n",
-        `${BLUE}ⓘ Token count: 1,496 (1.172% of context window)${RESET}\n`,
+        `${BLUE}Token count: 1,496 (1.172% of context window)${RESET}\n`,
         `- Chat messages: 8
 - Context files: 2
 - Harness and MCP tools: 807
@@ -1206,7 +1206,7 @@ second
       printTokens();
       assert.deepStrictEqual(getWrites(), [
         "\n",
-        `${BLUE}ⓘ Token count: 2,051 (20.54% of context window)${RESET}\n`,
+        `${BLUE}Token count: 2,051 (20.54% of context window)${RESET}\n`,
         `- Chat messages: 11
 - Context files: 3
 - Harness and MCP tools: 1,106
@@ -2515,7 +2515,7 @@ editor input
       printKeymaps();
       assert.deepStrictEqual(getWrites(), [
         "\n",
-        `${BLUE}ⓘ Keymaps:${RESET}\n`,
+        `${BLUE}Keymaps:${RESET}\n`,
         '- edit: {"name":"g","ctrl":true}\n',
         "\n",
       ]);
@@ -2780,7 +2780,7 @@ editor input
         assert.deepStrictEqual(harness.writes, []);
         assert.deepStrictEqual(getWrites(), [
           "\n",
-          `${BLUE}ⓘ Available MCP servers:${RESET}\n`,
+          `${BLUE}Available MCP servers:${RESET}\n`,
           "- first (fake-server v0.0.0)\n",
           "\n",
         ]);
@@ -3747,7 +3747,7 @@ log content
         assert.strictEqual(result, null);
         assert.deepStrictEqual(getWrites(), [
           "\n",
-          `${BLUE}ⓘ Keymaps:${RESET}\n`,
+          `${BLUE}Keymaps:${RESET}\n`,
           '- edit: {"name":"g","ctrl":true}\n',
           "\n",
         ]);
@@ -3771,7 +3771,7 @@ log content
         assert.strictEqual(result, null);
         assert.deepStrictEqual(getWrites(), [
           "\n",
-          `${BLUE}ⓘ Usage:${RESET}\n`,
+          `${BLUE}Usage:${RESET}\n`,
           "- Session: 0 tokens\n",
           "\n",
         ]);
@@ -3793,7 +3793,7 @@ log content
         assert.strictEqual(result, null);
         assert.deepStrictEqual(getWrites(), [
           "\n",
-          `${BLUE}ⓘ Usage:${RESET}\n`,
+          `${BLUE}Usage:${RESET}\n`,
           "- Session: 0 tokens, $0.000\n",
           "- 60m window: $0.000 of $10.000 limit\n",
           "\n",
@@ -3838,7 +3838,7 @@ log content
         assert.strictEqual(result, null);
         assert.deepStrictEqual(getWrites(), [
           "\n",
-          `${BLUE}ⓘ Usage:${RESET}\n`,
+          `${BLUE}Usage:${RESET}\n`,
           "- Session: 3,100,000 tokens, $2.750\n",
           "- 60m window: $1.350 of $1,234.500 limit\n",
           "\n",
@@ -3853,7 +3853,7 @@ log content
         assert.strictEqual(result, null);
         assert.deepStrictEqual(getWrites(), [
           "\n",
-          `${BLUE}ⓘ Token count: 845 (0% of context window)${RESET}\n`,
+          `${BLUE}Token count: 845 (0% of context window)${RESET}\n`,
           `- Chat messages: 0
 - Context files: 0
 - Harness and MCP tools: 0
@@ -3951,14 +3951,14 @@ commands diff
         );
         assert.deepStrictEqual(writes(), [
           `${YELLOW}⚠ - Warning: using a default context window of 128,000 tokens because there is no \`contextWindowPerModel\` entry for the current model \`__MISSING__\`${RESET}\n`,
-          `${BLUE}ⓘ Reading context files: ${RESET}\n`,
-          `${BLUE}ⓘ Reading skills: ${RESET}\n`,
-          `${BLUE}ⓘ Reading slash commands: ${RESET}\n`,
-          `${BLUE}ⓘ Reading context files: ${RESET}`,
+          `${BLUE}Reading context files: ${RESET}\n`,
+          `${BLUE}Reading skills: ${RESET}\n`,
+          `${BLUE}Reading slash commands: ${RESET}\n`,
+          `${BLUE}Reading context files: ${RESET}`,
           `${GREEN}0.0ms${RESET}`,
-          `${BLUE}ⓘ Reading skills: ${RESET}`,
+          `${BLUE}Reading skills: ${RESET}`,
           `${GREEN}0.0ms${RESET}`,
-          `${BLUE}ⓘ Reading slash commands: ${RESET}`,
+          `${BLUE}Reading slash commands: ${RESET}`,
           `${GREEN}0.0ms${RESET}`,
           `${RED}⚠ Failed to write to a temp file. Error: write failed${RESET}\n`,
         ]);
@@ -4014,14 +4014,14 @@ commands diff
         );
         assert.deepStrictEqual(writes(), [
           `${YELLOW}⚠ - Warning: using a default context window of 128,000 tokens because there is no \`contextWindowPerModel\` entry for the current model \`__MISSING__\`${RESET}\n`,
-          `${BLUE}ⓘ Reading context files: ${RESET}\n`,
-          `${BLUE}ⓘ Reading skills: ${RESET}\n`,
-          `${BLUE}ⓘ Reading slash commands: ${RESET}\n`,
-          `${BLUE}ⓘ Reading context files: ${RESET}`,
+          `${BLUE}Reading context files: ${RESET}\n`,
+          `${BLUE}Reading skills: ${RESET}\n`,
+          `${BLUE}Reading slash commands: ${RESET}\n`,
+          `${BLUE}Reading context files: ${RESET}`,
           `${GREEN}0.0ms${RESET}`,
-          `${BLUE}ⓘ Reading skills: ${RESET}`,
+          `${BLUE}Reading skills: ${RESET}`,
           `${GREEN}0.0ms${RESET}`,
-          `${BLUE}ⓘ Reading slash commands: ${RESET}`,
+          `${BLUE}Reading slash commands: ${RESET}`,
           `${GREEN}0.0ms${RESET}`,
           `${RED}⚠ Failed to write to a temp file. Error: write failed${RESET}\n`,
         ]);
@@ -4136,14 +4136,14 @@ commands diff
         assert.strictEqual(result, null);
         assert.deepStrictEqual(getWrites(), [
           `${YELLOW}⚠ - Warning: using a default context window of 128,000 tokens because there is no \`contextWindowPerModel\` entry for the current model \`__MISSING__\`${RESET}\n`,
-          `${BLUE}ⓘ Reading context files: ${RESET}\n`,
-          `${BLUE}ⓘ Reading skills: ${RESET}\n`,
-          `${BLUE}ⓘ Reading slash commands: ${RESET}\n`,
-          `${BLUE}ⓘ Reading context files: ${RESET}`,
+          `${BLUE}Reading context files: ${RESET}\n`,
+          `${BLUE}Reading skills: ${RESET}\n`,
+          `${BLUE}Reading slash commands: ${RESET}\n`,
+          `${BLUE}Reading context files: ${RESET}`,
           `${GREEN}0.0ms${RESET}`,
-          `${BLUE}ⓘ Reading skills: ${RESET}`,
+          `${BLUE}Reading skills: ${RESET}`,
           `${GREEN}0.0ms${RESET}`,
-          `${BLUE}ⓘ Reading slash commands: ${RESET}`,
+          `${BLUE}Reading slash commands: ${RESET}`,
           `${GREEN}0.0ms${RESET}`,
           `${RED}⚠ An error occurred when getting the diff: fatal${RESET}\n`,
         ]);
@@ -4295,7 +4295,7 @@ hello
         const result = await resolveSlashCommand("/custom");
         assert.strictEqual(result, "custom command content");
         assert.deepStrictEqual(getWrites(), [
-          `${PURPLE}⚗ ${BOLD}Executing command${BOLD_RESET}: /${GREY}custom${RESET}${RESET}\n`,
+          `${PURPLE}⚗ ${BOLD}Executing command${BOLD_RESET}:${GREY} /custom${RESET}${RESET}\n`,
         ]);
       });
 
@@ -4318,7 +4318,7 @@ hello
         const result = await resolveSlashCommand("/analyze");
         assert.strictEqual(result, "custom command content");
         assert.deepStrictEqual(getWrites(), [
-          `${PURPLE}⚗ ${BOLD}Executing command${BOLD_RESET}: /${GREY}analyze${RESET}${RESET}\n`,
+          `${PURPLE}⚗ ${BOLD}Executing command${BOLD_RESET}:${GREY} /analyze${RESET}${RESET}\n`,
         ]);
       });
 
@@ -4540,7 +4540,7 @@ Analyze carefully.`,
       assert.deepStrictEqual(getWrites(), [
         `${RED}⏺${RESET} Press enter to stop recording \n`,
         `${PURPLE}⚗ Transcribing…${RESET}\n`,
-        `${BLUE}ⓘ Transcribed: ${RESET}`,
+        `${BLUE}Transcribed: ${RESET}`,
         "hello from the mic\n",
       ]);
     });

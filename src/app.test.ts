@@ -931,7 +931,7 @@ describe("api", () => {
           "queued input",
         );
         assert.deepStrictEqual(getWrites(), [
-          `${BLUE}ⓘ Compacting…${RESET}\n`,
+          `${BLUE}Compacting…${RESET}\n`,
           `${YELLOW}⚠ You have queued messages!${RESET}\n`,
         ]);
       });
@@ -1698,7 +1698,7 @@ describe("api", () => {
           getState().terminal.editorInputValue,
           "queued input",
         );
-        assert.deepStrictEqual(getWrites(), [`${BLUE}ⓘ Compacting…${RESET}\n`]);
+        assert.deepStrictEqual(getWrites(), [`${BLUE}Compacting…${RESET}\n`]);
       });
 
       it("keeps messages on abort error during compaction", async () => {
@@ -1728,7 +1728,7 @@ describe("api", () => {
           stale: false,
           charLength: 0,
         });
-        assert.deepStrictEqual(getWrites(), [`${BLUE}ⓘ Compacting…${RESET}\n`]);
+        assert.deepStrictEqual(getWrites(), [`${BLUE}Compacting…${RESET}\n`]);
       });
 
       it("aborts the merge when the controller is aborted after summarizing", async () => {
@@ -4266,7 +4266,7 @@ second
         assert.deepStrictEqual(getWrites(), [
           "\n",
           `${YELLOW}━━ ${BOLD}Input${BOLD_RESET} ━━${RESET}\n`,
-          `${BLUE}ⓘ Resume this session with /resume 42000${RESET}\n`,
+          `${BLUE}Resume this session with /resume 42000${RESET}\n`,
           "\n",
         ]);
       });
@@ -4291,7 +4291,7 @@ second
         assert.deepStrictEqual(getWrites(), [
           "\n",
           `${YELLOW}━━ ${BOLD}Input${BOLD_RESET} ━━${RESET}\n`,
-          `${BLUE}ⓘ Resume this session with /resume 42000${RESET}\n`,
+          `${BLUE}Resume this session with /resume 42000${RESET}\n`,
           "\n",
         ]);
       });
@@ -4316,7 +4316,7 @@ second
           "\n",
           `${YELLOW}━━ ${BOLD}Input${BOLD_RESET} ━━${RESET}\n`,
           "\n",
-          `${BLUE}ⓘ Resume this session with /resume 42000${RESET}\n`,
+          `${BLUE}Resume this session with /resume 42000${RESET}\n`,
           "\n",
         ]);
       });

@@ -28,7 +28,6 @@ export function getUnicodeChar(char: string) {
     ["━"]: "=",
     ["⚠"]: "!",
     ["⚗"]: "*",
-    ["ⓘ"]: "i",
   };
   assertAtRuntime(char in map);
   const replacement = map[char as keyof typeof map];
@@ -75,7 +74,7 @@ export const print = {
   error: (text: string, opts: AppendNewlineOpts = {}) =>
     colorPrint(`${getUnicodeChar("⚠")} ${text}`, "red", opts),
   info: (text: string, opts: AppendNewlineOpts = {}) =>
-    colorPrint(`${getUnicodeChar("ⓘ")} ${text}`, "blue", opts),
+    colorPrint(text, "blue", opts),
   tool: (text: string, opts: AppendNewlineOpts = {}) =>
     colorPrint(`⚙ ${text}`, "blue", opts),
   infoSubtle: (text: string, opts: AppendNewlineOpts = {}) =>
