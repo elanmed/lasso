@@ -137,7 +137,7 @@ export function printMcps() {
   );
 
   successWithSpacing(() => {
-    print.doing("Available MCP servers:");
+    print.info("Available MCP servers:");
     for (const server of formatted) {
       print.plain(server);
     }

@@ -163,9 +163,9 @@ describe("mcp", () => {
       await initMcpState({ performanceLogger });
 
       assert.deepStrictEqual(getWrites(), [
-        `${BLUE}Starting first mcp server: ${RESET}\n`,
+        `${BLUE}ⓘ Starting first mcp server: ${RESET}\n`,
         `${UP_1}${CLEAR_LINE}${CR}`,
-        `${BLUE}Starting first mcp server: ${RESET}`,
+        `${BLUE}ⓘ Starting first mcp server: ${RESET}`,
         `${GREEN}0.0ms${RESET}`,
         `${DOWN_1}${CR}`,
       ]);
@@ -184,14 +184,14 @@ describe("mcp", () => {
       await initMcpState({ performanceLogger });
 
       assert.deepStrictEqual(getWrites(), [
-        `${BLUE}Starting first mcp server: ${RESET}\n`,
-        `${BLUE}Starting second mcp server: ${RESET}\n`,
+        `${BLUE}ⓘ Starting first mcp server: ${RESET}\n`,
+        `${BLUE}ⓘ Starting second mcp server: ${RESET}\n`,
         `${UP_2}${CLEAR_LINE}${CR}`,
-        `${BLUE}Starting first mcp server: ${RESET}`,
+        `${BLUE}ⓘ Starting first mcp server: ${RESET}`,
         `${GREEN}0.0ms${RESET}`,
         `${DOWN_2}${CR}`,
         `${UP_1}${CLEAR_LINE}${CR}`,
-        `${BLUE}Starting second mcp server: ${RESET}`,
+        `${BLUE}ⓘ Starting second mcp server: ${RESET}`,
         `${GREEN}0.0ms${RESET}`,
         `${DOWN_1}${CR}`,
       ]);
@@ -211,9 +211,9 @@ describe("mcp", () => {
       await initMcpState({ performanceLogger });
 
       assert.deepStrictEqual(getWrites(), [
-        `${BLUE}Starting first mcp server: ${RESET}\n`,
+        `${BLUE}ⓘ Starting first mcp server: ${RESET}\n`,
         `${UP_1}${CLEAR_LINE}${CR}`,
-        `${BLUE}Starting first mcp server: ${RESET}`,
+        `${BLUE}ⓘ Starting first mcp server: ${RESET}`,
         `${GREEN}0.0ms${RESET}`,
         `${DOWN_1}${CR}`,
       ]);
@@ -243,9 +243,9 @@ describe("mcp", () => {
       await initMcpState({ performanceLogger });
 
       assert.deepStrictEqual(getWrites(), [
-        `${BLUE}Starting first mcp server: ${RESET}\n`,
+        `${BLUE}ⓘ Starting first mcp server: ${RESET}\n`,
         `${UP_1}${CLEAR_LINE}${CR}`,
-        `${BLUE}Starting first mcp server: ${RESET}`,
+        `${BLUE}ⓘ Starting first mcp server: ${RESET}`,
         `${GREEN}0.0ms${RESET}`,
         `${DOWN_1}${CR}`,
       ]);
@@ -286,7 +286,7 @@ describe("printMcps", () => {
 
       assert.deepStrictEqual(getWrites(), [
         "\n",
-        `${BLUE}Available MCP servers:${RESET}\n`,
+        `${BLUE}ⓘ Available MCP servers:${RESET}\n`,
         "- first (fake-server v0.0.0)\n",
         "- second (fake-server v0.0.0)\n",
         "\n",
@@ -310,7 +310,7 @@ describe("printMcps", () => {
 
       assert.deepStrictEqual(getWrites(), [
         "\n",
-        `${BLUE}Available MCP servers:${RESET}\n`,
+        `${BLUE}ⓘ Available MCP servers:${RESET}\n`,
         "- first (my-server v1.2.3)\n",
         "- second (other-server v0.1.0)\n",
         "\n",
@@ -321,7 +321,7 @@ describe("printMcps", () => {
       printMcps();
       assert.deepStrictEqual(getWrites(), [
         "\n",
-        `${YELLOW}No available MCP servers${RESET}\n`,
+        `${YELLOW}⚠ No available MCP servers${RESET}\n`,
         "\n",
       ]);
       assert.strictEqual(testFs._files.has("/tmp/lasso-test-uuid.txt"), false);
@@ -331,7 +331,7 @@ describe("printMcps", () => {
       printMcps();
       assert.deepStrictEqual(getWrites(), [
         "\n",
-        `${YELLOW}No available MCP servers${RESET}\n`,
+        `${YELLOW}⚠ No available MCP servers${RESET}\n`,
         "\n",
       ]);
     });
@@ -341,7 +341,7 @@ describe("printMcps", () => {
       printMcps();
       assert.deepStrictEqual(getWrites(), [
         "\n",
-        `${YELLOW}No available MCP servers${RESET}\n`,
+        `${YELLOW}⚠ No available MCP servers${RESET}\n`,
         "\n",
       ]);
     });

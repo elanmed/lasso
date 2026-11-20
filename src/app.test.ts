@@ -931,8 +931,8 @@ describe("api", () => {
           "queued input",
         );
         assert.deepStrictEqual(getWrites(), [
-          `${BLUE}Compacting…${RESET}\n`,
-          `${YELLOW}You have queued messages!${RESET}\n`,
+          `${BLUE}ⓘ Compacting…${RESET}\n`,
+          `${YELLOW}⚠ You have queued messages!${RESET}\n`,
         ]);
       });
 
@@ -983,7 +983,7 @@ describe("api", () => {
 
         assert.strictEqual(result, null);
         assert.strictEqual(getState().terminal.isSteering, false);
-        assert.deepStrictEqual(getWrites(), [`${PURPLE}Steering…${RESET}\n`]);
+        assert.deepStrictEqual(getWrites(), [`${PURPLE}⚗ Steering…${RESET}\n`]);
       });
 
       it("preserves completed step messages when interrupted", async () => {
@@ -1698,7 +1698,7 @@ describe("api", () => {
           getState().terminal.editorInputValue,
           "queued input",
         );
-        assert.deepStrictEqual(getWrites(), [`${BLUE}Compacting…${RESET}\n`]);
+        assert.deepStrictEqual(getWrites(), [`${BLUE}ⓘ Compacting…${RESET}\n`]);
       });
 
       it("keeps messages on abort error during compaction", async () => {
@@ -1728,7 +1728,7 @@ describe("api", () => {
           stale: false,
           charLength: 0,
         });
-        assert.deepStrictEqual(getWrites(), [`${BLUE}Compacting…${RESET}\n`]);
+        assert.deepStrictEqual(getWrites(), [`${BLUE}ⓘ Compacting…${RESET}\n`]);
       });
 
       it("aborts the merge when the controller is aborted after summarizing", async () => {
@@ -2755,7 +2755,7 @@ Global content
 
       assert.deepStrictEqual(await getContextEntries(), []);
       assert.deepStrictEqual(writes(), [
-        `${RED}Failed to check if /fake-home/.config/lasso/context/AGENTS.md exists. Error: EACCES${RESET}\n`,
+        `${RED}⚠ Failed to check if /fake-home/.config/lasso/context/AGENTS.md exists. Error: EACCES${RESET}\n`,
       ]);
     });
 
@@ -3903,7 +3903,7 @@ describe("resolveInterruptWithEditorContent", () => {
     assert.equal(questionOptions.signal.aborted, false);
     assert.equal(getState().abortControllers.interruptWithEditorContent, null);
     assert.deepStrictEqual(getWrites(), [
-      `${YELLOW}You have queued messages!${RESET}\n`,
+      `${YELLOW}⚠ You have queued messages!${RESET}\n`,
     ]);
     assert.deepStrictEqual(prompts, [
       'Edit ({"name":"e","ctrl":true}), c(lear), or <CR> to continue: ',
@@ -3951,8 +3951,8 @@ describe("resolveInterruptWithEditorContent", () => {
 
     assert.equal(getState().abortControllers.interruptWithEditorContent, null);
     assert.deepStrictEqual(getWrites(), [
-      `${YELLOW}You have queued messages!${RESET}\n`,
-      `${RED}boom${RESET}\n`,
+      `${YELLOW}⚠ You have queued messages!${RESET}\n`,
+      `${RED}⚠ boom${RESET}\n`,
     ]);
   });
 });
@@ -4051,8 +4051,8 @@ describe("input", () => {
       assert.deepStrictEqual(spawned, ["/bin/zsh"]);
       assert.deepStrictEqual(spawnArgs, [["-i", "+m", "-c", " echo hello"]]);
       assert.deepStrictEqual(getWrites(), [
-        `${BLUE}$  echo hello${RESET}\n`,
-        `${RED}Error while executing the user input. Error: spawn failed${RESET}\n`,
+        `${BLUE}${BOLD}$${BOLD_RESET}${RESET}${GREY}  echo hello${RESET}\n`,
+        `${RED}⚠ Error while executing the user input. Error: spawn failed${RESET}\n`,
       ]);
       assert.strictEqual(getState().abortControllers.executeUserInput, null);
       assert.strictEqual(getState().terminal.isExecutingUserInput, false);
@@ -4187,7 +4187,7 @@ second
         assert.deepStrictEqual(getWrites(), [
           "\n",
           `${YELLOW}━━ ${BOLD}Input${BOLD_RESET} ━━${RESET}\n`,
-          `${RED}read failed${RESET}\n`,
+          `${RED}⚠ read failed${RESET}\n`,
         ]);
       });
 
@@ -4266,7 +4266,7 @@ second
         assert.deepStrictEqual(getWrites(), [
           "\n",
           `${YELLOW}━━ ${BOLD}Input${BOLD_RESET} ━━${RESET}\n`,
-          `${PURPLE}Resume this session with /resume 42000${RESET}\n`,
+          `${BLUE}ⓘ Resume this session with /resume 42000${RESET}\n`,
           "\n",
         ]);
       });
@@ -4291,7 +4291,7 @@ second
         assert.deepStrictEqual(getWrites(), [
           "\n",
           `${YELLOW}━━ ${BOLD}Input${BOLD_RESET} ━━${RESET}\n`,
-          `${PURPLE}Resume this session with /resume 42000${RESET}\n`,
+          `${BLUE}ⓘ Resume this session with /resume 42000${RESET}\n`,
           "\n",
         ]);
       });
@@ -4316,7 +4316,7 @@ second
           "\n",
           `${YELLOW}━━ ${BOLD}Input${BOLD_RESET} ━━${RESET}\n`,
           "\n",
-          `${PURPLE}Resume this session with /resume 42000${RESET}\n`,
+          `${BLUE}ⓘ Resume this session with /resume 42000${RESET}\n`,
           "\n",
         ]);
       });

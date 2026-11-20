@@ -538,7 +538,7 @@ describe("usage", () => {
         await syncNewModelUsageForLimitWindow("gpt-4", usage);
 
         assert.deepStrictEqual(getWrites(), [
-          `${RED}Failed to create the directory: ${dirname(getUsageLogPath())}${RESET}\n`,
+          `${RED}⚠ Failed to create the directory: ${dirname(getUsageLogPath())}${RESET}\n`,
         ]);
         assert.deepStrictEqual(getState().usage.modelUsageForLimitWindow, {});
         assert.strictEqual(testFs._files.has(getUsageLogPath()), false);
@@ -642,7 +642,7 @@ describe("usage", () => {
         await syncNewModelUsageForLimitWindow("gpt-4", usage);
 
         assert.deepStrictEqual(getWrites(), [
-          `${RED}Failed to parse the usage log at /fake-home/.local/share/lasso/usage.json. Error: Unexpected token 'o', "not-json" is not valid JSON${RESET}\n`,
+          `${RED}⚠ Failed to parse the usage log at /fake-home/.local/share/lasso/usage.json. Error: Unexpected token 'o', "not-json" is not valid JSON${RESET}\n`,
         ]);
         assert.deepStrictEqual(getState().usage.modelUsageForLimitWindow, {
           "gpt-4": [usage],
@@ -670,7 +670,7 @@ describe("usage", () => {
         await syncNewModelUsageForLimitWindow("gpt-4", usage);
 
         assert.deepStrictEqual(getWrites(), [
-          `${RED}Failed to read the usage log at /fake-home/.local/share/lasso/usage.json. Error: EIO${RESET}\n`,
+          `${RED}⚠ Failed to read the usage log at /fake-home/.local/share/lasso/usage.json. Error: EIO${RESET}\n`,
         ]);
         assert.deepStrictEqual(getState().usage.modelUsageForLimitWindow, {
           "gpt-4": [usage],
@@ -693,7 +693,7 @@ describe("usage", () => {
         await syncNewModelUsageForLimitWindow("gpt-4", usage);
 
         assert.deepStrictEqual(getWrites(), [
-          `${RED}Failed to check if /fake-home/.local/share/lasso exists. Error: EACCES${RESET}\n`,
+          `${RED}⚠ Failed to check if /fake-home/.local/share/lasso exists. Error: EACCES${RESET}\n`,
         ]);
         assert.deepStrictEqual(getState().usage.modelUsageForLimitWindow, {});
         assert.strictEqual(
@@ -721,7 +721,7 @@ describe("usage", () => {
         await syncNewModelUsageForLimitWindow("gpt-4", usage);
 
         assert.deepStrictEqual(getWrites(), [
-          `${RED}Failed to check if /fake-home/.local/share/lasso/usage.json exists. Error: EACCES${RESET}\n`,
+          `${RED}⚠ Failed to check if /fake-home/.local/share/lasso/usage.json exists. Error: EACCES${RESET}\n`,
         ]);
         assert.deepStrictEqual(getState().usage.modelUsageForLimitWindow, {
           "gpt-4": [usage],
@@ -1082,7 +1082,7 @@ describe("usage", () => {
       await syncInitialModelUsageForLimitWindow();
 
       assert.deepStrictEqual(getWrites(), [
-        `${RED}Failed to check if /fake-home/.local/share/lasso exists. Error: EACCES${RESET}\n`,
+        `${RED}⚠ Failed to check if /fake-home/.local/share/lasso exists. Error: EACCES${RESET}\n`,
       ]);
       assert.deepStrictEqual(getState().usage.modelUsageForLimitWindow, {});
       assert.strictEqual(
@@ -1104,7 +1104,7 @@ describe("usage", () => {
       await syncInitialModelUsageForLimitWindow();
 
       assert.deepStrictEqual(getWrites(), [
-        `${RED}Failed to check if /fake-home/.local/share/lasso/usage.json exists. Error: EACCES${RESET}\n`,
+        `${RED}⚠ Failed to check if /fake-home/.local/share/lasso/usage.json exists. Error: EACCES${RESET}\n`,
       ]);
       assert.deepStrictEqual(getState().usage.modelUsageForLimitWindow, {});
       assert.strictEqual(testFs._files.has(getUsageLogLockPath()), false);
@@ -1131,7 +1131,7 @@ describe("usage", () => {
       await syncInitialModelUsageForLimitWindow();
 
       assert.deepStrictEqual(getWrites(), [
-        `${RED}Failed to parse the usage log at /fake-home/.local/share/lasso/usage.json. Error: Unexpected token 'o', "not-json" is not valid JSON${RESET}\n`,
+        `${RED}⚠ Failed to parse the usage log at /fake-home/.local/share/lasso/usage.json. Error: Unexpected token 'o', "not-json" is not valid JSON${RESET}\n`,
       ]);
       assert.deepStrictEqual(getState().usage.modelUsageForLimitWindow, {});
       assert.strictEqual(testFs._files.get(getUsageLogPath()), `{}`);
@@ -1149,7 +1149,7 @@ describe("usage", () => {
       await syncInitialModelUsageForLimitWindow();
 
       assert.deepStrictEqual(getWrites(), [
-        `${RED}Failed to read the usage log at /fake-home/.local/share/lasso/usage.json. Error: EIO${RESET}\n`,
+        `${RED}⚠ Failed to read the usage log at /fake-home/.local/share/lasso/usage.json. Error: EIO${RESET}\n`,
       ]);
       assert.deepStrictEqual(getState().usage.modelUsageForLimitWindow, {});
       assert.strictEqual(testFs._files.get(getUsageLogPath()), `{}`);

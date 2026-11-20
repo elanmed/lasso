@@ -22,6 +22,8 @@ import {
   sleep,
   gitGlobWithFallback,
   writeDebugLog,
+  bold,
+  wrapInColor,
 } from "./utils.ts";
 import { actions, getState, type ContextEntry, type Skill } from "./state.ts";
 import { aiDeps, childProcessDeps, fsDeps, processDeps } from "./deps.ts";
@@ -577,7 +579,7 @@ export async function resolveApiCall(userInput: string) {
 
     if (isAbortError(generateTextResult.error)) {
       if (getState().terminal.isSteering) {
-        print.info("Steering" + getUnicodeChar("…"));
+        print.doing("Steering" + getUnicodeChar("…"));
         actions.terminal.setIsSteering(false);
         return null;
       }
@@ -750,7 +752,7 @@ export async function compactConversation({
   const chunks = splitMessagesToCompact(messagesToCompact);
   if (chunks.length === 0) return null;
 
-  print.doing("Compacting" + getUnicodeChar("…"));
+  print.info("Compacting" + getUnicodeChar("…"));
 
   let workingSummaries = summaries;
   let summarizedMessageCount = 0;
@@ -1099,7 +1101,9 @@ export async function executeUserInput(rawInput: string) {
   actions.abortControllers.setExecuteUserInput(abortController);
 
   const userInput = rawInput.trim().slice(1);
-  print.doing(`$ ${userInput}`);
+  print.plain(
+    `${wrapInColor(bold("$"), "blue")}${wrapInColor(` ${userInput}`, "grey")}`,
+  );
   try {
     const spawnResult = await tryCatchAsync(
       runUserInput(userInput, abortController.signal),

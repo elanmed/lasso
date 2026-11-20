@@ -42,7 +42,7 @@ describe("listSessionFiles", () => {
 
     assert.deepStrictEqual(await listSessionFiles(), []);
     assert.deepStrictEqual(writes(), [
-      `${RED}Failed to check if /fake-home/.local/state/lasso/sessions exists. Error: EACCES${RESET}\n`,
+      `${RED}⚠ Failed to check if /fake-home/.local/state/lasso/sessions exists. Error: EACCES${RESET}\n`,
     ]);
   });
 
@@ -55,7 +55,7 @@ describe("listSessionFiles", () => {
 
     assert.deepStrictEqual(await listSessionFiles(), []);
     assert.deepStrictEqual(writes(), [
-      `${RED}Failed to read /fake-home/.local/state/lasso/sessions. Error: EACCES${RESET}\n`,
+      `${RED}⚠ Failed to read /fake-home/.local/state/lasso/sessions. Error: EACCES${RESET}\n`,
     ]);
   });
 
@@ -189,7 +189,7 @@ describe("log", () => {
       await deleteExpiredWebpageFiles();
 
       assert.deepStrictEqual(writes(), [
-        `${RED}Failed to read ${webpagesDir}. Error: EACCES${RESET}\n`,
+        `${RED}⚠ Failed to read ${webpagesDir}. Error: EACCES${RESET}\n`,
       ]);
     });
 
@@ -370,7 +370,7 @@ describe("log", () => {
       await syncSessionFile({ messages, summaries });
 
       assert.deepStrictEqual(writes(), [
-        `${RED}Failed to check if /fake-home/.local/state/lasso/sessions exists. Error: EACCES${RESET}\n`,
+        `${RED}⚠ Failed to check if /fake-home/.local/state/lasso/sessions exists. Error: EACCES${RESET}\n`,
       ]);
       assert.strictEqual(
         testFs._files.has(
@@ -420,7 +420,7 @@ describe("log", () => {
       await syncSessionFile();
 
       assert.deepStrictEqual(getWrites(), [
-        `${RED}Failed to write the session file to /fake-home/.local/state/lasso/sessions/session-1234567890000.json${RESET}\n`,
+        `${RED}⚠ Failed to write the session file to /fake-home/.local/state/lasso/sessions/session-1234567890000.json${RESET}\n`,
       ]);
       assert.deepStrictEqual(getState().conversation.messages, []);
     });
@@ -435,7 +435,7 @@ describe("log", () => {
       });
 
       assert.deepStrictEqual(getWrites(), [
-        `${RED}Failed to stringify the session file${RESET}\n`,
+        `${RED}⚠ Failed to stringify the session file${RESET}\n`,
       ]);
       assert.equal(
         testFs._files.has(
@@ -494,7 +494,7 @@ describe("log", () => {
 
       assert.equal(result, false);
       assert.deepStrictEqual(getWrites(), [
-        `${RED}Failed to read the session file at /test/missing.json${RESET}\n`,
+        `${RED}⚠ Failed to read the session file at /test/missing.json${RESET}\n`,
         "\n",
       ]);
     });
@@ -507,7 +507,7 @@ describe("log", () => {
 
       assert.equal(result, false);
       assert.deepStrictEqual(getWrites(), [
-        `${RED}Failed to parse the session file at /test/broken.json${RESET}\n`,
+        `${RED}⚠ Failed to parse the session file at /test/broken.json${RESET}\n`,
         "\n",
       ]);
     });
@@ -520,7 +520,7 @@ describe("log", () => {
 
       assert.equal(result, false);
       assert.deepStrictEqual(getWrites(), [
-        `${RED}Failed to validate the session file at /test/invalid.json${RESET}\n`,
+        `${RED}⚠ Failed to validate the session file at /test/invalid.json${RESET}\n`,
         "\n",
       ]);
     });

@@ -6,6 +6,7 @@ import {
   startLoadingState,
   stopLoadingState,
   colorPrint,
+  print,
   printSessionStartDate,
   printNewline,
   successWithSpacing,
@@ -26,6 +27,7 @@ import {
   mockStdoutWrites,
   BLUE,
   RESET,
+  YELLOW,
   testProcessEnv,
   CLEAR_LINE,
   CR,
@@ -66,6 +68,48 @@ describe("print", () => {
     setupTestContext();
   });
 
+  describe("status methods", () => {
+    it("adds the alchemy marker to purple doing output", () => {
+      const getWrites = mockStdoutWrites();
+      print.doing("working");
+      assert.deepStrictEqual(getWrites(), [`${PURPLE}⚗ working${RESET}\n`]);
+    });
+
+    it("prints info in blue", () => {
+      const getWrites = mockStdoutWrites();
+      print.info("ready");
+      assert.deepStrictEqual(getWrites(), [`${BLUE}ⓘ ready${RESET}\n`]);
+    });
+
+    it("uses the warning symbol for errors and warnings", () => {
+      const getWrites = mockStdoutWrites();
+      print.warning("caution");
+      print.error("failure");
+      assert.deepStrictEqual(getWrites(), [
+        `${YELLOW}⚠ caution${RESET}\n`,
+        `${RED}⚠ failure${RESET}\n`,
+      ]);
+    });
+    it("uses single-character warning and error markers in ASCII mode", () => {
+      actions.config.setAsciiOnly(true);
+      const getWrites = mockStdoutWrites();
+      print.doing("working");
+      print.info("ready");
+      print.warning("caution");
+      print.error("failure");
+      assert.deepStrictEqual(getWrites(), [
+        `${PURPLE}* working${RESET}\n`,
+        `${BLUE}i ready${RESET}\n`,
+        `${YELLOW}! caution${RESET}\n`,
+        `${RED}! failure${RESET}\n`,
+      ]);
+    });
+    it("adds the gear marker to blue tool output", () => {
+      const getWrites = mockStdoutWrites();
+      print.tool("bash");
+      assert.deepStrictEqual(getWrites(), [`${BLUE}⚙ bash${RESET}\n`]);
+    });
+  });
   describe("startLoadingState", () => {
     it("writes loadingStateFrames cyclically", () => {
       actions.resetState();
@@ -162,14 +206,14 @@ describe("print", () => {
       const getWrites = mockStdoutWrites();
       logger.start("Reading context files: ");
       assert.deepStrictEqual(getWrites(), [
-        `${BLUE}Reading context files: ${RESET}`,
+        `${BLUE}ⓘ Reading context files: ${RESET}`,
       ]);
       mock.method(process.hrtime, "bigint", () => BigInt(1_234_567_890));
 
       logger.end();
 
       assert.deepStrictEqual(getWrites(), [
-        `${BLUE}Reading context files: ${RESET}`,
+        `${BLUE}ⓘ Reading context files: ${RESET}`,
         `${GREEN}234.567ms${RESET}\n`,
       ]);
     });
@@ -191,9 +235,9 @@ describe("print", () => {
       logger.end();
 
       assert.deepStrictEqual(getWrites(), [
-        `${BLUE}a: ${RESET}`,
+        `${BLUE}ⓘ a: ${RESET}`,
         `${GREEN}0.0ms${RESET}\n`,
-        `${BLUE}a: ${RESET}`,
+        `${BLUE}ⓘ a: ${RESET}`,
         `${RED}1s 0.0ms${RESET}\n`,
       ]);
     });
@@ -233,8 +277,8 @@ describe("print", () => {
       logger.printAllLabels();
 
       assert.deepStrictEqual(getWrites(), [
-        `${BLUE}Starting a: ${RESET}\n`,
-        `${BLUE}Starting b: ${RESET}\n`,
+        `${BLUE}ⓘ Starting a: ${RESET}\n`,
+        `${BLUE}ⓘ Starting b: ${RESET}\n`,
       ]);
     });
 
@@ -258,14 +302,14 @@ describe("print", () => {
       logger.end("b");
 
       assert.deepStrictEqual(getWrites(), [
-        `${BLUE}Starting a: ${RESET}\n`,
-        `${BLUE}Starting b: ${RESET}\n`,
+        `${BLUE}ⓘ Starting a: ${RESET}\n`,
+        `${BLUE}ⓘ Starting b: ${RESET}\n`,
         `${UP_2}${CLEAR_LINE}${CR}`,
-        `${BLUE}Starting a: ${RESET}`,
+        `${BLUE}ⓘ Starting a: ${RESET}`,
         `${GREEN}234.567ms${RESET}`,
         `${DOWN_2}${CR}`,
         `${UP_1}${CLEAR_LINE}${CR}`,
-        `${BLUE}Starting b: ${RESET}`,
+        `${BLUE}ⓘ Starting b: ${RESET}`,
         `${RED}1s 0.0ms${RESET}`,
         `${DOWN_1}${CR}`,
       ]);
@@ -412,7 +456,7 @@ describe("print", () => {
       const getWrites = mockStdoutWrites();
       printSessionStartDate();
       assert.deepStrictEqual(getWrites(), [
-        `${PURPLE}Resume this session with /resume 42000${RESET}\n`,
+        `${BLUE}ⓘ Resume this session with /resume 42000${RESET}\n`,
       ]);
     });
   });
@@ -539,6 +583,9 @@ describe("text", () => {
     it("returns the char unchanged by default", () => {
       assert.equal(getUnicodeChar("…"), "…");
       assert.equal(getUnicodeChar("┊"), "┊");
+      assert.equal(getUnicodeChar("⚠"), "⚠");
+      assert.equal(getUnicodeChar("⚗"), "⚗");
+      assert.equal(getUnicodeChar("ⓘ"), "ⓘ");
     });
 
     it("returns the ascii replacement when asciiOnly is on", () => {
@@ -546,6 +593,9 @@ describe("text", () => {
       assert.equal(getUnicodeChar("…"), "~");
       assert.equal(getUnicodeChar("┊"), "|");
       assert.equal(getUnicodeChar("━"), "=");
+      assert.equal(getUnicodeChar("⚠"), "!");
+      assert.equal(getUnicodeChar("⚗"), "*");
+      assert.equal(getUnicodeChar("ⓘ"), "i");
     });
 
     it("throws for a char outside the map", () => {
@@ -662,7 +712,7 @@ describe("temp-file", () => {
       });
       assert.equal(result, null);
       assert.deepStrictEqual(writes(), [
-        `${RED}Failed to create a temp file with content from path /source/file.txt. Error: EACCES${RESET}\n`,
+        `${RED}⚠ Failed to create a temp file with content from path /source/file.txt. Error: EACCES${RESET}\n`,
       ]);
     });
 
@@ -675,7 +725,7 @@ describe("temp-file", () => {
       });
       assert.equal(result, null);
       assert.deepStrictEqual(writes(), [
-        `${RED}Failed to read the content from path /source/file.txt to prepopulate a temp file. Error: EIO${RESET}\n`,
+        `${RED}⚠ Failed to read the content from path /source/file.txt to prepopulate a temp file. Error: EIO${RESET}\n`,
       ]);
     });
 
@@ -690,7 +740,7 @@ describe("temp-file", () => {
       });
       assert.equal(result, null);
       assert.deepStrictEqual(writes(), [
-        `${RED}Failed to write a temp file with the content from path /source/file.txt: ENOSPC${RESET}\n`,
+        `${RED}⚠ Failed to write a temp file with the content from path /source/file.txt: ENOSPC${RESET}\n`,
       ]);
     });
 
@@ -700,7 +750,7 @@ describe("temp-file", () => {
       const result = await getTempFileName({ initialContentStr: "content" });
       assert.equal(result, null);
       assert.deepStrictEqual(writes(), [
-        `${RED}Failed to write to a temp file. Error: EIO${RESET}\n`,
+        `${RED}⚠ Failed to write to a temp file. Error: EIO${RESET}\n`,
       ]);
     });
 
@@ -712,7 +762,7 @@ describe("temp-file", () => {
       });
       assert.equal(result, null);
       assert.deepStrictEqual(writes(), [
-        `${RED}Failed to write an empty temp file. Error: EIO${RESET}\n`,
+        `${RED}⚠ Failed to write an empty temp file. Error: EIO${RESET}\n`,
       ]);
     });
 
@@ -722,7 +772,7 @@ describe("temp-file", () => {
       const result = await getTempFileName();
       assert.equal(result, null);
       assert.deepStrictEqual(writes(), [
-        `${RED}Failed to create an empty temp file. Error: EIO${RESET}\n`,
+        `${RED}⚠ Failed to create an empty temp file. Error: EIO${RESET}\n`,
       ]);
     });
   });
@@ -1111,7 +1161,7 @@ describe("terminal formatting", () => {
         executeBat("test content\n");
 
         assert.deepStrictEqual(getWrites(), [
-          `${RED}Falling back to plain text rendering, an error occurred when spawning \`bat\`: spawn failed${RESET}\n`,
+          `${RED}⚠ Falling back to plain text rendering, an error occurred when spawning \`bat\`: spawn failed${RESET}\n`,
           "test content\n\n",
         ]);
       });
@@ -1127,7 +1177,7 @@ describe("terminal formatting", () => {
         executeBat("test content\n");
 
         assert.deepStrictEqual(getWrites(), [
-          `${RED}Falling back to plain text rendering, an error occurred when spawning \`bat\`: \`bat\` returned code 1${RESET}\n`,
+          `${RED}⚠ Falling back to plain text rendering, an error occurred when spawning \`bat\`: \`bat\` returned code 1${RESET}\n`,
           "test content\n\n",
         ]);
       });
@@ -1147,7 +1197,7 @@ describe("terminal formatting", () => {
         executeBat("test content\n");
 
         assert.deepStrictEqual(getWrites(), [
-          `${RED}Falling back to plain text rendering, an error occurred when spawning \`bat\`: bat warning${RESET}\n`,
+          `${RED}⚠ Falling back to plain text rendering, an error occurred when spawning \`bat\`: bat warning${RESET}\n`,
           "test content\n\n",
         ]);
       });

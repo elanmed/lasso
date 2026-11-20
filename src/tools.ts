@@ -850,7 +850,7 @@ export async function createSubagentTool(
 
 const subagentSafeTools = createSubagentSafeTools({
   toolPrint,
-  printDoing: (text) => print.doing(text),
+  printDoing: (text) => print.info(text),
 });
 
 const baseAgentTools = {

@@ -26,6 +26,9 @@ export function getUnicodeChar(char: string) {
     ["┊"]: "|",
     ["…"]: "~",
     ["━"]: "=",
+    ["⚠"]: "!",
+    ["⚗"]: "*",
+    ["ⓘ"]: "i",
   };
   assertAtRuntime(char in map);
   const replacement = map[char as keyof typeof map];
@@ -68,15 +71,17 @@ interface AppendNewlineOpts {
 
 export const print = {
   doing: (text: string, opts: AppendNewlineOpts = {}) =>
-    colorPrint(text, "blue", opts),
+    colorPrint(`${getUnicodeChar("⚗")} ${text}`, "purple", opts),
   error: (text: string, opts: AppendNewlineOpts = {}) =>
-    colorPrint(text, "red", opts),
+    colorPrint(`${getUnicodeChar("⚠")} ${text}`, "red", opts),
   info: (text: string, opts: AppendNewlineOpts = {}) =>
-    colorPrint(text, "purple", opts),
+    colorPrint(`${getUnicodeChar("ⓘ")} ${text}`, "blue", opts),
+  tool: (text: string, opts: AppendNewlineOpts = {}) =>
+    colorPrint(`⚙ ${text}`, "blue", opts),
   infoSubtle: (text: string, opts: AppendNewlineOpts = {}) =>
     colorPrint(text, "grey", opts),
   warning: (text: string, opts: AppendNewlineOpts = {}) =>
-    colorPrint(text, "yellow", opts),
+    colorPrint(`${getUnicodeChar("⚠")} ${text}`, "yellow", opts),
   plain: (text: string, opts: AppendNewlineOpts = {}) =>
     colorPrint(text, "none", opts),
 };
@@ -124,7 +129,7 @@ export function createPerformanceLogger({
     if (!logDuration) return;
     assertAtRuntime(startTime === null);
     startTime = process.hrtime.bigint();
-    print.doing(label, { appendNewline: false });
+    print.info(label, { appendNewline: false });
   }
 
   function end() {
@@ -160,7 +165,7 @@ export function createParallelPerformanceLogger({
   function printAllLabels() {
     if (!logDuration) return;
     for (const labelContent of labels) {
-      print.doing(labelContent);
+      print.info(labelContent);
     }
   }
 
@@ -183,7 +188,7 @@ export function createParallelPerformanceLogger({
     const linesUp = labels.length - labelIndex;
     const label = labelEntry[1];
     processDeps.stdout.write(`\x1b[${String(linesUp)}A\x1b[2K\r`);
-    print.doing(label, { appendNewline: false });
+    print.info(label, { appendNewline: false });
     colorPrint(duration, getDurationColor(startTime, endTime), {
       appendNewline: false,
     });
@@ -451,8 +456,8 @@ export function toolPrint(
   const prefixWidth = `⚙ ${label}: `.length;
   const maxChars = Math.max(1, maxLines * 100 - prefixWidth);
 
-  print.doing(
-    `⚙ ${bold(label)}: ${wrapInColor(truncateLines(detail, { maxLines, maxChars }), "grey")}`,
+  print.tool(
+    `${bold(label)}: ${wrapInColor(truncateLines(detail, { maxLines, maxChars }), "grey")}`,
   );
 }
 

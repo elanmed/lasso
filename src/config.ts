@@ -502,7 +502,7 @@ export async function initLocalConfig() {
     print.error(`Failed to write the config to ${path}`);
     return;
   }
-  print.info(`Created the local config at ${path}`);
+  print.doing(`Created the local config at ${path}`);
 }
 
 export async function initGlobalConfig() {
@@ -545,5 +545,5 @@ export async function initGlobalConfig() {
     print.error(`Failed to write the config to ${path}`);
     return;
   }
-  print.info(`Created the global config at ${path}`);
+  print.doing(`Created the global config at ${path}`);
 }

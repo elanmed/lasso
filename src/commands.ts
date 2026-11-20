@@ -499,7 +499,7 @@ export async function resume(rawInput: string) {
 
 export function printKeymaps() {
   successWithSpacing(() => {
-    print.doing("Keymaps:");
+    print.info("Keymaps:");
     for (const [command, keymap] of Object.entries(getState().config.keymaps)) {
       print.plain(`- ${command}: ${stringify(keymap, { space: 0 })}`);
     }
@@ -527,7 +527,7 @@ export function printUsage() {
   })();
 
   successWithSpacing(() => {
-    print.doing("Usage:");
+    print.info("Usage:");
     print.plain(`- Session: ${usedInSession}`);
 
     if (!isUsageLimitDisabled()) {
@@ -558,7 +558,7 @@ export function printTokens() {
   const contextWindowUsage = ` (${prettyContextWindowUsageRaw})`;
 
   successWithSpacing(() => {
-    print.doing(`Token count: ${total.toLocaleString()}${contextWindowUsage}`);
+    print.info(`Token count: ${total.toLocaleString()}${contextWindowUsage}`);
     print.plain(getPrettyTokensByArea());
     printNewline();
   });
@@ -999,7 +999,7 @@ export async function recordAndTranscribeInput({
 
   const transcriptionAbortController = new AbortController();
   actions.abortControllers.setTranscription(transcriptionAbortController);
-  print.info("Transcribing" + getUnicodeChar("…"), {
+  print.doing("Transcribing" + getUnicodeChar("…"), {
     whileBuffering: !isTyped,
   });
   const transcribeResult = await transcribeInput(readResult.value);
@@ -1023,7 +1023,7 @@ export async function recordAndTranscribeInput({
     return null;
   }
 
-  print.doing("Transcribed: ", { appendNewline: false, whileBuffering: true });
+  print.info("Transcribed: ", { appendNewline: false, whileBuffering: true });
   print.plain(transcribeResult.value, { whileBuffering: true });
   return "[Message transcribed; may contain errors] ".concat(
     transcribeResult.value,
@@ -1202,7 +1202,7 @@ function resolveCustomSlashCommand(commandStr: string): SlashCommandOutcome {
     ({ name }) => name === command,
   );
   if (matchedCommand !== undefined) {
-    print.info(
+    print.doing(
       `${bold("Executing command")}: /${wrapInColor(command, "grey")}`,
     );
     return {
@@ -1218,7 +1218,7 @@ function resolveCustomSlashCommand(commandStr: string): SlashCommandOutcome {
     ({ name }) => name === command,
   );
   if (matchedSkill !== undefined) {
-    print.info(`${bold("Executing skill")}: /${wrapInColor(command, "grey")}`);
+    print.doing(`${bold("Executing skill")}: /${wrapInColor(command, "grey")}`);
     return {
       handled: true,
       inputFromCommand: getSkillInput({
@@ -1484,7 +1484,7 @@ ${normalizeNewline(diffResult.value.stdout)}`,
 
   const diff = diffResults.join("\n");
   if (diff.length === 0) {
-    print.info("No diff from reload");
+    print.doing("No diff from reload");
   } else {
     await openWithPager({
       initialContentStr: diff,
