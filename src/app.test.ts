@@ -3835,6 +3835,45 @@ describe("config", () => {
       assert.strictEqual(getState().config.model, "claude-haiku-4-5");
     });
 
+    it("initializes and refreshes the cached session files", async () => {
+      testFs._dirs.add("/fake-home/.local/state/lasso/sessions");
+      testFs._files.set(
+        "/fake-home/.local/state/lasso/sessions/session-1000.json",
+        "session one",
+      );
+      testFs._files.set(getGlobalConfigPath(), JSON.stringify(testConfig));
+
+      await initState();
+
+      assert.deepStrictEqual(getState().session.sessionFiles, [
+        {
+          absolutePath:
+            "/fake-home/.local/state/lasso/sessions/session-1000.json",
+          timestampMs: 1000,
+        },
+      ]);
+
+      testFs._files.set(
+        "/fake-home/.local/state/lasso/sessions/session-2000.json",
+        "session two",
+      );
+
+      await initStateRepeatable();
+
+      assert.deepStrictEqual(getState().session.sessionFiles, [
+        {
+          absolutePath:
+            "/fake-home/.local/state/lasso/sessions/session-2000.json",
+          timestampMs: 2000,
+        },
+        {
+          absolutePath:
+            "/fake-home/.local/state/lasso/sessions/session-1000.json",
+          timestampMs: 1000,
+        },
+      ]);
+    });
+
     it("does not reset the session start date or debug log path", async () => {
       const sessionStartDate = getState().session.sessionStartDate;
       testFs._files.set(

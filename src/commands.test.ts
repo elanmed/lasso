@@ -63,6 +63,7 @@ import {
   mockSpawnSync,
   mockPagerSpawn,
   addSessionFile,
+  addSessionFileInfo,
   setupKeypressTests,
   makeFakeRlWithWrites,
   mockClipboardPaste,
@@ -1304,8 +1305,32 @@ second
       ]);
     });
 
+    it("resumes from the cached index even when new files appear on disk", async () => {
+      addSessionFile(1234567890000, {
+        messages: [{ role: "user", content: "cached session" }],
+        summaries: [],
+        transcript: [],
+      });
+      testFs._files.set(
+        "/fake-home/.local/state/lasso/sessions/session-1234567899999.json",
+        JSON.stringify({
+          messages: [{ role: "user", content: "new disk session" }],
+          summaries: [],
+          transcript: [],
+        }),
+      );
+
+      const result = await resume("/resume 0");
+
+      assert.strictEqual(result, "Continue");
+      assert.deepStrictEqual(getState().conversation.messages, [
+        { role: "user", content: "cached session" },
+      ]);
+    });
+
     it("prints error when no conversation is found", async () => {
       testFs._dirs.add("/fake-home/.local/state/lasso/sessions");
+      addSessionFileInfo(9999999999999);
       testFs._files.set(
         "/fake-home/.local/state/lasso/sessions/session-9999999999999.json",
         "transcript content",
@@ -1320,6 +1345,7 @@ second
 
     it("prints an error and returns null when the session file cannot be parsed", async () => {
       testFs._dirs.add("/fake-home/.local/state/lasso/sessions");
+      addSessionFileInfo(1234567890000);
       testFs._files.set(
         "/fake-home/.local/state/lasso/sessions/session-1234567890000.json",
         "not json",
@@ -1525,6 +1551,7 @@ second
 
     it("does not open a pager when every session file is invalid", async () => {
       testFs._dirs.add("/fake-home/.local/state/lasso/sessions");
+      addSessionFileInfo(1234567890000);
       testFs._files.set(
         "/fake-home/.local/state/lasso/sessions/session-1234567890000.json",
         "not json",
@@ -4064,15 +4091,11 @@ log content
 
       it("handles /resume without args", async () => {
         actions.terminal.resetStdout();
-        testFs._dirs.add("/fake-home/.local/state/lasso/sessions");
-        testFs._files.set(
-          "/fake-home/.local/state/lasso/sessions/session-1234567890000.json",
-          JSON.stringify({
-            messages: [{ role: "user", content: "hello" }],
-            summaries: [],
-            transcript: [],
-          }),
-        );
+        addSessionFile(1234567890000, {
+          messages: [{ role: "user", content: "hello" }],
+          summaries: [],
+          transcript: [],
+        });
         const result = await resolveSlashCommand("/resume");
         assert.strictEqual(result, "Continue");
         assert.deepStrictEqual(getState().conversation.transcript, [
@@ -4081,15 +4104,11 @@ log content
       });
 
       it("handles /resume with a session start date", async () => {
-        testFs._dirs.add("/fake-home/.local/state/lasso/sessions");
-        testFs._files.set(
-          "/fake-home/.local/state/lasso/sessions/session-1234567890000.json",
-          JSON.stringify({
-            messages: [{ role: "user", content: "hello" }],
-            summaries: [],
-            transcript: [],
-          }),
-        );
+        addSessionFile(1234567890000, {
+          messages: [{ role: "user", content: "hello" }],
+          summaries: [],
+          transcript: [],
+        });
         const result = await resolveSlashCommand("/resume 1234567890000");
         assert.strictEqual(result, "Continue");
         assert.deepStrictEqual(getState().conversation.transcript, [

@@ -60,8 +60,14 @@ interface DebugState {
   debugLogPath: string;
 }
 
+interface SessionFileInfo {
+  absolutePath: string;
+  timestampMs: number;
+}
+
 interface SessionState {
   sessionFilePath: string;
+  sessionFiles: SessionFileInfo[];
   sessionStartDate: number;
   sessionId: string;
 }
@@ -146,6 +152,7 @@ const createInitialState = (): State => ({
   },
   session: {
     sessionFilePath: "",
+    sessionFiles: [],
     sessionStartDate: Date.now(),
     sessionId: getShortId(),
   },
@@ -254,6 +261,9 @@ export const actions = {
   session: {
     setFilePath(sessionFilePath: string) {
       state.session.sessionFilePath = sessionFilePath;
+    },
+    setFiles(sessionFiles: SessionFileInfo[]) {
+      state.session.sessionFiles = sessionFiles;
     },
   },
   conversation: {

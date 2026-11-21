@@ -67,6 +67,7 @@ import {
   initSessionFile,
   deleteExpiredSessionFiles,
   deleteExpiredWebpageFiles,
+  listSessionFiles,
 } from "./session.ts";
 import {
   initStateFromConfig,
@@ -320,6 +321,8 @@ export async function initStateFromFs({
   performanceLogger: ParallelPerformanceLogger;
 }) {
   await syncInitialModelUsageForLimitWindow();
+  await deleteExpiredSessionFiles();
+  actions.session.setFiles(await listSessionFiles());
 
   performanceLogger.start("context");
   const contextEntries = await getContextEntries();
@@ -393,7 +396,6 @@ export async function initState() {
   await Promise.all([
     initMcpState({ performanceLogger }),
     initStateFromFs({ performanceLogger }),
-    deleteExpiredSessionFiles(),
     deleteExpiredWebpageFiles(),
     initBatAvailable(),
   ]);

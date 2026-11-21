@@ -56,7 +56,6 @@ import type { SpacingOpts } from "./printing.ts";
 import {
   getAppendedTranscript,
   interruptContent,
-  listSessionFiles,
   syncSessionFile,
   resumeFromSessionFile,
   parseSessionFile,
@@ -447,7 +446,7 @@ ${formatted}`;
 }
 
 export async function resumeWithNoArgs() {
-  const sessionFiles = (await listSessionFiles()).filter(
+  const sessionFiles = getState().session.sessionFiles.filter(
     ({ absolutePath }) => getState().session.sessionFilePath !== absolutePath,
   );
   if (sessionFiles.length === 0) {
@@ -478,7 +477,7 @@ export async function resume(rawInput: string) {
     return null;
   }
 
-  const sessionFiles = await listSessionFiles();
+  const sessionFiles = getState().session.sessionFiles;
   for (let idx = 0; idx < sessionFiles.length; idx++) {
     const sessionFile = sessionFiles[idx];
     assertAtBuildtime(sessionFile !== undefined);
@@ -1099,7 +1098,7 @@ const getReloadTempFileStr = (): Record<ReloadTempFilePrefixes, string> => ({
 });
 
 export async function pageSessions() {
-  const sessionFiles = await listSessionFiles();
+  const sessionFiles = getState().session.sessionFiles;
 
   interface SessionToPage {
     timestampMs: number;

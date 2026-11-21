@@ -24,6 +24,7 @@ describe("state", () => {
       assert.equal(getState().debug.debugLog, false);
       assert.equal(getState().debug.debugLogPath, "");
       assert.equal(getState().session.sessionFilePath, "");
+      assert.deepStrictEqual(getState().session.sessionFiles, []);
       assert.equal(getState().session.sessionStartDate, 0);
       assert.equal(getState().session.sessionId, "test-uuid");
       assert.deepStrictEqual(getState().conversation.messages, []);
@@ -184,6 +185,22 @@ describe("state", () => {
   });
 
   describe("conversation state", () => {
+    it("set-session-files", () => {
+      actions.session.setFiles([
+        {
+          absolutePath: "/tmp/session-123.json",
+          timestampMs: 123,
+        },
+      ]);
+
+      assert.deepStrictEqual(getState().session.sessionFiles, [
+        {
+          absolutePath: "/tmp/session-123.json",
+          timestampMs: 123,
+        },
+      ]);
+    });
+
     it("set-session-file-path", () => {
       assert.equal(getState().session.sessionFilePath, "");
       actions.session.setFilePath("/tmp/session.json");

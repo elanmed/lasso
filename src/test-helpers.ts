@@ -217,9 +217,23 @@ export const testFs = makeFakeFsDeps();
 export const testProcessEnv = makeFakeProcessEnv();
 const testCwd = makeFakeCwd();
 
+export function addSessionFileInfo(timestampMs: number) {
+  const absolutePath =
+    "/fake-home/.local/state/lasso/sessions/session-" +
+    timestampMs.toString() +
+    ".json";
+  actions.session.setFiles(
+    [
+      ...getState().session.sessionFiles,
+      { absolutePath, timestampMs },
+    ].toSorted((a, b) => b.timestampMs - a.timestampMs),
+  );
+  return absolutePath;
+}
+
 export function addSessionFile(timestampMs: number, session: SessionFile) {
   testFs._dirs.add("/fake-home/.local/state/lasso/sessions");
-  const path = `/fake-home/.local/state/lasso/sessions/session-${timestampMs.toString()}.json`;
+  const path = addSessionFileInfo(timestampMs);
   testFs._files.set(path, stringify(session, { space: 0 }));
   return path;
 }
