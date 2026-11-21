@@ -64,14 +64,14 @@ describe("listSessionFiles", () => {
     assert.deepStrictEqual(await listSessionFiles(), []);
   });
 
-  it("returns valid session files with absolute path and timestamp", async () => {
+  it("returns session files sorted by newest timestamp first", async () => {
     testFs._dirs.add("/fake-home/.local/state/lasso/sessions");
     testFs._files.set(
-      "/fake-home/.local/state/lasso/sessions/session-1234567890000.json",
+      "/fake-home/.local/state/lasso/sessions/session-999990000000.json",
       "",
     );
     testFs._files.set(
-      "/fake-home/.local/state/lasso/sessions/session-999990000000.json",
+      "/fake-home/.local/state/lasso/sessions/session-1234567890000.json",
       "",
     );
 

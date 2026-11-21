@@ -1227,7 +1227,7 @@ second
       const result = await resume("/resume");
       assert.strictEqual(result, null);
       assert.deepStrictEqual(getWrites(), [
-        `${RED}‼ Usage: /resume [session start date]${RESET}\n`,
+        `${RED}‼ Usage: /resume [session start date or index]${RESET}\n`,
       ]);
     });
 
@@ -1235,7 +1235,7 @@ second
       const result = await resume("/resume 123 456");
       assert.strictEqual(result, null);
       assert.deepStrictEqual(getWrites(), [
-        `${RED}‼ Usage: /resume [session start date]${RESET}\n`,
+        `${RED}‼ Usage: /resume [session start date or index]${RESET}\n`,
       ]);
     });
 
@@ -1243,7 +1243,7 @@ second
       const result = await resume("/resume abc");
       assert.strictEqual(result, null);
       assert.deepStrictEqual(getWrites(), [
-        `${RED}‼ Usage: /resume [session start date]${RESET}\n`,
+        `${RED}‼ Usage: /resume [session start date or index]${RESET}\n`,
       ]);
     });
 
@@ -1251,7 +1251,7 @@ second
       const result = await resume("/resume 1234567890000");
       assert.strictEqual(result, null);
       assert.deepStrictEqual(getWrites(), [
-        `${RED}‼ No conversation found with session start date: 1234567890000${RESET}\n`,
+        `${RED}‼ No conversation found with session start date or index: 1234567890000${RESET}\n`,
         "\n",
       ]);
     });
@@ -1283,6 +1283,26 @@ second
       });
     });
 
+    it("resumes the session at the requested index", async () => {
+      addSessionFile(1234567890000, {
+        messages: [{ role: "user", content: "older" }],
+        summaries: [],
+        transcript: [],
+      });
+      addSessionFile(1234567899999, {
+        messages: [{ role: "user", content: "newer" }],
+        summaries: [],
+        transcript: [],
+      });
+
+      const result = await resume("/resume 0");
+
+      assert.strictEqual(result, "Continue");
+      assert.deepStrictEqual(getState().conversation.messages, [
+        { role: "user", content: "newer" },
+      ]);
+    });
+
     it("prints error when no conversation is found", async () => {
       testFs._dirs.add("/fake-home/.local/state/lasso/sessions");
       testFs._files.set(
@@ -1292,7 +1312,7 @@ second
       const result = await resume("/resume 1234567890000");
       assert.strictEqual(result, null);
       assert.deepStrictEqual(getWrites(), [
-        `${RED}‼ No conversation found with session start date: 1234567890000${RESET}\n`,
+        `${RED}‼ No conversation found with session start date or index: 1234567890000${RESET}\n`,
         "\n",
       ]);
     });
@@ -1320,7 +1340,7 @@ second
       const result = await resume("/resume 1234567890000");
       assert.strictEqual(result, null);
       assert.deepStrictEqual(getWrites(), [
-        `${RED}‼ No conversation found with session start date: 1234567890000${RESET}\n`,
+        `${RED}‼ No conversation found with session start date or index: 1234567890000${RESET}\n`,
         "\n",
       ]);
     });

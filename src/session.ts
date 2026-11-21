@@ -64,7 +64,7 @@ export async function listSessionFiles() {
       timestampMs,
     });
   }
-  return sessionFiles;
+  return sessionFiles.toSorted((a, b) => b.timestampMs - a.timestampMs);
 }
 
 export function getAppendedConversationMessages(...messages: ModelMessage[]) {

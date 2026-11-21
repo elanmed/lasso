@@ -453,10 +453,7 @@ export async function resumeWithNoArgs() {
     return null;
   }
 
-  const sortedSessionFiles = sessionFiles.toSorted(
-    (a, b) => b.timestampMs - a.timestampMs,
-  );
-  const sessionFile = sortedSessionFiles[0];
+  const sessionFile = sessionFiles[0];
   assertAtBuildtime(sessionFile !== undefined);
 
   const success = await resumeFromSessionFile(sessionFile.absolutePath);
@@ -468,20 +465,29 @@ export async function resume(rawInput: string) {
   const parts = splitArgs(rawInput);
 
   if (parts.length !== 2) {
-    print.error("Usage: /resume [session start date]");
+    print.error("Usage: /resume [session start date or index]");
     return null;
   }
-  const sessionStartDate = parts[1];
-  assertAtBuildtime(sessionStartDate !== undefined);
+  const sessionStartDateOrIdx = parts[1];
+  assertAtBuildtime(sessionStartDateOrIdx !== undefined);
 
-  if (Number.isNaN(Number(sessionStartDate))) {
-    print.error("Usage: /resume [session start date]");
+  if (Number.isNaN(Number(sessionStartDateOrIdx))) {
+    print.error("Usage: /resume [session start date or index]");
     return null;
   }
 
   const sessionFiles = await listSessionFiles();
-  for (const { absolutePath, timestampMs } of sessionFiles) {
-    if (timestampMs !== Number(sessionStartDate)) continue;
+  for (let idx = 0; idx < sessionFiles.length; idx++) {
+    const sessionFile = sessionFiles[idx];
+    assertAtBuildtime(sessionFile !== undefined);
+    const { absolutePath, timestampMs } = sessionFile;
+
+    if (
+      timestampMs !== Number(sessionStartDateOrIdx) &&
+      idx !== Number(sessionStartDateOrIdx)
+    ) {
+      continue;
+    }
     const success = await resumeFromSessionFile(absolutePath);
     if (success) {
       return "Continue";
@@ -491,7 +497,7 @@ export async function resume(rawInput: string) {
 
   errorWithSpacing(() => {
     print.error(
-      `No conversation found with session start date: ${sessionStartDate}`,
+      `No conversation found with session start date or index: ${sessionStartDateOrIdx}`,
     );
   });
   return null;

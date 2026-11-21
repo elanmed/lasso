@@ -330,32 +330,32 @@ usageLimit:
 
 Slash commands are triggered with `/command` at the prompt.
 
-| Command         | Description                                                                   |
-| --------------- | ----------------------------------------------------------------------------- |
-| `/edit`         | Call the `edit` keymap                                                        |
-| `/editpage`     | View the current editor input in a pager                                      |
-| `/clear`        | Clear conversation context                                                    |
-| `/history`      | View chat history in a pager                                                  |
-| `/lastresponse` | View the latest assistant response in a pager                                 |
-| `/lastmessage`  | View the last user message in a pager                                         |
-| `/lastdiff`     | View the last turn's tool edit diffs in a pager                               |
-| `/paste`        | Call the `paste` keymap                                                       |
-| `/record`       | Record audio and transcribe it into the prompt                                |
-| `/skills`       | List available skills                                                         |
-| `/tools`        | List available harness and MCP tools in a pager                               |
-| `/context`      | List available context files                                                  |
-| `/commands`     | List available slash commands (builtin and custom)                            |
-| `/keymaps`      | List configured keybindings                                                   |
-| `/usage`        | Show current session usage                                                    |
-| `/tokens`       | Show current token count by area                                              |
-| `/config`       | View global, local, and applied config in a pager                             |
-| `/reload`       | Reload config and context, diff the result in a pager                         |
-| `/initlocal`    | Create `./.lasso/settings.yaml` if it doesn't exist                           |
-| `/initglobal`   | Create `$XDG_CONFIG_HOME/lasso/settings.yaml` if it doesn't exist             |
-| `/resume`       | Resume the latest session or select one by start date (`/resume <timestamp>`) |
-| `/summaries`    | View conversation summaries in a pager                                        |
-| `/mcps`         | Print configured MCP servers                                                  |
-| `/steer`        | Keymap-only: interrupt the active turn and send the editor's queued input     |
+| Command         | Description                                                                                              |
+| --------------- | -------------------------------------------------------------------------------------------------------- |
+| `/edit`         | Call the `edit` keymap                                                                                   |
+| `/editpage`     | View the current editor input in a pager                                                                 |
+| `/clear`        | Clear conversation context                                                                               |
+| `/history`      | View chat history in a pager                                                                             |
+| `/lastresponse` | View the latest assistant response in a pager                                                            |
+| `/lastmessage`  | View the last user message in a pager                                                                    |
+| `/lastdiff`     | View the last turn's tool edit diffs in a pager                                                          |
+| `/paste`        | Call the `paste` keymap                                                                                  |
+| `/record`       | Record audio and transcribe it into the prompt                                                           |
+| `/skills`       | List available skills                                                                                    |
+| `/tools`        | List available harness and MCP tools in a pager                                                          |
+| `/context`      | List available context files                                                                             |
+| `/commands`     | List available slash commands (builtin and custom)                                                       |
+| `/keymaps`      | List configured keybindings                                                                              |
+| `/usage`        | Show current session usage                                                                               |
+| `/tokens`       | Show current token count by area                                                                         |
+| `/config`       | View global, local, and applied config in a pager                                                        |
+| `/reload`       | Reload config and context, diff the result in a pager                                                    |
+| `/initlocal`    | Create `./.lasso/settings.yaml` if it doesn't exist                                                      |
+| `/initglobal`   | Create `$XDG_CONFIG_HOME/lasso/settings.yaml` if it doesn't exist                                        |
+| `/resume`       | Resume latest or select by timestamp or zero-based index (newest first) (`/resume <timestamp-or-index>`) |
+| `/summaries`    | View conversation summaries in a pager                                                                   |
+| `/mcps`         | Print configured MCP servers                                                                             |
+| `/steer`        | Keymap-only: interrupt the active turn and send the editor's queued input                                |
 
 ### Custom Slash Commands
 
