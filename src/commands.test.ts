@@ -1514,6 +1514,29 @@ second
       );
     });
 
+    it("accounts for the role prefix when truncating transcript messages", async () => {
+      actions.content.setBatAvailable(true);
+      mock.method(processDeps.stdout, "getColumns", () => 20);
+      mockPagerSpawn();
+      addSessionFile(1234567890000, {
+        messages: [],
+        summaries: [],
+        transcript: [{ timestamp: 0, role: "user", message: "1234567890" }],
+      });
+
+      await pageSessions();
+
+      assert.strictEqual(
+        testFs._files.get("/tmp/lasso-test-uuid.txt"),
+        `# [lasso] Sessions
+
+- **0**: 1234567890000
+  - _user_: 1234567…
+
+`,
+      );
+    });
+
     it("pages multiple sessions newest first with resume indices", async () => {
       actions.content.setBatAvailable(true);
       const { spawned } = mockPagerSpawn();

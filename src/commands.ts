@@ -1130,7 +1130,8 @@ export async function pageSessions() {
       const bullets = transcript
         .slice(0, 5)
         .map(({ role, message }) => {
-          return `  - _${role}_: ${truncateExactLine(message)}`;
+          const prefix = `  - _${role}_: `;
+          return `${prefix}${truncateExactLine(message, prefix.length)}`;
         })
         .join("\n");
 
