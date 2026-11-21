@@ -572,6 +572,12 @@ vim.g.clipboard = {
 
 ## TODO (now)
 
+- Non-interactive flag
+- Initial query flag
+- `/sessions` command with a clever way to pick a session?
+- Look into reversing pagers, or reversing readline stdout
+- Helper fns instead of checking abort controller nullishness
+
 ## TODO (later)
 
 - [ ] Print to the alternative buffer, repaint on resize
