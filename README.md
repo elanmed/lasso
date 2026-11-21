@@ -574,7 +574,6 @@ vim.g.clipboard = {
 
 - Non-interactive flag
 - Initial query flag
-- `/sessions` command with a clever way to pick a session?
 - Look into reversing pagers, or reversing readline stdout
 - Helper fns instead of checking abort controller nullishness
 
