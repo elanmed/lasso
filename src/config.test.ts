@@ -1436,9 +1436,9 @@ describe("config", () => {
           assert.deepStrictEqual(getWrites(), [
             "\n",
             `${YELLOW}▲ Warnings:${RESET}\n`,
-            `${YELLOW}▲ - A default context window of 128,000 tokens is used because there is no \`contextWindowPerModel\` entry for the current model \`claude-sonnet-4-6\`${RESET}\n`,
+            `${YELLOW}- A default context window of 128,000 tokens is used because there is no \`contextWindowPerModel\` entry for the current model \`claude-sonnet-4-6\`${RESET}\n`,
             "\n",
-            `${YELLOW}▲ Suppress these warnings via the \`suppressConfigWarnings\` config option${RESET}\n`,
+            `${YELLOW}Suppress these warnings via the \`suppressConfigWarnings\` config option${RESET}\n`,
             "\n",
           ]);
         });
@@ -2214,7 +2214,7 @@ hello
       assert.deepStrictEqual(getWrites(), [
         "\n",
         `${RED}‼ Errors:${RESET}\n`,
-        `${RED}‼ - Set \`model\` in your config file\n- Set the \`LASSO_API_KEY\` environment variable, e.g. \`export LASSO_API_KEY=...\`${RESET}\n`,
+        `${RED}- Set \`model\` in your config file\n- Set the \`LASSO_API_KEY\` environment variable, e.g. \`export LASSO_API_KEY=...\`${RESET}\n`,
         "\n",
       ]);
     });
@@ -2229,9 +2229,9 @@ hello
       assert.deepStrictEqual(getWrites(), [
         "\n",
         `${RED}‼ Errors:${RESET}\n`,
-        `${RED}‼ - Set \`model\` in your config file${RESET}\n`,
+        `${RED}- Set \`model\` in your config file${RESET}\n`,
         "\n",
-        `${RED}‼ Run /initlocal or /initglobal to generate a sample config in \`./.lasso\` or \`~/.config/lasso\` respectively, then /reload to apply it to the current session.${RESET}\n`,
+        `${RED}Run /initlocal or /initglobal to generate a sample config in \`./.lasso\` or \`~/.config/lasso\` respectively, then /reload to apply it to the current session.${RESET}\n`,
         "\n",
       ]);
     });

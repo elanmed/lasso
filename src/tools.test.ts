@@ -458,7 +458,7 @@ describe("tools", () => {
       const getWrites = mockStdoutWrites();
       toolPrint("bash", "one\ntwo\nthree", { maxLines: 2 });
       assert.deepStrictEqual(getWrites(), [
-        `${BLUE}⚙ ${BOLD}bash${BOLD_RESET}: ${GREY}one\ntwo~${RESET}${RESET}\n`,
+        `${BLUE}* ${BOLD}bash${BOLD_RESET}: ${GREY}one\ntwo~${RESET}${RESET}\n`,
       ]);
     });
   });

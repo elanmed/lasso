@@ -161,10 +161,13 @@ export function printMissingConfigWarnings() {
 
   printNewline();
   print.warning("Warnings:");
-  print.warning(messages.map((message) => `- ${message}`).join("\n"));
+  print.warning(messages.map((message) => `- ${message}`).join("\n"), {
+    skipPrefix: true,
+  });
   printNewline();
   print.warning(
     `Suppress these warnings via the \`suppressConfigWarnings\` config option`,
+    { skipPrefix: true },
   );
   printNewline();
 }
@@ -175,11 +178,14 @@ export function printMissingConfigErrors() {
 
   printNewline();
   print.error("Errors:");
-  print.error(messages.map((message) => `- ${message}`).join("\n"));
+  print.error(messages.map((message) => `- ${message}`).join("\n"), {
+    skipPrefix: true,
+  });
   if (getState().content.includeConfigInitMessage) {
     printNewline();
     print.error(
       "Run /initlocal or /initglobal to generate a sample config in `./.lasso` or `~/.config/lasso` respectively, then /reload to apply it to the current session.",
+      { skipPrefix: true },
     );
   }
   printNewline();

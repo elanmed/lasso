@@ -6,6 +6,7 @@ import {
   startLoadingState,
   stopLoadingState,
   colorPrint,
+  buildColorPrint,
   print,
   printSessionStartDate,
   printNewline,
@@ -98,7 +99,7 @@ describe("print", () => {
       print.warning("caution");
       print.error("failure");
       assert.deepStrictEqual(getWrites(), [
-        `${PURPLE}* working${RESET}\n`,
+        `${PURPLE}> working${RESET}\n`,
         `${BLUE}ready${RESET}\n`,
         `${YELLOW}! caution${RESET}\n`,
         `${RED}! failure${RESET}\n`,
@@ -108,6 +109,13 @@ describe("print", () => {
       const getWrites = mockStdoutWrites();
       print.tool("bash");
       assert.deepStrictEqual(getWrites(), [`${BLUE}⚙ bash${RESET}\n`]);
+    });
+
+    it("uses an ascii gear marker in ASCII mode", () => {
+      actions.config.setAsciiOnly(true);
+      const getWrites = mockStdoutWrites();
+      print.tool("bash");
+      assert.deepStrictEqual(getWrites(), [`${BLUE}* bash${RESET}\n`]);
     });
   });
   describe("startLoadingState", () => {
@@ -335,6 +343,26 @@ describe("print", () => {
         logIdToLabel: [["a", "Starting a: "]],
       });
       assert.throws(() => logger.end("a"));
+    });
+  });
+
+  describe("buildColorPrint", () => {
+    it("applies the configured prefix", () => {
+      const getWrites = mockStdoutWrites();
+      buildColorPrint(">")("hello", "blue");
+      assert.deepStrictEqual(getWrites(), [`${BLUE}> hello${RESET}\n`]);
+    });
+
+    it("omits the configured prefix when skipPrefix is true", () => {
+      const getWrites = mockStdoutWrites();
+      buildColorPrint(">")("hello", "blue", { skipPrefix: true });
+      assert.deepStrictEqual(getWrites(), [`${BLUE}hello${RESET}\n`]);
+    });
+
+    it("skips a status marker when requested", () => {
+      const getWrites = mockStdoutWrites();
+      print.doing("working", { skipPrefix: true });
+      assert.deepStrictEqual(getWrites(), [`${PURPLE}working${RESET}\n`]);
     });
   });
 
@@ -595,7 +623,8 @@ describe("text", () => {
       assert.equal(getUnicodeChar("━"), "=");
       assert.equal(getUnicodeChar("▲"), "!");
       assert.equal(getUnicodeChar("‼"), "!");
-      assert.equal(getUnicodeChar("⚗"), "*");
+      assert.equal(getUnicodeChar("⚗"), ">");
+      assert.equal(getUnicodeChar("⚙"), "*");
     });
 
     it("throws for a char outside the map", () => {

@@ -23,12 +23,13 @@ import { childProcessDeps, fsDeps, processDeps } from "./deps.ts";
 
 export function getUnicodeChar(char: string) {
   const map = {
+    ["⚙"]: "*",
     ["┊"]: "|",
     ["…"]: "~",
     ["━"]: "=",
     ["▲"]: "!",
     ["‼"]: "!",
-    ["⚗"]: "*",
+    ["⚗"]: ">",
   };
   assertAtRuntime(char in map);
   const replacement = map[char as keyof typeof map];
@@ -64,60 +65,66 @@ export function truncateExactLine(str: string, padding = 0) {
     .concat(ellipsis);
 }
 
-interface AppendNewlineOpts {
+interface PrintOpts {
   appendNewline?: boolean;
   whileBuffering?: boolean;
+  skipPrefix?: boolean;
 }
 
 export const print = {
-  doing: (text: string, opts: AppendNewlineOpts = {}) =>
-    colorPrint(`${getUnicodeChar("⚗")} ${text}`, "purple", opts),
-  error: (text: string, opts: AppendNewlineOpts = {}) =>
-    colorPrint(`${getUnicodeChar("‼")} ${text}`, "red", opts),
-  info: (text: string, opts: AppendNewlineOpts = {}) =>
-    colorPrint(text, "blue", opts),
-  tool: (text: string, opts: AppendNewlineOpts = {}) =>
-    colorPrint(`⚙ ${text}`, "blue", opts),
-  infoSubtle: (text: string, opts: AppendNewlineOpts = {}) =>
-    colorPrint(text, "grey", opts),
-  warning: (text: string, opts: AppendNewlineOpts = {}) =>
-    colorPrint(`${getUnicodeChar("▲")} ${text}`, "yellow", opts),
-  plain: (text: string, opts: AppendNewlineOpts = {}) =>
-    colorPrint(text, "none", opts),
+  doing: (text: string, opts: PrintOpts = {}) =>
+    buildColorPrint(getUnicodeChar("⚗"))(text, "purple", opts),
+  error: (text: string, opts: PrintOpts = {}) =>
+    buildColorPrint(getUnicodeChar("‼"))(text, "red", opts),
+  info: (text: string, opts: PrintOpts = {}) =>
+    buildColorPrint()(text, "blue", opts),
+  tool: (text: string, opts: PrintOpts = {}) =>
+    buildColorPrint(getUnicodeChar("⚙"))(text, "blue", opts),
+  infoSubtle: (text: string, opts: PrintOpts = {}) =>
+    buildColorPrint()(text, "grey", opts),
+  warning: (text: string, opts: PrintOpts = {}) =>
+    buildColorPrint(getUnicodeChar("▲"))(text, "yellow", opts),
+  plain: (text: string, opts: PrintOpts = {}) =>
+    buildColorPrint()(text, "none", opts),
 };
 
-export function colorPrint(
-  text: string,
-  color: Color,
-  opts: AppendNewlineOpts = {},
-) {
-  const out = (() => {
-    const suffix = opts.appendNewline === false ? "" : "\n";
-    if (color === "none" || shouldDisableColor()) {
-      return `${text}${suffix}`;
+export function buildColorPrint(prefix = "") {
+  return function colorPrint(text: string, color: Color, opts: PrintOpts = {}) {
+    const resolvedPrefix = (() => {
+      if (opts.skipPrefix === true) return "";
+      if (prefix === "") return "";
+      return prefix.concat(" ");
+    })();
+
+    const out = (() => {
+      const suffix = opts.appendNewline === false ? "" : "\n";
+      if (color === "none" || shouldDisableColor()) {
+        return `${resolvedPrefix}${text}${suffix}`;
+      }
+      return `${wrapInColor(`${resolvedPrefix}${text}`, color)}${suffix}`;
+    })();
+
+    if (opts.whileBuffering === true) {
+      processDeps.stdout.write(out);
+      return;
     }
-    return `${wrapInColor(text, color)}${suffix}`;
-  })();
 
-  if (opts.whileBuffering === true) {
-    // Print immediately instead of buffering output while the editor is open.
+    const { isNonBlockingProcessOngoing } = getState().terminal;
+    if (isNonBlockingProcessOngoing) {
+      actions.terminal.appendBufferedStdoutWhileEditorOpen(out);
+      actions.terminal.appendStdoutTail(out);
+      return;
+    }
+
+    const wasSpinnerActive = getState().terminal.loadingStateTimeout !== null;
+    stopLoadingState();
     processDeps.stdout.write(out);
-    return;
-  }
-
-  const { isNonBlockingProcessOngoing } = getState().terminal;
-  if (isNonBlockingProcessOngoing) {
-    actions.terminal.appendBufferedStdoutWhileEditorOpen(out);
+    if (wasSpinnerActive) startLoadingState();
     actions.terminal.appendStdoutTail(out);
-    return;
-  }
-
-  const wasSpinnerActive = getState().terminal.loadingStateTimeout !== null;
-  stopLoadingState();
-  processDeps.stdout.write(out);
-  if (wasSpinnerActive) startLoadingState();
-  actions.terminal.appendStdoutTail(out);
+  };
 }
+
+export const colorPrint = buildColorPrint();
 
 export function createPerformanceLogger({
   logDuration,
