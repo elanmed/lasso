@@ -59,6 +59,7 @@ import {
   listSessionFiles,
   syncSessionFile,
   resumeFromSessionFile,
+  parseSessionFile,
 } from "./session.ts";
 import {
   printMissingConfigWarnings,
@@ -79,7 +80,7 @@ import {
   formatTokenCountAside,
   formatTokenRangeAside,
 } from "./tokens.ts";
-import { isSameKey, type Key } from "./schemas.ts";
+import { isSameKey, type Key, type TranscriptEntry } from "./schemas.ts";
 import { printMcps } from "./mcp.ts";
 
 export const contextFileSkillNamePrefix = "__lasso-context-for";
@@ -108,6 +109,7 @@ export const builtinSlashCommands = [
   "tools",
   "record",
   "mcps",
+  "sessions",
   "steer",
 ] as const;
 
@@ -1096,6 +1098,57 @@ const getReloadTempFileStr = (): Record<ReloadTempFilePrefixes, string> => ({
   skills: getState().content.skillsStr,
 });
 
+export async function pageSessions() {
+  const sessionFiles = await listSessionFiles();
+  if (sessionFiles.length === 0) {
+    print.warning("No sessions");
+    return;
+  }
+
+  interface SessionToPage {
+    timestampMs: number;
+    transcript: TranscriptEntry[];
+    idx: number;
+  }
+
+  const sessionToPage: SessionToPage[] = [];
+  for (let idx = 0; idx < sessionFiles.length; idx++) {
+    const sessionFile = sessionFiles[idx];
+    assertAtBuildtime(sessionFile !== undefined);
+    const { absolutePath, timestampMs } = sessionFile;
+    const parsedSessionFile = await parseSessionFile(absolutePath);
+    if (parsedSessionFile === null) continue;
+    sessionToPage.push({
+      transcript: parsedSessionFile.transcript,
+      idx,
+      timestampMs,
+    });
+  }
+
+  const contentStr = sessionToPage
+    .map(({ timestampMs, idx, transcript }) => {
+      const bullets = transcript
+        .slice(0, 5)
+        .map(({ role, message }) => {
+          return `  - _${role}_: ${truncateExactLine(message)}`;
+        })
+        .join("\n");
+
+      return `- **${String(idx)}**: ${String(timestampMs)}
+${bullets}`;
+    })
+    .join("\n\n");
+
+  const initialContentStr = `# [lasso] Sessions
+
+${contentStr}`;
+
+  await openWithPager({
+    initialContentStr,
+    contentType: "markdown",
+  });
+}
+
 export async function getAvailableSlashCommands() {
   const seenSlashCommands = new Set<string>();
 
@@ -1726,6 +1779,14 @@ async function resolveBuiltinSlashCommand(
       printMcps();
       return { handled: true, inputFromCommand: null };
     }
+    case "sessions": {
+      if (printUsageIfArgs(commandWithArgs)) {
+        return { handled: true, inputFromCommand: null };
+      }
+
+      await pageSessions();
+      return { handled: true, inputFromCommand: null };
+    }
     case "steer": {
       if (printUsageIfArgs(commandWithArgs)) {
         return { handled: true, inputFromCommand: null };
@@ -1946,6 +2007,11 @@ function initKeypress(
           }
           case "mcps": {
             printMcps();
+            redrawPendingQuestion(rl);
+            return;
+          }
+          case "sessions": {
+            await pageSessions();
             redrawPendingQuestion(rl);
             return;
           }

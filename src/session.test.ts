@@ -8,6 +8,7 @@ import {
   deleteExpiredWebpageFiles,
   syncSessionFile,
   resumeFromSessionFile,
+  parseSessionFile,
 } from "./session.ts";
 import { actions, getState } from "./state.ts";
 import { getWebpagesDir } from "./paths.ts";
@@ -446,6 +447,30 @@ describe("log", () => {
       assert.deepStrictEqual(getState().conversation.messages, [
         { role: "user", content: circularContent },
       ]);
+    });
+  });
+
+  describe("parseSessionFile", () => {
+    beforeEach(() => {
+      mock.restoreAll();
+      setupTestContext({ now: 1_234_567_890_000 });
+    });
+
+    it("returns the validated session file", async () => {
+      testFs._files.set(
+        "/test/session.json",
+        JSON.stringify({
+          messages: [{ role: "user", content: "hello" }],
+          summaries: [],
+          transcript: [{ timestamp: 0, role: "user", message: "hello" }],
+        }),
+      );
+
+      assert.deepStrictEqual(await parseSessionFile("/test/session.json"), {
+        messages: [{ role: "user", content: "hello" }],
+        summaries: [],
+        transcript: [{ timestamp: 0, role: "user", message: "hello" }],
+      });
     });
   });
 

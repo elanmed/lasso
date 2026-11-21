@@ -131,7 +131,7 @@ export async function syncSessionFile({
   }
 }
 
-export async function resumeFromSessionFile(sessionFilePath: string) {
+export async function parseSessionFile(sessionFilePath: string) {
   const readResult = await tryCatchAsync(
     fsDeps.readFile(sessionFilePath, "utf8"),
   );
@@ -139,7 +139,7 @@ export async function resumeFromSessionFile(sessionFilePath: string) {
     errorWithSpacing(() => {
       print.error(`Failed to read the session file at ${sessionFilePath}`);
     });
-    return false;
+    return null;
   }
 
   const jsonResult = tryCatch((): unknown => JSON.parse(readResult.value));
@@ -147,7 +147,7 @@ export async function resumeFromSessionFile(sessionFilePath: string) {
     errorWithSpacing(() => {
       print.error(`Failed to parse the session file at ${sessionFilePath}`);
     });
-    return false;
+    return null;
   }
 
   const parseResult = tryCatch(() => SessionFileSchema.parse(jsonResult.value));
@@ -155,9 +155,16 @@ export async function resumeFromSessionFile(sessionFilePath: string) {
     errorWithSpacing(() => {
       print.error(`Failed to validate the session file at ${sessionFilePath}`);
     });
-    return false;
+    return null;
   }
-  const { messages, summaries, transcript } = parseResult.value;
+  return parseResult.value;
+}
+
+export async function resumeFromSessionFile(sessionFilePath: string) {
+  const parsedSessionFile = await parseSessionFile(sessionFilePath);
+  if (parsedSessionFile === null) return false;
+
+  const { messages, summaries, transcript } = parsedSessionFile;
   actions.conversation.setTranscript(transcript);
   actions.conversation.setSummaries(summaries);
   actions.conversation.setMessages(messages);

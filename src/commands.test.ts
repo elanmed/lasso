@@ -26,6 +26,7 @@ import {
   pageSummaries,
   pageTools,
   pageHistory,
+  pageSessions,
   pageLastMessage,
   pageLastResponse,
   pageLastDiff,
@@ -1436,6 +1437,58 @@ second
     });
   });
 
+  describe("pageSessions", () => {
+    beforeEach(() => {
+      actions.resetState();
+      actions.terminal.resetStdout();
+    });
+
+    it("warns without opening a pager when there are no sessions", async () => {
+      const { spawned } = mockPagerSpawn();
+
+      await pageSessions();
+
+      assert.deepStrictEqual(getWrites(), [`${YELLOW}▲ No sessions${RESET}\n`]);
+      assert.deepStrictEqual(spawned, []);
+    });
+
+    it("lists session indices and up to five transcript messages", async () => {
+      actions.content.setBatAvailable(true);
+      const { spawned } = mockPagerSpawn();
+      addSessionFile(1234567890000, {
+        messages: [],
+        summaries: [],
+        transcript: [
+          { timestamp: 0, role: "user", message: "first" },
+          { timestamp: 1, role: "assistant", message: "second" },
+          { timestamp: 2, role: "user", message: "third" },
+          { timestamp: 3, role: "assistant", message: "fourth" },
+          { timestamp: 4, role: "user", message: "fifth" },
+          { timestamp: 5, role: "assistant", message: "sixth" },
+        ],
+      });
+
+      await pageSessions();
+
+      assert.deepStrictEqual(spawned, [
+        batPagerCmd("/tmp/lasso-test-uuid.txt"),
+      ]);
+      assert.strictEqual(
+        testFs._files.get("/tmp/lasso-test-uuid.txt"),
+        `# [lasso] Sessions
+
+- **0**: 1234567890000
+  - _user_: first
+  - _assistant_: second
+  - _user_: third
+  - _assistant_: fourth
+  - _user_: fifth
+
+`,
+      );
+    });
+  });
+
   describe("pageHistory", () => {
     beforeEach(() => {
       actions.resetState();
@@ -2580,6 +2633,7 @@ editor input
 - /tools
 - /record
 - /mcps
+- /sessions
 - /steer
 - /test/.lasso/commands/custom.md`,
       );
@@ -2618,6 +2672,7 @@ editor input
 - /tools
 - /record
 - /mcps
+- /sessions
 - /steer
 - /test/.lasso/commands/custom.md _(2 tokens)_`,
       );
@@ -2667,6 +2722,7 @@ editor input
 - /tools
 - /record
 - /mcps
+- /sessions
 - /steer
 - /test/.lasso/commands/custom.md _(2 tokens)_
 
@@ -2805,6 +2861,40 @@ editor input
           "\n",
         ]);
       });
+
+      it("opens sessions in a pager when the sessions keymap matches", async () => {
+        const prompts: boolean[] = [];
+        mock.method(harness.rl, "prompt", (arg: boolean) => {
+          prompts.push(arg);
+        });
+        const { spawned } = mockPagerSpawn();
+        testProcessEnv._set("LASSO_PAGER", "cat __FILE__");
+        actions.config.setKeymaps({
+          ...defaultConfig.keymaps,
+          sessions: { name: "s", ctrl: true },
+        });
+        addSessionFile(1234567890000, {
+          messages: [],
+          summaries: [],
+          transcript: [{ timestamp: 0, role: "user", message: "hello" }],
+        });
+
+        harness.emitKey({ name: "s", ctrl: true });
+        await harness.flush();
+
+        assert.strictEqual(
+          testFs._files.get("/tmp/lasso-test-uuid.txt"),
+          `# [lasso] Sessions
+
+- **0**: 1234567890000
+  - _user_: hello
+
+`,
+        );
+        assert.deepStrictEqual(spawned, ["cat /tmp/lasso-test-uuid.txt"]);
+        assert.deepStrictEqual(prompts, [true]);
+      });
+
       it("does not type builtin command when no question is pending", () => {
         actions.config.setKeymaps({
           ...defaultConfig.keymaps,
@@ -3323,6 +3413,7 @@ editor input
 - /tools
 - /record
 - /mcps
+- /sessions
 - /steer
 - /test/.lasso/commands/custom.md _(2 tokens)_
 
@@ -3576,6 +3667,27 @@ editor input
           "\n",
         ]);
       });
+
+      it("handles /sessions command by opening the session list", async () => {
+        addSessionFile(1234567890000, {
+          messages: [],
+          summaries: [],
+          transcript: [{ timestamp: 0, role: "user", message: "hello" }],
+        });
+
+        const result = await resolveSlashCommand("/sessions");
+
+        assert.strictEqual(result, null);
+        assert.strictEqual(
+          testFs._files.get("/tmp/lasso-test-uuid.txt"),
+          `# [lasso] Sessions
+
+- **0**: 1234567890000
+  - _user_: hello
+
+`,
+        );
+      });
     });
 
     describe("record commands", () => {
@@ -3743,6 +3855,7 @@ log content
 - /tools
 - /record
 - /mcps
+- /sessions
 
 `,
         );
@@ -4510,6 +4623,7 @@ Analyze carefully.`,
 - /tools
 - /record
 - /mcps
+- /sessions
 - /steer
 - /test-cwd/.lasso/commands/known.md _(4 tokens)_
 
