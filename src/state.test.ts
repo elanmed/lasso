@@ -1,7 +1,12 @@
 import { afterEach, beforeEach, describe, it, mock } from "node:test";
 import assert from "node:assert/strict";
 import { initMcpState } from "./mcp.ts";
-import { actions, getState } from "./state.ts";
+import {
+  actions,
+  getState,
+  isApiStreamOngoing,
+  isQuestionPending,
+} from "./state.ts";
 import { defaultConfig, MISSING } from "./schemas.ts";
 import {
   makeFakeMcpClient,
@@ -502,6 +507,22 @@ describe("state", () => {
   });
 
   describe("input handling", () => {
+    it("reports whether a readline question is pending", () => {
+      assert.strictEqual(isQuestionPending(), false);
+      actions.abortControllers.setQuestion(new AbortController());
+      assert.strictEqual(isQuestionPending(), true);
+      actions.abortControllers.setQuestion(null);
+      assert.strictEqual(isQuestionPending(), false);
+    });
+
+    it("reports whether an API stream is ongoing", () => {
+      assert.strictEqual(isApiStreamOngoing(), false);
+      actions.abortControllers.setApiStream(new AbortController());
+      assert.strictEqual(isApiStreamOngoing(), true);
+      actions.abortControllers.setApiStream(null);
+      assert.strictEqual(isApiStreamOngoing(), false);
+    });
+
     it("set-keymaps", () => {
       actions.config.setKeymaps({
         edit: { name: "v", ctrl: false, meta: false, shift: false },

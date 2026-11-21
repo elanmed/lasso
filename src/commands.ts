@@ -23,7 +23,13 @@ import {
   type Option,
   bold,
 } from "./utils.ts";
-import { actions, getState, type Skill, type SlashCommand } from "./state.ts";
+import {
+  actions,
+  getState,
+  isQuestionPending,
+  type Skill,
+  type SlashCommand,
+} from "./state.ts";
 import { aiDeps, childProcessDeps, fsDeps, processDeps } from "./deps.ts";
 import {
   getGlobalConfigPath,
@@ -1865,7 +1871,7 @@ function typeCommand(rl: readline.Interface, command: string) {
 // Reprints the readline prompt line and any half-typed input after pager
 // commands so the pending question and its input stay visible and editable
 function redrawPendingQuestion(rl: readline.Interface) {
-  if (getState().abortControllers.question === null) return;
+  if (!isQuestionPending()) return;
   rl.prompt(true);
   actions.terminal.appendStdoutTail(getState().config.promptPrefix);
 }
@@ -1913,7 +1919,7 @@ function initKeypress(
             return;
           }
           case "record": {
-            if (getState().abortControllers.question !== null) {
+            if (isQuestionPending()) {
               typeCommand(rl, command);
               return;
             }
@@ -2037,7 +2043,7 @@ function initKeypress(
           case "tokens":
           case "resume":
           case "clear": {
-            if (getState().abortControllers.question !== null) {
+            if (isQuestionPending()) {
               typeCommand(rl, command);
             }
             return;
@@ -2053,7 +2059,7 @@ function initKeypress(
         if (keymap === undefined) continue;
         if (!isSameKey(key, keymap)) continue;
 
-        if (getState().abortControllers.question !== null) {
+        if (isQuestionPending()) {
           typeCommand(rl, slashCommand.name);
         }
         return;

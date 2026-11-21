@@ -18,7 +18,7 @@ import {
   bold,
   wrapInColor,
 } from "./utils.ts";
-import { actions, getState } from "./state.ts";
+import { actions, getState, isApiStreamOngoing } from "./state.ts";
 import { childProcessDeps, fsDeps, processDeps } from "./deps.ts";
 
 export function getUnicodeChar(char: string) {
@@ -478,7 +478,7 @@ export async function wrapToOpenNonBlockingProcess<T>(
     processDeps.stdout.write(bufferedStdout);
     actions.terminal.resetBufferedStdoutWhileEditorOpen();
   }
-  if (getState().abortControllers.apiStream !== null) {
+  if (isApiStreamOngoing()) {
     startLoadingState();
   }
   return ret;
@@ -492,7 +492,7 @@ export function streamingSupportedWithSpacing(
   isTyped: boolean,
   cb: () => void,
 ) {
-  if (getState().abortControllers.apiStream !== null) {
+  if (isApiStreamOngoing()) {
     cb();
     return;
   }

@@ -249,6 +249,11 @@ let state: State = createInitialState();
 
 export const getState = () => state;
 
+export const isQuestionPending = () => state.abortControllers.question !== null;
+
+export const isApiStreamOngoing = () =>
+  state.abortControllers.apiStream !== null;
+
 export const actions = {
   debug: {
     setLog(debugLog: boolean) {
