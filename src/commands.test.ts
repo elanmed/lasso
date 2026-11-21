@@ -1487,6 +1487,59 @@ second
 `,
       );
     });
+
+    it("pages multiple sessions newest first with resume indices", async () => {
+      actions.content.setBatAvailable(true);
+      const { spawned } = mockPagerSpawn();
+      addSessionFile(1234567890000, {
+        messages: [],
+        summaries: [],
+        transcript: [{ timestamp: 0, role: "user", message: "older session" }],
+      });
+      addSessionFile(1234567899999, {
+        messages: [],
+        summaries: [],
+        transcript: [
+          { timestamp: 1, role: "assistant", message: "newer session" },
+        ],
+      });
+
+      await pageSessions();
+
+      assert.deepStrictEqual(spawned, [
+        batPagerCmd("/tmp/lasso-test-uuid.txt"),
+      ]);
+      assert.strictEqual(
+        testFs._files.get("/tmp/lasso-test-uuid.txt"),
+        `# [lasso] Sessions
+
+- **0**: 1234567899999
+  - _assistant_: newer session
+
+- **1**: 1234567890000
+  - _user_: older session
+
+`,
+      );
+    });
+
+    it("does not open a pager when every session file is invalid", async () => {
+      testFs._dirs.add("/fake-home/.local/state/lasso/sessions");
+      testFs._files.set(
+        "/fake-home/.local/state/lasso/sessions/session-1234567890000.json",
+        "not json",
+      );
+      const { spawned } = mockPagerSpawn();
+
+      await pageSessions();
+
+      assert.deepStrictEqual(getWrites(), [
+        `${RED}‼ Failed to parse the session file at /fake-home/.local/state/lasso/sessions/session-1234567890000.json${RESET}\n`,
+        "\n",
+        `${YELLOW}▲ No sessions${RESET}\n`,
+      ]);
+      assert.deepStrictEqual(spawned, []);
+    });
   });
 
   describe("pageHistory", () => {
@@ -3687,6 +3740,18 @@ editor input
 
 `,
         );
+      });
+
+      it("warns without opening a pager for /sessions when none exist", async () => {
+        const { spawned } = mockPagerSpawn();
+
+        const result = await resolveSlashCommand("/sessions");
+
+        assert.strictEqual(result, null);
+        assert.deepStrictEqual(getWrites(), [
+          `${YELLOW}▲ No sessions${RESET}\n`,
+        ]);
+        assert.deepStrictEqual(spawned, []);
       });
     });
 

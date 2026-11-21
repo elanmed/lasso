@@ -1100,10 +1100,6 @@ const getReloadTempFileStr = (): Record<ReloadTempFilePrefixes, string> => ({
 
 export async function pageSessions() {
   const sessionFiles = await listSessionFiles();
-  if (sessionFiles.length === 0) {
-    print.warning("No sessions");
-    return;
-  }
 
   interface SessionToPage {
     timestampMs: number;
@@ -1123,6 +1119,11 @@ export async function pageSessions() {
       idx,
       timestampMs,
     });
+  }
+
+  if (sessionToPage.length === 0) {
+    print.warning("No sessions");
+    return;
   }
 
   const contentStr = sessionToPage

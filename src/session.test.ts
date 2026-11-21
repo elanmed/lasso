@@ -472,6 +472,38 @@ describe("log", () => {
         transcript: [{ timestamp: 0, role: "user", message: "hello" }],
       });
     });
+
+    it("returns null and reports read failures", async () => {
+      const getWrites = mockStdoutWrites();
+
+      assert.strictEqual(await parseSessionFile("/test/missing.json"), null);
+      assert.deepStrictEqual(getWrites(), [
+        `${RED}‼ Failed to read the session file at /test/missing.json${RESET}\n`,
+        "\n",
+      ]);
+    });
+
+    it("returns null and reports malformed json", async () => {
+      testFs._files.set("/test/broken.json", "not json");
+      const getWrites = mockStdoutWrites();
+
+      assert.strictEqual(await parseSessionFile("/test/broken.json"), null);
+      assert.deepStrictEqual(getWrites(), [
+        `${RED}‼ Failed to parse the session file at /test/broken.json${RESET}\n`,
+        "\n",
+      ]);
+    });
+
+    it("returns null and reports schema validation failures", async () => {
+      testFs._files.set("/test/invalid.json", "{}");
+      const getWrites = mockStdoutWrites();
+
+      assert.strictEqual(await parseSessionFile("/test/invalid.json"), null);
+      assert.deepStrictEqual(getWrites(), [
+        `${RED}‼ Failed to validate the session file at /test/invalid.json${RESET}\n`,
+        "\n",
+      ]);
+    });
   });
 
   describe("resumeFromSessionFile", () => {
