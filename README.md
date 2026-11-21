@@ -572,12 +572,10 @@ vim.g.clipboard = {
 
 ## TODO (now)
 
-- Non-interactive flag
-- Initial query flag
 - Look into reversing pagers, or reversing readline stdout
-- Helper fns instead of checking abort controller nullishness
 
 ## TODO (later)
 
-- [ ] Print to the alternative buffer, repaint on resize
 - [ ] Support codemode
+- [ ] Non-interactive flag
+- [ ] Initial query flag
