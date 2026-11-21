@@ -74,6 +74,7 @@ import {
   stripAnsi,
   mockProcessExit,
 } from "./test-helpers.ts";
+import { interruptContent } from "./session.ts";
 import { fsDeps, aiDeps, processDeps } from "./deps.ts";
 import { print } from "./printing.ts";
 import { sleep } from "./utils.ts";
@@ -1283,6 +1284,9 @@ second
         stale: true,
         charLength: 0,
       });
+      assert.deepStrictEqual(getWrites(), [
+        `${PURPLE}⚗ Resuming session: ${GREY}1234567890000${RESET}${RESET}\n`,
+      ]);
     });
 
     it("resumes the session at the requested index", async () => {
@@ -1302,6 +1306,9 @@ second
       assert.strictEqual(result, "Continue");
       assert.deepStrictEqual(getState().conversation.messages, [
         { role: "user", content: "newer" },
+      ]);
+      assert.deepStrictEqual(getWrites(), [
+        `${PURPLE}⚗ Resuming session: ${GREY}1234567899999${RESET}${RESET}\n`,
       ]);
     });
 
@@ -1414,6 +1421,9 @@ second
       assert.deepStrictEqual(getState().conversation.transcript, [
         { timestamp: 0, role: "user", message: "newer transcript" },
       ]);
+      assert.deepStrictEqual(getWrites(), [
+        `${PURPLE}⚗ Resuming last session: ${GREY}1234567899999${RESET}${RESET}\n`,
+      ]);
     });
 
     it("excludes the current session file when resuming the most recent session", async () => {
@@ -1499,6 +1509,40 @@ second
       assert.deepStrictEqual(spawned, [
         batPagerCmd("/tmp/lasso-test-uuid.txt"),
       ]);
+      assert.strictEqual(
+        testFs._files.get("/tmp/lasso-test-uuid.txt"),
+        `# [lasso] Sessions
+
+- **0**: 1234567890000
+  - _user_: first
+  - _assistant_: second
+  - _user_: third
+  - _assistant_: fourth
+  - _user_: fifth
+
+`,
+      );
+    });
+
+    it("filters interrupted messages before limiting transcript entries", async () => {
+      actions.content.setBatAvailable(true);
+      mockPagerSpawn();
+      addSessionFile(1234567890000, {
+        messages: [],
+        summaries: [],
+        transcript: [
+          { timestamp: 0, role: "user", message: interruptContent },
+          { timestamp: 1, role: "user", message: "first" },
+          { timestamp: 2, role: "assistant", message: "second" },
+          { timestamp: 3, role: "user", message: "third" },
+          { timestamp: 4, role: "assistant", message: "fourth" },
+          { timestamp: 5, role: "user", message: "fifth" },
+          { timestamp: 6, role: "assistant", message: "sixth" },
+        ],
+      });
+
+      await pageSessions();
+
       assert.strictEqual(
         testFs._files.get("/tmp/lasso-test-uuid.txt"),
         `# [lasso] Sessions

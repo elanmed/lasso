@@ -458,7 +458,12 @@ export async function resumeWithNoArgs() {
   assertAtBuildtime(sessionFile !== undefined);
 
   const success = await resumeFromSessionFile(sessionFile.absolutePath);
-  if (success) return "Continue";
+  if (success) {
+    print.doing(
+      `Resuming last session: ${wrapInColor(String(sessionFile.timestampMs), "grey")}`,
+    );
+    return "Continue";
+  }
   return null;
 }
 
@@ -491,6 +496,9 @@ export async function resume(rawInput: string) {
     }
     const success = await resumeFromSessionFile(absolutePath);
     if (success) {
+      print.doing(
+        `Resuming session: ${wrapInColor(String(sessionFile.timestampMs), "grey")}`,
+      );
       return "Continue";
     }
     return null;
@@ -1128,6 +1136,7 @@ export async function pageSessions() {
   const contentStr = sessionToPage
     .map(({ timestampMs, idx, transcript }) => {
       const bullets = transcript
+        .filter(({ message }) => message !== interruptContent)
         .slice(0, 5)
         .map(({ role, message }) => {
           const prefix = `  - _${role}_: `;
