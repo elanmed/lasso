@@ -1,4 +1,4 @@
-minimumReleaseAge: 10080,
+minimumReleaseAge: 10080
 blockExoticSubdeps: true
 allowBuilds:
   unrs-resolver: true
