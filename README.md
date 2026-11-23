@@ -572,7 +572,7 @@ vim.g.clipboard = {
 
 ## TODO (now)
 
-- Look into reversing pagers, or reversing readline stdout
+- [ ] Look into reversing pagers, or reversing readline stdout
 
 ## TODO (later)
 
