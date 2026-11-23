@@ -356,6 +356,15 @@ export async function getTempFileName(args?: GetTempFileNameArgs) {
       return tempFile;
     }
 
+    const statResult = await tryCatchAsync(fsDeps.stat(initialContentPath));
+    if (!statResult.ok) {
+      print.error(
+        `Could not stat ${initialContentPath}, ignoring. Error: ${getMessageFromError(statResult.error, { forceSingleLine: true })}`,
+      );
+      return null;
+    }
+    if (statResult.value.isDirectory()) return null;
+
     const readResult = await tryCatchAsync(
       fsDeps.readFile(initialContentPath, "utf8"),
     );

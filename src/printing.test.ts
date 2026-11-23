@@ -660,6 +660,15 @@ describe("temp-file", () => {
       );
     });
 
+    it("does not create a temp file when the initial content path is a directory", async () => {
+      testFs._dirs.add("/source/directory");
+      const result = await getTempFileName({
+        initialContentPath: "/source/directory",
+      });
+      assert.equal(result, null);
+      assert.equal(testFs._files.has("/tmp/lasso-test-uuid.txt"), false);
+    });
+
     it("creates an empty temp file when the initial content path does not exist", async () => {
       const result = await getTempFileName({
         initialContentPath: "/missing/file.txt",
@@ -742,6 +751,23 @@ describe("temp-file", () => {
       assert.equal(result, null);
       assert.deepStrictEqual(writes(), [
         `${RED}‼ Failed to create a temp file with content from path /source/file.txt. Error: EACCES${RESET}\n`,
+      ]);
+    });
+
+    it("prints the error when statting the initial content path fails", async () => {
+      testFs._files.set("/source/file.txt", "initial content");
+      mock.method(fsDeps, "stat", () =>
+        Promise.reject(
+          Object.assign(new Error("permission denied"), { code: "EACCES" }),
+        ),
+      );
+      const writes = mockStdoutWrites();
+      const result = await getTempFileName({
+        initialContentPath: "/source/file.txt",
+      });
+      assert.equal(result, null);
+      assert.deepStrictEqual(writes(), [
+        `${RED}‼ Could not stat /source/file.txt, ignoring. Error: permission denied${RESET}\n`,
       ]);
     });
 
