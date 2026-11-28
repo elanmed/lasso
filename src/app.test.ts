@@ -70,6 +70,8 @@ import {
   mockProcessExit,
   testConfig,
   makeFakeRlWithWrites,
+  mockEditorSpawn,
+  setupKeypressTests,
 } from "./test-helpers.ts";
 import { aiDeps, fsDeps } from "./deps.ts";
 
@@ -4409,6 +4411,34 @@ describe("input", () => {
     });
 
     describe("editor input", () => {
+      it("consumes an editor draft typed during API loading on the next input", async () => {
+        const harness = setupKeypressTests();
+        try {
+          actions.abortControllers.setQuestion(null);
+          actions.abortControllers.setApiStream(new AbortController());
+          Object.defineProperty(harness.rl, "line", { value: "t" });
+          mockEditorSpawn(() => {
+            testFs.writeFile("/tmp/lasso-test-uuid.txt", "saved draft");
+          });
+
+          harness.emitKey({ name: "t" });
+          await harness.flush();
+          actions.abortControllers.setApiStream(null);
+
+          const result = await resolveUserInput({ isFirstInput: false });
+
+          assert.deepStrictEqual(
+            {
+              result,
+              editorInputValue: getState().terminal.editorInputValue,
+            },
+            { result: "saved draft", editorInputValue: null },
+          );
+        } finally {
+          harness.cleanup();
+        }
+      });
+
       it("returns editor input value when set and clears it", async () => {
         actions.terminal.setEditorInputValue("editor content");
         const result = await resolveUserInput({ isFirstInput: false });

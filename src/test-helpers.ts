@@ -823,13 +823,16 @@ export function setupKeypressTests() {
   actions.abortControllers.setQuestion(new AbortController());
   initKeypress(rl);
 
-  const emitKey = (key: Key) => {
+  const emitKey = (key: Key, char = key.name) => {
     actions.terminal.resetStdout();
     writes.length = 0;
-    stdin.emit("keypress", key.name, key);
+    stdin.emit("keypress", char, key);
   };
   const flush = () => new Promise<void>((resolve) => setImmediate(resolve));
-  const cleanup = () => stdin.removeAllListeners("keypress");
+  const cleanup = () => {
+    stdin.removeAllListeners("keypress");
+    stdin.pause();
+  };
 
   return { rl, writes, emitKey, flush, cleanup };
 }

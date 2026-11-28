@@ -1884,6 +1884,15 @@ function redrawPendingQuestion(rl: readline.Interface) {
   actions.terminal.appendStdoutTail(getState().config.promptPrefix);
 }
 
+function isPrintableCharacter(char: string | undefined, key: Key) {
+  if (typeof char !== "string" || char.length === 0) return false;
+  if (!isTypeableKey(key)) return false;
+  const codePoint = char.codePointAt(0);
+  if (codePoint === undefined) return false;
+  // 32 starts printable ASCII, 127 is DEL, and 160 is past the C1 control range.
+  return codePoint >= 32 && (codePoint < 127 || codePoint >= 160);
+}
+
 function initKeypress(
   {
     reloadState,
@@ -1894,7 +1903,26 @@ function initKeypress(
   },
   rl: readline.Interface,
 ) {
-  stdin.on("keypress", (_char, key: Key) => {
+  async function openEditor({
+    clearReadlineLine = false,
+  }: {
+    clearReadlineLine?: boolean;
+  } = {}) {
+    const editorContentPromise = wrapToOpenNonBlockingProcess(
+      spawnAndReadEditorContent,
+    );
+    if (clearReadlineLine) {
+      rl.write(null, { ctrl: true, name: "u" });
+    }
+    const editorContent = await editorContentPromise;
+    if (editorContent === null) {
+      redrawPendingQuestion(rl);
+    } else {
+      abortRlQuestionForEditorIfActive(editorContent);
+    }
+  }
+
+  stdin.on("keypress", (char: string | undefined, key: Key) => {
     void (async () => {
       if (key.ctrl === true && key.name === "d") {
         await onExitRequested();
@@ -1914,16 +1942,7 @@ function initKeypress(
 
         switch (command) {
           case "edit": {
-            const editorContent = await wrapToOpenNonBlockingProcess(
-              spawnAndReadEditorContent,
-            );
-
-            if (editorContent === null) {
-              redrawPendingQuestion(rl);
-            } else {
-              abortRlQuestionForEditorIfActive(editorContent);
-            }
-
+            await openEditor();
             return;
           }
           case "record": {
@@ -2070,6 +2089,14 @@ function initKeypress(
         if (isQuestionPending()) {
           typeCommand(rl, slashCommand.name);
         }
+        return;
+      }
+
+      if (
+        getState().abortControllers.apiStream !== null &&
+        isPrintableCharacter(char, key)
+      ) {
+        await openEditor({ clearReadlineLine: true });
         return;
       }
 

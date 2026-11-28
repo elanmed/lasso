@@ -3231,6 +3231,86 @@ editor input
     });
 
     describe("runs edit and paste", () => {
+      it("opens the editor with the first character typed during an API call", async () => {
+        actions.abortControllers.setQuestion(null);
+        actions.abortControllers.setApiStream(new AbortController());
+        let initialContent = "";
+        const { spawned } = mockEditorSpawn(() => {
+          initialContent = testFs._files.get("/tmp/lasso-test-uuid.txt") ?? "";
+          testFs.writeFile("/tmp/lasso-test-uuid.txt", "saved draft");
+        });
+        Object.defineProperty(harness.rl, "line", { value: "t" });
+
+        harness.emitKey({ name: "t" });
+        await harness.flush();
+
+        assert.deepStrictEqual(
+          {
+            spawned,
+            initialContent,
+            editorInputValue: getState().terminal.editorInputValue,
+            apiStreamActive: getState().abortControllers.apiStream !== null,
+          },
+          {
+            spawned: ["vi '/tmp/lasso-test-uuid.txt'"],
+            initialContent: "t",
+            editorInputValue: "saved draft",
+            apiStreamActive: true,
+          },
+        );
+      });
+
+      it("ignores non-printable keys during an API call", async () => {
+        actions.abortControllers.setQuestion(null);
+        actions.abortControllers.setApiStream(new AbortController());
+        const { spawned } = mockEditorSpawn();
+
+        harness.emitKey({ name: "left" }, "");
+        await harness.flush();
+        harness.emitKey({ name: "return" }, "\r");
+        await harness.flush();
+
+        assert.deepStrictEqual(spawned, []);
+      });
+
+      it("keeps configured keymaps ahead of the automatic editor trigger", async () => {
+        actions.abortControllers.setQuestion(null);
+        actions.abortControllers.setApiStream(new AbortController());
+        actions.config.setKeymaps({
+          ...defaultConfig.keymaps,
+          clear: { name: "t", ctrl: false },
+        });
+        const { spawned } = mockEditorSpawn();
+
+        harness.emitKey({ name: "t", ctrl: false });
+        await harness.flush();
+
+        assert.deepStrictEqual(spawned, []);
+      });
+
+      it("discards the trigger character when the editor closes without saving", async () => {
+        actions.abortControllers.setQuestion(null);
+        actions.abortControllers.setApiStream(new AbortController());
+        mockEditorSpawn();
+        Object.defineProperty(harness.rl, "line", { value: "t" });
+
+        harness.emitKey({ name: "t" });
+        await harness.flush();
+
+        assert.deepStrictEqual(
+          {
+            editorInputValue: getState().terminal.editorInputValue,
+            apiStreamActive: getState().abortControllers.apiStream !== null,
+            readlineWrites: harness.writes,
+          },
+          {
+            editorInputValue: null,
+            apiStreamActive: true,
+            readlineWrites: [{ chunk: null, key: { ctrl: true, name: "u" } }],
+          },
+        );
+      });
+
       it("ignores keymaps while the stop-recording question is pending", async () => {
         actions.config.setKeymaps({
           ...defaultConfig.keymaps,
