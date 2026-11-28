@@ -38,6 +38,7 @@ import {
 import { actions, getState } from "./state.ts";
 import {
   setupTestContext,
+  resetTestState,
   testFs,
   mockStdoutWrites,
   BLUE,
@@ -436,6 +437,22 @@ describe("openWithPager", () => {
     });
 
     describe("spawns the pager", () => {
+      it("uses the pager path stored in state", async () => {
+        actions.terminal.setTempFilePaths({
+          editor: "/tmp/editor-state.txt",
+          recorder: "/tmp/recorder-state.wav",
+          pager: "/tmp/pager-state.txt",
+        });
+        testProcessEnv._set("LASSO_PAGER", "bat __FILE__");
+
+        await openWithPager({
+          initialContentStr: "content",
+          contentType: "markdown",
+        });
+
+        assert.strictEqual(spawned[0], "bat /tmp/pager-state.txt");
+      });
+
       it("uses base bat flags without markdown flags for diff contentType", async () => {
         await openWithPager({
           initialContentStr: "",
@@ -840,7 +857,7 @@ describe("input commands", () => {
         assert.strictEqual(result, null);
       });
 
-      it("warns when creating the temp file fails", async () => {
+      it("prints an error when writing editor content fails", async () => {
         mock.method(fsDeps, "writeFile", () =>
           Promise.reject(new Error("write failed")),
         );
@@ -850,7 +867,7 @@ describe("input commands", () => {
 
         assert.strictEqual(result, null);
         assert.deepStrictEqual(getWrites(), [
-          `${RED}‼ Failed to create an empty temp file. Error: write failed${RESET}\n`,
+          `${RED}‼ Failed to write to temp file. Error: write failed${RESET}\n`,
         ]);
       });
 
@@ -918,6 +935,18 @@ describe("input commands", () => {
     });
 
     describe("selects the editor", () => {
+      it("uses the editor path stored in state", async () => {
+        actions.terminal.setTempFilePaths({
+          editor: "/tmp/editor-state.txt",
+          recorder: "/tmp/recorder-state.wav",
+          pager: "/tmp/pager-state.txt",
+        });
+
+        await spawnAndReadEditorContent();
+
+        assert.strictEqual(spawned[0], "vi '/tmp/editor-state.txt'");
+      });
+
       it("uses LASSO_EDIT env var with __FILE__ when available", async () => {
         testProcessEnv._set("LASSO_EDIT", "nano __FILE__");
         await spawnAndReadEditorContent();
@@ -1572,7 +1601,7 @@ second
 
   describe("pageSessions", () => {
     beforeEach(() => {
-      actions.resetState();
+      resetTestState();
       actions.terminal.resetStdout();
     });
 
@@ -1735,7 +1764,7 @@ second
 
   describe("pageHistory", () => {
     beforeEach(() => {
-      actions.resetState();
+      resetTestState();
       actions.terminal.resetStdout();
     });
 
@@ -1800,7 +1829,7 @@ older content
 
   describe("pageLastResponse", () => {
     beforeEach(() => {
-      actions.resetState();
+      resetTestState();
       actions.terminal.resetStdout();
     });
 
@@ -1863,7 +1892,7 @@ second
 
   describe("pageLastMessage", () => {
     beforeEach(() => {
-      actions.resetState();
+      resetTestState();
       actions.terminal.resetStdout();
     });
 
@@ -1941,7 +1970,7 @@ latest question
 
   describe("pageLastDiff", () => {
     beforeEach(() => {
-      actions.resetState();
+      resetTestState();
       actions.terminal.resetStdout();
     });
 
@@ -2011,7 +2040,7 @@ latest question
 
   describe("pageSummaries", () => {
     beforeEach(() => {
-      actions.resetState();
+      resetTestState();
       actions.terminal.resetStdout();
     });
 
@@ -2164,7 +2193,7 @@ older summary
 
   describe("pageHistory", () => {
     beforeEach(() => {
-      actions.resetState();
+      resetTestState();
       actions.terminal.resetStdout();
     });
 
@@ -2229,7 +2258,7 @@ older content
 
   describe("pageLastResponse", () => {
     beforeEach(() => {
-      actions.resetState();
+      resetTestState();
       actions.terminal.resetStdout();
     });
 
@@ -2292,7 +2321,7 @@ second
 
   describe("pageLastMessage", () => {
     beforeEach(() => {
-      actions.resetState();
+      resetTestState();
       actions.terminal.resetStdout();
     });
 
@@ -2352,7 +2381,7 @@ latest question
 
   describe("pageLastDiff", () => {
     beforeEach(() => {
-      actions.resetState();
+      resetTestState();
       actions.terminal.resetStdout();
     });
 
@@ -2422,7 +2451,7 @@ latest question
 
   describe("pageSummaries", () => {
     beforeEach(() => {
-      actions.resetState();
+      resetTestState();
       actions.terminal.resetStdout();
     });
 
@@ -2485,7 +2514,7 @@ older summary
 
   describe("pageEditStr", () => {
     beforeEach(() => {
-      actions.resetState();
+      resetTestState();
       actions.terminal.resetStdout();
     });
 
@@ -2535,7 +2564,7 @@ editor input
 
   describe("pageSkills", () => {
     beforeEach(() => {
-      actions.resetState();
+      resetTestState();
       actions.terminal.resetStdout();
     });
 
@@ -2653,7 +2682,7 @@ editor input
 
   describe("pageTools", () => {
     beforeEach(() => {
-      actions.resetState();
+      resetTestState();
       actions.terminal.resetStdout();
     });
 
@@ -2765,7 +2794,7 @@ editor input
 
   describe("pageContext", () => {
     beforeEach(() => {
-      actions.resetState();
+      resetTestState();
       actions.terminal.resetStdout();
     });
 
@@ -2852,7 +2881,7 @@ editor input
 
   describe("printKeymaps", () => {
     beforeEach(() => {
-      actions.resetState();
+      resetTestState();
       actions.terminal.resetStdout();
     });
 
@@ -2869,7 +2898,7 @@ editor input
 
   describe("getAvailableCommandsStr", () => {
     beforeEach(() => {
-      actions.resetState();
+      resetTestState();
     });
 
     it("formats builtin and custom commands without token counts by default", () => {
@@ -2953,7 +2982,7 @@ editor input
 
   describe("pageCommands", () => {
     beforeEach(() => {
-      actions.resetState();
+      resetTestState();
       actions.terminal.resetStdout();
     });
 
@@ -4953,6 +4982,29 @@ Analyze carefully.`,
         `${BLUE}Transcribed: ${RESET}`,
         "hello from the mic\n",
       ]);
+    });
+
+    it("uses the recorder path stored in state", async () => {
+      actions.terminal.setTempFilePaths({
+        editor: "/tmp/editor-state.txt",
+        recorder: "/tmp/recorder-state.wav",
+        pager: "/tmp/pager-state.txt",
+      });
+      actions.config.setTranscriptionSdkProvider("openai");
+      actions.config.setTranscriptionModel("gpt-4o-transcribe");
+      testProcessEnv._set("LASSO_TRANSCRIPTION_API_KEY", "key");
+      const recording = mockRecording();
+      mockTranscription("transcribed");
+      actions.terminal.setRl(
+        makeFakeRl({ question: () => Promise.resolve("") }),
+      );
+
+      await recordAndTranscribeInput();
+
+      assert.strictEqual(
+        recording.spawnCalls[0]?.args.at(-1),
+        "/tmp/recorder-state.wav",
+      );
     });
 
     it("removes the wav temp file after a successful transcription", async () => {

@@ -1,5 +1,4 @@
 import os from "node:os";
-import { join } from "node:path";
 import { stdin } from "node:process";
 import {
   assertAtBuildtime,
@@ -8,8 +7,6 @@ import {
   assertAtRuntime,
   tryCatch,
   normalizeNewline,
-  getShortId,
-  isShellSafePath,
   getMaxColLength,
   shouldDisableColor,
   getDurationColor,
@@ -19,6 +16,7 @@ import {
   wrapInColor,
 } from "./utils.ts";
 import { actions, getState, isApiStreamOngoing } from "./state.ts";
+import { getTempFilePath } from "./paths.ts";
 import { childProcessDeps, fsDeps, processDeps } from "./deps.ts";
 
 export function getUnicodeChar(char: string) {
@@ -316,26 +314,27 @@ export function createFencePrint({
   };
 }
 
-export interface GetTempFileNameArgs {
+interface TempFilePathOptions {
   pathPrefix?: string | undefined;
-  initialContentPath?: string | undefined;
-  initialContentStr?: string | undefined;
-  extension?: string;
+  extension?: string | undefined;
 }
 
-export async function getTempFileName(args?: GetTempFileNameArgs) {
-  const { pathPrefix, initialContentPath, initialContentStr, extension } =
-    args ?? {};
-  assertAtRuntime(
-    initialContentPath === undefined || initialContentStr === undefined,
-  );
+export interface CreateTempFileFromPathArgs extends TempFilePathOptions {
+  initialContentPath: string;
+  initialContentStr?: never;
+}
 
-  const tempFile = join(
-    os.tmpdir(),
-    `${pathPrefix ?? "lasso"}-${getShortId()}.${extension ?? "txt"}`,
-  );
+export interface CreateTempFileFromStringArgs extends TempFilePathOptions {
+  initialContentPath?: never;
+  initialContentStr: string;
+}
 
-  assertAtRuntime(isShellSafePath(tempFile));
+export type CreateTempFileArgs =
+  CreateTempFileFromPathArgs | CreateTempFileFromStringArgs;
+
+export async function createTempFile(args: CreateTempFileArgs) {
+  const { pathPrefix, initialContentPath, initialContentStr, extension } = args;
+  const tempFile = getTempFilePath({ pathPrefix, extension });
 
   if (initialContentPath !== undefined) {
     const existsResult = tryCatch(() => fsDeps.existsSync(initialContentPath));
@@ -388,23 +387,12 @@ export async function getTempFileName(args?: GetTempFileNameArgs) {
     return tempFile;
   }
 
-  if (initialContentStr !== undefined) {
-    const writeResult = await tryCatchAsync(
-      fsDeps.writeFile(tempFile, initialContentStr),
-    );
-    if (!writeResult.ok) {
-      print.error(
-        `Failed to write to a temp file. Error: ${getMessageFromError(writeResult.error)}`,
-      );
-      return null;
-    }
-    return tempFile;
-  }
-
-  const writeResult = await tryCatchAsync(fsDeps.writeFile(tempFile, ""));
+  const writeResult = await tryCatchAsync(
+    fsDeps.writeFile(tempFile, initialContentStr),
+  );
   if (!writeResult.ok) {
     print.error(
-      `Failed to create an empty temp file. Error: ${getMessageFromError(writeResult.error)}`,
+      `Failed to write to a temp file. Error: ${getMessageFromError(writeResult.error)}`,
     );
     return null;
   }

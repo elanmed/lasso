@@ -4058,6 +4058,26 @@ describe("config", () => {
   });
 
   describe("initStateRepeatable", () => {
+    it("initializes distinct temp file paths", async () => {
+      testFs._files.set(getGlobalConfigPath(), JSON.stringify(testConfig));
+
+      await initState();
+
+      assert.deepStrictEqual(getState().terminal.tempFilePaths, {
+        editor: "/tmp/lasso-editor-test-uuid.txt",
+        recorder: "/tmp/lasso-recorder-test-uuid.wav",
+        pager: "/tmp/lasso-pager-test-uuid.txt",
+      });
+      assert.deepStrictEqual(
+        [
+          testFs._files.has("/tmp/lasso-editor-test-uuid.txt"),
+          testFs._files.has("/tmp/lasso-recorder-test-uuid.wav"),
+          testFs._files.has("/tmp/lasso-pager-test-uuid.txt"),
+        ],
+        [false, false, false],
+      );
+    });
+
     it("updates config and context without resetting session start date", async () => {
       const sessionStartDate = getState().session.sessionStartDate;
       testFs._files.set(
@@ -4069,6 +4089,7 @@ describe("config", () => {
 
       await initState();
       assert.strictEqual(getState().session.sessionStartDate, sessionStartDate);
+      const tempFilePaths = getState().terminal.tempFilePaths;
 
       const globalConfigStr = JSON.stringify({
         ...testConfig,
@@ -4081,6 +4102,7 @@ describe("config", () => {
       assert.strictEqual(getState().session.sessionStartDate, sessionStartDate);
       assert.strictEqual(getState().content.globalConfigStr, globalConfigStr);
       assert.strictEqual(getState().config.model, "claude-haiku-4-5");
+      assert.deepStrictEqual(getState().terminal.tempFilePaths, tempFilePaths);
     });
 
     it("initializes and refreshes the cached session files", async () => {

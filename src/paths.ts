@@ -1,6 +1,22 @@
 import os from "node:os";
 import { join } from "node:path";
 import { processDeps } from "./deps.ts";
+import { assertAtRuntime, getShortId, isShellSafePath } from "./utils.ts";
+
+export function getTempFilePath({
+  pathPrefix,
+  extension,
+}: {
+  pathPrefix?: string | undefined;
+  extension?: string | undefined;
+} = {}) {
+  const tempFile = join(
+    os.tmpdir(),
+    `${pathPrefix ?? "lasso"}-${getShortId()}.${extension ?? "txt"}`,
+  );
+  assertAtRuntime(isShellSafePath(tempFile));
+  return tempFile;
+}
 
 export function getGlobalConfigDir() {
   const configHome = processDeps.env.get("XDG_CONFIG_HOME");

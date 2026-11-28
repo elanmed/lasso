@@ -292,6 +292,15 @@ export function getTestRl() {
   return rl;
 }
 
+export function resetTestState() {
+  actions.resetState();
+  actions.terminal.setTempFilePaths({
+    editor: "/tmp/lasso-test-uuid.txt",
+    recorder: "/tmp/lasso-test-uuid.wav",
+    pager: "/tmp/lasso-test-uuid.txt",
+  });
+}
+
 export function setupTestContext({
   now = 0,
   apiKey = "api-key",
@@ -350,7 +359,7 @@ export function setupTestContext({
     () => 0 as unknown as ReturnType<typeof setInterval>,
   );
   mock.method(globalThis, "clearInterval", () => undefined);
-  actions.resetState();
+  resetTestState();
   if (apiKey !== null) {
     testProcessEnv._set("LASSO_API_KEY", apiKey);
   }

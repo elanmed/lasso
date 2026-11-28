@@ -15,7 +15,7 @@ import {
   truncateExactLine,
   truncateLines,
   getUnicodeChar,
-  getTempFileName,
+  createTempFile,
   executeBat,
   execGitDiff,
   createFencePrint,
@@ -642,15 +642,16 @@ describe("temp-file", () => {
     setupTestContext();
   });
 
-  describe("getTempFileName", () => {
-    it("returns temp file path without initial content", async () => {
-      const result = await getTempFileName();
+  describe("createTempFile", () => {
+    it("creates an empty file from empty initial content", async () => {
+      const result = await createTempFile({ initialContentStr: "" });
       assert.equal(result, "/tmp/lasso-test-uuid.txt");
+      assert.equal(testFs._files.get("/tmp/lasso-test-uuid.txt"), "");
     });
 
     it("copies initial content when initialContentPath is provided", async () => {
       testFs._files.set("/source/file.txt", "initial content");
-      const result = await getTempFileName({
+      const result = await createTempFile({
         initialContentPath: "/source/file.txt",
       });
       assert.equal(result, "/tmp/lasso-test-uuid.txt");
@@ -662,7 +663,7 @@ describe("temp-file", () => {
 
     it("does not create a temp file when the initial content path is a directory", async () => {
       testFs._dirs.add("/source/directory");
-      const result = await getTempFileName({
+      const result = await createTempFile({
         initialContentPath: "/source/directory",
       });
       assert.equal(result, null);
@@ -670,7 +671,7 @@ describe("temp-file", () => {
     });
 
     it("creates an empty temp file when the initial content path does not exist", async () => {
-      const result = await getTempFileName({
+      const result = await createTempFile({
         initialContentPath: "/missing/file.txt",
       });
       assert.equal(result, "/tmp/lasso-test-uuid.txt");
@@ -680,7 +681,7 @@ describe("temp-file", () => {
     it("returns null when reading an existing path fails", async () => {
       testFs._files.set("/source/file.txt", "initial content");
       mock.method(fsDeps, "readFile", () => Promise.reject(new Error("EIO")));
-      const result = await getTempFileName({
+      const result = await createTempFile({
         initialContentPath: "/source/file.txt",
       });
       assert.equal(result, null);
@@ -690,20 +691,22 @@ describe("temp-file", () => {
     it("returns null when write fails", async () => {
       testFs._files.set("/source.txt", "content");
       mock.method(fsDeps, "writeFile", () => Promise.reject(new Error("EIO")));
-      const result = await getTempFileName({
+      const result = await createTempFile({
         initialContentPath: "/source.txt",
       });
       assert.equal(result, null);
 
-      const strResult = await getTempFileName({ initialContentStr: "content" });
+      const strResult = await createTempFile({ initialContentStr: "content" });
       assert.equal(strResult, null);
 
-      const noArgsResult = await getTempFileName();
-      assert.equal(noArgsResult, null);
+      const emptyContentResult = await createTempFile({
+        initialContentStr: "",
+      });
+      assert.equal(emptyContentResult, null);
     });
 
     it("writes initialContentStr into the temp file", async () => {
-      const result = await getTempFileName({
+      const result = await createTempFile({
         initialContentStr: "string content",
       });
       assert.equal(result, "/tmp/lasso-test-uuid.txt");
@@ -714,12 +717,15 @@ describe("temp-file", () => {
     });
 
     it("uses the extension in the temp file path", async () => {
-      const result = await getTempFileName({ extension: "wav" });
+      const result = await createTempFile({
+        extension: "wav",
+        initialContentStr: "",
+      });
       assert.equal(result, "/tmp/lasso-test-uuid.wav");
     });
 
     it("uses the path prefix in the temp file path", async () => {
-      const result = await getTempFileName({
+      const result = await createTempFile({
         pathPrefix: "lasso-local",
         initialContentStr: "local content",
       });
@@ -730,22 +736,12 @@ describe("temp-file", () => {
       );
     });
 
-    it("throws when both initialContentPath and initialContentStr are provided", async () => {
-      await assert.rejects(
-        () =>
-          getTempFileName({
-            initialContentPath: "/source/file.txt",
-            initialContentStr: "string content",
-          }),
-        /falsy value/,
-      );
-    });
     it("prints the error when checking the initial content path fails", async () => {
       mock.method(fsDeps, "existsSync", () => {
         throw new Error("EACCES");
       });
       const writes = mockStdoutWrites();
-      const result = await getTempFileName({
+      const result = await createTempFile({
         initialContentPath: "/source/file.txt",
       });
       assert.equal(result, null);
@@ -762,7 +758,7 @@ describe("temp-file", () => {
         ),
       );
       const writes = mockStdoutWrites();
-      const result = await getTempFileName({
+      const result = await createTempFile({
         initialContentPath: "/source/file.txt",
       });
       assert.equal(result, null);
@@ -775,7 +771,7 @@ describe("temp-file", () => {
       testFs._files.set("/source/file.txt", "initial content");
       mock.method(fsDeps, "readFile", () => Promise.reject(new Error("EIO")));
       const writes = mockStdoutWrites();
-      const result = await getTempFileName({
+      const result = await createTempFile({
         initialContentPath: "/source/file.txt",
       });
       assert.equal(result, null);
@@ -790,7 +786,7 @@ describe("temp-file", () => {
         Promise.reject(new Error("ENOSPC")),
       );
       const writes = mockStdoutWrites();
-      const result = await getTempFileName({
+      const result = await createTempFile({
         initialContentPath: "/source/file.txt",
       });
       assert.equal(result, null);
@@ -802,7 +798,7 @@ describe("temp-file", () => {
     it("prints the error when the temp file cannot be created", async () => {
       mock.method(fsDeps, "writeFile", () => Promise.reject(new Error("EIO")));
       const writes = mockStdoutWrites();
-      const result = await getTempFileName({ initialContentStr: "content" });
+      const result = await createTempFile({ initialContentStr: "content" });
       assert.equal(result, null);
       assert.deepStrictEqual(writes(), [
         `${RED}‼ Failed to write to a temp file. Error: EIO${RESET}\n`,
@@ -812,7 +808,7 @@ describe("temp-file", () => {
     it("prints the error when the empty temp file for a missing path cannot be created", async () => {
       mock.method(fsDeps, "writeFile", () => Promise.reject(new Error("EIO")));
       const writes = mockStdoutWrites();
-      const result = await getTempFileName({
+      const result = await createTempFile({
         initialContentPath: "/missing/file.txt",
       });
       assert.equal(result, null);
@@ -821,13 +817,13 @@ describe("temp-file", () => {
       ]);
     });
 
-    it("prints the error when no initial content is given and the temp file cannot be created", async () => {
+    it("prints an error when empty initial content cannot be written", async () => {
       mock.method(fsDeps, "writeFile", () => Promise.reject(new Error("EIO")));
       const writes = mockStdoutWrites();
-      const result = await getTempFileName();
+      const result = await createTempFile({ initialContentStr: "" });
       assert.equal(result, null);
       assert.deepStrictEqual(writes(), [
-        `${RED}‼ Failed to create an empty temp file. Error: EIO${RESET}\n`,
+        `${RED}‼ Failed to write to a temp file. Error: EIO${RESET}\n`,
       ]);
     });
   });

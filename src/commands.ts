@@ -54,7 +54,7 @@ import {
   wrapInFence,
   streamingSupportedWithSpacing,
   wrapToOpenNonBlockingProcess,
-  getTempFileName,
+  createTempFile,
   markdownBatFlags,
   baseBatFlags,
   execGitDiff,
@@ -176,8 +176,16 @@ export async function openWithPager({
   contentType: "diff" | "markdown";
 }): Promise<void> {
   initialContentStr = normalizeNewline(initialContentStr, { count: 2 });
-  const tempFile = await getTempFileName({ initialContentStr });
-  if (tempFile === null) return;
+  const tempFile = getState().terminal.tempFilePaths.pager;
+  const writeResult = await tryCatchAsync(
+    fsDeps.writeFile(tempFile, initialContentStr),
+  );
+  if (!writeResult.ok) {
+    print.error(
+      `Failed to write to a temp file. Error: ${getMessageFromError(writeResult.error)}`,
+    );
+    return;
+  }
 
   const pagerCommand = (() => {
     const lassoDefaultPagerEnvValue = processDeps.env.get("LASSO_PAGER");
@@ -289,8 +297,7 @@ export async function spawnAndReadEditorContent(opts?: {
     includeClipboardSuffix,
   });
 
-  const tempFile = await getTempFileName();
-  if (tempFile === null) return null;
+  const tempFile = getState().terminal.tempFilePaths.editor;
 
   const editCommand = getEditCommand(tempFile);
 
@@ -298,7 +305,9 @@ export async function spawnAndReadEditorContent(opts?: {
     fsDeps.writeFile(tempFile, initialContent),
   );
   if (!writeResult.ok) {
-    print.error("Failed to write to temp file");
+    print.error(
+      `Failed to write to temp file. Error: ${getMessageFromError(writeResult.error)}`,
+    );
     return null;
   }
 
@@ -944,14 +953,9 @@ export async function recordAndTranscribeInput({
   const abortController = new AbortController();
   actions.abortControllers.setRecordProcess(abortController);
 
-  const tempFile = await getTempFileName({ extension: "wav" });
-  if (tempFile === null) {
-    actions.abortControllers.setRecordProcess(null);
-    return null;
-  }
+  const tempFile = getState().terminal.tempFilePaths.recorder;
 
   async function cleanup() {
-    assertAtBuildtime(tempFile !== null);
     await tryCatchAsync(fsDeps.unlink(tempFile));
   }
 
@@ -1500,7 +1504,7 @@ async function reload(reloadState: () => Promise<void>) {
 
   const beforeFiles = await Promise.all(
     reloadTempFilePrefixes.map((prefix) =>
-      getTempFileName({
+      createTempFile({
         pathPrefix: `lasso-${prefix}-before`,
         initialContentStr: getReloadTempFileStr()[prefix],
       }),
@@ -1511,7 +1515,7 @@ async function reload(reloadState: () => Promise<void>) {
 
   const afterFiles = await Promise.all(
     reloadTempFilePrefixes.map((prefix) =>
-      getTempFileName({
+      createTempFile({
         pathPrefix: `lasso-${prefix}-after`,
         initialContentStr: getReloadTempFileStr()[prefix],
       }),

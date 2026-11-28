@@ -29,6 +29,7 @@ import { actions, getState, type ContextEntry, type Skill } from "./state.ts";
 import { aiDeps, childProcessDeps, fsDeps, processDeps } from "./deps.ts";
 import {
   getDebugLogDir,
+  getTempFilePath,
   getGlobalAgentSkillDir,
   getGlobalContextDir,
   getGlobalSkillDir,
@@ -389,6 +390,17 @@ export async function initBatAvailable() {
   }
 }
 
+function initTempFilePaths() {
+  actions.terminal.setTempFilePaths({
+    editor: getTempFilePath({ pathPrefix: "lasso-editor" }),
+    recorder: getTempFilePath({
+      pathPrefix: "lasso-recorder",
+      extension: "wav",
+    }),
+    pager: getTempFilePath({ pathPrefix: "lasso-pager" }),
+  });
+}
+
 export async function initState() {
   const { globalConfig, localConfig } = await initStateFirst();
   const debugLogPath = join(getDebugLogDir(), `debug-${getShortId()}.log`);
@@ -403,6 +415,7 @@ export async function initState() {
   performanceLogger.printAllLabels();
 
   initSessionFile();
+  initTempFilePaths();
 
   await Promise.all([
     initMcpState({ performanceLogger }),

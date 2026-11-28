@@ -102,7 +102,14 @@ interface ContentState {
   batAvailable: boolean;
 }
 
+interface TempFilePaths {
+  editor: string;
+  recorder: string;
+  pager: string;
+}
+
 interface TerminalState {
+  tempFilePaths: TempFilePaths;
   rl: readline.Interface | null;
   loadingStateTimeout: NodeJS.Timeout | null;
   loadingStateFrameIdx: number;
@@ -190,6 +197,7 @@ const createInitialState = (): State => ({
     batAvailable: false,
   },
   terminal: {
+    tempFilePaths: { editor: "", recorder: "", pager: "" },
     bufferedStdoutWhileEditorOpen: "",
     editorInputValue: null,
     isNonBlockingProcessOngoing: false,
@@ -370,6 +378,9 @@ export const actions = {
     },
   },
   terminal: {
+    setTempFilePaths(tempFilePaths: TempFilePaths) {
+      state.terminal.tempFilePaths = tempFilePaths;
+    },
     setEditorInputValue(value: string | null) {
       assertAtRuntime(value !== "");
       state.terminal.editorInputValue = value;

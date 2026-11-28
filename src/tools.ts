@@ -20,7 +20,7 @@ import {
   print,
   printNewline,
   toolPrint,
-  getTempFileName,
+  createTempFile,
   execGitDiff,
 } from "./printing.ts";
 import { getLanguageModel } from "./config.ts";
@@ -616,7 +616,7 @@ export function createToolCallDiffer() {
       isToolCallDiffSafePath,
     );
     const promises = pathsToSnapshot.map(async (path) => {
-      const tempFile = await getTempFileName({ initialContentPath: path });
+      const tempFile = await createTempFile({ initialContentPath: path });
       if (tempFile === null) return;
       filePathToTempFileBefore.set(path, tempFile);
     });
@@ -635,7 +635,7 @@ export function createToolCallDiffer() {
     );
 
     const promises = pathsToDiff.map(async (path) => {
-      const tempFileAfterPath = await getTempFileName({
+      const tempFileAfterPath = await createTempFile({
         initialContentPath: path,
       });
       if (tempFileAfterPath === null) return;
