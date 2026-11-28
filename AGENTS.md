@@ -37,6 +37,7 @@ The README states approximate source and test line counts. Run `./agent-pnpm-run
 - Don't add comments unless explicitly told
 - When you would create a new file to break a cyclic import chain, first check whether an existing small/leaf module fits, even if the name is a stretch. Only create a new file if no reasonable existing module works
 - When moving a function between files, always move its tests to the new file's test file too
+- When changing a function's callers, inspect the function and its other call sites; reconsider its name, argument requirements, types, and contract, and update the API when warranted
 - Minimize diffs — only change what's necessary
 - All changes must have test coverage
 - For sequential mocks, prefer array-based mock helpers over manual callCount tracking; avoid call-count assertions unless call count itself is behavior under test
