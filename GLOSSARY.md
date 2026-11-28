@@ -54,6 +54,9 @@ A capability the model can invoke during a response to perform an action or retr
 **Subagent**:
 A separate **Agent** run for delegated work, with a defined task and access scope. Its blocking **Tool** call waits for results; multiple subagents may run in parallel.
 
+**Worker**:
+A separate **Agent** run launched by another **Agent** that runs asynchronously under the launching Lasso process; launching it does not wait for its completion, and it is cleaned up when that process exits.
+
 **MCP server**:
 An external service or process Lasso connects to through MCP, providing tools and resources that Lasso makes available to the agent.
 
