@@ -1,8 +1,6 @@
 import { describe, it, beforeEach, afterEach, mock } from "node:test";
 import assert from "node:assert/strict";
 import os from "node:os";
-import readline from "node:readline/promises";
-import { PassThrough } from "node:stream";
 import { stdin } from "node:process";
 import {
   getAvailableSlashCommands,
@@ -84,12 +82,7 @@ import { print } from "./printing.ts";
 import { sleep } from "./utils.ts";
 import { getGlobalContextDir, getGlobalConfigPath } from "./paths.ts";
 import { defaultConfig, type Key } from "./schemas.ts";
-import {
-  initKeypress,
-  pollUntilNonBlockingProcessClosed,
-  resolveSlashCommand,
-  resolveUserInput,
-} from "./app.ts";
+import { resolveSlashCommand } from "./app.ts";
 import { getRequestInputCharLength } from "./tokens.ts";
 
 describe("getAvailableSlashCommands", () => {
@@ -590,59 +583,43 @@ describe("isPrintableCharacter", () => {
 });
 
 describe("startup editor", () => {
-  beforeEach(() => {
-    setupTestContext();
-  });
-
   afterEach(() => {
     mock.restoreAll();
   });
 
-  it("clears typed input after saving editor content", async () => {
+  beforeEach(() => {
+    setupTestContext();
+  });
+
+  it("clears typed readline input after saving editor content", async () => {
     const getWrites = mockStdoutWrites({ includeSpinnerFrames: true });
     actions.terminal.setIsInitializing(true);
+    const harness = setupKeypressTests();
     actions.abortControllers.setQuestion(null);
-    const input = new PassThrough();
-    const rl = readline.createInterface({
-      input,
-      output: mutedStdout,
-      terminal: true,
-    });
-    actions.terminal.setRl(rl);
 
     try {
       mockEditorSpawn(() => {
         testFs.writeFile("/tmp/lasso-test-uuid.txt", "saved draft");
       });
-      initKeypress(rl);
+      Object.defineProperty(harness.rl, "line", { value: "h" });
 
-      const key = { name: "h", ctrl: false, meta: false, shift: false };
-      input.emit("keypress", "h", key);
-      stdin.emit("keypress", "h", key);
-      await new Promise<void>((resolve) => setImmediate(resolve));
-      await pollUntilNonBlockingProcessClosed();
-      actions.terminal.setIsInitializing(false);
-      const result = await resolveUserInput({ isFirstInput: true });
+      harness.emitKey({ name: "h", ctrl: false });
+      await harness.flush();
 
       assert.deepStrictEqual(
         {
-          readlineLine: rl.line,
-          result,
           editorInputValue: getState().terminal.editorInputValue,
+          readlineWrites: harness.writes,
           stdout: getWrites().map(String),
         },
         {
-          readlineLine: "",
-          result: "saved draft",
-          editorInputValue: null,
-          stdout: ["h", "\r\u001b[2K"],
+          editorInputValue: "saved draft",
+          readlineWrites: [{ chunk: null, key: { ctrl: true, name: "u" } }],
+          stdout: ["\r\u001b[2K"],
         },
       );
     } finally {
-      rl.close();
-      input.destroy();
-      stdin.removeAllListeners("keypress");
-      stdin.pause();
+      harness.cleanup();
     }
   });
 });

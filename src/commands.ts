@@ -1912,6 +1912,8 @@ function initKeypress(
     }
     const editorContent = await editorContentPromise;
     if (clearReadlineLine) {
+      // `\r` returns to column 0
+      // `\u001b[2K` erases the line without redrawing the prompt
       mutedStdout.write("\r\u001b[2K");
     }
     if (editorContent === null) {
