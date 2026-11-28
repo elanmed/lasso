@@ -139,7 +139,7 @@ describe("state", () => {
       actions.content.setContextStr("# context");
       actions.content.setGlobalConfigStr("global");
       actions.content.setLocalConfigStr("local");
-      actions.content.setSkillsStr("skills");
+      actions.content.setAvailableSkillsStr("skills");
       actions.content.setSkills([
         {
           name: "demo",
@@ -639,9 +639,9 @@ hello`,
       assert.equal(getState().content.localConfigStr, "model: claude");
     });
 
-    it("set-skills-str", () => {
+    it("set-available-skills-str", () => {
       assert.equal(getState().content.skillsStr, "");
-      actions.content.setSkillsStr("- skill: desc");
+      actions.content.setAvailableSkillsStr("- skill: desc");
       assert.equal(getState().content.skillsStr, "- skill: desc");
     });
   });

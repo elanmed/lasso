@@ -115,7 +115,7 @@ describe("state", () => {
   describe("system content", () => {
     it("getSystemContent joins prompt, context, and skills with blank lines", () => {
       actions.content.setContextStr("ctx body");
-      actions.content.setSkillsStr("skills body");
+      actions.content.setAvailableSkillsStr("skills body");
       assert.strictEqual(
         getSystemContent(),
         `${getBaseAgentPrompt({ mcpClients: {}, subagentModels: [] })}
@@ -229,7 +229,7 @@ describe("getTokensByArea", () => {
   beforeEach(() => {
     setupTestContext();
     actions.content.setContextStr("123456789");
-    actions.content.setSkillsStr("1234");
+    actions.content.setAvailableSkillsStr("1234");
     actions.conversation.setMessages([{ role: "user", content: "hello" }]);
   });
 
@@ -273,7 +273,7 @@ describe("getPrettyTokensByArea", () => {
   beforeEach(() => {
     setupTestContext();
     actions.content.setContextStr("123456789");
-    actions.content.setSkillsStr("1234");
+    actions.content.setAvailableSkillsStr("1234");
     actions.conversation.setMessages([{ role: "user", content: "hello" }]);
   });
 

@@ -32,6 +32,7 @@ export interface Skill {
   description: string;
   dir: string;
   content: string;
+  disableModelInvocation?: boolean;
 }
 
 export interface SlashCommand {
@@ -346,7 +347,7 @@ export const actions = {
     setLocalConfigStr(localConfigStr: string) {
       state.content.localConfigStr = localConfigStr;
     },
-    setSkillsStr(skillsStr: string) {
+    setAvailableSkillsStr(skillsStr: string) {
       state.content.skillsStr = skillsStr;
     },
     setSkills(skills: Skill[]) {

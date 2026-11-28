@@ -179,6 +179,7 @@ export async function getContextEntries() {
 const skillMetadataSchema = z.object({
   name: z.string(),
   description: z.string(),
+  "disable-model-invocation": z.boolean().optional(),
 });
 
 export type SkillMetadata = z.infer<typeof skillMetadataSchema>;
@@ -187,6 +188,7 @@ export function getSkillsStr(skills: Skill[]) {
   if (skills.length === 0) return "";
 
   const skillsFormatted = skills
+    .filter((skill) => skill.disableModelInvocation !== true)
     .map((skill) => `- ${skill.name}: ${skill.description}`)
     .join("\n");
 
@@ -286,7 +288,7 @@ export async function getSkillJSON(skillMdPath: string) {
   const parseResult = skillMetadataSchema.safeParse(parsed.data);
   if (!parseResult.success) {
     actions.content.appendConfigWarningMessage(
-      `Malformed skill at ${skillMdPath}! A skill's front matter must contain a \`name\` and \`description\` field.`,
+      `Malformed skill at ${skillMdPath}! A skill's front matter must contain a \`name\`, a \`description\`, and an optional boolean \`disable-model-invocation\` field.`,
     );
     return null;
   }
@@ -296,6 +298,11 @@ export async function getSkillJSON(skillMdPath: string) {
     dir: dirname(skillMdPath),
     name: parseResult.data.name,
     description: parseResult.data.description,
+    ...(parseResult.data["disable-model-invocation"] === undefined
+      ? {}
+      : {
+          disableModelInvocation: parseResult.data["disable-model-invocation"],
+        }),
   };
   return skill;
 }
@@ -337,7 +344,7 @@ export async function initStateFromFs({
   performanceLogger.start("skills");
   const skills = await getSkills();
   actions.content.setSkills(skills);
-  actions.content.setSkillsStr(getSkillsStr(skills));
+  actions.content.setAvailableSkillsStr(getSkillsStr(skills));
   performanceLogger.end("skills");
 
   performanceLogger.start("commands");

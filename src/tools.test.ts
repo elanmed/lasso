@@ -1206,7 +1206,7 @@ describe("tools", () => {
 
       it("builds subagent systemContent from prompt, context, and skills", async () => {
         actions.content.setContextStr("ctx body");
-        actions.content.setSkillsStr("skills body");
+        actions.content.setAvailableSkillsStr("skills body");
         const calls: Record<string, unknown>[] = [];
         mockGenerateText((options: Record<string, unknown>) => {
           calls.push(options);

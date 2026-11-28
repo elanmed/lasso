@@ -82,7 +82,7 @@ describe("api", () => {
     setupTestContext({ model: "claude-sonnet-4-20250514" });
     actions.config.setBaseURL("https://api.anthropic.com");
     actions.content.setContextStr("");
-    actions.content.setSkillsStr("");
+    actions.content.setAvailableSkillsStr("");
     mock.method(aiDeps, "generateText", (options: Record<string, unknown>) =>
       completeGenerateTextStep(options, makeGenerateTextResult()),
     );
@@ -2838,6 +2838,44 @@ would benefit from specialized instructions.
         );
       });
 
+      it("omits skills with model invocation disabled", async () => {
+        testFs._globResults.set("/fake-home/.config/lasso/skills/**/SKILL.md", [
+          "/fake-home/.config/lasso/skills/private/SKILL.md",
+          "/fake-home/.config/lasso/skills/public/SKILL.md",
+        ]);
+        testFs._files.set(
+          "/fake-home/.config/lasso/skills/private/SKILL.md",
+          `---
+name: private
+description: A private skill
+disable-model-invocation: true
+---
+# Private`,
+        );
+        testFs._files.set(
+          "/fake-home/.config/lasso/skills/public/SKILL.md",
+          `---
+name: public
+description: A public skill\ndisable-model-invocation: false
+---
+# Public`,
+        );
+
+        const result = getSkillsStr(await getSkills());
+
+        assert.equal(
+          result,
+          `# [lasso] Skills
+
+Use the \`load_skill\` tool to load a skill when the user's request
+would benefit from specialized instructions.
+
+## Available skills:
+
+- public: A public skill`,
+        );
+      });
+
       it("deduplicates by parsed name, keeping first occurrence", async () => {
         testFs._globResults.set("/test-cwd/.lasso/skills/**/SKILL.md", [
           "/test-cwd/.lasso/skills/local-skill/SKILL.md",
@@ -3744,7 +3782,26 @@ name: deploy
       assert.equal(result, null);
       assert.deepStrictEqual(writes(), []);
       assert.deepStrictEqual(getState().content.configWarningMessages, [
-        "Malformed skill at /skill-dir/SKILL.md! A skill's front matter must contain a `name` and `description` field.",
+        "Malformed skill at /skill-dir/SKILL.md! A skill's front matter must contain a `name`, a `description`, and an optional boolean `disable-model-invocation` field.",
+      ]);
+    });
+
+    it("warns and returns null when disable-model-invocation is not a boolean", async () => {
+      testFs._files.set(
+        "/skill-dir/SKILL.md",
+        `---
+name: deploy
+description: Deploy the app
+disable-model-invocation: "true"
+---
+# Deploy`,
+      );
+
+      const result = await getSkillJSON("/skill-dir/SKILL.md");
+
+      assert.strictEqual(result, null);
+      assert.deepStrictEqual(getState().content.configWarningMessages, [
+        "Malformed skill at /skill-dir/SKILL.md! A skill's front matter must contain a `name`, a `description`, and an optional boolean `disable-model-invocation` field.",
       ]);
     });
 

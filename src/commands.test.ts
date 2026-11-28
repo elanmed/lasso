@@ -1164,6 +1164,22 @@ second
         );
       });
 
+      it("returns true for a registered skill with model invocation disabled", () => {
+        actions.content.setSkills([
+          {
+            name: "analyze",
+            description: "Analyze a task",
+            dir: "/skills/analyze",
+            content: "Analyze carefully.",
+            disableModelInvocation: true,
+          },
+        ]);
+        assert.strictEqual(
+          shouldResolveSlashCommand("/analyze", { forceKnownCommand: true }),
+          true,
+        );
+      });
+
       it("returns true for a registered skill with args when forceKnownCommand is set", () => {
         actions.content.setSkills([
           {
@@ -1244,7 +1260,7 @@ second
       actions.terminal.resetStdout();
       actions.content.setContextStr("");
       actions.content.setContextStr("123456789");
-      actions.content.setSkillsStr("1234");
+      actions.content.setAvailableSkillsStr("1234");
       actions.conversation.setMessages([{ role: "user", content: "hello" }]);
     });
 
@@ -2544,6 +2560,34 @@ editor input
 
 - **test-skill** _(4-4 tokens)_: A test skill
   /skills/test-skill
+
+`,
+      );
+      assert.deepStrictEqual(getWrites(), []);
+    });
+
+    it("opens skills with model invocation disabled in a pager", async () => {
+      const { spawned } = mockPagerSpawn();
+      testProcessEnv._set("LASSO_PAGER", "nano __FILE__");
+      actions.content.setSkills([
+        {
+          name: "disabled-skill",
+          description: "A disabled skill",
+          dir: "/skills/disabled-skill",
+          content: "skill content",
+          disableModelInvocation: true,
+        },
+      ]);
+
+      await pageSkills();
+
+      assert.strictEqual(spawned[0], "nano /tmp/lasso-test-uuid.txt");
+      assert.strictEqual(
+        testFs._files.get("/tmp/lasso-test-uuid.txt"),
+        `# [lasso] Available skills:
+
+- **disabled-skill** _(5-4 tokens)_: A disabled skill
+  /skills/disabled-skill
 
 `,
       );
