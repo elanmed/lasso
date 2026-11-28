@@ -1398,14 +1398,10 @@ export function initStdin() {
   // decode raw stdin bytes into "keypress" events so the listener below receives structured keys
   emitKeypressEvents(stdin);
 
-  stdin.on("keypress", (char: string, key: Key) => {
-    if (!getState().terminal.isInitializing) return;
-
-    if (key.ctrl === true && key.name === "c") process.exit(130);
-    if (key.name === "return" || key.name === "enter") return;
-    if (!isTypeableKey(key)) return;
-    if (typeof char !== "string") return;
-    actions.terminal.appendBufferedInputWhileInitializing(char);
+  stdin.on("keypress", (_char: string, key: Key) => {
+    if (getState().terminal.isInitializing) {
+      if (key.ctrl === true && key.name === "c") process.exit(130);
+    }
   });
 }
 
@@ -1915,6 +1911,9 @@ function initKeypress(
       rl.write(null, { ctrl: true, name: "u" });
     }
     const editorContent = await editorContentPromise;
+    if (clearReadlineLine) {
+      mutedStdout.write("\r\u001b[2K");
+    }
     if (editorContent === null) {
       redrawPendingQuestion(rl);
     } else {
@@ -1932,6 +1931,13 @@ function initKeypress(
       if (getState().terminal.isNonBlockingProcessOngoing) return;
       if (getState().terminal.isRecording) return;
       if (getState().terminal.isExecutingUserInput) return;
+
+      if (getState().terminal.isInitializing) {
+        if (isPrintableCharacter(char, key)) {
+          await openEditor({ clearReadlineLine: true });
+        }
+        return;
+      }
 
       const keymaps = getState().config.keymaps;
 

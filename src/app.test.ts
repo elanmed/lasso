@@ -69,7 +69,6 @@ import {
   testProcessEnv,
   mockProcessExit,
   testConfig,
-  makeFakeRlWithWrites,
   mockEditorSpawn,
   setupKeypressTests,
 } from "./test-helpers.ts";
@@ -4060,6 +4059,18 @@ describe("config", () => {
   });
 
   describe("initStateRepeatable", () => {
+    it("calls the editor-ready callback after preparing the editor path", async () => {
+      let editorPath = "";
+
+      await initState({
+        onEditorReady: () => {
+          editorPath = getState().terminal.tempFilePaths.editor;
+        },
+      });
+
+      assert.strictEqual(editorPath, "/tmp/lasso-editor-test-uuid.txt");
+    });
+
     it("initializes distinct temp file paths", async () => {
       testFs._files.set(getGlobalConfigPath(), JSON.stringify(testConfig));
 
@@ -4279,23 +4290,6 @@ describe("input", () => {
     setupTestContext();
     testProcessEnv._set("SHELL", "/bin/zsh");
     getWrites = mockStdoutWrites();
-  });
-
-  describe("restores buffered initialization input", () => {
-    it("writes buffered input into rl right after the question starts", () => {
-      mockStdoutWrites();
-      const { rl, writes } = makeFakeRlWithWrites({
-        question: () => new Promise(() => undefined),
-      });
-      actions.terminal.setRl(rl);
-      actions.terminal.appendBufferedInputWhileInitializing("ab");
-      void resolveUserInput({ isFirstInput: true });
-      assert.deepStrictEqual(
-        writes.map((write) => write.chunk),
-        ["ab"],
-      );
-      assert.equal(getState().terminal.bufferedInputWhileInitializing, "");
-    });
   });
 
   describe("executeUserInput", () => {

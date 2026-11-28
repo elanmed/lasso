@@ -118,7 +118,6 @@ interface TerminalState {
   isInitializing: boolean;
   isRecording: boolean;
   isSteering: boolean;
-  bufferedInputWhileInitializing: string;
   bufferedStdoutWhileEditorOpen: string;
   stdoutTail: string;
   editorInputValue: string | null;
@@ -205,7 +204,6 @@ const createInitialState = (): State => ({
     isInitializing: false,
     isRecording: false,
     isSteering: false,
-    bufferedInputWhileInitializing: "",
     stdoutTail: "",
     rl: null,
     loadingStateTimeout: null,
@@ -405,12 +403,6 @@ export const actions = {
     },
     setIsSteering(isSteering: boolean) {
       state.terminal.isSteering = isSteering;
-    },
-    appendBufferedInputWhileInitializing(input: string) {
-      state.terminal.bufferedInputWhileInitializing += input;
-    },
-    resetBufferedInputWhileInitializing() {
-      state.terminal.bufferedInputWhileInitializing = "";
     },
     appendBufferedStdoutWhileEditorOpen(line: string) {
       state.terminal.bufferedStdoutWhileEditorOpen += line;

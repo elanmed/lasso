@@ -27,8 +27,7 @@ async function main() {
   actions.terminal.setIsInitializing(true);
   initStdin();
   initStdout();
-  await initState();
-  initReadline();
+  await initState({ onEditorReady: initReadline });
   printMissingConfigErrors();
   printMissingConfigWarnings();
   printLargeContextOverheadWarning();

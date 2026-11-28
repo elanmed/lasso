@@ -1,6 +1,8 @@
 import { describe, it, beforeEach, afterEach, mock } from "node:test";
 import assert from "node:assert/strict";
 import os from "node:os";
+import readline from "node:readline/promises";
+import { PassThrough } from "node:stream";
 import { stdin } from "node:process";
 import {
   getAvailableSlashCommands,
@@ -82,7 +84,12 @@ import { print } from "./printing.ts";
 import { sleep } from "./utils.ts";
 import { getGlobalContextDir, getGlobalConfigPath } from "./paths.ts";
 import { defaultConfig, type Key } from "./schemas.ts";
-import { resolveSlashCommand } from "./app.ts";
+import {
+  initKeypress,
+  pollUntilNonBlockingProcessClosed,
+  resolveSlashCommand,
+  resolveUserInput,
+} from "./app.ts";
 import { getRequestInputCharLength } from "./tokens.ts";
 
 describe("getAvailableSlashCommands", () => {
@@ -582,6 +589,64 @@ describe("isPrintableCharacter", () => {
   }
 });
 
+describe("startup editor", () => {
+  beforeEach(() => {
+    setupTestContext();
+  });
+
+  afterEach(() => {
+    mock.restoreAll();
+  });
+
+  it("clears typed input after saving editor content", async () => {
+    const getWrites = mockStdoutWrites({ includeSpinnerFrames: true });
+    actions.terminal.setIsInitializing(true);
+    actions.abortControllers.setQuestion(null);
+    const input = new PassThrough();
+    const rl = readline.createInterface({
+      input,
+      output: mutedStdout,
+      terminal: true,
+    });
+    actions.terminal.setRl(rl);
+
+    try {
+      mockEditorSpawn(() => {
+        testFs.writeFile("/tmp/lasso-test-uuid.txt", "saved draft");
+      });
+      initKeypress(rl);
+
+      const key = { name: "h", ctrl: false, meta: false, shift: false };
+      input.emit("keypress", "h", key);
+      stdin.emit("keypress", "h", key);
+      await new Promise<void>((resolve) => setImmediate(resolve));
+      await pollUntilNonBlockingProcessClosed();
+      actions.terminal.setIsInitializing(false);
+      const result = await resolveUserInput({ isFirstInput: true });
+
+      assert.deepStrictEqual(
+        {
+          readlineLine: rl.line,
+          result,
+          editorInputValue: getState().terminal.editorInputValue,
+          stdout: getWrites().map(String),
+        },
+        {
+          readlineLine: "",
+          result: "saved draft",
+          editorInputValue: null,
+          stdout: ["h", "\r\u001b[2K"],
+        },
+      );
+    } finally {
+      rl.close();
+      input.destroy();
+      stdin.removeAllListeners("keypress");
+      stdin.pause();
+    }
+  });
+});
+
 describe("input commands", () => {
   afterEach(() => {
     mock.restoreAll();
@@ -797,7 +862,7 @@ describe("input commands", () => {
     });
   });
 
-  describe("initStdin input buffering", () => {
+  describe("initStdin", () => {
     let emitKey: (char: string | undefined, key: Key) => void;
 
     beforeEach(() => {
@@ -811,41 +876,6 @@ describe("input commands", () => {
       stdin.removeAllListeners();
       stdin.pause();
       stdin.destroy();
-    });
-
-    it("buffers typeable characters while initializing", () => {
-      actions.terminal.setIsInitializing(true);
-      emitKey("a", { name: "a" });
-      emitKey(" ", { name: "space" });
-      assert.equal(getState().terminal.bufferedInputWhileInitializing, "a ");
-    });
-
-    it("ignores keypresses when not initializing", () => {
-      emitKey("a", { name: "a" });
-      assert.equal(getState().terminal.bufferedInputWhileInitializing, "");
-    });
-
-    it("ignores return and enter keys", () => {
-      actions.terminal.setIsInitializing(true);
-      actions.terminal.appendBufferedInputWhileInitializing("ab");
-      emitKey("\r", { name: "return" });
-      emitKey("\n", { name: "enter" });
-      assert.equal(getState().terminal.bufferedInputWhileInitializing, "ab");
-    });
-
-    it("ignores keys without characters like arrow keys", () => {
-      actions.terminal.setIsInitializing(true);
-      actions.terminal.appendBufferedInputWhileInitializing("ab");
-      emitKey(undefined, { name: "left" });
-      assert.equal(getState().terminal.bufferedInputWhileInitializing, "ab");
-    });
-
-    it("ignores ctrl and meta keys", () => {
-      actions.terminal.setIsInitializing(true);
-      actions.terminal.appendBufferedInputWhileInitializing("ab");
-      emitKey("h", { name: "h", ctrl: true });
-      emitKey("f", { name: "f", meta: true });
-      assert.equal(getState().terminal.bufferedInputWhileInitializing, "ab");
     });
 
     it("exits with code 130 on ctrl c while initializing", () => {
@@ -3269,6 +3299,39 @@ editor input
     });
 
     describe("runs edit and paste", () => {
+      it("opens the editor for printable input during initialization", async () => {
+        actions.terminal.setIsInitializing(true);
+        actions.abortControllers.setQuestion(null);
+        actions.config.setKeymaps({
+          ...defaultConfig.keymaps,
+          clear: { name: "t", ctrl: false },
+        });
+        let initialContent = "";
+        const { spawned } = mockEditorSpawn(() => {
+          initialContent = testFs._files.get("/tmp/lasso-test-uuid.txt") ?? "";
+          testFs.writeFile("/tmp/lasso-test-uuid.txt", "startup draft");
+        });
+        Object.defineProperty(harness.rl, "line", { value: "t" });
+
+        harness.emitKey({ name: "t", ctrl: false });
+        await harness.flush();
+
+        assert.deepStrictEqual(
+          {
+            spawned,
+            initialContent,
+            editorInputValue: getState().terminal.editorInputValue,
+            readlineWrites: harness.writes,
+          },
+          {
+            spawned: ["vi '/tmp/lasso-test-uuid.txt'"],
+            initialContent: "t",
+            editorInputValue: "startup draft",
+            readlineWrites: [{ chunk: null, key: { ctrl: true, name: "u" } }],
+          },
+        );
+      });
+
       it("opens the editor with the first character typed during an API call", async () => {
         actions.abortControllers.setQuestion(null);
         actions.abortControllers.setApiStream(new AbortController());

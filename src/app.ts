@@ -401,7 +401,11 @@ function initTempFilePaths() {
   });
 }
 
-export async function initState() {
+export async function initState({
+  onEditorReady,
+}: {
+  onEditorReady?: () => void;
+} = {}) {
   const { globalConfig, localConfig } = await initStateFirst();
   const debugLogPath = join(getDebugLogDir(), `debug-${getShortId()}.log`);
   actions.debug.setLogPath(debugLogPath);
@@ -416,6 +420,7 @@ export async function initState() {
 
   initSessionFile();
   initTempFilePaths();
+  onEditorReady?.();
 
   await Promise.all([
     initMcpState({ performanceLogger }),
@@ -1056,17 +1061,11 @@ export async function resolveUserInput({
   actions.abortControllers.setQuestion(new AbortController());
   const abortController = getState().abortControllers.question;
   assertAtBuildtime(abortController !== null);
-  const bufferedInputWhileInitializing =
-    getState().terminal.bufferedInputWhileInitializing;
   const questionResult = tryCatchAsync(
     rl.question(getState().config.promptPrefix, {
       signal: abortController.signal,
     }),
   );
-  if (bufferedInputWhileInitializing.length > 0) {
-    rl.write(bufferedInputWhileInitializing);
-    actions.terminal.resetBufferedInputWhileInitializing();
-  }
   const inputResult = await questionResult;
   actions.abortControllers.setQuestion(null);
 

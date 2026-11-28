@@ -65,10 +65,6 @@ describe("state", () => {
       assert.strictEqual(getState().terminal.isExecutingUserInput, false);
       assert.strictEqual(getState().terminal.isRecording, false);
       assert.strictEqual(getState().terminal.isSteering, false);
-      assert.strictEqual(
-        getState().terminal.bufferedInputWhileInitializing,
-        "",
-      );
       assert.strictEqual(getState().terminal.stdoutTail, "");
       assert.strictEqual(getState().terminal.rl, null);
       assert.strictEqual(getState().terminal.loadingStateTimeout, null);
@@ -122,7 +118,6 @@ describe("state", () => {
       actions.terminal.setEditorInputValue("draft");
       actions.terminal.setIsInitializing(true);
       actions.terminal.setIsSteering(true);
-      actions.terminal.appendBufferedInputWhileInitializing("buffered");
       actions.content.setSlashCommands([
         {
           name: "custom",
@@ -365,19 +360,6 @@ describe("state", () => {
       assert.equal(getState().terminal.isNonBlockingProcessOngoing, true);
       actions.terminal.setIsNonBlockingProcessOngoing(false);
       assert.equal(getState().terminal.isNonBlockingProcessOngoing, false);
-    });
-
-    it("append-buffered-input-while-initializing accumulates inputs", () => {
-      assert.equal(getState().terminal.bufferedInputWhileInitializing, "");
-      actions.terminal.appendBufferedInputWhileInitializing("he");
-      actions.terminal.appendBufferedInputWhileInitializing("llo");
-      assert.equal(getState().terminal.bufferedInputWhileInitializing, "hello");
-    });
-
-    it("reset-buffered-input-while-initializing", () => {
-      actions.terminal.appendBufferedInputWhileInitializing("abc");
-      actions.terminal.resetBufferedInputWhileInitializing();
-      assert.equal(getState().terminal.bufferedInputWhileInitializing, "");
     });
 
     it("append-buffered-stdout-while-editor-open accumulates lines", () => {
