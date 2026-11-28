@@ -29,8 +29,10 @@ import { actions, getState, type ContextEntry, type Skill } from "./state.ts";
 import { aiDeps, childProcessDeps, fsDeps, processDeps } from "./deps.ts";
 import {
   getDebugLogDir,
+  getGlobalAgentSkillDir,
   getGlobalContextDir,
   getGlobalSkillDir,
+  getLocalAgentSkillDir,
   getLocalSkillDir,
 } from "./paths.ts";
 import {
@@ -203,7 +205,9 @@ export async function getSkills() {
   const skillGrandparentDirs = [
     ...getState().config.customSkillDirs,
     getLocalSkillDir(),
+    getLocalAgentSkillDir(),
     getGlobalSkillDir(),
+    getGlobalAgentSkillDir(),
   ];
   const skills: Skill[] = [];
   const skillPaths: string[] = [];

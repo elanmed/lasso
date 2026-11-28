@@ -6,7 +6,7 @@ _A minimal agent harness to rein in your llm_
 
 ## Features
 
-- **Minimal**: ~7,800 lines of source code, ~18,800 lines of tests
+- **Minimal**: ~7,800 lines of source code, ~19,000 lines of tests
 - **Simple architecture**:
   - Responses are piped through `bat` to render markdown
   - Multi-line input is supported by spawning a non-blocking editor of your choice
@@ -359,18 +359,22 @@ Slash commands are triggered with `/command` at the prompt.
 
 ### Custom Slash Commands
 
-Create custom commands by adding markdown files (`.md`) to `./.lasso/commands/` (local), `$XDG_CONFIG_HOME/lasso/commands/` (global), or any directory specified in `customSlashCommandDirs`. Nested subdirectories are supported via `**/*.md` glob. Commands with the same filename are deduplicated with the first occurrence taking precedence, in this priority order: custom dirs → local → global.
+Create custom commands by adding markdown files (`.md`) to `./.agents/commands/`, `./.lasso/commands/` (local), `~/.agents/commands/`, `$XDG_CONFIG_HOME/lasso/commands/` (global), or any directory specified in `customSlashCommandDirs`. Nested subdirectories are supported via `**/*.md` glob. Commands with the same filename are deduplicated with the first occurrence taking precedence, in this priority order: custom dirs → project `.lasso` → project `.agents` → global lasso config → user `.agents`.
 
 Running `/command` sends the command's markdown content as a message. Extra content can be passed after the command name: `/command <extra content>` sends the command's instructions followed by the extra content as context, letting you parameterize a command without editing its file, e.g. `/refactor extract the config parsing into a module`.
 
 #### Directory Structure
 
 ```
-./.lasso/commands/              # local commands
+./.agents/commands/            # project commands
+  review.md
+./.lasso/commands/              # local lasso commands
   help.md
   refactor.md
-$XDG_CONFIG_HOME/lasso/commands/      # global commands
+~/.agents/commands/             # user commands
   status.md
+$XDG_CONFIG_HOME/lasso/commands/ # global lasso commands
+  deploy.md
 /home/me/my-commands/              # custom commands (via customSlashCommandDirs)
   custom.md
 ```
@@ -420,27 +424,35 @@ $XDG_CONFIG_HOME/lasso/context/       # global context dir
 ### Directory Structure
 
 ```
-$XDG_CONFIG_HOME/lasso/skills/   # global skills
+./.agents/skills/              # project skills
+  project-skill/
+    SKILL.md
+./.lasso/skills/                # local lasso skills
+  legacy-skill/
+    SKILL.md
+~/.agents/skills/               # user skills
   my-skill/
     SKILL.md
   category/
     nested-skill/
       SKILL.md
-./.lasso/skills/            # local skills
-  project-skill/
+$XDG_CONFIG_HOME/lasso/skills/  # global lasso skills
+  legacy-skill/
     SKILL.md
-/custom/skills/                # custom skills (via customSkillDirs)
+/custom/skills/                 # custom skills (via customSkillDirs)
   custom-skill/
     SKILL.md
 ```
 
 ### Discovery
 
-Skills are discovered via `**/SKILL.md` glob from three sources in priority order:
+Skills are discovered via `**/SKILL.md` glob from five sources in priority order:
 
 1. **Custom skill dirs** — directories specified in `customSkillDirs`
-2. **Local skills** — `./.lasso/skills/`
-3. **Global skills** — `$XDG_CONFIG_HOME/lasso/skills/`
+2. **Project lasso skills** — `./.lasso/skills/`
+3. **Project agent skills** — `./.agents/skills/`
+4. **Global lasso skills** — `$XDG_CONFIG_HOME/lasso/skills/`
+5. **User agent skills** — `~/.agents/skills/`
 
 Skills with duplicate names are deduplicated, with the first occurrence taking precedence.
 

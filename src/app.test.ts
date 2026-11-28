@@ -3312,7 +3312,9 @@ would benefit from specialized instructions.
         assert.deepStrictEqual(writes(), []);
         assert.deepStrictEqual(getState().content.configWarningMessages, [
           "Failed to list the skill files in `/test-cwd/.lasso/skills`, ignoring. Error: glob failed",
+          "Failed to list the skill files in `/test-cwd/.agents/skills`, ignoring. Error: glob failed",
           "Failed to list the skill files in `/fake-home/.config/lasso/skills`, ignoring. Error: glob failed",
+          "Failed to list the skill files in `/fake-home/.agents/skills`, ignoring. Error: glob failed",
         ]);
       });
 
@@ -3396,6 +3398,195 @@ description: From global dir
             name: "global-skill",
             description: "From global dir",
             dir: "/fake-home/.config/lasso/skills/global-skill",
+            content: "",
+          },
+        ]);
+      });
+
+      it("prefers higher-priority skill directories across all sources", async () => {
+        actions.config.setCustomSkillDirs(["/custom/skills"]);
+        testFs._globResults.set("/custom/skills/**/SKILL.md", [
+          "/custom/skills/all/SKILL.md",
+        ]);
+        testFs._globResults.set("/test-cwd/.lasso/skills/**/SKILL.md", [
+          "/test-cwd/.lasso/skills/all/SKILL.md",
+          "/test-cwd/.lasso/skills/project-lasso/SKILL.md",
+        ]);
+        testFs._globResults.set("/test-cwd/.agents/skills/**/SKILL.md", [
+          "/test-cwd/.agents/skills/all/SKILL.md",
+          "/test-cwd/.agents/skills/project-lasso/SKILL.md",
+          "/test-cwd/.agents/skills/project-agent/SKILL.md",
+        ]);
+        testFs._globResults.set("/fake-home/.config/lasso/skills/**/SKILL.md", [
+          "/fake-home/.config/lasso/skills/all/SKILL.md",
+          "/fake-home/.config/lasso/skills/project-lasso/SKILL.md",
+          "/fake-home/.config/lasso/skills/project-agent/SKILL.md",
+          "/fake-home/.config/lasso/skills/global-lasso/SKILL.md",
+        ]);
+        testFs._globResults.set("/fake-home/.agents/skills/**/SKILL.md", [
+          "/fake-home/.agents/skills/all/SKILL.md",
+          "/fake-home/.agents/skills/project-lasso/SKILL.md",
+          "/fake-home/.agents/skills/project-agent/SKILL.md",
+          "/fake-home/.agents/skills/global-lasso/SKILL.md",
+          "/fake-home/.agents/skills/global-agent/SKILL.md",
+        ]);
+
+        for (const [path, content] of [
+          [
+            "/custom/skills/all/SKILL.md",
+            `---
+name: all
+description: Custom
+---
+`,
+          ],
+          [
+            "/test-cwd/.lasso/skills/all/SKILL.md",
+            `---
+name: all
+description: Project lasso
+---
+`,
+          ],
+          [
+            "/test-cwd/.lasso/skills/project-lasso/SKILL.md",
+            `---
+name: project-lasso
+description: Project lasso
+---
+`,
+          ],
+          [
+            "/test-cwd/.agents/skills/all/SKILL.md",
+            `---
+name: all
+description: Project agent
+---
+`,
+          ],
+          [
+            "/test-cwd/.agents/skills/project-lasso/SKILL.md",
+            `---
+name: project-lasso
+description: Project agent
+---
+`,
+          ],
+          [
+            "/test-cwd/.agents/skills/project-agent/SKILL.md",
+            `---
+name: project-agent
+description: Project agent
+---
+`,
+          ],
+          [
+            "/fake-home/.config/lasso/skills/all/SKILL.md",
+            `---
+name: all
+description: Global lasso
+---
+`,
+          ],
+          [
+            "/fake-home/.config/lasso/skills/project-lasso/SKILL.md",
+            `---
+name: project-lasso
+description: Global lasso
+---
+`,
+          ],
+          [
+            "/fake-home/.config/lasso/skills/project-agent/SKILL.md",
+            `---
+name: project-agent
+description: Global lasso
+---
+`,
+          ],
+          [
+            "/fake-home/.config/lasso/skills/global-lasso/SKILL.md",
+            `---
+name: global-lasso
+description: Global lasso
+---
+`,
+          ],
+          [
+            "/fake-home/.agents/skills/all/SKILL.md",
+            `---
+name: all
+description: Global agent
+---
+`,
+          ],
+          [
+            "/fake-home/.agents/skills/project-lasso/SKILL.md",
+            `---
+name: project-lasso
+description: Global agent
+---
+`,
+          ],
+          [
+            "/fake-home/.agents/skills/project-agent/SKILL.md",
+            `---
+name: project-agent
+description: Global agent
+---
+`,
+          ],
+          [
+            "/fake-home/.agents/skills/global-lasso/SKILL.md",
+            `---
+name: global-lasso
+description: Global agent
+---
+`,
+          ],
+          [
+            "/fake-home/.agents/skills/global-agent/SKILL.md",
+            `---
+name: global-agent
+description: Global agent
+---
+`,
+          ],
+        ] as const) {
+          testFs._files.set(path, content);
+        }
+
+        const result = await getSkills();
+
+        assert.deepStrictEqual(result, [
+          {
+            name: "all",
+            description: "Custom",
+            dir: "/custom/skills/all",
+            content: "",
+          },
+          {
+            name: "project-lasso",
+            description: "Project lasso",
+            dir: "/test-cwd/.lasso/skills/project-lasso",
+            content: "",
+          },
+          {
+            name: "project-agent",
+            description: "Project agent",
+            dir: "/test-cwd/.agents/skills/project-agent",
+            content: "",
+          },
+          {
+            name: "global-lasso",
+            description: "Global lasso",
+            dir: "/fake-home/.config/lasso/skills/global-lasso",
+            content: "",
+          },
+          {
+            name: "global-agent",
+            description: "Global agent",
+            dir: "/fake-home/.agents/skills/global-agent",
             content: "",
           },
         ]);

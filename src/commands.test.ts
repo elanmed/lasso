@@ -196,6 +196,85 @@ describe("getAvailableSlashCommands", () => {
         },
       ]);
     });
+
+    it("prefers higher-priority command directories across all sources", async () => {
+      actions.config.setCustomSlashCommandDirs(["/custom/commands"]);
+      testFs._globResults.set("/custom/commands/**/*.md", [
+        "/custom/commands/all.md",
+      ]);
+      testFs._globResults.set("/test-cwd/.lasso/commands/**/*.md", [
+        "/test-cwd/.lasso/commands/all.md",
+        "/test-cwd/.lasso/commands/project-lasso.md",
+      ]);
+      testFs._globResults.set("/test-cwd/.agents/commands/**/*.md", [
+        "/test-cwd/.agents/commands/all.md",
+        "/test-cwd/.agents/commands/project-lasso.md",
+        "/test-cwd/.agents/commands/project-agent.md",
+      ]);
+      testFs._globResults.set("/fake-home/.config/lasso/commands/**/*.md", [
+        "/fake-home/.config/lasso/commands/all.md",
+        "/fake-home/.config/lasso/commands/project-lasso.md",
+        "/fake-home/.config/lasso/commands/project-agent.md",
+        "/fake-home/.config/lasso/commands/global-lasso.md",
+      ]);
+      testFs._globResults.set("/fake-home/.agents/commands/**/*.md", [
+        "/fake-home/.agents/commands/all.md",
+        "/fake-home/.agents/commands/project-lasso.md",
+        "/fake-home/.agents/commands/project-agent.md",
+        "/fake-home/.agents/commands/global-lasso.md",
+        "/fake-home/.agents/commands/global-agent.md",
+      ]);
+
+      for (const [path, content] of [
+        ["/custom/commands/all.md", "custom"],
+        ["/test-cwd/.lasso/commands/all.md", "project lasso"],
+        ["/test-cwd/.lasso/commands/project-lasso.md", "project lasso"],
+        ["/test-cwd/.agents/commands/all.md", "project agent"],
+        ["/test-cwd/.agents/commands/project-lasso.md", "project agent"],
+        ["/test-cwd/.agents/commands/project-agent.md", "project agent"],
+        ["/fake-home/.config/lasso/commands/all.md", "global lasso"],
+        ["/fake-home/.config/lasso/commands/project-lasso.md", "global lasso"],
+        ["/fake-home/.config/lasso/commands/project-agent.md", "global lasso"],
+        ["/fake-home/.config/lasso/commands/global-lasso.md", "global lasso"],
+        ["/fake-home/.agents/commands/all.md", "global agent"],
+        ["/fake-home/.agents/commands/project-lasso.md", "global agent"],
+        ["/fake-home/.agents/commands/project-agent.md", "global agent"],
+        ["/fake-home/.agents/commands/global-lasso.md", "global agent"],
+        ["/fake-home/.agents/commands/global-agent.md", "global agent"],
+      ] as const) {
+        testFs._files.set(path, content);
+      }
+
+      const result = await getAvailableSlashCommands();
+
+      assert.deepStrictEqual(result, [
+        {
+          name: "all",
+          filePath: "/custom/commands/all.md",
+          content: "custom",
+        },
+        {
+          name: "project-lasso",
+          filePath: "/test-cwd/.lasso/commands/project-lasso.md",
+          content: "project lasso",
+        },
+        {
+          name: "project-agent",
+          filePath: "/test-cwd/.agents/commands/project-agent.md",
+          content: "project agent",
+        },
+        {
+          name: "global-lasso",
+          filePath: "/fake-home/.config/lasso/commands/global-lasso.md",
+          content: "global lasso",
+        },
+        {
+          name: "global-agent",
+          filePath: "/fake-home/.agents/commands/global-agent.md",
+          content: "global agent",
+        },
+      ]);
+    });
   });
 
   describe("handles errors", () => {
@@ -231,7 +310,9 @@ describe("getAvailableSlashCommands", () => {
       assert.deepStrictEqual(getWrites(), []);
       assert.deepStrictEqual(getState().content.configWarningMessages, [
         "Failed to list the slash command files in `/test-cwd/.lasso/commands`, ignoring. Error: permission denied",
+        "Failed to list the slash command files in `/test-cwd/.agents/commands`, ignoring. Error: permission denied",
         "Failed to list the slash command files in `/fake-home/.config/lasso/commands`, ignoring. Error: permission denied",
+        "Failed to list the slash command files in `/fake-home/.agents/commands`, ignoring. Error: permission denied",
       ]);
     });
 

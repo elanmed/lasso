@@ -44,8 +44,24 @@ export function getLocalSkillDir() {
   return join(getLocalConfigDir(), "skills");
 }
 
+export function getLocalAgentSkillDir() {
+  return join(processDeps.cwd(), ".agents", "skills");
+}
+
+export function getGlobalAgentSkillDir() {
+  return join(os.homedir(), ".agents", "skills");
+}
+
 export function getLocalSlashCommandDir() {
   return join(getLocalConfigDir(), "commands");
+}
+
+export function getLocalAgentSlashCommandDir() {
+  return join(processDeps.cwd(), ".agents", "commands");
+}
+
+export function getGlobalAgentSlashCommandDir() {
+  return join(os.homedir(), ".agents", "commands");
 }
 
 export function getGlobalSlashCommandDir() {

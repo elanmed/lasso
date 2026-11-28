@@ -32,8 +32,10 @@ import {
 } from "./state.ts";
 import { aiDeps, childProcessDeps, fsDeps, processDeps } from "./deps.ts";
 import {
+  getGlobalAgentSlashCommandDir,
   getGlobalConfigPath,
   getGlobalSlashCommandDir,
+  getLocalAgentSlashCommandDir,
   getLocalConfigPath,
   getLocalSlashCommandDir,
 } from "./paths.ts";
@@ -1174,7 +1176,9 @@ export async function getAvailableSlashCommands() {
   const slashCommandDirs = [
     ...getState().config.customSlashCommandDirs,
     getLocalSlashCommandDir(),
+    getLocalAgentSlashCommandDir(),
     getGlobalSlashCommandDir(),
+    getGlobalAgentSlashCommandDir(),
   ];
 
   for (const dir of slashCommandDirs) {
