@@ -8,7 +8,7 @@
   "private": true,
   "scripts": {
     "start": "node src/index.ts",
-    "test": "CI=true node --test src/**/*.test.ts scripts/**/*.test.ts",
+    "test": "CI=true node --test",
     "lint": "eslint src scripts",
     "types": "tsc",
     "prettier-format": "./scripts/prettier.sh write",
