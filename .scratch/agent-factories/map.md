@@ -8,10 +8,10 @@ Domain: Lasso. Consult `codebase-design` for module boundaries and `domain-model
 
 ## Decisions so far
 
+- [Headless Lasso invocation contract](issues/01-headless-lasso-invocation-contract.md): Workers run a persistent headless Lasso session, polling until explicitly stopped or cleaned up with the parent.
 
 ## Not yet specified
 
-- The exact headless invocation and Worker script contract, including how a Worker remains active across its task.
 - Channel message identity, ordering, reading/cursors, and error behavior.
 - Process-tree supervision and recovery details; resource limits and retention for Worker output and channel history.
 - How parallel Workers coordinate changes in their shared working directory.
