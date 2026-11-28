@@ -17,6 +17,7 @@ import {
   pageCommands,
   pageEditStr,
   spawnAndReadEditorContent,
+  isPrintableCharacter,
   resume,
   resumeWithNoArgs,
   initStdin,
@@ -542,6 +543,43 @@ describe("openWithPager", () => {
       });
     });
   });
+});
+
+describe("isPrintableCharacter", () => {
+  const cases: [string, string | undefined, Key, boolean][] = [
+    ["accepts ASCII space", " ", { name: "space" }, true],
+    ["accepts printable ASCII", "~", { name: "~" }, true],
+    ["rejects ASCII controls", "\u001f", { name: "x" }, false],
+    ["rejects DEL", "\u007f", { name: "delete" }, false],
+    ["rejects the start of C1 controls", "\u0080", { name: "unknown" }, false],
+    ["rejects the end of C1 controls", "\u009f", { name: "unknown" }, false],
+    [
+      "accepts the first code point after C1 controls",
+      "\u00a0",
+      { name: "unknown" },
+      true,
+    ],
+    ["accepts non-ASCII text", "é", { name: "é" }, true],
+    ["accepts supplementary Unicode characters", "💡", { name: "💡" }, true],
+    ["rejects tab", "\t", { name: "tab" }, false],
+    ["rejects return", "\r", { name: "return" }, false],
+    ["rejects a missing character", undefined, { name: "a" }, false],
+    ["rejects an empty character", "", { name: "a" }, false],
+    ["rejects Ctrl-modified characters", "a", { name: "a", ctrl: true }, false],
+    ["rejects Meta-modified characters", "a", { name: "a", meta: true }, false],
+    [
+      "accepts Shift-modified characters",
+      "A",
+      { name: "a", shift: true },
+      true,
+    ],
+  ];
+
+  for (const [name, char, key, expected] of cases) {
+    it(name, () => {
+      assert.strictEqual(isPrintableCharacter(char, key), expected);
+    });
+  }
 });
 
 describe("input commands", () => {

@@ -1884,7 +1884,7 @@ function redrawPendingQuestion(rl: readline.Interface) {
   actions.terminal.appendStdoutTail(getState().config.promptPrefix);
 }
 
-function isPrintableCharacter(char: string | undefined, key: Key) {
+export function isPrintableCharacter(char: string | undefined, key: Key) {
   if (typeof char !== "string" || char.length === 0) return false;
   if (!isTypeableKey(key)) return false;
   const codePoint = char.codePointAt(0);
